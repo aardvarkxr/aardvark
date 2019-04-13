@@ -1,0 +1,113 @@
+renderer 
+  reads:
+    * list of things to draw
+	  * parent
+      * Transform
+      * model
+      * textures
+      * animation state
+    * list of lights
+      * transform
+      * light parameters
+  On new frame:
+    * get list of things
+	* get list of visuals
+	* get list of lights
+	* draw all visuals + lights
+
+
+input 
+  Reads:
+	  * List of grabbable things
+		* collision volume
+		* handle to write to
+      * list of pointable things
+	    * intersection volume
+		* handle to send events to
+	  * list of tools
+	    * handle
+	    * type (pointing, grabbing both)
+		* transform
+
+  Writes:
+    * changes in collision state
+	* changes in grabbing state
+	* new transforms for grabbables
+	* point start/stop events
+	* current active points
+	* point/grab state for tools
+  
+  on new frame:
+    * get list of things
+	* get list of interactables
+	* get list of functions
+	* for each function
+	  * test against compatible interactables
+	  * update interactable state
+
+App:
+  Reads:
+    * events:
+	  * collision state
+	  * grab state/transform
+	  * point state/position
+	  * point/grab state for tools
+	* anchor transforms
+  Writes:
+    * List of things
+	  * grabability w/ collision volume
+	  * pointability w/ intersection volume
+	  * drawables
+	    * model
+		* textures
+		* animation state(?)
+	  * lights
+	  * parent anchor for all of those
+
+Core
+  * Allow apps to own lists of things
+  * manage some core things that serve as anchors (device transforms, stage, etc.)
+  * Frame loop:
+    * accept all state updates
+    * Update anchor positions (send events?)
+    * frame_handle = snapshot of state (so apps can update async. Input too?)
+	* Tell renderer to render frame_handle
+	* tell input to process frame_handle
+	* wait for next frame
+
+
+commands:
+* create app ( name, *handle )
+* destroy app( handle )
+* Create thing( app_handle, name, *handle )
+* destroy thing( app_handle )
+* update thing flag( handle, flag, value ) - visible
+* read thing flag( frame_handle, handle, flag, *value )
+* update thing transform( thing_handle, matrix, parent )
+* read thing transform( frame_handle, thing_handle, *matrix, *parent )
+* lock thing transform( locked_thing_handle, locking_thing_handle ) - when something is grabbed, the tool locks it
+* unlock thing transform( locked_thing_handle ) - everyone can update it again
+* create thing interaction( thing_handle, type, *interaction_handle ) - grabable, pointable
+* destroy thing interaction( interaction_handle )
+* update interaction intersection volume( interaction_handle, volume )
+* read interaction intersection volume( frame_handle, interaction_handle, *volume )
+* update interaction state( interaction_handle, new_state ) -- grabbed, clicked, point position, etc
+* read interaction state( frame_handle, interaction_handle, *state )
+* create thing visual( thing_handle, type, *visual_handle )
+* destroy visual( visual_handle )
+* update visual model( visual_handle, model_handle 
+* read thing visual model( frame_handle, visual_handle, *model_handle )
+* update thing visual model state( visual_handle, newstate ) - animation state? texture overrides for quads?
+* read thing visual model state( frame_handle, visual_handle *state )
+* create thing light( thing_handle, *light_handle )
+* destroy thing light (light_handle)
+* update light params( light_handle, params)
+* read light params( light_handle *params)
+* create thing function( thing_handle, type, *function_handle ) - pointers, grabbers
+* destroy thing function( function_handle )
+* get thing list( frame_handle, *thing handles, *thing handle count )
+* get interactable list( frame_handle, thing_handle, *interactable_handles, *interactable_handle_count )
+* get visual list( frame_handle, thing_handle, *visual_handles, *visual_handle_count)
+* get light list( frame_handle, thing_handle, *light_handles, *light_handle_count)
+* get function list( frame_handle, thing_handle, *function_handles, *function_handle_count)
+
