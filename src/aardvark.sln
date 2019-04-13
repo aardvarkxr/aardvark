@@ -5,6 +5,8 @@ VisualStudioVersion = 15.0.28307.421
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tests", "tests\tests.vcxproj", "{A41C4E03-9675-4115-928C-DAF137C720B1}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "aardvark", "aardvark\aardvark.vcxproj", "{C81CCAC3-A87D-4233-8953-DC92DEF0748A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -21,6 +23,14 @@ Global
 		{A41C4E03-9675-4115-928C-DAF137C720B1}.Release|x64.Build.0 = Release|x64
 		{A41C4E03-9675-4115-928C-DAF137C720B1}.Release|x86.ActiveCfg = Release|Win32
 		{A41C4E03-9675-4115-928C-DAF137C720B1}.Release|x86.Build.0 = Release|Win32
+		{C81CCAC3-A87D-4233-8953-DC92DEF0748A}.Debug|x64.ActiveCfg = Debug|x64
+		{C81CCAC3-A87D-4233-8953-DC92DEF0748A}.Debug|x64.Build.0 = Debug|x64
+		{C81CCAC3-A87D-4233-8953-DC92DEF0748A}.Debug|x86.ActiveCfg = Debug|Win32
+		{C81CCAC3-A87D-4233-8953-DC92DEF0748A}.Debug|x86.Build.0 = Debug|Win32
+		{C81CCAC3-A87D-4233-8953-DC92DEF0748A}.Release|x64.ActiveCfg = Release|x64
+		{C81CCAC3-A87D-4233-8953-DC92DEF0748A}.Release|x64.Build.0 = Release|x64
+		{C81CCAC3-A87D-4233-8953-DC92DEF0748A}.Release|x86.ActiveCfg = Release|Win32
+		{C81CCAC3-A87D-4233-8953-DC92DEF0748A}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -15,10 +15,24 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="tests.cpp">
+    <ClInclude Include="..\public\aardvark\aardvark_apps.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="aardvark_handle.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="aardvark_app_impl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="aardvark_apps.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="test_aardvark_apps.cpp">
+    <ClCompile Include="aardvark_handle.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="aardvark_app_impl.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
