@@ -48,7 +48,7 @@ namespace aardvark
 		AardvarkHandleSharedPtr_t Find( uint32_t unRawHandle );
 
 		template<typename RealType_t, typename HandleType_t>
-		AardvarkHandleSharedPtr_t Find( HandleType_t handle )
+		std::shared_ptr<RealType_t> Find( HandleType_t handle )
 		{
 			uint32_t rawHandle = reinterpret_cast<uint32_t>( handle );
 			AardvarkHandleSharedPtr_t obj = Find( rawHandle );

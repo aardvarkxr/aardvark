@@ -157,6 +157,7 @@
   <ItemGroup>
     <ClCompile Include="tests.cpp" />
     <ClCompile Include="test_aardvark_apps.cpp" />
+    <ClCompile Include="test_gadget.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\aardvark\aardvark.vcxproj">
