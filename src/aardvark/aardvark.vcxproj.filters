@@ -33,6 +33,9 @@
     <ClInclude Include="..\public\aardvark\aardvark.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\public\aardvark\aardvark_types.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="aardvark_apps.cpp">
