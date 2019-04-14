@@ -16,6 +16,6 @@ add_library(aardvark STATIC
 )
 
 
-target_include_directories( aardvark PUBLIC ../public )
-target_include_directories( aardvark PRIVATE ../thirdparty )
+target_include_directories( aardvark PUBLIC ${AV_SRC_PUBLIC} )
+target_include_directories( aardvark PRIVATE ${AV_SRC_THIRDPARTY} )
 

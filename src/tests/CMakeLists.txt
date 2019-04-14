@@ -7,7 +7,7 @@ add_executable( tests
 	tests.cpp
 )
 
-target_include_directories( tests PUBLIC ../thirdparty )
+target_include_directories( tests PRIVATE ${AV_SRC_THIRDPARTY} )
 
 target_link_libraries( tests aardvark )
 

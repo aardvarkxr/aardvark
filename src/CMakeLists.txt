@@ -3,6 +3,12 @@ project( Aardvark VERSION 0.1
 					DESCRIPTION "AR in VR"
 					LANGUAGES CXX)
 
+set( AV_SRC_PUBLIC ${CMAKE_SOURCE_DIR}/public )
+set( AV_SRC_THIRDPARTY ${CMAKE_SOURCE_DIR}/thirdparty )
+
+message ( "pub" ${AV_SRC_PUBLIC} )
+message ( "tp" ${AV_SRC_THIRDPARTY} )
+
 add_subdirectory(aardvark)
 add_subdirectory(tests)
 
