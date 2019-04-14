@@ -1,5 +1,9 @@
+build
 Debug
 Release
 .vs
 *.user
+*.swp
+~*
+
 
