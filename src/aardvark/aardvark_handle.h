@@ -3,9 +3,13 @@
 #include <stdint.h>
 #include <memory>
 #include <unordered_map>
+#include <mutex>
 
 namespace aardvark
 {
+	class CAardvarkHandleBase;
+	typedef std::shared_ptr<CAardvarkHandleBase> AardvarkHandleSharedPtr_t;
+
 	class CAardvarkHandleBase
 	{
 	protected:
@@ -19,7 +23,6 @@ namespace aardvark
 		uint32_t m_rawHandle = 0;
 	};
 
-	typedef std::shared_ptr<CAardvarkHandleBase> AardvarkHandleSharedPtr_t;
 
 	template< typename HandleType_t>
 	class CAardvarkHandleBaseTyped : public CAardvarkHandleBase
@@ -32,6 +35,7 @@ namespace aardvark
 
 	class CAardvarkHandleManager
 	{
+		friend class CAardvarkFrame;
 	public:
 		static CAardvarkHandleManager *Instance();
 
@@ -60,6 +64,7 @@ namespace aardvark
 
 		std::unordered_map<uint32_t, AardvarkHandleSharedPtr_t> m_handles;
 		uint32_t m_nextRawHandle = 12;
+		std::mutex m_mutex;
 	};
 
 

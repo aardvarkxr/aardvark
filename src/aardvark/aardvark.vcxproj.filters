@@ -36,6 +36,12 @@
     <ClInclude Include="..\public\aardvark\aardvark_types.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\public\aardvark\aardvark_frames.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="aardvark_frame_impl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="aardvark_apps.cpp">
@@ -52,6 +58,12 @@
     </ClCompile>
     <ClCompile Include="aardvark_gadget_impl.cpp">
       <Filter>Header Files</Filter>
+    </ClCompile>
+    <ClCompile Include="aardvark_frame_impl.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="aardvark_frames.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

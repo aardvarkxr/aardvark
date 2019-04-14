@@ -21,15 +21,19 @@
   <ItemGroup>
     <ClInclude Include="..\public\aardvark\aardvark.h" />
     <ClInclude Include="..\public\aardvark\aardvark_apps.h" />
+    <ClInclude Include="..\public\aardvark\aardvark_frames.h" />
     <ClInclude Include="..\public\aardvark\aardvark_gadgets.h" />
     <ClInclude Include="..\public\aardvark\aardvark_types.h" />
     <ClInclude Include="aardvark_app_impl.h" />
+    <ClInclude Include="aardvark_frame_impl.h" />
     <ClInclude Include="aardvark_gadget_impl.h" />
     <ClInclude Include="aardvark_handle.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="aardvark_apps.cpp" />
     <ClCompile Include="aardvark_app_impl.cpp" />
+    <ClCompile Include="aardvark_frames.cpp" />
+    <ClCompile Include="aardvark_frame_impl.cpp" />
     <ClCompile Include="aardvark_gadgets.cpp" />
     <ClCompile Include="aardvark_gadget_impl.cpp" />
     <ClCompile Include="aardvark_handle.cpp" />
