@@ -30,7 +30,7 @@ namespace aardvark
 	public:
 		CAardvarkHandleBaseTyped( uint32_t rawHandle ) : CAardvarkHandleBase( rawHandle ) {  }
 
-		HandleType_t GetPublicHandle() const { return reinterpret_cast<HandleType_t>( GetRawHandle() ); }
+		HandleType_t GetPublicHandle() const { return reinterpret_cast<HandleType_t>( static_cast<uintptr_t>( GetRawHandle() ) ); }
 	};
 
 	class CAardvarkHandleManager
@@ -54,7 +54,7 @@ namespace aardvark
 		template<typename RealType_t, typename HandleType_t>
 		std::shared_ptr<RealType_t> Find( HandleType_t handle )
 		{
-			uint32_t rawHandle = reinterpret_cast<uint32_t>( handle );
+			uint32_t rawHandle = (uint32_t) (uint64_t)handle ;
 			AardvarkHandleSharedPtr_t obj = Find( rawHandle );
 			return std::dynamic_pointer_cast<RealType_t>( obj );
 		}
