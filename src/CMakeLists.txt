@@ -3,6 +3,8 @@ project( Aardvark VERSION 0.1
 					DESCRIPTION "AR in VR"
 					LANGUAGES CXX)
 
+set( CapnProto_DIR ${CMAKE_SOURCE_DIR}/packages/capnproto/lib/cmake/CapnProto  )
+
 set( AV_SRC_PUBLIC ${CMAKE_SOURCE_DIR}/public )
 set( AV_SRC_THIRDPARTY ${CMAKE_SOURCE_DIR}/thirdparty )
 

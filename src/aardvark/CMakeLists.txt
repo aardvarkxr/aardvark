@@ -1,5 +1,8 @@
 cmake_minimum_required ( VERSION 3.14)
 
+find_package( CapnProto 0.7.0 REQUIRED )
+
+capnp_generate_cpp( CAPNP_SRCS CAPNP_HDRS aardvark.capnp )
 
 add_library(aardvark STATIC
 	aardvark_app_impl.cpp
@@ -13,9 +16,16 @@ add_library(aardvark STATIC
 	aardvark_gadgets.cpp
 	aardvark_handle.cpp
 	aardvark_handle.h
+	${CAPNP_SRCS}
+	${CAPNP_HDRS}
+	aardvark.capnp
 )
 
+target_link_libraries( aardvark PUBLIC CapnProto::capnp-rpc )
 
+
+target_link_directories( aardvark PUBLIC ${CAPNP_LIBRARIES} )
 target_include_directories( aardvark PUBLIC ${AV_SRC_PUBLIC} )
 target_include_directories( aardvark PRIVATE ${AV_SRC_THIRDPARTY} )
+target_include_directories( aardvark PRIVATE ${CMAKE_CURRENT_BINARY_DIR} )
 
