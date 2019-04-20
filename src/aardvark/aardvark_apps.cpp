@@ -11,16 +11,16 @@ namespace aardvark
 			return AardvarkError_InvalidParam;
 		}
 
-		auto app = CAardvarkHandleManager::Instance()->CreateHandle< CAardvarkApp >();
-		if ( !app )
-			return AardvarkError_InternalError;
+		//auto app = CAardvarkHandleManager::Instance()->CreateHandle< CAardvarkApp >();
+		//if ( !app )
+		//	return AardvarkError_InternalError;
 
-		if ( !app->Init( appName ) )
-		{
-			CAardvarkHandleManager::Instance()->DestroyHandle( app );
-			return AardvarkError_InternalError;
-		}
-		*pHandle = app->GetPublicHandle();
+		//if ( !app->Init( appName ) )
+		//{
+		//	CAardvarkHandleManager::Instance()->DestroyHandle( app );
+		//	return AardvarkError_InternalError;
+		//}
+		//*pHandle = app->GetPublicHandle();
 
 		return aardvark::AardvarkError_None;
 	}
@@ -30,19 +30,19 @@ namespace aardvark
 		if ( !hApp )
 			return AardvarkError_InvalidParam;
 
-		auto app = CAardvarkHandleManager::Instance()->Find<CAardvarkApp>( hApp );
-		if ( app )
-		{
-			if ( CAardvarkHandleManager::Instance()->DestroyHandle( app ) )
-			{
-				return AardvarkError_None;
-			}
-			else
-			{
-				return AardvarkError_InvalidParam;
-			}
-		}
-		else
+		//auto app = CAardvarkHandleManager::Instance()->Find<CAardvarkApp>( hApp );
+		//if ( app )
+		//{
+		//	if ( CAardvarkHandleManager::Instance()->DestroyHandle( app ) )
+		//	{
+		//		return AardvarkError_None;
+		//	}
+		//	else
+		//	{
+		//		return AardvarkError_InvalidParam;
+		//	}
+		//}
+		//else
 		{
 			return AardvarkError_InvalidParam;
 		}

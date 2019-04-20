@@ -6,6 +6,13 @@
 
 using namespace aardvark;
 
+CAardvarkApp::CAardvarkApp( const std::string & sName )
+{
+	m_sName = sName;
+//	this->body.setRoot( m_body.getRoot() );
+}
+
+
 bool CAardvarkApp::Init( const char *pchName )
 {
 	if ( !pchName )
@@ -19,14 +26,14 @@ bool CAardvarkApp::Init( const char *pchName )
 
 void CAardvarkApp::AddGadget( std::shared_ptr<CAardvarkGadget> gadget )
 {
-	assert( gadget->GetAppHandle() == GetPublicHandle() );
+//	assert( gadget->GetAppHandle() == GetPublicHandle() );
 	m_gadgets.push_back( gadget );
 }
 
 
 void CAardvarkApp::RemoveGadget( std::shared_ptr<CAardvarkGadget> gadget )
 {
-	assert( gadget->GetAppHandle() == GetPublicHandle() );
+//	assert( gadget->GetAppHandle() == GetPublicHandle() );
 	auto i = std::find( m_gadgets.begin(), m_gadgets.end(), gadget );
 	if ( i != m_gadgets.end() )
 	{

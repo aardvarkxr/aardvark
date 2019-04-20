@@ -16,6 +16,10 @@ add_library(aardvark STATIC
 	aardvark_gadgets.cpp
 	aardvark_handle.cpp
 	aardvark_handle.h
+	aardvark_client.cpp
+	${AV_SRC_PUBLIC}/aardvark/aardvark_client.h
+	aardvark_server.cpp
+	${AV_SRC_PUBLIC}/aardvark/aardvark_server.h
 	${CAPNP_SRCS}
 	${CAPNP_HDRS}
 	aardvark.capnp
@@ -27,5 +31,5 @@ target_link_libraries( aardvark PUBLIC CapnProto::capnp-rpc )
 target_link_directories( aardvark PUBLIC ${CAPNP_LIBRARIES} )
 target_include_directories( aardvark PUBLIC ${AV_SRC_PUBLIC} )
 target_include_directories( aardvark PRIVATE ${AV_SRC_THIRDPARTY} )
-target_include_directories( aardvark PRIVATE ${CMAKE_CURRENT_BINARY_DIR} )
+target_include_directories( aardvark PUBLIC ${CMAKE_CURRENT_BINARY_DIR} )
 
