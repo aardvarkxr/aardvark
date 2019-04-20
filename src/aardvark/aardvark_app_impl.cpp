@@ -14,34 +14,6 @@ CAardvarkApp::CAardvarkApp( const std::string & sName, AvServerImpl *pParentServ
 }
 
 
-bool CAardvarkApp::Init( const char *pchName )
-{
-	if ( !pchName )
-	{
-		return false;
-	}
-
-	m_sName = pchName;
-	return true;
-}
-
-void CAardvarkApp::AddGadget( std::shared_ptr<CAardvarkGadget> gadget )
-{
-//	assert( gadget->GetAppHandle() == GetPublicHandle() );
-	m_gadgets.push_back( gadget );
-}
-
-
-void CAardvarkApp::RemoveGadget( std::shared_ptr<CAardvarkGadget> gadget )
-{
-//	assert( gadget->GetAppHandle() == GetPublicHandle() );
-	auto i = std::find( m_gadgets.begin(), m_gadgets.end(), gadget );
-	if ( i != m_gadgets.end() )
-	{
-		m_gadgets.erase( i );
-	}
-}
-
 ::kj::Promise<void> CAardvarkApp::destroy( DestroyContext context )
 {
 	m_pParentServer->removeApp( this );
@@ -55,3 +27,28 @@ void CAardvarkApp::RemoveGadget( std::shared_ptr<CAardvarkGadget> gadget )
 	return kj::READY_NOW;
 }
 
+
+::kj::Promise<void> CAardvarkApp::createGadget( CreateGadgetContext context )
+{
+	auto gadget = kj::heap<CAardvarkGadget>( context.getParams().getName(), this );
+	auto& gadgetRef = *gadget;
+	AvGadget::Client capability = kj::mv( gadget );
+
+	context.getResults().setGadget( capability );
+
+	gadgetRef.AddClient( capability );
+
+	m_vecGadgets.push_back( &gadgetRef );
+
+	return kj::READY_NOW;
+}
+
+void CAardvarkApp::removeGadget( CAardvarkGadget *pGadget )
+{
+	auto iApp = std::find( m_vecGadgets.begin(), m_vecGadgets.end(), pGadget );
+	if ( iApp != m_vecGadgets.end() )
+	{
+		pGadget->clearClients();
+		m_vecGadgets.erase( iApp );
+	}
+}

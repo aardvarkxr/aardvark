@@ -21,9 +21,9 @@ namespace aardvark
 	{
 		if ( m_pClient )
 		{
+			m_pMainInterface = nullptr;
 			delete m_pClient;
 			m_pClient = nullptr;
-			m_pMainInterface = nullptr;
 		}
 	}
 

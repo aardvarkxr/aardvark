@@ -3,20 +3,26 @@
 
 #include "aardvark/aardvark.h"
 #include "aardvark_handle.h"
+#include "aardvark.capnp.h"
 
 namespace aardvark
 {
-	class CAardvarkGadget : public CAardvarkHandleBaseTyped< GadgetHandle_t >
+	class CAardvarkApp;
+
+	class CAardvarkGadget : public AvGadget::Server
 	{
 	public:
-		CAardvarkGadget( uint32_t unRawHandle ) : CAardvarkHandleBaseTyped < GadgetHandle_t >( unRawHandle ) {}
+		CAardvarkGadget( const std::string & sName, CAardvarkApp *pParentApp );
 
-		bool Init( const char *pchName, AppHandle_t hApp );
+		void AddClient( AvGadget::Client & client ) { m_vecClients.push_back( AvGadget::Client( client ) ); }
+		void clearClients() { m_vecClients.clear(); }
 
-		AppHandle_t GetAppHandle() const { return m_hApp; }
+		virtual ::kj::Promise<void> destroy( DestroyContext context ) override;
+		virtual ::kj::Promise<void> name( NameContext context ) override;
+
 	private:
 		std::string m_sName;
-		AppHandle_t m_hApp;
-
+		CAardvarkApp *m_pParentApp = nullptr;
+		std::vector< AvGadget::Client > m_vecClients;
 	};
 }

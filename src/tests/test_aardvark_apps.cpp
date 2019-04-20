@@ -28,21 +28,21 @@ TEST_CASE( "Aardvark apps", "[apps]" )
 	client.Start();
 
 	{
-		auto createAppRequest = client.Server().createAppRequest();
-		createAppRequest.setName( "fnord" );
-		auto promise = createAppRequest.send();
+		auto reqCreateApp = client.Server().createAppRequest();
+		reqCreateApp.setName( "fnord" );
+		auto promCreateApp = reqCreateApp.send();
 
-		auto res = promise.wait( client.WaitScope() );
-		REQUIRE( res.hasApp() );
+		auto resCreateApp = promCreateApp.wait( client.WaitScope() );
+		REQUIRE( resCreateApp.hasApp() );
 
-		auto namePromise = res.getApp().nameRequest().send();
-		auto nameRes = namePromise.wait( client.WaitScope() );
+		auto promName = resCreateApp.getApp().nameRequest().send();
+		auto resName = promName.wait( client.WaitScope() );
 
-		REQUIRE( "fnord" == nameRes.getName() );
+		REQUIRE( "fnord" == resName.getName() );
 
-		auto destroyPromise = res.getApp().destroyRequest().send();
-		auto destroyRes = destroyPromise.wait( client.WaitScope() );
-		REQUIRE( destroyRes.getSuccess() );
+		auto promDestroy = resCreateApp.getApp().destroyRequest().send();
+		auto resDestroy = promDestroy.wait( client.WaitScope() );
+		REQUIRE( resDestroy.getSuccess() );
 	}
 
 	client.Stop();

@@ -17,20 +17,18 @@ namespace aardvark
 		CAardvarkApp( const std::string & sName, AvServerImpl *pParentServer );
 		~CAardvarkApp() {}
 
-		bool Init( const char *pchName );
-
-		void AddGadget( std::shared_ptr<CAardvarkGadget> gadget );
-		void RemoveGadget( std::shared_ptr<CAardvarkGadget> gadget );
+		void removeGadget( CAardvarkGadget *pGadget );
 
 		void AddClient( AvApp::Client & client ) { m_vecClients.push_back( AvApp::Client( client ) ); }
 		void clearClients() { m_vecClients.clear(); }
 
 		virtual ::kj::Promise<void> destroy( DestroyContext context ) override;
 		virtual ::kj::Promise<void> name( NameContext context ) override;
+		virtual ::kj::Promise<void> createGadget( CreateGadgetContext context ) override;
 	private:
 		std::string m_sName;
 		std::vector< AvApp::Client > m_vecClients;
-		std::vector< std::shared_ptr<CAardvarkGadget> > m_gadgets;
+		std::vector< CAardvarkGadget * > m_vecGadgets;
 		AvServerImpl *m_pParentServer = nullptr;
 	};
 
