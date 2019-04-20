@@ -16,6 +16,7 @@ namespace aardvark
 	public:
 		virtual ::kj::Promise<void> createApp( CreateAppContext context ) override;
 
+		void removeApp( CAardvarkApp *pApp );
 	protected:
 		void clearApps();
 

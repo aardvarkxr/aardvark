@@ -1,15 +1,16 @@
 #include "aardvark_app_impl.h"
 #include "aardvark_gadget_impl.h"
+#include "aardvark/aardvark_server.h"
 
 #include <algorithm>
 #include <assert.h>
 
 using namespace aardvark;
 
-CAardvarkApp::CAardvarkApp( const std::string & sName )
+CAardvarkApp::CAardvarkApp( const std::string & sName, AvServerImpl *pParentServer )
 {
 	m_sName = sName;
-//	this->body.setRoot( m_body.getRoot() );
+	m_pParentServer = pParentServer;
 }
 
 
@@ -40,3 +41,11 @@ void CAardvarkApp::RemoveGadget( std::shared_ptr<CAardvarkGadget> gadget )
 		m_gadgets.erase( i );
 	}
 }
+
+::kj::Promise<void> CAardvarkApp::destroy( DestroyContext context )
+{
+	m_pParentServer->removeApp( this );
+	context.getResults().setSuccess( true );
+	return kj::READY_NOW;
+}
+

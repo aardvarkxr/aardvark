@@ -9,11 +9,13 @@
 namespace aardvark
 {
 	class CAardvarkGadget;
+	class AvServerImpl;
 
 	class CAardvarkApp : public AvApp::Server
 	{
 	public:
-		CAardvarkApp( const std::string & sName );
+		CAardvarkApp( const std::string & sName, AvServerImpl *pParentServer );
+		~CAardvarkApp() {}
 
 		bool Init( const char *pchName );
 
@@ -23,11 +25,12 @@ namespace aardvark
 		void AddClient( AvApp::Client & client ) { m_vecClients.push_back( AvApp::Client( client ) ); }
 		void clearClients() { m_vecClients.clear(); }
 
+		virtual ::kj::Promise<void> destroy( DestroyContext context ) override;
 	private:
 		std::string m_sName;
 		std::vector< AvApp::Client > m_vecClients;
 		std::vector< std::shared_ptr<CAardvarkGadget> > m_gadgets;
-//		capnp::MallocMessageBuilder m_body;
+		AvServerImpl *m_pParentServer = nullptr;
 	};
 
 	typedef std::shared_ptr< CAardvarkApp > AardvarkAppPtr_t;

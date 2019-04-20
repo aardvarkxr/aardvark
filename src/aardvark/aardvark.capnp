@@ -9,6 +9,6 @@ interface AvApp
 {
 	name @0 () -> ( name: Text );
 
-	destroy @1 ();
+	destroy @1 () -> ( success: Bool );
 }
 

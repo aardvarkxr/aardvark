@@ -8,7 +8,7 @@ namespace aardvark
 
 	::kj::Promise<void> AvServerImpl::createApp( CreateAppContext context )
 	{
-		auto server = kj::heap<CAardvarkApp>( context.getParams().getName() );
+		auto server = kj::heap<CAardvarkApp>( context.getParams().getName(), this );
 		auto& serverRef = *server;
 		AvApp::Client capability = kj::mv( server );
 
@@ -28,6 +28,16 @@ namespace aardvark
 			iApp->clearClients();
 		}
 		m_vecApps.clear();
+	}
+
+	void AvServerImpl::removeApp( CAardvarkApp *pApp )
+	{
+		auto iApp = std::find( m_vecApps.begin(), m_vecApps.end(), pApp );
+		if ( iApp != m_vecApps.end() )
+		{
+			pApp->clearClients();
+			m_vecApps.erase( iApp );
+		}
 	}
 
 	CServerThread::CServerThread()

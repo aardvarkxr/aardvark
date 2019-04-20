@@ -22,10 +22,13 @@ TEST_CASE( "Aardvark apps", "[apps]" )
 		createAppRequest.setName( "fnord" );
 		auto promise = createAppRequest.send();
 
-		auto response = promise.wait( client.WaitScope() );
-		auto sString = response.toString().flatten();
-		printf( "%s\n", sString.cStr() );
+		auto res = promise.wait( client.WaitScope() );
+		REQUIRE( res.hasApp() );
+		auto destroyPromise = res.getApp().destroyRequest().send();
+		auto destroyRes = destroyPromise.wait( client.WaitScope() );
+		REQUIRE( destroyRes.getSuccess() );
 	}
+
 	client.Stop();
 
 	serverThread.Join();
