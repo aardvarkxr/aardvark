@@ -49,3 +49,9 @@ void CAardvarkApp::RemoveGadget( std::shared_ptr<CAardvarkGadget> gadget )
 	return kj::READY_NOW;
 }
 
+::kj::Promise<void> CAardvarkApp::name( NameContext context )
+{
+	context.getResults().setName( m_sName );
+	return kj::READY_NOW;
+}
+

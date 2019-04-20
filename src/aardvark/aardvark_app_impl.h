@@ -26,6 +26,7 @@ namespace aardvark
 		void clearClients() { m_vecClients.clear(); }
 
 		virtual ::kj::Promise<void> destroy( DestroyContext context ) override;
+		virtual ::kj::Promise<void> name( NameContext context ) override;
 	private:
 		std::string m_sName;
 		std::vector< AvApp::Client > m_vecClients;
