@@ -591,7 +591,7 @@ public:
         dataSize(ZERO * BITS), pointerCount(ZERO * POINTERS), nestingLimit(0x7fffffff) {}
   inline StructReader(kj::ArrayPtr<const word> data)
       : segment(nullptr), capTable(nullptr), data(data.begin()), pointers(nullptr),
-        dataSize(assumeBits<STRUCT_DATA_WORD_COUNT_BITS>(data.size()) * WORDS * BITS_PER_WORD),
+        dataSize(static_cast<capnp::StructDataBitCount>(assumeBits<STRUCT_DATA_WORD_COUNT_BITS>(data.size()) * WORDS * BITS_PER_WORD)),
         pointerCount(ZERO * POINTERS), nestingLimit(0x7fffffff) {}
 
   const void* getLocation() const { return data; }

@@ -715,7 +715,7 @@ typedef uint StructPointerOffset;
 inline StructDataOffset assumeDataOffset(uint32_t offset) { return offset; }
 inline StructPointerOffset assumePointerOffset(uint32_t offset) { return offset; }
 
-constexpr uint MAX_TEXT_SIZE = kj::maxValueForBits<BLOB_SIZE_BITS>() - 1;
+constexpr uint MAX_TEXT_SIZE = static_cast<uint>(kj::maxValueForBits<BLOB_SIZE_BITS>() - 1);
 typedef uint TextSize;
 
 template <typename T>

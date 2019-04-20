@@ -455,10 +455,14 @@ AnyStruct::Reader VatNetwork<
 
 template <typename SturdyRef>
 Capability::Client SturdyRefRestorer<SturdyRef>::baseRestore(AnyPointer::Reader ref) {
+#if defined(__GNUC__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
   return restore(ref.getAs<SturdyRef>());
+#if defined(__GNUC__)
 #pragma GCC diagnostic pop
+#endif
 }
 
 template <typename VatId>
