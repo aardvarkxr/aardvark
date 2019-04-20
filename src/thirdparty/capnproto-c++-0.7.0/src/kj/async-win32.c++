@@ -77,9 +77,7 @@ public:
         //   for now. Note that even if a new handle is opened with the same numeric value, it
         //   should be hardless to call CancelIoEx() on it because it couldn't possibly be using
         //   the same OVERLAPPED structure.
-        if (error == ERROR_INVALID_HANDLE) {
-          handle = INVALID_HANDLE_VALUE;
-		} else if (error != ERROR_NOT_FOUND ) {
+        if (error != ERROR_NOT_FOUND && error != ERROR_INVALID_HANDLE) {
           KJ_FAIL_WIN32("CancelIoEx()", error, handle);
         }
       }
