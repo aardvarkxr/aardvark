@@ -1,5 +1,6 @@
 #include "aardvark/aardvark_server.h"
 #include "aardvark_app_impl.h"
+#include "framestructs.h"
 
 #include <capnp/ez-rpc.h>
 
@@ -39,6 +40,47 @@ namespace aardvark
 			m_vecApps.erase( iApp );
 		}
 	}
+
+	void CopyTransform( AvTransform::Builder & out, const AvTransform_t & in )
+	{
+		out.getPosition().setX( in.position.x );
+		out.getPosition().setY( in.position.y );
+		out.getPosition().setZ( in.position.z );
+		out.getRotation().setX( in.rotation.x );
+		out.getRotation().setY( in.rotation.y );
+		out.getRotation().setZ( in.rotation.z );
+		out.getRotation().setW( in.rotation.w );
+		out.getScale().setX( in.scale.x );
+		out.getScale().setY( in.scale.y );
+		out.getScale().setZ( in.scale.z );
+	}
+
+	::kj::Promise<void> AvServerImpl::getNextVisualFrame( GetNextVisualFrameContext context )
+	{
+		AvVisuals_t visuals;
+		for ( auto iApp : m_vecApps )
+		{
+			iApp->gatherVisuals( visuals );
+		}
+
+		AvVisualFrame::Builder bldFrame( context.getResults().initFrame() );
+		bldFrame.setId( m_unNextFrame++ );
+
+		if ( !visuals.vecModels.empty() )
+		{
+			auto bldModels = bldFrame.initModels( (uint32_t)visuals.vecModels.size() );
+
+			for ( uint32_t unIndex = 0; unIndex < visuals.vecModels.size(); unIndex++ )
+			{
+				AvModel_t & in = visuals.vecModels[unIndex];
+				auto out = bldFrame.getModels()[unIndex];
+				out.setSource( kj::heap< AvModelSource::Server >() );
+				CopyTransform( out.getTransform(), in.transform );
+			}
+		}
+		return kj::READY_NOW;
+	}
+
 
 	CServerThread::CServerThread()
 	{

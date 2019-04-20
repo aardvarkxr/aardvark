@@ -3,6 +3,7 @@
 interface AvServer
 {
 	createApp @0 ( name: Text ) -> ( app: AvApp );
+	getNextVisualFrame @1 () -> ( frame: AvVisualFrame );
 }
 
 interface AvApp
@@ -19,4 +20,60 @@ interface AvGadget
 {
 	name @0 () -> ( name: Text );
 	destroy @1 () -> ( success: Bool );
+}
+
+interface AvModelSource
+{
+	name @0 () -> ( name: Text );
+	uri @1 () -> ( name: Text );
+	data @2 () -> ( data: Data );
+}
+
+struct AvVector
+{
+	x @0 : Float32;
+	y @1 : Float32;
+	z @2 : Float32;
+}
+
+struct AvColor
+{
+	r @0 : Float32;
+	g @1 : Float32;
+	b @2 : Float32;
+	a @3 : Float32;
+}
+
+struct AvQuaternion
+{
+	x @0 : Float32;
+	y @1 : Float32;
+	z @2 : Float32;
+	w @3 : Float32;
+}
+
+struct AvTransform
+{
+	position @0: AvVector;
+	rotation @1: AvQuaternion;
+	scale @2: AvVector;
+}
+
+struct AvModel
+{
+	transform @0: AvTransform;
+	source @1: AvModelSource;
+}
+
+struct AvLight
+{
+	transform @0: AvTransform;
+	diffuse @1: AvColor;
+}
+
+struct AvVisualFrame
+{
+	id @0: UInt64;
+	models @1: List( AvModel );
+	lights @2: List( AvLight );
 }

@@ -8,6 +8,7 @@
 namespace aardvark
 {
 	class CAardvarkApp;
+	struct AvVisuals_t;
 
 	class CAardvarkGadget : public AvGadget::Server
 	{
@@ -16,6 +17,8 @@ namespace aardvark
 
 		void AddClient( AvGadget::Client & client ) { m_vecClients.push_back( AvGadget::Client( client ) ); }
 		void clearClients() { m_vecClients.clear(); }
+
+		void gatherVisuals( AvVisuals_t & visuals );
 
 		virtual ::kj::Promise<void> destroy( DestroyContext context ) override;
 		virtual ::kj::Promise<void> name( NameContext context ) override;

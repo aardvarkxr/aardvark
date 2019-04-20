@@ -52,3 +52,12 @@ void CAardvarkApp::removeGadget( CAardvarkGadget *pGadget )
 		m_vecGadgets.erase( iApp );
 	}
 }
+
+void CAardvarkApp::gatherVisuals( AvVisuals_t & visuals )
+{
+	for ( auto iGadget : m_vecGadgets )
+	{
+		iGadget->gatherVisuals( visuals );
+	}
+}
+

@@ -15,6 +15,7 @@ namespace aardvark
 		friend class CServerThread;
 	public:
 		virtual ::kj::Promise<void> createApp( CreateAppContext context ) override;
+		virtual ::kj::Promise<void> getNextVisualFrame( GetNextVisualFrameContext context ) override;
 
 		void removeApp( CAardvarkApp *pApp );
 	protected:
@@ -22,6 +23,7 @@ namespace aardvark
 
 	private:
 		std::vector< CAardvarkApp * > m_vecApps;
+		uint64_t m_unNextFrame = 1;
 	};
 
 

@@ -1,5 +1,8 @@
 #include "aardvark_gadget_impl.h"
 #include "aardvark_app_impl.h"
+#include "framestructs.h"
+
+#include <capnp/message.h>
 
 using namespace aardvark;
 
@@ -22,6 +25,16 @@ CAardvarkGadget::CAardvarkGadget( const std::string & sName, CAardvarkApp *pPare
 	context.getResults().setName( m_sName );
 	return kj::READY_NOW;
 }
+
+void CAardvarkGadget::gatherVisuals( AvVisuals_t & visuals )
+{
+	AvModel_t model;
+	model.sSourceUri = "http://somedomain.com/assets/something.gltf";
+	model.transform.position = { 1, 2, 3 };
+
+	visuals.vecModels.push_back( model );
+}
+
 
 
 //::kj::Promise<void> CAardvarkApp::createGadget( CreateGadgetContext context )
