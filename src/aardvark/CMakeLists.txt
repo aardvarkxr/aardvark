@@ -17,6 +17,7 @@ add_library(aardvark STATIC
 	aardvark_handle.cpp
 	aardvark_handle.h
 	aardvark_client.cpp
+	framestructs.cpp
 	framestructs.h
 
 	${AV_SRC_PUBLIC}/aardvark/aardvark_client.h

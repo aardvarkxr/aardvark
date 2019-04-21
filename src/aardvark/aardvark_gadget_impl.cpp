@@ -26,6 +26,44 @@ CAardvarkGadget::CAardvarkGadget( const std::string & sName, CAardvarkApp *pPare
 	return kj::READY_NOW;
 }
 
+::kj::Promise<void> CAardvarkGadget::setTransform( SetTransformContext context )
+{
+	auto & params = context.getParams();
+	if ( params.hasTransform() )
+	{
+		m_transform = TransformFromProto( params.getTransform() );
+	}
+	else
+	{
+		m_transform = AvTransform_t();
+	}
+
+	if ( params.hasParentPath() )
+	{
+		m_sTransformParent = params.getParentPath();
+	}
+	else
+	{
+		m_sTransformParent.clear();
+	}
+
+	context.getResults().setSuccess( true );
+	return kj::READY_NOW;
+}
+
+
+::kj::Promise<void> CAardvarkGadget::getTransform( GetTransformContext context )
+{
+	auto & results = context.initResults();
+	ProtoFromTransform( results.initTransform(), m_transform );
+	if ( !m_sTransformParent.empty() )
+	{
+		results.setParentPath( m_sTransformParent );
+	}
+	return kj::READY_NOW;
+}
+
+
 void CAardvarkGadget::gatherVisuals( AvVisuals_t & visuals )
 {
 	AvModel_t model;

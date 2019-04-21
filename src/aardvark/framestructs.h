@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include "aardvark.capnp.h"
 
 namespace aardvark
 {
@@ -53,5 +54,13 @@ struct AvVisuals_t
 	std::vector<AvModel_t> vecModels;
 	std::vector<AvLight_t> vecLights;
 };
+
+AvVector_t VectorFromProto( const AvVector::Reader & from );
+AvQuaternion_t QuaternionFromProto( const AvQuaternion::Reader & from );
+AvTransform_t TransformFromProto( const AvTransform::Reader & from );
+
+void ProtoFromVector( AvVector::Builder & to, const AvVector_t & from );
+void ProtoFromQuaternion( AvQuaternion::Builder & to, const AvQuaternion_t & from );
+void ProtoFromTransform( AvTransform::Builder & to, const AvTransform_t & from );
 
 };

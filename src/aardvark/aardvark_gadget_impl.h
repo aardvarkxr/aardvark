@@ -4,6 +4,7 @@
 #include "aardvark/aardvark.h"
 #include "aardvark_handle.h"
 #include "aardvark.capnp.h"
+#include "framestructs.h"
 
 namespace aardvark
 {
@@ -23,9 +24,14 @@ namespace aardvark
 		virtual ::kj::Promise<void> destroy( DestroyContext context ) override;
 		virtual ::kj::Promise<void> name( NameContext context ) override;
 
+		virtual ::kj::Promise<void> setTransform( SetTransformContext context ) override;
+		virtual ::kj::Promise<void> getTransform( GetTransformContext context ) override;
+
 	private:
 		std::string m_sName;
 		CAardvarkApp *m_pParentApp = nullptr;
 		std::vector< AvGadget::Client > m_vecClients;
+		AvTransform_t m_transform;
+		std::string m_sTransformParent;
 	};
 }

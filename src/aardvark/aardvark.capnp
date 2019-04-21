@@ -20,6 +20,9 @@ interface AvGadget
 {
 	name @0 () -> ( name: Text );
 	destroy @1 () -> ( success: Bool );
+
+	setTransform @2 ( transform: AvTransform, parentPath : Text ) -> ( success: Bool );
+	getTransform @3 () -> ( transform: AvTransform, parentPath : Text );
 }
 
 interface AvModelSource
