@@ -151,6 +151,36 @@ TEST_CASE( "Aardvark gadgets", "[gadgets]" )
 					REQUIRE( 3.5f == transform.getScale().getZ() );
 				} )
 				.wait( client.WaitScope() );
+
+			gadget.modelsRequest().send()
+				.then( []( capnp::Response< AvGadget::ModelsResults> && res ) 
+				{
+					REQUIRE( res.hasModels() );
+					REQUIRE( res.getModels().size() == 1 );
+
+					auto firstModel = *res.getModels().begin();
+					return firstModel.getTransformRequest().send();
+				} )
+					.then( []( capnp::Response< AvModelInstance::GetTransformResults > && response )
+				{
+					REQUIRE( response.hasTransform() );
+
+					auto & transform = response.getTransform();
+					REQUIRE( 1.f == transform.getPosition().getX() );
+					REQUIRE( 2.f == transform.getPosition().getY() );
+					REQUIRE( 3.f == transform.getPosition().getZ() );
+
+					REQUIRE( 0.1f == transform.getRotation().getX() );
+					REQUIRE( 0.2f == transform.getRotation().getY() );
+					REQUIRE( 0.3f == transform.getRotation().getZ() );
+					REQUIRE( 0.4f == transform.getRotation().getW() );
+
+					REQUIRE( 1.5f == transform.getScale().getX() );
+					REQUIRE( 2.5f == transform.getScale().getY() );
+					REQUIRE( 3.5f == transform.getScale().getZ() );
+				} )
+					.wait( client.WaitScope() );
+
 		}
 	}
 
