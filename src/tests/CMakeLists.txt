@@ -5,6 +5,7 @@ add_executable( tests
 	test_aardvark_apps.cpp
 	test_frames.cpp
 	test_gadget.cpp
+	test_tools.cpp
 	tests.cpp
 )
 

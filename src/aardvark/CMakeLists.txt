@@ -19,6 +19,8 @@ add_library(aardvark STATIC
 	aardvark_handle.cpp
 	aardvark_handle.h
 	aardvark_client.cpp
+	pathtools.cpp
+	pathtools.h
 	framestructs.cpp
 	framestructs.h
 
