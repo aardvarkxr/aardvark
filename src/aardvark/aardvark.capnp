@@ -23,12 +23,25 @@ interface AvGadget
 
 	setTransform @2 ( transform: AvTransform, parentPath : Text ) -> ( success: Bool );
 	getTransform @3 () -> ( transform: AvTransform, parentPath : Text );
+
+	createModelInstance @4 ( uri : Text) -> ( model: AvModelInstance );
+	models @5 () -> ( models: List( AvModelInstance ) );
 }
+
+interface AvModelInstance
+{
+	source @0 () -> ( source : AvModelSource );
+	destroy @1 () -> ( success: Bool );
+
+	setTransform @2 ( transform: AvTransform, parentPath : Text ) -> ( success: Bool );
+	getTransform @3 () -> ( transform: AvTransform, parentPath : Text );
+}
+
 
 interface AvModelSource
 {
 	name @0 () -> ( name: Text );
-	uri @1 () -> ( name: Text );
+	uri @1 () -> ( uri: Text );
 	data @2 () -> ( data: Data );
 }
 

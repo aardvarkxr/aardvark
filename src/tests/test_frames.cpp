@@ -22,20 +22,21 @@ TEST_CASE( "Aardvark frames", "[frames]" )
 		auto reqCreateApp = client.Server().createAppRequest();
 		reqCreateApp.setName( "fnord" );
 		auto promCreateApp = reqCreateApp.send();
-		auto reqCreateGadget = promCreateApp.getApp().createGadgetRequest();
-		reqCreateGadget.setName( "foo" );
-		auto promCreateGadget = reqCreateGadget.send();
 
-		auto promFrame = client.Server().getNextVisualFrameRequest().send();
-		auto resFrame = promFrame.wait( client.WaitScope() );
+		SECTION( "empty frame" )
+		{
+			auto reqCreateGadget = promCreateApp.getApp().createGadgetRequest();
+			reqCreateGadget.setName( "foo" );
+			auto promCreateGadget = reqCreateGadget.send();
 
-		REQUIRE( resFrame.hasFrame() );
-		auto frame = resFrame.getFrame();
-		REQUIRE( frame.getId() == 1 );
-		REQUIRE( frame.hasModels() );
+			auto promFrame = client.Server().getNextVisualFrameRequest().send();
+			auto resFrame = promFrame.wait( client.WaitScope() );
 
-		auto models = frame.getModels();
-		REQUIRE( models.size() == 1 );
+			REQUIRE( resFrame.hasFrame() );
+			auto frame = resFrame.getFrame();
+			REQUIRE( frame.getId() == 1 );
+			REQUIRE( !frame.hasModels() );
+		}
 	}
 
 	client.Stop();

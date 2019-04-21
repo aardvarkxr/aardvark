@@ -10,6 +10,7 @@ namespace aardvark
 {
 	class CAardvarkApp;
 	struct AvVisuals_t;
+	class CAardvarkModelInstance;
 
 	class CAardvarkGadget : public AvGadget::Server
 	{
@@ -18,6 +19,7 @@ namespace aardvark
 
 		void AddClient( AvGadget::Client & client ) { m_vecClients.push_back( AvGadget::Client( client ) ); }
 		void clearClients() { m_vecClients.clear(); }
+		void removeModelInstance( CAardvarkModelInstance *pModelInstance );
 
 		void gatherVisuals( AvVisuals_t & visuals );
 
@@ -27,11 +29,14 @@ namespace aardvark
 		virtual ::kj::Promise<void> setTransform( SetTransformContext context ) override;
 		virtual ::kj::Promise<void> getTransform( GetTransformContext context ) override;
 
+		virtual ::kj::Promise<void> createModelInstance( CreateModelInstanceContext context ) override;
+		virtual ::kj::Promise<void> models( ModelsContext context ) override;
 	private:
 		std::string m_sName;
 		CAardvarkApp *m_pParentApp = nullptr;
 		std::vector< AvGadget::Client > m_vecClients;
 		AvTransform_t m_transform;
 		std::string m_sTransformParent;
+		std::vector< CAardvarkModelInstance *> m_vecModelInstances;
 	};
 }

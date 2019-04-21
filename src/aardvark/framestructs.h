@@ -63,4 +63,5 @@ void ProtoFromVector( AvVector::Builder & to, const AvVector_t & from );
 void ProtoFromQuaternion( AvQuaternion::Builder & to, const AvQuaternion_t & from );
 void ProtoFromTransform( AvTransform::Builder & to, const AvTransform_t & from );
 
+AvTransform_t MultiplyTransforms( const AvTransform_t & l, const AvTransform_t & r );
 };

@@ -1,6 +1,7 @@
 #include "aardvark_gadget_impl.h"
 #include "aardvark_app_impl.h"
 #include "framestructs.h"
+#include "aardvark_model_instance_impl.h"
 
 #include <capnp/message.h>
 
@@ -64,39 +65,51 @@ CAardvarkGadget::CAardvarkGadget( const std::string & sName, CAardvarkApp *pPare
 }
 
 
-void CAardvarkGadget::gatherVisuals( AvVisuals_t & visuals )
+::kj::Promise<void> CAardvarkGadget::createModelInstance( CreateModelInstanceContext context )
 {
-	AvModel_t model;
-	model.sSourceUri = "http://somedomain.com/assets/something.gltf";
-	model.transform.position = { 1, 2, 3 };
+	auto modelInstance = kj::heap<CAardvarkModelInstance>( context.getParams().getUri(), this );
+	auto& modelInstanceRef = *modelInstance;
+	AvModelInstance::Client capability = kj::mv( modelInstance );
 
-	visuals.vecModels.push_back( model );
+	context.getResults().setModel( capability );
+
+	modelInstanceRef.AddClient( capability );
+
+	m_vecModelInstances.push_back( &modelInstanceRef );
+
+	return kj::READY_NOW;
 }
 
 
+::kj::Promise<void> CAardvarkGadget::models( ModelsContext context )
+{
+	auto bldModels = context.getResults().initModels( (uint32_t)m_vecModelInstances.size() );
+	uint32_t unIndex = 0;
+	for ( auto iModel : m_vecModelInstances )
+	{
+		bldModels.set( unIndex++, iModel->createNewClient() );
+	}
 
-//::kj::Promise<void> CAardvarkApp::createGadget( CreateGadgetContext context )
-//{
-//	auto gadget = kj::heap<CAardvarkGadget>( context.getParams().getName(), this );
-//	auto& gadgetRef = *gadget;
-//	AvGadget::Client capability = kj::mv( gadget );
-//
-//	context.getResults().setGadget( capability );
-//
-//	gadgetRef.AddClient( capability );
-//
-//	m_vecGadgets.push_back( &gadgetRef );
-//
-//	return kj::READY_NOW;
-//}
-//
-//void AvServerImpl::removeGadget( CAardvarkGadget *pGadget )
-//{
-//	auto iApp = std::find( m_vecGadgets.begin(), m_vecGadgets.end(), pGadget );
-//	if ( iApp != m_vecGadgets.end() )
-//	{
-//		pGadget->clearClients();
-//		m_vecGadgets.erase( iApp );
-//	}
-//}
-//
+	return kj::READY_NOW;
+}
+
+
+void CAardvarkGadget::gatherVisuals( AvVisuals_t & visuals )
+{
+	for ( auto iModel : m_vecModelInstances )
+	{
+		iModel->gatherVisuals( visuals, m_sTransformParent, m_transform );
+	}
+}
+
+
+void CAardvarkGadget::removeModelInstance( CAardvarkModelInstance *pModelInstance )
+{
+	auto iModelInstance = std::find( m_vecModelInstances.begin(), m_vecModelInstances.end(), pModelInstance );
+	if ( iModelInstance != m_vecModelInstances.end() )
+	{
+		pModelInstance->clearClients();
+		m_vecModelInstances.erase( iModelInstance );
+	}
+}
+
