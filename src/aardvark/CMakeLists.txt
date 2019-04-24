@@ -16,6 +16,8 @@ add_library(aardvark STATIC
 	aardvark_gadgets.cpp
 	aardvark_model_instance_impl.cpp
 	aardvark_model_instance_impl.h
+	aardvark_model_source_impl.cpp
+	aardvark_model_source_impl.h
 	aardvark_handle.cpp
 	aardvark_handle.h
 	aardvark_client.cpp

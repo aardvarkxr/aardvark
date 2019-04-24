@@ -4,6 +4,7 @@ interface AvServer
 {
 	createApp @0 ( name: Text ) -> ( app: AvApp );
 	getNextVisualFrame @1 () -> ( frame: AvVisualFrame );
+	getModelSource @2 ( uri: Text ) -> ( success: Bool, source: AvModelSource );
 }
 
 interface AvApp
@@ -40,9 +41,8 @@ interface AvModelInstance
 
 interface AvModelSource
 {
-	name @0 () -> ( name: Text );
-	uri @1 () -> ( uri: Text );
-	data @2 () -> ( data: Data );
+	uri @0 () -> ( uri: Text );
+	data @1 () -> ( data: Data );
 }
 
 struct AvVector

@@ -1,6 +1,9 @@
 #include "aardvark/aardvark_server.h"
 #include "aardvark_app_impl.h"
+#include "aardvark_model_source_impl.h"
 #include "framestructs.h"
+#include "filetools.h"
+#include "pathtools.h"
 
 #include <capnp/ez-rpc.h>
 
@@ -78,6 +81,59 @@ namespace aardvark
 				CopyTransform( out.getTransform(), in.transform );
 			}
 		}
+		return kj::READY_NOW;
+	}
+
+	::kj::Promise<void> AvServerImpl::getModelSource( GetModelSourceContext context )
+	{
+		std::string sUri = context.getParams().getUri();
+		if ( sUri.size() == 0 )
+		{
+			context.getResults().setSuccess( false );
+			return kj::READY_NOW;
+		}
+
+		auto iSource = m_mapModelSources.find( sUri );
+		if ( iSource != m_mapModelSources.end() )
+		{
+			context.getResults().setSource( iSource->second->getClient() );
+			context.getResults().setSuccess( true );
+			return kj::READY_NOW;
+		}
+
+		if ( !tools::IsFileUri( sUri ) )
+		{
+			// actual HTTP requests aren't supported yet
+			context.getResults().setSuccess( false );
+			return kj::READY_NOW;
+		}
+
+		auto path = tools::FileUriToPath( sUri );
+		if( path.empty() )
+		{
+			// URI must have been malformed in some way
+			context.getResults().setSuccess( false );
+			return kj::READY_NOW;
+		}
+
+		auto modelBlob = tools::ReadBinaryFile( path );
+		if ( modelBlob.empty() )
+		{
+			context.getResults().setSuccess( false );
+			return kj::READY_NOW;
+		}
+
+		context.getResults().setSuccess( true );
+		auto modelSource = kj::heap<CAardvarkModelSource>( sUri, std::move( modelBlob ) );
+
+		auto& modelSourceRef = *modelSource;
+		AvModelSource::Client capability = kj::mv( modelSource );
+
+		context.getResults().setSource( capability );
+
+		modelSourceRef.setClient( capability );
+
+		m_mapModelSources.insert( std::make_pair( std::string( sUri ), &modelSourceRef ) );
 		return kj::READY_NOW;
 	}
 

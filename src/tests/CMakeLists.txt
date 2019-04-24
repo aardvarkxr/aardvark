@@ -5,8 +5,11 @@ add_executable( tests
 	test_aardvark_apps.cpp
 	test_frames.cpp
 	test_gadget.cpp
+	test_models.cpp
 	test_tools.cpp
 	tests.cpp
+	testutils.cpp
+	testutils.h
 )
 
 target_include_directories( tests PRIVATE ${AV_SRC_THIRDPARTY} )

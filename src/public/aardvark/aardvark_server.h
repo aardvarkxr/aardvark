@@ -9,6 +9,7 @@
 namespace aardvark
 {
 	class CAardvarkApp;
+	class CAardvarkModelSource;
 
 	class AvServerImpl final : public AvServer::Server 
 	{
@@ -16,12 +17,14 @@ namespace aardvark
 	public:
 		virtual ::kj::Promise<void> createApp( CreateAppContext context ) override;
 		virtual ::kj::Promise<void> getNextVisualFrame( GetNextVisualFrameContext context ) override;
+		virtual ::kj::Promise<void> getModelSource( GetModelSourceContext context ) override;
 
 		void removeApp( CAardvarkApp *pApp );
 	protected:
 		void clearApps();
 
 	private:
+		std::unordered_map< std::string, CAardvarkModelSource *> m_mapModelSources;
 		std::vector< CAardvarkApp * > m_vecApps;
 		uint64_t m_unNextFrame = 1;
 	};

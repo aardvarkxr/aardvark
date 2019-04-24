@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <filesystem>
 #include <stdio.h>
+#include <algorithm>
 
 namespace tools
 {
@@ -49,6 +50,32 @@ namespace tools
 
 		auto path = buf;
 		return path;
+	}
+
+	std::string PathToFileUri( const std::filesystem::path & path )
+	{
+		std::string sUri;
+		if ( path.has_root_name() )
+		{
+			std::string sRootName = path.root_name().string();
+			if ( sRootName.size() >= 2 && !strncmp( sRootName.c_str(), "//", 2 ) || !strncmp( sRootName.c_str(), "\\\\", 2 ) )
+			{
+				sUri = std::string( "file:" ) + path.root_name().generic_string();
+			}
+			else
+			{
+				sUri = std::string( "file:///" ) + path.root_name().generic_string();
+			}
+		}
+		else
+		{
+			sUri = "file://";
+		}
+
+		sUri += path.root_directory().string();
+		sUri += path.relative_path().string();
+		std::replace( sUri.begin(), sUri.end(), '\\', '/' );
+		return sUri;
 	}
 
 
