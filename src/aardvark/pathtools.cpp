@@ -1,6 +1,11 @@
 #include "pathtools.h"
 
+#include "stringtools.h"
+
 #include <cstring>
+#include <cstdio>
+#include <filesystem>
+#include <stdio.h>
 
 namespace tools
 {
@@ -10,7 +15,7 @@ namespace tools
 			|| 0 == std::strncmp( sUri.c_str(), "FILE://", 7 );
 	}
 
-	std::string FileUriToPath( const std::string & sUri )
+	std::filesystem::path FileUriToPath( const std::string & sUri )
 	{
 		if ( sUri.size() < 8 || !IsFileUri( sUri ) )
 		{
@@ -36,5 +41,15 @@ namespace tools
 #endif
 		}
 	}
+
+	std::filesystem::path GetUniqueTempFilePath()
+	{
+		char buf[ L_tmpnam ];
+		tmpnam_s( buf, sizeof( buf ) );
+
+		auto path = buf;
+		return path;
+	}
+
 
 }
