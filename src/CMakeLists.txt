@@ -15,6 +15,7 @@ message ( "tp" ${AV_SRC_THIRDPARTY} )
 add_compile_options( "/std:c++17" )
 
 add_subdirectory(aardvark)
+add_subdirectory(tools)
 add_subdirectory(tests)
 
 

@@ -21,12 +21,6 @@ add_library(aardvark STATIC
 	aardvark_handle.cpp
 	aardvark_handle.h
 	aardvark_client.cpp
-	pathtools.cpp
-	pathtools.h
-	filetools.cpp
-	filetools.h
-	stringtools.cpp
-	stringtools.h
 	framestructs.cpp
 	framestructs.h
 
@@ -39,6 +33,7 @@ add_library(aardvark STATIC
 )
 
 target_link_libraries( aardvark PUBLIC CapnProto::capnp-rpc )
+target_link_libraries( aardvark PRIVATE tools )
 
 
 target_link_directories( aardvark PUBLIC ${CAPNP_LIBRARIES} )

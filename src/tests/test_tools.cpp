@@ -2,9 +2,9 @@
 // Purpose: Test gadget API in Aardvark
 // ---------------------------------------------------------------------------
 #include <catch/catch.hpp>
-#include <../aardvark/pathtools.h>
-#include <../aardvark/filetools.h>
-#include <../aardvark/stringtools.h>
+#include <tools/pathtools.h>
+#include <tools/filetools.h>
+#include <tools/stringtools.h>
 
 #include "testutils.h"
 

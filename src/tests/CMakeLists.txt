@@ -15,6 +15,7 @@ add_executable( tests
 target_include_directories( tests PRIVATE ${AV_SRC_THIRDPARTY} )
 
 target_link_libraries( tests aardvark )
+target_link_libraries( tests tools )
 #target_link_libraries( tests CapnProto::capnp )
 #target_link_directories( aardvark PUBLIC ${CAPNP_LIBRARIES} )
 

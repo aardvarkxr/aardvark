@@ -1,6 +1,6 @@
-#include "pathtools.h"
+#include "tools/pathtools.h"
 
-#include "stringtools.h"
+#include "tools/stringtools.h"
 
 #include <cstring>
 #include <cstdio>

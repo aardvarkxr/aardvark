@@ -2,8 +2,8 @@
 #include "aardvark_app_impl.h"
 #include "aardvark_model_source_impl.h"
 #include "framestructs.h"
-#include "filetools.h"
-#include "pathtools.h"
+#include "tools/filetools.h"
+#include "tools/pathtools.h"
 
 #include <capnp/ez-rpc.h>
 
