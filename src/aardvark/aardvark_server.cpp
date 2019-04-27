@@ -77,11 +77,55 @@ namespace aardvark
 			{
 				AvModel_t & in = visuals.vecModels[unIndex];
 				auto out = bldFrame.getModels()[unIndex];
-				out.setSource( kj::heap< AvModelSource::Server >() );
+
+				CAardvarkModelSource *pSource = findOrCreateSource( in.sSourceUri );
+				if ( !pSource )
+					continue;
+
+				out.setSource( pSource->getClient() );
 				CopyTransform( out.getTransform(), in.transform );
 			}
 		}
 		return kj::READY_NOW;
+	}
+
+	CAardvarkModelSource *AvServerImpl::findOrCreateSource( const std::string & sUri )
+	{
+		auto iSource = m_mapModelSources.find( sUri );
+		if ( iSource != m_mapModelSources.end() )
+		{
+			return iSource->second;
+		}
+
+		if ( !tools::IsFileUri( sUri ) )
+		{
+			// TODO(Joe): actual HTTP requests aren't supported yet
+			return nullptr;
+		}
+
+		auto path = tools::FileUriToPath( sUri );
+		if ( path.empty() )
+		{
+			// URI must have been malformed in some way
+			return nullptr;
+		}
+
+		auto modelBlob = tools::ReadBinaryFile( path );
+		if ( modelBlob.empty() )
+		{
+			return nullptr;
+		}
+
+		auto modelSource = kj::heap<CAardvarkModelSource>( sUri, std::move( modelBlob ) );
+
+		auto& modelSourceRef = *modelSource;
+		AvModelSource::Client capability = kj::mv( modelSource );
+
+		modelSourceRef.setClient( capability );
+
+		m_mapModelSources.insert( std::make_pair( std::string( sUri ), &modelSourceRef ) );
+
+		return &modelSourceRef;
 	}
 
 	::kj::Promise<void> AvServerImpl::getModelSource( GetModelSourceContext context )
@@ -93,47 +137,16 @@ namespace aardvark
 			return kj::READY_NOW;
 		}
 
-		auto iSource = m_mapModelSources.find( sUri );
-		if ( iSource != m_mapModelSources.end() )
+		CAardvarkModelSource *pSource = findOrCreateSource( sUri );
+		if ( !pSource )
 		{
-			context.getResults().setSource( iSource->second->getClient() );
+			context.getResults().setSuccess( false );
+		}
+		else
+		{
+			context.getResults().setSource( pSource->getClient() );
 			context.getResults().setSuccess( true );
-			return kj::READY_NOW;
 		}
-
-		if ( !tools::IsFileUri( sUri ) )
-		{
-			// actual HTTP requests aren't supported yet
-			context.getResults().setSuccess( false );
-			return kj::READY_NOW;
-		}
-
-		auto path = tools::FileUriToPath( sUri );
-		if( path.empty() )
-		{
-			// URI must have been malformed in some way
-			context.getResults().setSuccess( false );
-			return kj::READY_NOW;
-		}
-
-		auto modelBlob = tools::ReadBinaryFile( path );
-		if ( modelBlob.empty() )
-		{
-			context.getResults().setSuccess( false );
-			return kj::READY_NOW;
-		}
-
-		context.getResults().setSuccess( true );
-		auto modelSource = kj::heap<CAardvarkModelSource>( sUri, std::move( modelBlob ) );
-
-		auto& modelSourceRef = *modelSource;
-		AvModelSource::Client capability = kj::mv( modelSource );
-
-		context.getResults().setSource( capability );
-
-		modelSourceRef.setClient( capability );
-
-		m_mapModelSources.insert( std::make_pair( std::string( sUri ), &modelSourceRef ) );
 		return kj::READY_NOW;
 	}
 

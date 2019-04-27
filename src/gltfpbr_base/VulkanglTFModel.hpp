@@ -1135,7 +1135,6 @@ namespace vkglTF
 			std::string error;
 			std::string warning;
 
-			this->device = device;
 
 			bool binary = false;
 			size_t extpos = filename.rfind('.', filename.length());
@@ -1144,49 +1143,88 @@ namespace vkglTF
 			}  
 
 			bool fileLoaded = binary ? gltfContext.LoadBinaryFromFile(&gltfModel, &error, &warning, filename.c_str()) : gltfContext.LoadASCIIFromFile(&gltfModel, &error, &warning, filename.c_str());
-
-			std::vector<uint32_t> indexBuffer;
-			std::vector<Vertex> vertexBuffer;
-
-			if (fileLoaded) {
-				loadTextureSamplers(gltfModel);
-				loadTextures(gltfModel, device, transferQueue);
-				loadMaterials(gltfModel);
-				// TODO: scene handling with no default scene
-				const tinygltf::Scene &scene = gltfModel.scenes[gltfModel.defaultScene > -1 ? gltfModel.defaultScene : 0];
-				for (size_t i = 0; i < scene.nodes.size(); i++) {
-					const tinygltf::Node node = gltfModel.nodes[scene.nodes[i]];
-					loadNode(nullptr, node, scene.nodes[i], gltfModel, indexBuffer, vertexBuffer, scale);
-				}
-				if (gltfModel.animations.size() > 0) {
-					loadAnimations(gltfModel);
-				}
-				loadSkins(gltfModel);
-
-				for (auto node : linearNodes) {
-					// Assign skins
-					if (node->skinIndex > -1) {
-						node->skin = skins[node->skinIndex];
-					}
-					// Initial pose
-					if (node->mesh) {
-						node->update();
-					}
-				}
-			}
-			else {
+			if( !fileLoaded )
+			{
 				// TODO: throw
 				std::cerr << "Could not load gltf file: " << error << std::endl;
 				return;
 			}
 
+			loadFromGltfModel( device, gltfModel, transferQueue, scale );
+		}
+
+		bool loadFromMemory( const void *pvData, size_t unSize, vks::VulkanDevice *device, VkQueue transferQueue, float scale = 1.0f )
+		{
+			tinygltf::Model gltfModel;
+			tinygltf::TinyGLTF gltfContext;
+			std::string error;
+			std::string warning;
+
+			if ( unSize < 4 )
+				return false;
+
+			uint32_t *pData = (uint32_t *)pvData;
+			bool bBinary = *pData == 0x46546C67;
+
+			bool bLoaded;
+			if ( bBinary )
+			{
+				bLoaded = gltfContext.LoadBinaryFromMemory( &gltfModel, &error, &warning, (const unsigned char*)pvData, (uint32_t)unSize );
+			}
+			else
+			{
+				bLoaded = gltfContext.LoadASCIIFromString( &gltfModel, &error, &warning, (const char*)pvData, (uint32_t)unSize, ""  );
+			}
+			if ( !bLoaded )
+			{
+				// TODO: throw
+				std::cerr << "Could not load gltf model from memory: " << error << std::endl;
+				return false;
+			}
+
+			loadFromGltfModel( device, gltfModel, transferQueue, scale );
+			return true;
+		}
+
+		void loadFromGltfModel( vks::VulkanDevice * device, tinygltf::Model &gltfModel, VkQueue transferQueue, float scale )
+		{
+			this->device = device;
+
+			std::vector<uint32_t> indexBuffer;
+			std::vector<Vertex> vertexBuffer;
+
+			loadTextureSamplers( gltfModel );
+			loadTextures( gltfModel, device, transferQueue );
+			loadMaterials( gltfModel );
+			// TODO: scene handling with no default scene
+			const tinygltf::Scene &scene = gltfModel.scenes[gltfModel.defaultScene > -1 ? gltfModel.defaultScene : 0];
+			for ( size_t i = 0; i < scene.nodes.size(); i++ ) {
+				const tinygltf::Node node = gltfModel.nodes[scene.nodes[i]];
+				loadNode( nullptr, node, scene.nodes[i], gltfModel, indexBuffer, vertexBuffer, scale );
+			}
+			if ( gltfModel.animations.size() > 0 ) {
+				loadAnimations( gltfModel );
+			}
+			loadSkins( gltfModel );
+
+			for ( auto node : linearNodes ) {
+				// Assign skins
+				if ( node->skinIndex > -1 ) {
+					node->skin = skins[node->skinIndex];
+				}
+				// Initial pose
+				if ( node->mesh ) {
+					node->update();
+				}
+			}
+
 			extensions = gltfModel.extensionsUsed;
 
-			size_t vertexBufferSize = vertexBuffer.size() * sizeof(Vertex);
-			size_t indexBufferSize = indexBuffer.size() * sizeof(uint32_t);
-			indices.count = static_cast<uint32_t>(indexBuffer.size());
+			size_t vertexBufferSize = vertexBuffer.size() * sizeof( Vertex );
+			size_t indexBufferSize = indexBuffer.size() * sizeof( uint32_t );
+			indices.count = static_cast<uint32_t>( indexBuffer.size() );
 
-			assert(vertexBufferSize > 0);
+			assert( vertexBufferSize > 0 );
 
 			struct StagingBuffer {
 				VkBuffer buffer;
@@ -1195,62 +1233,62 @@ namespace vkglTF
 
 			// Create staging buffers
 			// Vertex data
-			VK_CHECK_RESULT(device->createBuffer(
+			VK_CHECK_RESULT( device->createBuffer(
 				VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 				vertexBufferSize,
 				&vertexStaging.buffer,
 				&vertexStaging.memory,
-				vertexBuffer.data()));
+				vertexBuffer.data() ) );
 			// Index data
-			if (indexBufferSize > 0) {
-				VK_CHECK_RESULT(device->createBuffer(
+			if ( indexBufferSize > 0 ) {
+				VK_CHECK_RESULT( device->createBuffer(
 					VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 					VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 					indexBufferSize,
 					&indexStaging.buffer,
 					&indexStaging.memory,
-					indexBuffer.data()));
+					indexBuffer.data() ) );
 			}
 
 			// Create device local buffers
 			// Vertex buffer
-			VK_CHECK_RESULT(device->createBuffer(
+			VK_CHECK_RESULT( device->createBuffer(
 				VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				vertexBufferSize,
 				&vertices.buffer,
-				&vertices.memory));
+				&vertices.memory ) );
 			// Index buffer
-			if (indexBufferSize > 0) {
-				VK_CHECK_RESULT(device->createBuffer(
+			if ( indexBufferSize > 0 ) {
+				VK_CHECK_RESULT( device->createBuffer(
 					VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 					VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 					indexBufferSize,
 					&indices.buffer,
-					&indices.memory));
+					&indices.memory ) );
 			}
 
 			// Copy from staging buffers
-			VkCommandBuffer copyCmd = device->createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
+			VkCommandBuffer copyCmd = device->createCommandBuffer( VK_COMMAND_BUFFER_LEVEL_PRIMARY, true );
 
 			VkBufferCopy copyRegion = {};
 
 			copyRegion.size = vertexBufferSize;
-			vkCmdCopyBuffer(copyCmd, vertexStaging.buffer, vertices.buffer, 1, &copyRegion);
+			vkCmdCopyBuffer( copyCmd, vertexStaging.buffer, vertices.buffer, 1, &copyRegion );
 
-			if (indexBufferSize > 0) {
+			if ( indexBufferSize > 0 ) {
 				copyRegion.size = indexBufferSize;
-				vkCmdCopyBuffer(copyCmd, indexStaging.buffer, indices.buffer, 1, &copyRegion);
+				vkCmdCopyBuffer( copyCmd, indexStaging.buffer, indices.buffer, 1, &copyRegion );
 			}
 
-			device->flushCommandBuffer(copyCmd, transferQueue, true);
+			device->flushCommandBuffer( copyCmd, transferQueue, true );
 
-			vkDestroyBuffer(device->logicalDevice, vertexStaging.buffer, nullptr);
-			vkFreeMemory(device->logicalDevice, vertexStaging.memory, nullptr);
-			if (indexBufferSize > 0) {
-				vkDestroyBuffer(device->logicalDevice, indexStaging.buffer, nullptr);
-				vkFreeMemory(device->logicalDevice, indexStaging.memory, nullptr);
+			vkDestroyBuffer( device->logicalDevice, vertexStaging.buffer, nullptr );
+			vkFreeMemory( device->logicalDevice, vertexStaging.memory, nullptr );
+			if ( indexBufferSize > 0 ) {
+				vkDestroyBuffer( device->logicalDevice, indexStaging.buffer, nullptr );
+				vkFreeMemory( device->logicalDevice, indexStaging.memory, nullptr );
 			}
 
 			getSceneDimensions();

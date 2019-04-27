@@ -17,6 +17,8 @@
 #include <chrono>
 #include <map>
 #include "algorithm"
+#include <filesystem>
+#include <tools/pathtools.h>
 
 #if defined(__ANDROID__)
 #define TINYGLTF_ANDROID_LOAD_FROM_ASSETS
@@ -29,10 +31,30 @@
 #include "VulkanUtils.hpp"
 #include "ui.hpp"
 
+#include <aardvark/aardvark_apps.h>
+#include <aardvark/aardvark_server.h>
+#include <aardvark/aardvark_client.h>
+
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+
+
+void CreateExampleApp( aardvark::CAardvarkClient *pClient )
+{
+	auto reqCreateExampleApp = pClient->Server().createAppRequest();
+	reqCreateExampleApp.setName( "Example with renderer" );
+	auto app = reqCreateExampleApp.send().getApp();
+	auto reqCreateGadget = app.createGadgetRequest();
+	reqCreateGadget.setName( "My Gadget" );
+	auto gadget = reqCreateGadget.send().getGadget();
+	auto reqCreateModel = gadget.createModelInstanceRequest();
+	std::filesystem::path pathModel = VK_EXAMPLE_DATA_DIR;
+	pathModel /= "models/DamagedHelmet/glTF-Embedded/DamagedHelmet.gltf";
+	reqCreateModel.setUri( tools::PathToFileUri( pathModel ) );
+	auto resCreateModel = reqCreateModel.send().wait( pClient->WaitScope() );
+}
 
 /*
 	PBR example main class
@@ -47,11 +69,6 @@ public:
 		vks::TextureCubeMap irradianceCube;
 		vks::TextureCubeMap prefilteredCube;
 	} textures;
-
-	struct Models {
-		vkglTF::Model scene;
-		vkglTF::Model skybox;
-	} models;
 
 	struct UniformBufferSet {
 		Buffer scene;
@@ -102,6 +119,10 @@ public:
 	std::vector<VkFence> waitFences;
 	std::vector<VkSemaphore> renderCompleteSemaphores;
 	std::vector<VkSemaphore> presentCompleteSemaphores;
+
+	aardvark::CServerThread m_serverThread;
+	kj::Own<aardvark::CAardvarkClient> m_pClient;
+	std::vector< std::shared_ptr< vkglTF::Model > > m_vecModels;
 
 	const uint32_t renderAhead = 2;
 	uint32_t frameIndex = 0;
@@ -167,8 +188,12 @@ public:
 #endif
 	}
 
-	~VulkanExample()
+	~VulkanExample() noexcept
 	{
+		m_pClient->Stop();
+		m_pClient = nullptr;
+		m_serverThread.Join();
+
 		vkDestroyPipeline(device, pipelines.skybox, nullptr);
 		vkDestroyPipeline(device, pipelines.pbr, nullptr);
 		vkDestroyPipeline(device, pipelines.pbrAlphaBlend, nullptr);
@@ -178,8 +203,10 @@ public:
 		vkDestroyDescriptorSetLayout(device, descriptorSetLayouts.material, nullptr);
 		vkDestroyDescriptorSetLayout(device, descriptorSetLayouts.node, nullptr);
 
-		models.scene.destroy(device);
-		models.skybox.destroy(device);
+		for ( auto pModel : m_vecModels )
+		{
+			pModel->destroy( device );
+		}
 
 		for (auto buffer : uniformBuffers) {
 			buffer.params.destroy();
@@ -312,37 +339,22 @@ public:
 			scissor.extent = { width, height };
 			vkCmdSetScissor(currentCB, 0, 1, &scissor);
 
-			VkDeviceSize offsets[1] = { 0 };
-
-			if (displayBackground) {
-				vkCmdBindDescriptorSets(currentCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[i].skybox, 0, nullptr);
-				vkCmdBindPipeline(currentCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines.skybox);
-				models.skybox.draw(currentCB);
-			}
+			//if (displayBackground) {
+			//	vkCmdBindDescriptorSets(currentCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[i].skybox, 0, nullptr);
+			//	vkCmdBindPipeline(currentCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines.skybox);
+			//	models.skybox.draw(currentCB);
+			//}
 
 			vkCmdBindPipeline(currentCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines.pbr);
 
-			vkglTF::Model &model = models.scene;
 
-			vkCmdBindVertexBuffers(currentCB, 0, 1, &model.vertices.buffer, offsets);
-			if (model.indices.buffer != VK_NULL_HANDLE) {
-				vkCmdBindIndexBuffer(currentCB, model.indices.buffer, 0, VK_INDEX_TYPE_UINT32);
-			}
+			recordCommandsForModels( currentCB, i, vkglTF::Material::ALPHAMODE_OPAQUE );
+			recordCommandsForModels( currentCB, i, vkglTF::Material::ALPHAMODE_MASK );
 
-			// Opaque primitives first
-			for (auto node : model.nodes) {
-				renderNode(node, i, vkglTF::Material::ALPHAMODE_OPAQUE);
-			}
-			// Alpha masked primitives
-			for (auto node : model.nodes) {
-				renderNode(node, i, vkglTF::Material::ALPHAMODE_MASK);
-			}
 			// Transparent primitives
 			// TODO: Correct depth sorting
-			vkCmdBindPipeline(currentCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines.pbrAlphaBlend);
-			for (auto node : model.nodes) {
-				renderNode(node, i, vkglTF::Material::ALPHAMODE_BLEND);
-			}
+			vkCmdBindPipeline( currentCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines.pbrAlphaBlend );
+			recordCommandsForModels( currentCB, i, vkglTF::Material::ALPHAMODE_BLEND );
 
 			// User interface
 			ui->draw(currentCB);
@@ -352,16 +364,33 @@ public:
 		}
 	}
 
-	void loadScene(std::string filename)
+	void recordCommandsForModels( VkCommandBuffer currentCB, uint32_t i, vkglTF::Material::AlphaMode eAlphaMode )
 	{
-		std::cout << "Loading scene from " << filename << std::endl;
-		models.scene.destroy(device);
-		animationIndex = 0;
-		animationTimer = 0.0f;
-		models.scene.loadFromFile(filename, vulkanDevice, queue);
-		camera.setPosition({ 0.0f, 0.0f, 1.0f });
-		camera.setRotation({ 0.0f, 0.0f, 0.0f });
+		for ( auto pModel : m_vecModels )
+		{
+			VkDeviceSize offsets[1] = { 0 };
+			vkCmdBindVertexBuffers( currentCB, 0, 1, &pModel->vertices.buffer, offsets );
+			if ( pModel->indices.buffer != VK_NULL_HANDLE )
+			{
+				vkCmdBindIndexBuffer( currentCB, pModel->indices.buffer, 0, VK_INDEX_TYPE_UINT32 );
+			}
+
+			for ( auto node : pModel->nodes ) {
+				renderNode( node, i, eAlphaMode );
+			}
+		}
 	}
+
+	//void loadScene(std::string filename)
+	//{
+	//	std::cout << "Loading scene from " << filename << std::endl;
+	//	models.scene.destroy(device);
+	//	animationIndex = 0;
+	//	animationTimer = 0.0f;
+	//	models.scene.loadFromFile(filename, vulkanDevice, queue);
+	//	camera.setPosition({ 0.0f, 0.0f, 1.0f });
+	//	camera.setRotation({ 0.0f, 0.0f, 0.0f });
+	//}
 
 	void loadEnvironment(std::string filename)
 	{
@@ -415,8 +444,8 @@ public:
 			}
 		}
 
-		loadScene(sceneFile.c_str());
-		models.skybox.loadFromFile(assetpath + "models/Box/glTF-Embedded/Box.gltf", vulkanDevice, queue);
+		//loadScene(sceneFile.c_str());
+		//models.skybox.loadFromFile(assetpath + "models/Box/glTF-Embedded/Box.gltf", vulkanDevice, queue);
 
 		loadEnvironment(envMapFile.c_str());
 	}
@@ -457,13 +486,12 @@ public:
 		// Environment samplers (radiance, irradiance, brdf lut)
 		imageSamplerCount += 3;
 
-		std::vector<vkglTF::Model*> modellist = { &models.skybox, &models.scene };
-		for (auto &model : modellist) {
-			for (auto &material : model->materials) {
+		for (auto pModel : m_vecModels ) {
+			for (auto &material : pModel->materials) {
 				imageSamplerCount += 5;
 				materialCount++;
 			}
-			for (auto node : model->linearNodes) {
+			for (auto node : pModel->linearNodes) {
 				if (node->mesh) {
 					meshCount++;
 				}
@@ -566,53 +594,57 @@ public:
 			VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCI, nullptr, &descriptorSetLayouts.material));
 
 			// Per-Material descriptor sets
-			for (auto &material : models.scene.materials) {
-				VkDescriptorSetAllocateInfo descriptorSetAllocInfo{};
-				descriptorSetAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-				descriptorSetAllocInfo.descriptorPool = descriptorPool;
-				descriptorSetAllocInfo.pSetLayouts = &descriptorSetLayouts.material;
-				descriptorSetAllocInfo.descriptorSetCount = 1;
-				VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &descriptorSetAllocInfo, &material.descriptorSet));
+			for ( auto pModel : m_vecModels )
+			{
+				for (auto &material : pModel->materials) {
+					VkDescriptorSetAllocateInfo descriptorSetAllocInfo{};
+					descriptorSetAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+					descriptorSetAllocInfo.descriptorPool = descriptorPool;
+					descriptorSetAllocInfo.pSetLayouts = &descriptorSetLayouts.material;
+					descriptorSetAllocInfo.descriptorSetCount = 1;
+					VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &descriptorSetAllocInfo, &material.descriptorSet));
 
-				std::vector<VkDescriptorImageInfo> imageDescriptors = {
-					textures.empty.descriptor,
-					textures.empty.descriptor,
-					material.normalTexture ? material.normalTexture->descriptor : textures.empty.descriptor,
-					material.occlusionTexture ? material.occlusionTexture->descriptor : textures.empty.descriptor,
-					material.emissiveTexture ? material.emissiveTexture->descriptor : textures.empty.descriptor
-				};
+					std::vector<VkDescriptorImageInfo> imageDescriptors = {
+						textures.empty.descriptor,
+						textures.empty.descriptor,
+						material.normalTexture ? material.normalTexture->descriptor : textures.empty.descriptor,
+						material.occlusionTexture ? material.occlusionTexture->descriptor : textures.empty.descriptor,
+						material.emissiveTexture ? material.emissiveTexture->descriptor : textures.empty.descriptor
+					};
 
-				// TODO: glTF specs states that metallic roughness should be preferred, even if specular glosiness is present
+					// TODO: glTF specs states that metallic roughness should be preferred, even if specular glosiness is present
 
-				if (material.pbrWorkflows.metallicRoughness) {
-					if (material.baseColorTexture) {
-						imageDescriptors[0] = material.baseColorTexture->descriptor;
+					if (material.pbrWorkflows.metallicRoughness) {
+						if (material.baseColorTexture) {
+							imageDescriptors[0] = material.baseColorTexture->descriptor;
+						}
+						if (material.metallicRoughnessTexture) {
+							imageDescriptors[1] = material.metallicRoughnessTexture->descriptor;
+						}
 					}
-					if (material.metallicRoughnessTexture) {
-						imageDescriptors[1] = material.metallicRoughnessTexture->descriptor;
+
+					if (material.pbrWorkflows.specularGlossiness) {
+						if (material.extension.diffuseTexture) {
+							imageDescriptors[0] = material.extension.diffuseTexture->descriptor;
+						}
+						if (material.extension.specularGlossinessTexture) {
+							imageDescriptors[1] = material.extension.specularGlossinessTexture->descriptor;
+						}
 					}
+
+					std::array<VkWriteDescriptorSet, 5> writeDescriptorSets{};
+					for (size_t i = 0; i < imageDescriptors.size(); i++) {
+						writeDescriptorSets[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+						writeDescriptorSets[i].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+						writeDescriptorSets[i].descriptorCount = 1;
+						writeDescriptorSets[i].dstSet = material.descriptorSet;
+						writeDescriptorSets[i].dstBinding = static_cast<uint32_t>(i);
+						writeDescriptorSets[i].pImageInfo = &imageDescriptors[i];
+					}
+
+					vkUpdateDescriptorSets(device, static_cast<uint32_t>(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, NULL);
 				}
 
-				if (material.pbrWorkflows.specularGlossiness) {
-					if (material.extension.diffuseTexture) {
-						imageDescriptors[0] = material.extension.diffuseTexture->descriptor;
-					}
-					if (material.extension.specularGlossinessTexture) {
-						imageDescriptors[1] = material.extension.specularGlossinessTexture->descriptor;
-					}
-				}
-
-				std::array<VkWriteDescriptorSet, 5> writeDescriptorSets{};
-				for (size_t i = 0; i < imageDescriptors.size(); i++) {
-					writeDescriptorSets[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-					writeDescriptorSets[i].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-					writeDescriptorSets[i].descriptorCount = 1;
-					writeDescriptorSets[i].dstSet = material.descriptorSet;
-					writeDescriptorSets[i].dstBinding = static_cast<uint32_t>(i);
-					writeDescriptorSets[i].pImageInfo = &imageDescriptors[i];
-				}
-
-				vkUpdateDescriptorSets(device, static_cast<uint32_t>(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, NULL);
 			}
 
 			// Model node (matrices)
@@ -626,9 +658,12 @@ public:
 				descriptorSetLayoutCI.bindingCount = static_cast<uint32_t>(setLayoutBindings.size());
 				VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCI, nullptr, &descriptorSetLayouts.node));
 
-				// Per-Node descriptor set
-				for (auto &node : models.scene.nodes) {
-					setupNodeDescriptorSet(node);
+				for ( auto pModel : m_vecModels )
+				{
+					// Per-Node descriptor set
+					for ( auto &node : pModel->nodes ) {
+						setupNodeDescriptorSet( node );
+					}
 				}
 			}
 
@@ -1519,7 +1554,7 @@ public:
 
 					VkDeviceSize offsets[1] = { 0 };
 
-					models.skybox.draw(cmdBuf);
+					//models.skybox.draw(cmdBuf);
 
 					vkCmdEndRenderPass(cmdBuf);
 
@@ -1651,9 +1686,14 @@ public:
 		shaderValuesScene.view = camera.matrices.view;
 		
 		// Center and scale model
-		float scale = (1.0f / std::max(models.scene.aabb[0][0], std::max(models.scene.aabb[1][1], models.scene.aabb[2][2]))) * 0.5f;
-		glm::vec3 translate = -glm::vec3(models.scene.aabb[3][0], models.scene.aabb[3][1], models.scene.aabb[3][2]);
-		translate += -0.5f * glm::vec3(models.scene.aabb[0][0], models.scene.aabb[1][1], models.scene.aabb[2][2]);
+		glm::mat4 aabb( 1.f );
+		if ( !m_vecModels.empty() )
+		{
+			aabb = m_vecModels.front()->aabb;
+		}
+		float scale = (1.0f / std::max( aabb[0][0], std::max( aabb[1][1], aabb[2][2]))) * 0.5f;
+		glm::vec3 translate = -glm::vec3( aabb[3][0], aabb[3][1], aabb[3][2]);
+		translate += -0.5f * glm::vec3( aabb[0][0], aabb[1][1], aabb[2][2]);
 
 		shaderValuesScene.model = glm::mat4(1.0f);
 		shaderValuesScene.model[0][0] = scale;
@@ -1744,7 +1784,51 @@ public:
 
 		recordCommandBuffers();
 
+		m_serverThread.Start();
+
+		m_pClient = kj::heap<aardvark::CAardvarkClient>();
+		m_pClient->Start();
+
+		CreateExampleApp( m_pClient );
+		UpdateFrameFromServer();
 		prepared = true;
+	}
+
+	void UpdateFrameFromServer()
+	{
+		//TODO(Joe): Probably don't wait here and block rendering
+		auto resNextFrame = m_pClient->Server().getNextVisualFrameRequest().send().wait( m_pClient->WaitScope() );
+		assert( resNextFrame.hasFrame() );
+
+		destroyAllModels();
+
+		animationIndex = 0;
+		animationTimer = 0.0f;
+		camera.setPosition( { 0.0f, 0.0f, 1.0f } );
+		camera.setRotation( { 0.0f, 0.0f, 0.0f } );
+
+		auto frame = resNextFrame.getFrame();
+		for ( auto & model : frame.getModels() )
+		{
+			// TODO(Joe): Definitely make pulling the GLTF blob across the wire async
+			auto resData = model.getSource().dataRequest().send().wait( m_pClient->WaitScope() );
+			auto pModel = std::make_shared<vkglTF::Model>();
+			bool bLoaded = pModel->loadFromMemory( &resData.getData()[0], resData.getData().size(), vulkanDevice, queue );
+			assert( bLoaded );
+			m_vecModels.push_back( pModel );
+		}
+
+		setupDescriptors();
+		recordCommandBuffers();
+	}
+
+	void destroyAllModels()
+	{
+		for ( auto pModel : m_vecModels )
+		{
+			pModel->destroy( device );
+		}
+		m_vecModels.clear();
 	}
 
 	/*
@@ -1775,108 +1859,108 @@ public:
 		ImGui::NewFrame();
 
 		ImGui::SetNextWindowPos(ImVec2(10, 10));
-		ImGui::SetNextWindowSize(ImVec2(200 * scale, (models.scene.animations.size() > 0 ? 440 : 360) * scale), ImGuiSetCond_Always);
-		ImGui::Begin("Vulkan glTF 2.0 PBR", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+		ImGui::SetNextWindowSize(ImVec2(200 * scale, 360 * scale), ImGuiSetCond_Always);
+		ImGui::Begin("Aardvark Renderer", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 		ImGui::PushItemWidth(100.0f * scale);
 
-		ui->text("www.saschawillems.de");
+		ui->text("Drawing frames...");
 		ui->text("%.1d fps (%.2f ms)", lastFPS, (1000.0f / lastFPS));
 
-		if (ui->header("Scene")) {
-#if defined(VK_USE_PLATFORM_ANDROID_KHR)
-			if (ui->combo("File", selectedScene, scenes)) {
-				vkDeviceWaitIdle(device);
-				loadScene(scenes[selectedScene]);
-				setupDescriptors();
-				updateCBs = true;
-			}
-#else
-			if (ui->button("Open gltf file")) {
-				std::string filename = "";
-#if defined(_WIN32)
-				char buffer[MAX_PATH];
-				OPENFILENAME ofn;
-				ZeroMemory(&buffer, sizeof(buffer));
-				ZeroMemory(&ofn, sizeof(ofn));
-				ofn.lStructSize = sizeof(ofn);
-				ofn.lpstrFilter = "glTF files\0*.gltf;*.glb\0";
-				ofn.lpstrFile = buffer;
-				ofn.nMaxFile = MAX_PATH;
-				ofn.lpstrTitle = "Select a glTF file to load";
-				ofn.Flags = OFN_DONTADDTORECENT | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
-				if (GetOpenFileNameA(&ofn)) {
-					filename = buffer;
-				}
-#elif defined(__linux__) && !defined(VK_USE_PLATFORM_ANDROID_KHR)
-				char buffer[1024];
-				FILE *file = popen("zenity --title=\"Select a glTF file to load\" --file-filter=\"glTF files | *.gltf *.glb\" --file-selection", "r");
-				if (file) {
-					while (fgets(buffer, sizeof(buffer), file)) {
-						filename += buffer;
-					};
-					filename.erase(std::remove(filename.begin(), filename.end(), '\n'), filename.end());
-					std::cout << filename << std::endl;
-				}
-#endif
-				if (!filename.empty()) {
-					vkDeviceWaitIdle(device);
-					loadScene(filename);
-					setupDescriptors();
-					updateCBs = true;
-				}
-			}
-#endif
-			if (ui->combo("Environment", selectedEnvironment, environments)) {
-				vkDeviceWaitIdle(device);
-				loadEnvironment(environments[selectedEnvironment]);
-				setupDescriptors();
-				updateCBs = true;
-			}
-		}
-
-		if (ui->header("Environment")) {
-			if (ui->checkbox("Background", &displayBackground)) {
-				updateShaderParams = true;
-			}
-			if (ui->slider("Exposure", &shaderValuesParams.exposure, 0.1f, 10.0f)) {
-				updateShaderParams = true;
-			}
-			if (ui->slider("Gamma", &shaderValuesParams.gamma, 0.1f, 4.0f)) {
-				updateShaderParams = true;
-			}
-			if (ui->slider("IBL", &shaderValuesParams.scaleIBLAmbient, 0.0f, 1.0f)) {
-				updateShaderParams = true;
-			}
-		}
-
-		if (ui->header("Debug view")) {
-			const std::vector<std::string> debugNamesInputs = {
-				"none", "Base color", "Normal", "Occlusion", "Emissive", "Metallic", "Roughness"
-			};
-			if (ui->combo("Inputs", &debugViewInputs, debugNamesInputs)) {
-				shaderValuesParams.debugViewInputs = (float)debugViewInputs;
-				updateShaderParams = true;
-			}
-			const std::vector<std::string> debugNamesEquation = {
-				"none", "Diff (l,n)", "F (l,h)", "G (l,v,h)", "D (h)", "Specular"
-			};
-			if (ui->combo("PBR equation", &debugViewEquation, debugNamesEquation)) {
-				shaderValuesParams.debugViewEquation = (float)debugViewEquation;
-				updateShaderParams = true;
-			}
-		}
-
-		if (models.scene.animations.size() > 0) {
-			if (ui->header("Animations")) {
-				ui->checkbox("Animate", &animate);
-				std::vector<std::string> animationNames;
-				for (auto animation : models.scene.animations) {
-					animationNames.push_back(animation.name);
-				}
-				ui->combo("Animation", &animationIndex, animationNames);
-			}
-		}
-
+//		if (ui->header("Scene")) {
+//#if defined(VK_USE_PLATFORM_ANDROID_KHR)
+//			if (ui->combo("File", selectedScene, scenes)) {
+//				vkDeviceWaitIdle(device);
+//				loadScene(scenes[selectedScene]);
+//				setupDescriptors();
+//				updateCBs = true;
+//			}
+//#else
+//			if (ui->button("Open gltf file")) {
+//				std::string filename = "";
+//#if defined(_WIN32)
+//				char buffer[MAX_PATH];
+//				OPENFILENAME ofn;
+//				ZeroMemory(&buffer, sizeof(buffer));
+//				ZeroMemory(&ofn, sizeof(ofn));
+//				ofn.lStructSize = sizeof(ofn);
+//				ofn.lpstrFilter = "glTF files\0*.gltf;*.glb\0";
+//				ofn.lpstrFile = buffer;
+//				ofn.nMaxFile = MAX_PATH;
+//				ofn.lpstrTitle = "Select a glTF file to load";
+//				ofn.Flags = OFN_DONTADDTORECENT | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
+//				if (GetOpenFileNameA(&ofn)) {
+//					filename = buffer;
+//				}
+//#elif defined(__linux__) && !defined(VK_USE_PLATFORM_ANDROID_KHR)
+//				char buffer[1024];
+//				FILE *file = popen("zenity --title=\"Select a glTF file to load\" --file-filter=\"glTF files | *.gltf *.glb\" --file-selection", "r");
+//				if (file) {
+//					while (fgets(buffer, sizeof(buffer), file)) {
+//						filename += buffer;
+//					};
+//					filename.erase(std::remove(filename.begin(), filename.end(), '\n'), filename.end());
+//					std::cout << filename << std::endl;
+//				}
+//#endif
+//				if (!filename.empty()) {
+//					vkDeviceWaitIdle(device);
+//					loadScene(filename);
+//					setupDescriptors();
+//					updateCBs = true;
+//				}
+//			}
+//#endif
+//			if (ui->combo("Environment", selectedEnvironment, environments)) {
+//				vkDeviceWaitIdle(device);
+//				loadEnvironment(environments[selectedEnvironment]);
+//				setupDescriptors();
+//				updateCBs = true;
+//			}
+//		}
+//
+//		if (ui->header("Environment")) {
+//			if (ui->checkbox("Background", &displayBackground)) {
+//				updateShaderParams = true;
+//			}
+//			if (ui->slider("Exposure", &shaderValuesParams.exposure, 0.1f, 10.0f)) {
+//				updateShaderParams = true;
+//			}
+//			if (ui->slider("Gamma", &shaderValuesParams.gamma, 0.1f, 4.0f)) {
+//				updateShaderParams = true;
+//			}
+//			if (ui->slider("IBL", &shaderValuesParams.scaleIBLAmbient, 0.0f, 1.0f)) {
+//				updateShaderParams = true;
+//			}
+//		}
+//
+//		if (ui->header("Debug view")) {
+//			const std::vector<std::string> debugNamesInputs = {
+//				"none", "Base color", "Normal", "Occlusion", "Emissive", "Metallic", "Roughness"
+//			};
+//			if (ui->combo("Inputs", &debugViewInputs, debugNamesInputs)) {
+//				shaderValuesParams.debugViewInputs = (float)debugViewInputs;
+//				updateShaderParams = true;
+//			}
+//			const std::vector<std::string> debugNamesEquation = {
+//				"none", "Diff (l,n)", "F (l,h)", "G (l,v,h)", "D (h)", "Specular"
+//			};
+//			if (ui->combo("PBR equation", &debugViewEquation, debugNamesEquation)) {
+//				shaderValuesParams.debugViewEquation = (float)debugViewEquation;
+//				updateShaderParams = true;
+//			}
+//		}
+//
+//		if (models.scene.animations.size() > 0) {
+//			if (ui->header("Animations")) {
+//				ui->checkbox("Animate", &animate);
+//				std::vector<std::string> animationNames;
+//				for (auto animation : models.scene.animations) {
+//					animationNames.push_back(animation.name);
+//				}
+//				ui->combo("Animation", &animationIndex, animationNames);
+//			}
+//		}
+//
 		ImGui::PopItemWidth();
 		ImGui::End();
 		ImGui::Render();
@@ -2001,13 +2085,15 @@ public:
 					modelrot.y -= 360.0f;
 				}
 			}
-			if ((animate) && (models.scene.animations.size() > 0)) {
-				animationTimer += frameTimer * 0.75f;
-				if (animationTimer > models.scene.animations[animationIndex].end) {
-					animationTimer -= models.scene.animations[animationIndex].end;
-				}
-				models.scene.updateAnimation(animationIndex, animationTimer);
-			}
+
+			// TODO(Joe): Make a model instance thing for current anim time
+			//if ((animate) && (models.scene.animations.size() > 0)) {
+			//	animationTimer += frameTimer * 0.75f;
+			//	if (animationTimer > models.scene.animations[animationIndex].end) {
+			//		animationTimer -= models.scene.animations[animationIndex].end;
+			//	}
+			//	models.scene.updateAnimation(animationIndex, animationTimer);
+			//}
 			updateParams();
 			if (rotateModel) {
 				updateUniformBuffers();

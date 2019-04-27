@@ -9,6 +9,8 @@ add_executable(avrenderer
 	${SHADERS}
 	)
 target_link_libraries(avrenderer ${Vulkan_LIBRARY} ${WINLIBS})
+target_link_libraries( avrenderer aardvark )
+target_link_libraries( avrenderer tools )
 
 target_include_directories( avrenderer PUBLIC ${AV_SRC_THIRDPARTY} )
 target_link_libraries( avrenderer gltfpbr_base)
