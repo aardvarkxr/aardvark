@@ -86,7 +86,9 @@ namespace vks
 
 			free(textureData);
 #else
-			gli::texture2d tex2D(gli::load(filename.c_str()));
+			auto loadedTexture = gli::load( filename );
+			assert( !loadedTexture.empty() );
+			gli::texture2d tex2D( loadedTexture );
 #endif		
 			assert(!tex2D.empty());
 

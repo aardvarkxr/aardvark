@@ -122,7 +122,7 @@ public:
 #if defined(VK_USE_PLATFORM_ANDROID_KHR)
 	const std::string assetpath = "";
 #else
-	const std::string assetpath = "./../data/";
+	const std::string assetpath = std::string( VK_EXAMPLE_DATA_DIR ) + "/";
 #endif
 
 	bool rotateModel = false;
@@ -381,7 +381,7 @@ public:
 		tinygltf::asset_manager = androidApp->activity->assetManager;
 		readDirectory(assetpath + "models", "*.gltf", scenes, true);
 #else
-		const std::string assetpath = "./../data/";
+		const std::string assetpath = std::string( VK_EXAMPLE_DATA_DIR ) + "/";
 		struct stat info;
 		if (stat(assetpath.c_str(), &info) != 0) {
 			std::string msg = "Could not locate asset path in \"" + assetpath + "\".\nMake sure binary is run from correct relative directory!";

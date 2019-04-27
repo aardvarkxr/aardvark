@@ -15,6 +15,7 @@ set( Vulkan_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/thirdparty/vulkan  )
 
 set( AV_SRC_PUBLIC ${CMAKE_SOURCE_DIR}/public )
 set( AV_SRC_THIRDPARTY ${CMAKE_SOURCE_DIR}/thirdparty )
+set( AV_DATA ${CMAKE_SOURCE_DIR}/../data )
 
 #message ( "pub" ${AV_SRC_PUBLIC} )
 #message ( "tp" ${AV_SRC_THIRDPARTY} )
