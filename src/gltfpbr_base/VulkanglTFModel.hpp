@@ -114,7 +114,7 @@ namespace vkglTF
 			descriptor.imageLayout = imageLayout;
 		}
 
-		void destroy()
+		~Texture()
 		{
 			vkDestroyImageView(device->logicalDevice, view, nullptr);
 			vkDestroyImage(device->logicalDevice, image, nullptr);
@@ -575,6 +575,40 @@ namespace vkglTF
 		float end = std::numeric_limits<float>::min();
 	};
 
+	struct ModelBuffers
+	{
+		vks::VulkanDevice *device;
+
+		struct Vertices {
+			VkBuffer buffer = VK_NULL_HANDLE;
+			VkDeviceMemory memory;
+		} vertices;
+		struct Indices {
+			int count;
+			VkBuffer buffer = VK_NULL_HANDLE;
+			VkDeviceMemory memory;
+		} indices;
+
+		ModelBuffers( vks::VulkanDevice *device )
+		{
+			this->device = device;
+		}
+
+		~ModelBuffers()
+		{
+			if ( vertices.buffer != VK_NULL_HANDLE ) {
+				vkDestroyBuffer( device->logicalDevice, vertices.buffer, nullptr );
+				vkFreeMemory( device->logicalDevice, vertices.memory, nullptr );
+				vertices.buffer = VK_NULL_HANDLE;
+			}
+			if ( indices.buffer != VK_NULL_HANDLE ) {
+				vkDestroyBuffer( device->logicalDevice, indices.buffer, nullptr );
+				vkFreeMemory( device->logicalDevice, indices.memory, nullptr );
+				indices.buffer = VK_NULL_HANDLE;
+			}
+		}
+	};
+
 	/*
 		glTF model loading and rendering class
 	*/
@@ -591,16 +625,7 @@ namespace vkglTF
 			glm::vec4 weight0;
 		};
 
-		struct Vertices {
-			VkBuffer buffer = VK_NULL_HANDLE;
-			VkDeviceMemory memory;
-		} vertices;
-		struct Indices {
-			int count;
-			VkBuffer buffer = VK_NULL_HANDLE;
-			VkDeviceMemory memory;
-		} indices;
-
+		std::shared_ptr<ModelBuffers> buffers;
 		glm::mat4 aabb;
 
 		std::vector<std::shared_ptr<Node>> nodes;
@@ -618,29 +643,6 @@ namespace vkglTF
 			glm::vec3 min = glm::vec3(FLT_MAX);
 			glm::vec3 max = glm::vec3(-FLT_MAX);
 		} dimensions;
-
-		void destroy(VkDevice device)
-		{
-			if (vertices.buffer != VK_NULL_HANDLE) {
-				vkDestroyBuffer(device, vertices.buffer, nullptr);
-				vkFreeMemory(device, vertices.memory, nullptr);
-			}
-			if (indices.buffer != VK_NULL_HANDLE) {
-				vkDestroyBuffer(device, indices.buffer, nullptr);
-				vkFreeMemory(device, indices.memory, nullptr);
-			}
-			for (auto texture : textures) {
-				texture->destroy();
-			}
-			textures.resize(0);
-			textureSamplers.resize(0);
-			materials.resize(0);
-			animations.resize(0);
-			nodes.resize(0);
-			linearNodes.resize(0);
-			extensions.resize(0);
-			skins.resize(0);
-		};
 
 		void loadNode(std::shared_ptr<vkglTF::Node> parent, const tinygltf::Node &node, uint32_t nodeIndex, const tinygltf::Model &model, std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& vertexBuffer, float globalscale)
 		{
@@ -1209,7 +1211,8 @@ namespace vkglTF
 
 			size_t vertexBufferSize = vertexBuffer.size() * sizeof( Vertex );
 			size_t indexBufferSize = indexBuffer.size() * sizeof( uint32_t );
-			indices.count = static_cast<uint32_t>( indexBuffer.size() );
+			buffers = std::make_shared<ModelBuffers>( device );
+			buffers->indices.count = static_cast<uint32_t>( indexBuffer.size() );
 
 			assert( vertexBufferSize > 0 );
 
@@ -1244,16 +1247,16 @@ namespace vkglTF
 				VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				vertexBufferSize,
-				&vertices.buffer,
-				&vertices.memory ) );
+				&buffers->vertices.buffer,
+				&buffers->vertices.memory ) );
 			// Index buffer
 			if ( indexBufferSize > 0 ) {
 				VK_CHECK_RESULT( device->createBuffer(
 					VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 					VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 					indexBufferSize,
-					&indices.buffer,
-					&indices.memory ) );
+					&buffers->indices.buffer,
+					&buffers->indices.memory ) );
 			}
 
 			// Copy from staging buffers
@@ -1262,11 +1265,11 @@ namespace vkglTF
 			VkBufferCopy copyRegion = {};
 
 			copyRegion.size = vertexBufferSize;
-			vkCmdCopyBuffer( copyCmd, vertexStaging.buffer, vertices.buffer, 1, &copyRegion );
+			vkCmdCopyBuffer( copyCmd, vertexStaging.buffer, buffers->vertices.buffer, 1, &copyRegion );
 
 			if ( indexBufferSize > 0 ) {
 				copyRegion.size = indexBufferSize;
-				vkCmdCopyBuffer( copyCmd, indexStaging.buffer, indices.buffer, 1, &copyRegion );
+				vkCmdCopyBuffer( copyCmd, indexStaging.buffer, buffers->indices.buffer, 1, &copyRegion );
 			}
 
 			device->flushCommandBuffer( copyCmd, transferQueue, true );
@@ -1296,8 +1299,8 @@ namespace vkglTF
 		void draw(VkCommandBuffer commandBuffer)
 		{
 			const VkDeviceSize offsets[1] = { 0 };
-			vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertices.buffer, offsets);
-			vkCmdBindIndexBuffer(commandBuffer, indices.buffer, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdBindVertexBuffers(commandBuffer, 0, 1, &buffers->vertices.buffer, offsets);
+			vkCmdBindIndexBuffer(commandBuffer, buffers->indices.buffer, 0, VK_INDEX_TYPE_UINT32);
 			for (auto& node : nodes) {
 				drawNode(node, commandBuffer);
 			}

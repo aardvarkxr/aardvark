@@ -123,7 +123,8 @@ public:
 
 	aardvark::CServerThread m_serverThread;
 	kj::Own<aardvark::CAardvarkClient> m_pClient;
-	std::vector< std::shared_ptr< vkglTF::Model > > m_vecModels;
+	std::unordered_map < std::string, std::shared_ptr< vkglTF::Model > > m_mapModels;
+	std::vector< std::shared_ptr< vkglTF::Model > > m_vecModelsToRender;
 
 	const uint32_t renderAhead = 2;
 	uint32_t frameIndex = 0;
@@ -204,10 +205,8 @@ public:
 		vkDestroyDescriptorSetLayout(device, descriptorSetLayouts.material, nullptr);
 		vkDestroyDescriptorSetLayout(device, descriptorSetLayouts.node, nullptr);
 
-		for ( auto pModel : m_vecModels )
-		{
-			pModel->destroy( device );
-		}
+		m_vecModelsToRender.clear();
+		m_mapModels.clear();
 
 		for (auto buffer : uniformBuffers) {
 			buffer.params.destroy();
@@ -367,13 +366,13 @@ public:
 
 	void recordCommandsForModels( VkCommandBuffer currentCB, uint32_t i, vkglTF::Material::AlphaMode eAlphaMode )
 	{
-		for ( auto pModel : m_vecModels )
+		for ( auto pModel : m_vecModelsToRender )
 		{
 			VkDeviceSize offsets[1] = { 0 };
-			vkCmdBindVertexBuffers( currentCB, 0, 1, &pModel->vertices.buffer, offsets );
-			if ( pModel->indices.buffer != VK_NULL_HANDLE )
+			vkCmdBindVertexBuffers( currentCB, 0, 1, &pModel->buffers->vertices.buffer, offsets );
+			if ( pModel->buffers->indices.buffer != VK_NULL_HANDLE )
 			{
-				vkCmdBindIndexBuffer( currentCB, pModel->indices.buffer, 0, VK_INDEX_TYPE_UINT32 );
+				vkCmdBindIndexBuffer( currentCB, pModel->buffers->indices.buffer, 0, VK_INDEX_TYPE_UINT32 );
 			}
 
 			for ( auto node : pModel->nodes ) {
@@ -487,7 +486,7 @@ public:
 		// Environment samplers (radiance, irradiance, brdf lut)
 		imageSamplerCount += 3;
 
-		for (auto pModel : m_vecModels ) {
+		for (auto pModel : m_vecModelsToRender ) {
 			for (auto &material : pModel->materials) {
 				imageSamplerCount += 5;
 				materialCount++;
@@ -595,7 +594,7 @@ public:
 			VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCI, nullptr, &descriptorSetLayouts.material));
 
 			// Per-Material descriptor sets
-			for ( auto pModel : m_vecModels )
+			for ( auto pModel : m_vecModelsToRender )
 			{
 				for (auto &material : pModel->materials) {
 					VkDescriptorSetAllocateInfo descriptorSetAllocInfo{};
@@ -659,7 +658,7 @@ public:
 				descriptorSetLayoutCI.bindingCount = static_cast<uint32_t>(setLayoutBindings.size());
 				VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCI, nullptr, &descriptorSetLayouts.node));
 
-				for ( auto pModel : m_vecModels )
+				for ( auto pModel : m_vecModelsToRender )
 				{
 					// Per-Node descriptor set
 					for ( auto &node : pModel->nodes ) {
@@ -1688,9 +1687,9 @@ public:
 		
 		// Center and scale model
 		glm::mat4 aabb( 1.f );
-		if ( !m_vecModels.empty() )
+		if ( !m_vecModelsToRender.empty() )
 		{
-			aabb = m_vecModels.front()->aabb;
+			aabb = m_vecModelsToRender.front()->aabb;
 		}
 		float scale = (1.0f / std::max( aabb[0][0], std::max( aabb[1][1], aabb[2][2]))) * 0.5f;
 		glm::vec3 translate = -glm::vec3( aabb[3][0], aabb[3][1], aabb[3][2]);
@@ -1801,7 +1800,7 @@ public:
 		auto resNextFrame = m_pClient->Server().getNextVisualFrameRequest().send().wait( m_pClient->WaitScope() );
 		assert( resNextFrame.hasFrame() );
 
-		destroyAllModels();
+		m_vecModelsToRender.clear();
 
 		animationIndex = 0;
 		animationTimer = 0.0f;
@@ -1811,25 +1810,40 @@ public:
 		auto frame = resNextFrame.getFrame();
 		for ( auto & model : frame.getModels() )
 		{
-			// TODO(Joe): Definitely make pulling the GLTF blob across the wire async
-			auto resData = model.getSource().dataRequest().send().wait( m_pClient->WaitScope() );
-			auto pModel = std::make_shared<vkglTF::Model>();
-			bool bLoaded = pModel->loadFromMemory( &resData.getData()[0], resData.getData().size(), vulkanDevice, queue );
-			assert( bLoaded );
-			m_vecModels.push_back( pModel );
+			auto pModel = findOrLoadModel( model.getSource() );
+			assert( pModel );
+			if ( pModel )
+			{
+				m_vecModelsToRender.push_back( pModel );
+			}
 		}
 
 		setupDescriptors();
 		recordCommandBuffers();
 	}
 
-	void destroyAllModels()
+	std::shared_ptr<vkglTF::Model> findOrLoadModel( AvModelSource::Client & source )
 	{
-		for ( auto pModel : m_vecModels )
+		auto resUri = source.uriRequest().send().wait( m_pClient->WaitScope() );
+		if ( !resUri.hasUri() || resUri.getUri().size() == 0 )
 		{
-			pModel->destroy( device );
+			return nullptr;
 		}
-		m_vecModels.clear();
+		std::string sUri = resUri.getUri();
+
+		auto iModel = m_mapModels.find( sUri );
+		if ( iModel != m_mapModels.end() )
+		{
+			return iModel->second;
+		}
+
+		// TODO(Joe): Definitely make pulling the GLTF blob across the wire async
+		auto resData = source.dataRequest().send().wait( m_pClient->WaitScope() );
+		auto pModel = std::make_shared<vkglTF::Model>();
+		bool bLoaded = pModel->loadFromMemory( &resData.getData()[0], resData.getData().size(), vulkanDevice, queue );
+		assert( bLoaded );
+		m_mapModels.insert( std::make_pair( sUri, pModel ) );
+		return pModel;
 	}
 
 	/*
