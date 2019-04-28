@@ -432,6 +432,7 @@ namespace vkglTF
 	struct Mesh {
 		vks::VulkanDevice *device;
 
+		std::string name;
 		std::vector<std::shared_ptr<Primitive>> primitives;
 
 		BoundingBox bb;
@@ -513,7 +514,8 @@ namespace vkglTF
 			glm::mat4 m = localMatrix();
 			vkglTF::Node *p = parent;
 			while (p) {
-				m = p->localMatrix() * m;
+				glm::mat4 mp = p->localMatrix();
+				m = mp * m;
 				p = p->parent;
 			}
 			return m;
@@ -670,6 +672,16 @@ namespace vkglTF
 				collectLinearNodes( pNewNode );
 			}
 
+			// Fix all the parent points on those nodes
+			for ( auto pNode : linearNodes )
+			{
+				if ( pNode->parent )
+				{
+					auto pParentNode = nodeFromIndex( pNode->parent->index );
+					pNode->parent = &*pParentNode;
+				}
+			}
+
 			// copy the skins deeply and make them point at the new nodes
 			for ( auto pSrcSkin : src.skins ) 
 			{
@@ -739,7 +751,7 @@ namespace vkglTF
 			linearNodes.push_back( pNode );
 			for ( auto pChildNode : pNode->children )
 			{
-				linearNodes.push_back( pChildNode );
+				collectLinearNodes( pChildNode );
 			}
 		}
 
@@ -783,6 +795,7 @@ namespace vkglTF
 			if (node.mesh > -1) {
 				const tinygltf::Mesh mesh = model.meshes[node.mesh];
 				std::shared_ptr<Mesh> newMesh = std::make_shared<Mesh>(device, newNode->matrix);
+				newMesh->name = mesh.name;
 				for (size_t j = 0; j < mesh.primitives.size(); j++) {
 					const tinygltf::Primitive &primitive = mesh.primitives[j];
 					uint32_t indexStart = static_cast<uint32_t>(indexBuffer.size());
@@ -1462,7 +1475,14 @@ namespace vkglTF
 				animation.time += timeDelta;
 				if ( animation.time > animation.end )
 				{
-					animation.time -= animation.end;
+					if ( animation.end > 0 )
+					{
+						animation.time = fmod( animation.time, animation.end );
+					}
+					else
+					{
+						animation.time = 0;
+					}
 				}
 
 				for ( auto& channel : animation.channels ) {

@@ -53,9 +53,9 @@ void CreateExampleApp( aardvark::CAardvarkClient *pClient )
 	std::filesystem::path pathModel = VK_EXAMPLE_DATA_DIR;
 	pathModel /= "models/DamagedHelmet/glTF-Embedded/DamagedHelmet.gltf";
 	//pathModel = "d:\\Downloads\\glTF-Sample-Models-master\\2.0\\RiggedFigure\\glTF-Binary\\RiggedFigure.glb";
-	pathModel = "d:\\Downloads\\glTF-Sample-Models-master\\2.0\\2CylinderEngine\\glTF-Binary\\2CylinderEngine.glb";
-	pathModel = "d:\\Downloads\\glTF-Sample-Models-master\\2.0\\BoxAnimated\\glTF-Binary\\BoxAnimated.glb";
+	//pathModel = "d:\\Downloads\\glTF-Sample-Models-master\\2.0\\2CylinderEngine\\glTF-Binary\\2CylinderEngine.glb";
 	pathModel = "d:\\Downloads\\glTF-Sample-Models-master\\2.0\\InterpolationTest\\glTF-Binary\\InterpolationTest.glb";
+	//pathModel = "d:\\Downloads\\glTF-Sample-Models-master\\2.0\\BoxAnimated\\glTF-Binary\\BoxAnimated.glb";
 	reqCreateModel.setUri( tools::PathToFileUri( pathModel ) );
 	auto resCreateModel = reqCreateModel.send().wait( pClient->WaitScope() );
 }
