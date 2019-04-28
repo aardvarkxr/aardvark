@@ -494,8 +494,8 @@ namespace vkglTF
 		std::vector<std::shared_ptr<Node>> children;
 		glm::mat4 matrix{};
 		std::string name;
-		Mesh *mesh = nullptr;
-		Skin *skin = nullptr;
+		std::unique_ptr<Mesh> mesh;
+		std::shared_ptr<Skin> skin;
 		int32_t skinIndex = -1;
 		glm::vec3 translation{};
 		glm::vec3 scale{ 1.0f };
@@ -540,12 +540,6 @@ namespace vkglTF
 
 			for (auto& child : children) {
 				child->update();
-			}
-		}
-
-		~Node() {
-			if (mesh) {
-				delete mesh;
 			}
 		}
 	};
@@ -612,7 +606,7 @@ namespace vkglTF
 		std::vector<std::shared_ptr<Node>> nodes;
 		std::vector<std::shared_ptr<Node>> linearNodes;
 
-		std::vector<Skin*> skins;
+		std::vector<std::shared_ptr<Skin>> skins;
 
 		std::vector<std::shared_ptr<Texture>> textures;
 		std::vector<TextureSampler> textureSamplers;
@@ -687,7 +681,7 @@ namespace vkglTF
 			// Node contains mesh data
 			if (node.mesh > -1) {
 				const tinygltf::Mesh mesh = model.meshes[node.mesh];
-				Mesh *newMesh = new Mesh(device, newNode->matrix);
+				std::unique_ptr<Mesh> newMesh = std::make_unique<Mesh>(device, newNode->matrix);
 				for (size_t j = 0; j < mesh.primitives.size(); j++) {
 					const tinygltf::Primitive &primitive = mesh.primitives[j];
 					uint32_t indexStart = static_cast<uint32_t>(indexBuffer.size());
@@ -812,7 +806,7 @@ namespace vkglTF
 					newMesh->bb.min = glm::min(newMesh->bb.min, p->bb.min);
 					newMesh->bb.max = glm::max(newMesh->bb.max, p->bb.max);
 				}
-				newNode->mesh = newMesh;
+				newNode->mesh.swap( newMesh );
 			}
 			if (parent) {
 				parent->children.push_back(newNode);
@@ -825,7 +819,7 @@ namespace vkglTF
 		void loadSkins(tinygltf::Model &gltfModel)
 		{
 			for (tinygltf::Skin &source : gltfModel.skins) {
-				Skin *newSkin = new Skin{};
+				std::shared_ptr<Skin> newSkin = std::make_shared<Skin>();
 				newSkin->name = source.name;
 				
 				// Find skeleton root node

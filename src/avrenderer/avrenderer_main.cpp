@@ -52,6 +52,7 @@ void CreateExampleApp( aardvark::CAardvarkClient *pClient )
 	auto reqCreateModel = gadget.createModelInstanceRequest();
 	std::filesystem::path pathModel = VK_EXAMPLE_DATA_DIR;
 	pathModel /= "models/DamagedHelmet/glTF-Embedded/DamagedHelmet.gltf";
+	//pathModel = "d:\\Downloads\\glTF-Sample-Models-master\\2.0\\RiggedFigure\\glTF-Binary\\RiggedFigure.glb";
 	reqCreateModel.setUri( tools::PathToFileUri( pathModel ) );
 	auto resCreateModel = reqCreateModel.send().wait( pClient->WaitScope() );
 }
