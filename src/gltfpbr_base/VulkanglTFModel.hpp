@@ -494,7 +494,7 @@ namespace vkglTF
 		std::vector<std::shared_ptr<Node>> children;
 		glm::mat4 matrix{};
 		std::string name;
-		std::unique_ptr<Mesh> mesh;
+		std::shared_ptr<Mesh> mesh;
 		std::shared_ptr<Skin> skin;
 		int32_t skinIndex = -1;
 		glm::vec3 translation{};
@@ -644,6 +644,101 @@ namespace vkglTF
 			glm::vec3 max = glm::vec3(-FLT_MAX);
 		} dimensions;
 
+		Model() = default;
+		Model( const Model & src )
+		{
+			copyFrom( src );
+		}
+		Model & operator=( const Model & src )
+		{
+			copyFrom( src );
+		}
+		void copyFrom( const Model & src )
+		{
+			device = src.device;
+			buffers = src.buffers; // shallow copy so we reuse the vertex and index buffers
+			aabb = src.aabb;
+
+			// deep copy the nodes because they contain lots of dynamic state
+			for ( auto pNode : src.nodes )
+			{
+				auto pNewNode = std::make_shared<Node>( *pNode );
+				nodes.push_back( pNewNode );
+				collectLinearNodes( pNewNode );
+			}
+
+			// copy the skins deeply and make them point at the new nodes
+			for ( auto pSrcSkin : src.skins ) 
+			{
+				std::shared_ptr<Skin> newSkin = std::make_shared<Skin>();
+
+				newSkin->name = pSrcSkin->name;
+				newSkin->inverseBindMatrices = pSrcSkin->inverseBindMatrices;
+
+				// Find skeleton root node
+				if ( pSrcSkin->skeletonRoot ) 
+				{
+					newSkin->skeletonRoot = nodeFromIndex( pSrcSkin->skeletonRoot->index );
+				}
+
+				// Find joint nodes
+				for ( auto pSrcJointNode : pSrcSkin->joints ) 
+				{
+					std::shared_ptr<Node> node = nodeFromIndex( pSrcJointNode->index );
+					if ( node ) 
+					{
+						newSkin->joints.push_back( node );
+					}
+				}
+
+				skins.push_back( newSkin );
+			}
+
+			// shallow copy textures and materials
+			textures = src.textures;
+			textureSamplers = src.textureSamplers;
+			materials = src.materials;
+
+			// extensions don't actually seem to be used, so shallow copy those
+			extensions = src.extensions;
+
+			for ( auto & srcAnimation : src.animations )
+			{
+				// everything but channels can just be copied
+				Animation newAnim;
+				newAnim.name = srcAnimation.name;
+				newAnim.samplers = srcAnimation.samplers;
+				newAnim.start = srcAnimation.start;
+				newAnim.end = srcAnimation.end;
+
+				// Channels need their nodes patched up
+				for ( auto & srcChannel : srcAnimation.channels )
+				{
+					AnimationChannel newChannel;
+					newChannel.path = srcChannel.path;
+					newChannel.samplerIndex = srcChannel.samplerIndex;
+					if ( srcChannel.node )
+					{
+						newChannel.node = nodeFromIndex( srcChannel.node->index );
+					}
+					newAnim.channels.push_back( newChannel );
+				}
+
+				animations.push_back( newAnim );
+			}
+		}
+
+		// linearNodes just holds all the nodes in the hierarchy in a flat
+		// list. Maybe just eliminate this concept?
+		void collectLinearNodes( std::shared_ptr < Node> pNode )
+		{
+			linearNodes.push_back( pNode );
+			for ( auto pChildNode : pNode->children )
+			{
+				linearNodes.push_back( pChildNode );
+			}
+		}
+
 		void loadNode(std::shared_ptr<vkglTF::Node> parent, const tinygltf::Node &node, uint32_t nodeIndex, const tinygltf::Model &model, std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& vertexBuffer, float globalscale)
 		{
 			std::shared_ptr<vkglTF::Node> newNode = std::make_shared<Node>();
@@ -683,7 +778,7 @@ namespace vkglTF
 			// Node contains mesh data
 			if (node.mesh > -1) {
 				const tinygltf::Mesh mesh = model.meshes[node.mesh];
-				std::unique_ptr<Mesh> newMesh = std::make_unique<Mesh>(device, newNode->matrix);
+				std::shared_ptr<Mesh> newMesh = std::make_shared<Mesh>(device, newNode->matrix);
 				for (size_t j = 0; j < mesh.primitives.size(); j++) {
 					const tinygltf::Primitive &primitive = mesh.primitives[j];
 					uint32_t indexStart = static_cast<uint32_t>(indexBuffer.size());

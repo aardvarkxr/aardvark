@@ -184,7 +184,7 @@ public:
 
 	VulkanExample() : VulkanExampleBase()
 	{
-		title = "Vulkan glTF 2.0 PBR - � Sascha Willems (www.saschawillems.de)";
+		title = "Aardvark Renderer";
 #if defined(TINYGLTF_ENABLE_DRACO)
 		std::cout << "Draco mesh compression is enabled" << std::endl;
 #endif
@@ -594,9 +594,9 @@ public:
 			VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCI, nullptr, &descriptorSetLayouts.material));
 
 			// Per-Material descriptor sets
-			for ( auto pModel : m_vecModelsToRender )
+			for ( auto iModel : m_mapModels)
 			{
-				for (auto &material : pModel->materials) {
+				for (auto &material : iModel.second->materials) {
 					VkDescriptorSetAllocateInfo descriptorSetAllocInfo{};
 					descriptorSetAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 					descriptorSetAllocInfo.descriptorPool = descriptorPool;
@@ -1810,11 +1810,12 @@ public:
 		auto frame = resNextFrame.getFrame();
 		for ( auto & model : frame.getModels() )
 		{
-			auto pModel = findOrLoadModel( model.getSource() );
-			assert( pModel );
-			if ( pModel )
+			auto pSampleModel = findOrLoadModel( model.getSource() );
+			assert( pSampleModel );
+			if ( pSampleModel )
 			{
-				m_vecModelsToRender.push_back( pModel );
+				std::shared_ptr<vkglTF::Model> pClonedModel = std::make_shared<vkglTF::Model>( *pSampleModel );
+				m_vecModelsToRender.push_back( pClonedModel );
 			}
 		}
 
