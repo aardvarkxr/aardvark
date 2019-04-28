@@ -232,7 +232,7 @@ public:
 		delete ui;
 	}
 
-	void renderNode(vkglTF::Node *node, uint32_t cbIndex, vkglTF::Material::AlphaMode alphaMode) {
+	void renderNode( std::shared_ptr<vkglTF::Node> node, uint32_t cbIndex, vkglTF::Material::AlphaMode alphaMode) {
 		if (node->mesh) {
 			// Render mesh primitives
 			for (auto primitive : node->mesh->primitives) {
@@ -450,7 +450,7 @@ public:
 		loadEnvironment(envMapFile.c_str());
 	}
 
-	void setupNodeDescriptorSet(vkglTF::Node *node) {
+	void setupNodeDescriptorSet(std::shared_ptr<vkglTF::Node> node) {
 		if (node->mesh) {
 			VkDescriptorSetAllocateInfo descriptorSetAllocInfo{};
 			descriptorSetAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;

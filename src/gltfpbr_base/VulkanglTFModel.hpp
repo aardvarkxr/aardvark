@@ -480,22 +480,22 @@ namespace vkglTF
 	*/
 	struct Skin {
 		std::string name;
-		Node *skeletonRoot = nullptr;
+		std::shared_ptr<Node> skeletonRoot = nullptr;
 		std::vector<glm::mat4> inverseBindMatrices;
-		std::vector<Node*> joints;
+		std::vector<std::shared_ptr<Node>> joints;
 	};
 
 	/*
 		glTF node
 	*/
 	struct Node {
-		Node *parent;
-		uint32_t index;
-		std::vector<Node*> children;
-		glm::mat4 matrix;
+		Node *parent = nullptr;
+		uint32_t index = 0;
+		std::vector<std::shared_ptr<Node>> children;
+		glm::mat4 matrix{};
 		std::string name;
-		Mesh *mesh;
-		Skin *skin;
+		Mesh *mesh = nullptr;
+		Skin *skin = nullptr;
 		int32_t skinIndex = -1;
 		glm::vec3 translation{};
 		glm::vec3 scale{ 1.0f };
@@ -526,7 +526,7 @@ namespace vkglTF
 					glm::mat4 inverseTransform = glm::inverse(m);
 					size_t numJoints = std::min((uint32_t)skin->joints.size(), MAX_NUM_JOINTS);
 					for (size_t i = 0; i < numJoints; i++) {
-						vkglTF::Node *jointNode = skin->joints[i];
+						std::shared_ptr<Node> jointNode = skin->joints[i];
 						glm::mat4 jointMat = jointNode->getMatrix() * skin->inverseBindMatrices[i];
 						jointMat = inverseTransform * jointMat;
 						mesh->uniformBlock.jointMatrix[i] = jointMat;
@@ -547,9 +547,6 @@ namespace vkglTF
 			if (mesh) {
 				delete mesh;
 			}
-			for (auto& child : children) {
-				delete child;
-			}
 		}
 	};
 
@@ -559,7 +556,7 @@ namespace vkglTF
 	struct AnimationChannel {
 		enum PathType { TRANSLATION, ROTATION, SCALE };
 		PathType path;
-		Node *node;
+		std::shared_ptr<Node> node;
 		uint32_t samplerIndex;
 	};
 
@@ -612,8 +609,8 @@ namespace vkglTF
 
 		glm::mat4 aabb;
 
-		std::vector<Node*> nodes;
-		std::vector<Node*> linearNodes;
+		std::vector<std::shared_ptr<Node>> nodes;
+		std::vector<std::shared_ptr<Node>> linearNodes;
 
 		std::vector<Skin*> skins;
 
@@ -643,9 +640,6 @@ namespace vkglTF
 			}
 			textures.resize(0);
 			textureSamplers.resize(0);
-			for (auto node : nodes) {
-				delete node;
-			}
 			materials.resize(0);
 			animations.resize(0);
 			nodes.resize(0);
@@ -654,11 +648,11 @@ namespace vkglTF
 			skins.resize(0);
 		};
 
-		void loadNode(vkglTF::Node *parent, const tinygltf::Node &node, uint32_t nodeIndex, const tinygltf::Model &model, std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& vertexBuffer, float globalscale)
+		void loadNode(std::shared_ptr<vkglTF::Node> parent, const tinygltf::Node &node, uint32_t nodeIndex, const tinygltf::Model &model, std::vector<uint32_t>& indexBuffer, std::vector<Vertex>& vertexBuffer, float globalscale)
 		{
-			vkglTF::Node *newNode = new Node{};
+			std::shared_ptr<vkglTF::Node> newNode = std::make_shared<Node>();
 			newNode->index = nodeIndex;
-			newNode->parent = parent;
+			newNode->parent = &*parent;
 			newNode->name = node.name;
 			newNode->skinIndex = node.skin;
 			newNode->matrix = glm::mat4(1.0f);
@@ -841,9 +835,9 @@ namespace vkglTF
 
 				// Find joint nodes
 				for (int jointIndex : source.joints) {
-					Node* node = nodeFromIndex(jointIndex);
+					std::shared_ptr<Node> node = nodeFromIndex(jointIndex);
 					if (node) {
-						newSkin->joints.push_back(nodeFromIndex(jointIndex));
+						newSkin->joints.push_back(node);
 					}
 				}
 
@@ -1293,7 +1287,7 @@ namespace vkglTF
 			getSceneDimensions();
 		}
 
-		void drawNode(Node *node, VkCommandBuffer commandBuffer)
+		void drawNode( std::shared_ptr<Node> node, VkCommandBuffer commandBuffer)
 		{
 			if (node->mesh) {
 				for (auto primitive : node->mesh->primitives) {
@@ -1315,7 +1309,7 @@ namespace vkglTF
 			}
 		}
 
-		void calculateBoundingBox(Node *node, Node *parent) {
+		void calculateBoundingBox( std::shared_ptr<Node> node, Node *parent) {
 			BoundingBox parentBvh = parent ? parent->bvh : BoundingBox(dimensions.min, dimensions.max);
 
 			if (node->mesh) {
@@ -1333,7 +1327,7 @@ namespace vkglTF
 			parentBvh.max = glm::min(parentBvh.max, node->bvh.max);
 
 			for (auto &child : node->children) {
-				calculateBoundingBox(child, node);
+				calculateBoundingBox(child, &*node);
 			}
 		}
 
@@ -1421,29 +1415,30 @@ namespace vkglTF
 		/*
 			Helper functions
 		*/
-		Node* findNode(Node *parent, uint32_t index) {
-			Node* nodeFound = nullptr;
+		std::shared_ptr<Node> findNode(std::shared_ptr<Node> parent, uint32_t index) 
+		{
 			if (parent->index == index) {
 				return parent;
 			}
 			for (auto& child : parent->children) {
-				nodeFound = findNode(child, index);
-				if (nodeFound) {
-					break;
+				auto nodeFound = findNode(child, index);
+				if (nodeFound) 
+				{
+					return nodeFound;
 				}
 			}
-			return nodeFound;
+			return nullptr;
 		}
 
-		Node* nodeFromIndex(uint32_t index) {
-			Node* nodeFound = nullptr;
+		std::shared_ptr<Node> nodeFromIndex(uint32_t index)
+		{
 			for (auto &node : nodes) {
-				nodeFound = findNode(node, index);
+				auto nodeFound = findNode(node, index);
 				if (nodeFound) {
-					break;
+					return nodeFound;
 				}
 			}
-			return nodeFound;
+			return nullptr;
 		}
 	};
 }
