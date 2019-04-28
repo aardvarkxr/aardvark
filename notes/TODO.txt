@@ -1,7 +1,22 @@
+Current:
+* Get gadget transforms to apply to rendering
+* get model transforms to apply to rendering
+* Let N clients connect to one server
+* Get Server into a different process
+* model caching
+* multiple instances of the same model
+* multiple models for real
+* some kind of default lighting that isn't blue
+* Animation in models (and per-model)
+* get more than one frame
+* probably don't wait on the frame promise, but switch to the next one when it's available
+* Show frame info in the UI?
+
+
+
 Step 1 - Make some pixels from C++ on screen
 * Pick a PBR/graphics library
 * Pick a GLTF parser
-* Let N clients connect to one server
 * Maybe switch to named pipes?
 
 Candidates:
