@@ -12,6 +12,7 @@
 #include <string>
 #include <fstream>
 #include <vector>
+#include <memory>
 
 #include "vulkan/vulkan.h"
 #include "VulkanDevice.hpp"
@@ -374,11 +375,11 @@ namespace vkglTF
 		float roughnessFactor = 1.0f;
 		glm::vec4 baseColorFactor = glm::vec4(1.0f);
 		glm::vec4 emissiveFactor = glm::vec4(1.0f);
-		vkglTF::Texture *baseColorTexture;
-		vkglTF::Texture *metallicRoughnessTexture;
-		vkglTF::Texture *normalTexture;
-		vkglTF::Texture *occlusionTexture;
-		vkglTF::Texture *emissiveTexture;
+		std::shared_ptr<vkglTF::Texture> baseColorTexture;
+		std::shared_ptr<vkglTF::Texture> metallicRoughnessTexture;
+		std::shared_ptr<vkglTF::Texture> normalTexture;
+		std::shared_ptr<vkglTF::Texture> occlusionTexture;
+		std::shared_ptr<vkglTF::Texture> emissiveTexture;
 		struct TexCoordSets {
 			uint8_t baseColor = 0;
 			uint8_t metallicRoughness = 0;
@@ -388,8 +389,8 @@ namespace vkglTF
 			uint8_t emissive = 0;
 		} texCoordSets;
 		struct Extension {
-			vkglTF::Texture *specularGlossinessTexture;
-			vkglTF::Texture *diffuseTexture;
+			std::shared_ptr < vkglTF::Texture> specularGlossinessTexture;
+			std::shared_ptr < vkglTF::Texture> diffuseTexture;
 			glm::vec4 diffuseFactor = glm::vec4(1.0f);
 			glm::vec3 specularFactor = glm::vec3(0.0f);
 		} extension;
@@ -429,7 +430,7 @@ namespace vkglTF
 	struct Mesh {
 		vks::VulkanDevice *device;
 
-		std::vector<Primitive*> primitives;
+		std::vector<std::shared_ptr<Primitive>> primitives;
 
 		BoundingBox bb;
 		BoundingBox aabb;
@@ -465,8 +466,6 @@ namespace vkglTF
 		~Mesh() {
 			vkDestroyBuffer(device->logicalDevice, uniformBuffer.buffer, nullptr);
 			vkFreeMemory(device->logicalDevice, uniformBuffer.memory, nullptr);
-			for (Primitive* p : primitives)
-				delete p;
 		}
 
 		void setBoundingBox(glm::vec3 min, glm::vec3 max) {
@@ -618,7 +617,7 @@ namespace vkglTF
 
 		std::vector<Skin*> skins;
 
-		std::vector<Texture> textures;
+		std::vector<std::shared_ptr<Texture>> textures;
 		std::vector<TextureSampler> textureSamplers;
 		std::vector<Material> materials;
 		std::vector<Animation> animations;
@@ -640,7 +639,7 @@ namespace vkglTF
 				vkFreeMemory(device, indices.memory, nullptr);
 			}
 			for (auto texture : textures) {
-				texture.destroy();
+				texture->destroy();
 			}
 			textures.resize(0);
 			textureSamplers.resize(0);
@@ -806,7 +805,7 @@ namespace vkglTF
 							return;
 						}
 					}					
-					Primitive *newPrimitive = new Primitive(indexStart, indexCount, vertexCount, primitive.material > -1 ? materials[primitive.material] : materials.back());
+					auto newPrimitive = std::make_shared<Primitive>(indexStart, indexCount, vertexCount, primitive.material > -1 ? materials[primitive.material] : materials.back());
 					newPrimitive->setBoundingBox(posMin, posMax);
 					newMesh->primitives.push_back(newPrimitive);
 				}
@@ -877,9 +876,9 @@ namespace vkglTF
 				else {
 					textureSampler = textureSamplers[tex.sampler];
 				}
-				vkglTF::Texture texture;
-				texture.fromglTfImage(image, textureSampler, device, transferQueue);
-				textures.push_back(texture);
+				auto pTexture = std::make_shared<vkglTF::Texture>();
+				pTexture->fromglTfImage(image, textureSampler, device, transferQueue);
+				textures.push_back( pTexture );
 			}
 		}
 
@@ -933,11 +932,11 @@ namespace vkglTF
 			for (tinygltf::Material &mat : gltfModel.materials) {
 				vkglTF::Material material{};
 				if (mat.values.find("baseColorTexture") != mat.values.end()) {
-					material.baseColorTexture = &textures[mat.values["baseColorTexture"].TextureIndex()];
+					material.baseColorTexture = textures[mat.values["baseColorTexture"].TextureIndex()];
 					material.texCoordSets.baseColor = mat.values["baseColorTexture"].TextureTexCoord();
 				}
 				if (mat.values.find("metallicRoughnessTexture") != mat.values.end()) {
-					material.metallicRoughnessTexture = &textures[mat.values["metallicRoughnessTexture"].TextureIndex()];
+					material.metallicRoughnessTexture = textures[mat.values["metallicRoughnessTexture"].TextureIndex()];
 					material.texCoordSets.metallicRoughness = mat.values["metallicRoughnessTexture"].TextureTexCoord();
 				}
 				if (mat.values.find("roughnessFactor") != mat.values.end()) {
@@ -950,15 +949,15 @@ namespace vkglTF
 					material.baseColorFactor = glm::make_vec4(mat.values["baseColorFactor"].ColorFactor().data());
 				}				
 				if (mat.additionalValues.find("normalTexture") != mat.additionalValues.end()) {
-					material.normalTexture = &textures[mat.additionalValues["normalTexture"].TextureIndex()];
+					material.normalTexture = textures[mat.additionalValues["normalTexture"].TextureIndex()];
 					material.texCoordSets.normal = mat.additionalValues["normalTexture"].TextureTexCoord();
 				}
 				if (mat.additionalValues.find("emissiveTexture") != mat.additionalValues.end()) {
-					material.emissiveTexture = &textures[mat.additionalValues["emissiveTexture"].TextureIndex()];
+					material.emissiveTexture = textures[mat.additionalValues["emissiveTexture"].TextureIndex()];
 					material.texCoordSets.emissive = mat.additionalValues["emissiveTexture"].TextureTexCoord();
 				}
 				if (mat.additionalValues.find("occlusionTexture") != mat.additionalValues.end()) {
-					material.occlusionTexture = &textures[mat.additionalValues["occlusionTexture"].TextureIndex()];
+					material.occlusionTexture = textures[mat.additionalValues["occlusionTexture"].TextureIndex()];
 					material.texCoordSets.occlusion = mat.additionalValues["occlusionTexture"].TextureTexCoord();
 				}
 				if (mat.additionalValues.find("alphaMode") != mat.additionalValues.end()) {
@@ -985,14 +984,14 @@ namespace vkglTF
 					auto ext = mat.extensions.find("KHR_materials_pbrSpecularGlossiness");
 					if (ext->second.Has("specularGlossinessTexture")) {
 						auto index = ext->second.Get("specularGlossinessTexture").Get("index");
-						material.extension.specularGlossinessTexture = &textures[index.Get<int>()];
+						material.extension.specularGlossinessTexture = textures[index.Get<int>()];
 						auto texCoordSet = ext->second.Get("specularGlossinessTexture").Get("texCoord");
 						material.texCoordSets.specularGlossiness = texCoordSet.Get<int>();
 						material.pbrWorkflows.specularGlossiness = true;
 					}
 					if (ext->second.Has("diffuseTexture")) {
 						auto index = ext->second.Get("diffuseTexture").Get("index");
-						material.extension.diffuseTexture = &textures[index.Get<int>()];
+						material.extension.diffuseTexture = textures[index.Get<int>()];
 					}
 					if (ext->second.Has("diffuseFactor")) {
 						auto factor = ext->second.Get("diffuseFactor");
@@ -1297,7 +1296,7 @@ namespace vkglTF
 		void drawNode(Node *node, VkCommandBuffer commandBuffer)
 		{
 			if (node->mesh) {
-				for (Primitive *primitive : node->mesh->primitives) {
+				for (auto primitive : node->mesh->primitives) {
 					vkCmdDrawIndexed(commandBuffer, primitive->indexCount, 1, primitive->firstIndex, 0, 0);
 				}
 			}

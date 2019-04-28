@@ -235,7 +235,7 @@ public:
 	void renderNode(vkglTF::Node *node, uint32_t cbIndex, vkglTF::Material::AlphaMode alphaMode) {
 		if (node->mesh) {
 			// Render mesh primitives
-			for (vkglTF::Primitive * primitive : node->mesh->primitives) {
+			for (auto primitive : node->mesh->primitives) {
 				if (primitive->material.alphaMode == alphaMode) {
 
 					const std::vector<VkDescriptorSet> descriptorsets = {
