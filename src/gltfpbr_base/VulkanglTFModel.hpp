@@ -24,6 +24,8 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <gli/gli.hpp>
 #include <glm/gtx/string_cast.hpp>
+#include <glm/gtx/spline.hpp>
+
 
 // ERROR is already defined in wingdi.h and collides with a define in the Draco headers
 #if defined(_WIN32) && defined(ERROR) && defined(TINYGLTF_ENABLE_DRACO) 
@@ -573,6 +575,7 @@ namespace vkglTF
 		std::vector<AnimationChannel> channels;
 		float start = std::numeric_limits<float>::max();
 		float end = std::numeric_limits<float>::min();
+		float time = 0;
 	};
 
 	struct ModelBuffers
@@ -726,6 +729,7 @@ namespace vkglTF
 
 				animations.push_back( newAnim );
 			}
+
 		}
 
 		// linearNodes just holds all the nodes in the hierarchy in a flat
@@ -1447,56 +1451,151 @@ namespace vkglTF
 			aabb[3][2] = dimensions.min[2];
 		}
 
-		void updateAnimation(uint32_t index, float time) 
+		void animate( float timeDelta )
 		{
-			if (index > static_cast<uint32_t>(animations.size()) - 1) {
-				std::cout << "No animation with index " << index << std::endl;
+			if ( animations.empty() )
 				return;
-			}
-			Animation &animation = animations[index];
 
 			bool updated = false;
-			for (auto& channel : animation.channels) {
-				vkglTF::AnimationSampler &sampler = animation.samplers[channel.samplerIndex];
-				if (sampler.inputs.size() > sampler.outputsVec4.size()) {
-					continue;
+			for ( auto &animation : animations )
+			{
+				animation.time += timeDelta;
+				if ( animation.time > animation.end )
+				{
+					animation.time -= animation.end;
 				}
 
-				for (size_t i = 0; i < sampler.inputs.size() - 1; i++) {
-					if ((time >= sampler.inputs[i]) && (time <= sampler.inputs[i + 1])) {
-						float u = std::max(0.0f, time - sampler.inputs[i]) / (sampler.inputs[i + 1] - sampler.inputs[i]);
-						if (u <= 1.0f) {
-							switch (channel.path) {
-							case vkglTF::AnimationChannel::PathType::TRANSLATION: {
-								glm::vec4 trans = glm::mix(sampler.outputsVec4[i], sampler.outputsVec4[i + 1], u);
-								channel.node->translation = glm::vec3(trans);
-								break;
+				for ( auto& channel : animation.channels ) {
+					vkglTF::AnimationSampler &sampler = animation.samplers[channel.samplerIndex];
+					if ( sampler.inputs.size() > sampler.outputsVec4.size() ) {
+						continue;
+					}
+
+					size_t nStartFrame = 0, nEndFrame=0;
+					for ( size_t i = 0; i < sampler.inputs.size() - 1; i++ )
+					{
+						if ( ( animation.time >= sampler.inputs[i] ) && ( animation.time < sampler.inputs[i + 1] ) )
+						{
+							nStartFrame = i;
+							nEndFrame = i + 1;
+						}
+					}
+
+					switch ( sampler.interpolation )
+					{
+						case AnimationSampler::LINEAR:
+						{
+							float u = 0;
+							if ( nStartFrame != nEndFrame )
+							{
+								u = std::max( 0.0f, animation.time - sampler.inputs[nStartFrame] ) / ( sampler.inputs[nEndFrame] - sampler.inputs[nStartFrame] );
 							}
-							case vkglTF::AnimationChannel::PathType::SCALE: {
-								glm::vec4 trans = glm::mix(sampler.outputsVec4[i], sampler.outputsVec4[i + 1], u);
-								channel.node->scale = glm::vec3(trans);
-								break;
+
+							if ( u <= 1.0f )
+							{
+								switch ( channel.path )
+								{
+									case vkglTF::AnimationChannel::PathType::TRANSLATION:
+									{
+										glm::vec4 trans = glm::mix( sampler.outputsVec4[nStartFrame], sampler.outputsVec4[nEndFrame], u );
+										channel.node->translation = glm::vec3( trans );
+										break;
+									}
+									case vkglTF::AnimationChannel::PathType::SCALE:
+									{
+										glm::vec4 trans = glm::mix( sampler.outputsVec4[nStartFrame], sampler.outputsVec4[nEndFrame], u );
+										channel.node->scale = glm::vec3( trans );
+										break;
+									}
+									case vkglTF::AnimationChannel::PathType::ROTATION:
+									{
+										glm::quat q1;
+										q1.x = sampler.outputsVec4[nStartFrame].x;
+										q1.y = sampler.outputsVec4[nStartFrame].y;
+										q1.z = sampler.outputsVec4[nStartFrame].z;
+										q1.w = sampler.outputsVec4[nStartFrame].w;
+										glm::quat q2;
+										q2.x = sampler.outputsVec4[nEndFrame].x;
+										q2.y = sampler.outputsVec4[nEndFrame].y;
+										q2.z = sampler.outputsVec4[nEndFrame].z;
+										q2.w = sampler.outputsVec4[nEndFrame].w;
+										channel.node->rotation = glm::normalize( glm::slerp( q1, q2, u ) );
+										break;
+									}
+								}
+								updated = true;
 							}
-							case vkglTF::AnimationChannel::PathType::ROTATION: {
-								glm::quat q1;
-								q1.x = sampler.outputsVec4[i].x;
-								q1.y = sampler.outputsVec4[i].y;
-								q1.z = sampler.outputsVec4[i].z;
-								q1.w = sampler.outputsVec4[i].w;
-								glm::quat q2;
-								q2.x = sampler.outputsVec4[i + 1].x;
-								q2.y = sampler.outputsVec4[i + 1].y;
-								q2.z = sampler.outputsVec4[i + 1].z;
-								q2.w = sampler.outputsVec4[i + 1].w;
-								channel.node->rotation = glm::normalize(glm::slerp(q1, q2, u));
-								break;
-							}
+						}
+						break;
+
+						case AnimationSampler::STEP:
+							switch ( channel.path ) 
+							{
+								case vkglTF::AnimationChannel::PathType::TRANSLATION: 
+								{
+									channel.node->translation = glm::vec3( sampler.outputsVec4[nStartFrame] );
+									break;
+								}
+
+								case vkglTF::AnimationChannel::PathType::SCALE: 
+								{
+									channel.node->scale = glm::vec3( sampler.outputsVec4[nStartFrame] );
+									break;
+								}
+
+								case vkglTF::AnimationChannel::PathType::ROTATION: 
+								{
+									channel.node->rotation = glm::quat( sampler.outputsVec4[nStartFrame] );
+									break;
+								}
 							}
 							updated = true;
+							break;
+
+						case AnimationSampler::CUBICSPLINE:
+						{
+							float u = 0;
+							if ( nStartFrame != nEndFrame )
+							{
+								u = std::max( 0.0f, animation.time - sampler.inputs[nStartFrame] ) / ( sampler.inputs[nEndFrame] - sampler.inputs[nStartFrame] );
+							}
+
+							if ( u <= 1.0f )
+							{
+								glm::vec4 vInTangent = sampler.outputsVec4[nStartFrame * 3 + 0];
+								glm::vec4 vStartPoint = sampler.outputsVec4[nStartFrame * 3 + 1];
+								glm::vec4 vOutTangent = sampler.outputsVec4[nStartFrame * 3 + 2];
+								glm::vec4 vEndPoint = sampler.outputsVec4[nEndFrame * 3 + 1];
+
+								switch ( channel.path )
+								{
+								case vkglTF::AnimationChannel::PathType::TRANSLATION:
+								{
+									glm::vec4 trans = glm::hermite( vStartPoint, vInTangent, vEndPoint, vOutTangent, u );
+									channel.node->translation = glm::vec3( trans );
+									break;
+								}
+								case vkglTF::AnimationChannel::PathType::SCALE:
+								{
+									glm::vec4 scale = glm::hermite( vStartPoint, vInTangent, vEndPoint, vOutTangent, u );
+									channel.node->scale = glm::vec3( scale );
+									break;
+								}
+								case vkglTF::AnimationChannel::PathType::ROTATION:
+								{
+									glm::vec4 rot = glm::hermite( vStartPoint, vInTangent, vEndPoint, vOutTangent, u );
+									channel.node->rotation = glm::normalize( glm::quat( rot ) );
+									break;
+								}
+								}
+								updated = true;
+							}
+							break;
 						}
 					}
 				}
 			}
+
 			if (updated) {
 				for (auto &node : nodes) {
 					node->update();

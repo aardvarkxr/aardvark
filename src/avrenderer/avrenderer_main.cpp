@@ -53,6 +53,9 @@ void CreateExampleApp( aardvark::CAardvarkClient *pClient )
 	std::filesystem::path pathModel = VK_EXAMPLE_DATA_DIR;
 	pathModel /= "models/DamagedHelmet/glTF-Embedded/DamagedHelmet.gltf";
 	//pathModel = "d:\\Downloads\\glTF-Sample-Models-master\\2.0\\RiggedFigure\\glTF-Binary\\RiggedFigure.glb";
+	pathModel = "d:\\Downloads\\glTF-Sample-Models-master\\2.0\\2CylinderEngine\\glTF-Binary\\2CylinderEngine.glb";
+	pathModel = "d:\\Downloads\\glTF-Sample-Models-master\\2.0\\BoxAnimated\\glTF-Binary\\BoxAnimated.glb";
+	pathModel = "d:\\Downloads\\glTF-Sample-Models-master\\2.0\\InterpolationTest\\glTF-Binary\\InterpolationTest.glb";
 	reqCreateModel.setUri( tools::PathToFileUri( pathModel ) );
 	auto resCreateModel = reqCreateModel.send().wait( pClient->WaitScope() );
 }
@@ -129,8 +132,6 @@ public:
 	const uint32_t renderAhead = 2;
 	uint32_t frameIndex = 0;
 
-	int32_t animationIndex = 0;
-	float animationTimer = 0.0f;
 	bool animate = true;
 
 	bool displayBackground = true;
@@ -385,8 +386,6 @@ public:
 	//{
 	//	std::cout << "Loading scene from " << filename << std::endl;
 	//	models.scene.destroy(device);
-	//	animationIndex = 0;
-	//	animationTimer = 0.0f;
 	//	models.scene.loadFromFile(filename, vulkanDevice, queue);
 	//	camera.setPosition({ 0.0f, 0.0f, 1.0f });
 	//	camera.setRotation({ 0.0f, 0.0f, 0.0f });
@@ -1802,8 +1801,6 @@ public:
 
 		m_vecModelsToRender.clear();
 
-		animationIndex = 0;
-		animationTimer = 0.0f;
 		camera.setPosition( { 0.0f, 0.0f, 1.0f } );
 		camera.setRotation( { 0.0f, 0.0f, 0.0f } );
 
@@ -2102,14 +2099,13 @@ public:
 				}
 			}
 
-			// TODO(Joe): Make a model instance thing for current anim time
-			//if ((animate) && (models.scene.animations.size() > 0)) {
-			//	animationTimer += frameTimer * 0.75f;
-			//	if (animationTimer > models.scene.animations[animationIndex].end) {
-			//		animationTimer -= models.scene.animations[animationIndex].end;
-			//	}
-			//	models.scene.updateAnimation(animationIndex, animationTimer);
-			//}
+			if ( animate )
+			{
+				for ( auto pModel : m_vecModelsToRender )
+				{
+					pModel->animate( frameTimer  );
+				}
+			}
 			updateParams();
 			if (rotateModel) {
 				updateUniformBuffers();
