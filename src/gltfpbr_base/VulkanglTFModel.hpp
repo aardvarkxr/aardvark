@@ -466,6 +466,25 @@ namespace vkglTF
 			uniformBuffer.descriptor = { uniformBuffer.buffer, 0, sizeof(uniformBlock) };
 		};
 
+		Mesh( const Mesh & src ) {
+			device = src.device;
+			name = src.name;
+			primitives = src.primitives;
+			bb = src.bb;
+			aabb = src.aabb;
+			uniformBlock = src.uniformBlock;
+
+			VK_CHECK_RESULT( device->createBuffer(
+				VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+				sizeof( uniformBlock ),
+				&uniformBuffer.buffer,
+				&uniformBuffer.memory,
+				&uniformBlock ) );
+			VK_CHECK_RESULT( vkMapMemory( device->logicalDevice, uniformBuffer.memory, 0, sizeof( uniformBlock ), 0, &uniformBuffer.mapped ) );
+			uniformBuffer.descriptor = { uniformBuffer.buffer, 0, sizeof( uniformBlock ) };
+		};
+
 		~Mesh() {
 			vkDestroyBuffer(device->logicalDevice, uniformBuffer.buffer, nullptr);
 			vkFreeMemory(device->logicalDevice, uniformBuffer.memory, nullptr);
@@ -519,6 +538,31 @@ namespace vkglTF
 		int32_t skinIndex = -1;
 		BoundingBox bvh;
 		BoundingBox aabb;
+
+		Node() = default;
+		Node( const Node & src )
+			: Transformable( src )
+		{
+			index = src.index;
+			name = src.name;
+			if ( src.mesh )
+			{
+				mesh = std::make_shared<Mesh>( *src.mesh );
+				if ( src.skin )
+				{
+					skin = std::make_shared<Skin>( *src.skin );
+				}
+			}
+			skinIndex = src.skinIndex;
+			bvh = src.bvh;
+			aabb = src.aabb;
+
+			for ( auto pSrcChild : src.children )
+			{
+				auto pNewChild = std::make_shared<Node>( *pSrcChild );
+				children.push_back( pNewChild );
+			}
+		}
 
 		glm::mat4 getMatrix() {
 			glm::mat4 m = localMatrix();

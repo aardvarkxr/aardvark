@@ -4,8 +4,8 @@ Current:
 * Let N clients connect to one server
 * Get Server into a different process
 ====== * model caching
-* multiple instances of the same model - should work. Need to test
-* multiple models for real - should work. need to test
+====== * multiple instances of the same model - should work. Need to test
+====== * multiple models for real - should work. need to test
 * some kind of default lighting that isn't blue
 ====== * Animation in models (and per-model)
 * get more than one frame
