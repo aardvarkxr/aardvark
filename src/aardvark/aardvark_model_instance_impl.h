@@ -20,7 +20,7 @@ namespace aardvark
 		void clearClients() { m_vecClients.clear(); }
 		AvModelInstance::Client createNewClient();
 
-		void gatherVisuals( AvVisuals_t & visuals, const std::string & sParentPath, const AvTransform_t & transformParent );
+		void gatherVisuals( AvVisualGadget_t & visualGadget );
 
 		virtual ::kj::Promise<void> destroy( DestroyContext context ) override;
 		virtual ::kj::Promise<void> source( SourceContext context ) override;

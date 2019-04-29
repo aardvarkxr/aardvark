@@ -69,21 +69,33 @@ namespace aardvark
 		AvVisualFrame::Builder bldFrame( context.getResults().initFrame() );
 		bldFrame.setId( m_unNextFrame++ );
 
-		if ( !visuals.vecModels.empty() )
+		if ( !visuals.vecGadgets.empty() )
 		{
-			auto bldModels = bldFrame.initModels( (uint32_t)visuals.vecModels.size() );
+			auto bldModels = bldFrame.initGadgets( (uint32_t)visuals.vecGadgets.size() );
 
-			for ( uint32_t unIndex = 0; unIndex < visuals.vecModels.size(); unIndex++ )
+			for ( uint32_t unIndex = 0; unIndex < visuals.vecGadgets.size(); unIndex++ )
 			{
-				AvModel_t & in = visuals.vecModels[unIndex];
-				auto out = bldFrame.getModels()[unIndex];
+				AvVisualGadget_t & inGadget = visuals.vecGadgets[unIndex];
+				auto outGadget = bldFrame.getGadgets()[unIndex];
 
-				CAardvarkModelSource *pSource = findOrCreateSource( in.sSourceUri );
-				if ( !pSource )
-					continue;
+				CopyTransform( outGadget.getTransform(), inGadget.transform );
 
-				out.setSource( pSource->getClient() );
-				CopyTransform( out.getTransform(), in.transform );
+				if ( !inGadget.vecModels.empty() )
+				{
+					outGadget.initModels( (uint32_t)inGadget.vecModels.size() );
+					for ( uint32_t unIndex = 0; unIndex < inGadget.vecModels.size(); unIndex++ )
+					{
+						AvModel_t & inModel = inGadget.vecModels[unIndex];
+						auto out = outGadget.getModels()[unIndex];
+
+						CAardvarkModelSource *pSource = findOrCreateSource( inModel.sSourceUri );
+						if ( !pSource )
+							continue;
+
+						out.setSource( pSource->getClient() );
+						CopyTransform( out.getTransform(), inModel.transform );
+					}
+				}
 			}
 		}
 		return kj::READY_NOW;

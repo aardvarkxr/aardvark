@@ -56,13 +56,13 @@ AvModelInstance::Client CAardvarkModelInstance::createNewClient()
 }
 
 
-void CAardvarkModelInstance::gatherVisuals( AvVisuals_t & visuals, const std::string & sParentPath, const AvTransform_t & transformParent )
+void CAardvarkModelInstance::gatherVisuals( AvVisualGadget_t & visualGadget )
 {
 	AvModel_t model;
 	model.sSourceUri = m_sSourceUri;
-	model.transform = MultiplyTransforms( transformParent, m_transform );
+	model.transform = m_transform;
 
-	visuals.vecModels.push_back( model );
+	visualGadget.vecModels.push_back( model );
 }
 
 

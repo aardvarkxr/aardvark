@@ -87,9 +87,15 @@ struct AvLight
 	diffuse @1: AvColor;
 }
 
+struct AvVisualGadget
+{
+	transform @0: AvTransform;
+	models @1: List( AvModel );
+	lights @2: List( AvLight );
+}
+
 struct AvVisualFrame
 {
 	id @0: UInt64;
-	models @1: List( AvModel );
-	lights @2: List( AvLight );
+	gadgets @1: List( AvVisualGadget );
 }

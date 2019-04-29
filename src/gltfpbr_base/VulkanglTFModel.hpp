@@ -489,30 +489,40 @@ namespace vkglTF
 	};
 
 	/*
+		Anything that can have a transform, which could be a node, model, or gadget
+	*/
+	struct Transformable
+	{
+		glm::vec3 translation{};
+		glm::vec3 scale{ 1.0f };
+		glm::quat rotation{};
+		glm::mat4 matrix{ 1.0f };
+
+		Transformable *parent = nullptr;
+
+		glm::mat4 localMatrix() {
+			return glm::translate( glm::mat4( 1.0f ), translation ) * glm::mat4( rotation ) * glm::scale( glm::mat4( 1.0f ), scale ) * matrix;
+		}
+
+	};
+
+	/*
 		glTF node
 	*/
-	struct Node {
-		Node *parent = nullptr;
+	struct Node : public Transformable
+	{
 		uint32_t index = 0;
 		std::vector<std::shared_ptr<Node>> children;
-		glm::mat4 matrix{};
 		std::string name;
 		std::shared_ptr<Mesh> mesh;
 		std::shared_ptr<Skin> skin;
 		int32_t skinIndex = -1;
-		glm::vec3 translation{};
-		glm::vec3 scale{ 1.0f };
-		glm::quat rotation{};
 		BoundingBox bvh;
 		BoundingBox aabb;
 
-		glm::mat4 localMatrix() {
-			return glm::translate(glm::mat4(1.0f), translation) * glm::mat4(rotation) * glm::scale(glm::mat4(1.0f), scale) * matrix;
-		}
-
 		glm::mat4 getMatrix() {
 			glm::mat4 m = localMatrix();
-			vkglTF::Node *p = parent;
+			vkglTF::Transformable *p = parent;
 			while (p) {
 				glm::mat4 mp = p->localMatrix();
 				m = mp * m;
@@ -617,7 +627,8 @@ namespace vkglTF
 	/*
 		glTF model loading and rendering class
 	*/
-	struct Model {
+	struct Model : public Transformable 
+	{
 
 		vks::VulkanDevice *device;
 
@@ -675,9 +686,13 @@ namespace vkglTF
 			// Fix all the parent points on those nodes
 			for ( auto pNode : linearNodes )
 			{
-				if ( pNode->parent )
+				if ( !pNode->parent || pNode->parent == &src )
 				{
-					auto pParentNode = nodeFromIndex( pNode->parent->index );
+					pNode->parent = this;
+				}
+				else
+				{
+					auto pParentNode = nodeFromIndex( static_cast<vkglTF::Node *>( pNode->parent )->index );
 					pNode->parent = &*pParentNode;
 				}
 			}

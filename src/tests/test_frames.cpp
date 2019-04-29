@@ -35,7 +35,8 @@ TEST_CASE( "Aardvark frames", "[frames]" )
 			REQUIRE( resFrame.hasFrame() );
 			auto frame = resFrame.getFrame();
 			REQUIRE( frame.getId() == 1 );
-			REQUIRE( !frame.hasModels() );
+			REQUIRE( frame.hasGadgets() );
+			REQUIRE( frame.getGadgets().size() == 1 );
 		}
 	}
 

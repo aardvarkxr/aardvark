@@ -96,10 +96,13 @@ CAardvarkGadget::CAardvarkGadget( const std::string & sName, CAardvarkApp *pPare
 
 void CAardvarkGadget::gatherVisuals( AvVisuals_t & visuals )
 {
+	AvVisualGadget_t visualGadget;
+	visualGadget.transform = m_transform;
 	for ( auto iModel : m_vecModelInstances )
 	{
-		iModel->gatherVisuals( visuals, m_sTransformParent, m_transform );
+		iModel->gatherVisuals( visualGadget );
 	}
+	visuals.vecGadgets.push_back( visualGadget );
 }
 
 

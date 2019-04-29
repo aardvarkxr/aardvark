@@ -49,10 +49,17 @@ struct AvLight_t
 	AvColor_t diffuse;
 };
 
-struct AvVisuals_t
+struct AvVisualGadget_t
 {
+	AvTransform_t transform;
 	std::vector<AvModel_t> vecModels;
 	std::vector<AvLight_t> vecLights;
+};
+
+
+struct AvVisuals_t
+{
+	std::vector<AvVisualGadget_t> vecGadgets;
 };
 
 AvVector_t VectorFromProto( const AvVector::Reader & from );

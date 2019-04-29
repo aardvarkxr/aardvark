@@ -57,7 +57,64 @@ void CreateExampleApp( aardvark::CAardvarkClient *pClient )
 	pathModel = "d:\\Downloads\\glTF-Sample-Models-master\\2.0\\InterpolationTest\\glTF-Binary\\InterpolationTest.glb";
 	//pathModel = "d:\\Downloads\\glTF-Sample-Models-master\\2.0\\BoxAnimated\\glTF-Binary\\BoxAnimated.glb";
 	reqCreateModel.setUri( tools::PathToFileUri( pathModel ) );
-	auto resCreateModel = reqCreateModel.send().wait( pClient->WaitScope() );
+	auto gadgetModel = reqCreateModel.send().getModel();
+	auto reqSetTransform = gadgetModel.setTransformRequest();
+	auto transform = reqSetTransform.initTransform();
+	transform.getPosition().setY( 0.1f );
+	transform.getScale().setX( 1.f );
+	transform.getScale().setY( 0.5f );
+	transform.getScale().setZ( 1.f );
+	reqSetTransform.send().wait( pClient->WaitScope() );
+}
+
+struct Gadget : public vkglTF::Transformable
+{
+	std::vector<std::shared_ptr<vkglTF::Model>> models;
+
+	void animate( float frameTimer )
+	{
+		for ( auto pModel : models )
+		{
+			pModel->animate( frameTimer );
+		}
+	}
+};
+
+void UpdateTransformable( std::shared_ptr<vkglTF::Transformable> pTransformable, AvTransform::Reader & transform )
+{
+	if ( transform.hasPosition() )
+	{
+		pTransformable->translation.x = transform.getPosition().getX();
+		pTransformable->translation.y = transform.getPosition().getY();
+		pTransformable->translation.z = transform.getPosition().getZ();
+	}
+	else
+	{
+		pTransformable->translation = glm::vec3( 0.f );
+	}
+
+	if ( transform.hasScale() )
+	{
+		pTransformable->scale.x = transform.getScale().getX();
+		pTransformable->scale.y = transform.getScale().getY();
+		pTransformable->scale.z = transform.getScale().getZ();
+	}
+	else
+	{
+		pTransformable->scale = glm::vec3( 1.f );
+	}
+
+	if ( transform.hasRotation() )
+	{
+		pTransformable->rotation.x = transform.getRotation().getX();
+		pTransformable->rotation.y = transform.getRotation().getY();
+		pTransformable->rotation.z = transform.getRotation().getZ();
+		pTransformable->rotation.w = transform.getRotation().getW();
+	}
+	else
+	{
+		pTransformable->rotation = glm::quat();
+	}
 }
 
 /*
@@ -127,7 +184,7 @@ public:
 	aardvark::CServerThread m_serverThread;
 	kj::Own<aardvark::CAardvarkClient> m_pClient;
 	std::unordered_map < std::string, std::shared_ptr< vkglTF::Model > > m_mapModels;
-	std::vector< std::shared_ptr< vkglTF::Model > > m_vecModelsToRender;
+	std::vector< std::shared_ptr< Gadget > > m_vecGadgets;
 
 	const uint32_t renderAhead = 2;
 	uint32_t frameIndex = 0;
@@ -206,7 +263,7 @@ public:
 		vkDestroyDescriptorSetLayout(device, descriptorSetLayouts.material, nullptr);
 		vkDestroyDescriptorSetLayout(device, descriptorSetLayouts.node, nullptr);
 
-		m_vecModelsToRender.clear();
+		m_vecGadgets.clear();
 		m_mapModels.clear();
 
 		for (auto buffer : uniformBuffers) {
@@ -367,17 +424,20 @@ public:
 
 	void recordCommandsForModels( VkCommandBuffer currentCB, uint32_t i, vkglTF::Material::AlphaMode eAlphaMode )
 	{
-		for ( auto pModel : m_vecModelsToRender )
+		for ( auto pGadget : m_vecGadgets)
 		{
-			VkDeviceSize offsets[1] = { 0 };
-			vkCmdBindVertexBuffers( currentCB, 0, 1, &pModel->buffers->vertices.buffer, offsets );
-			if ( pModel->buffers->indices.buffer != VK_NULL_HANDLE )
+			for ( auto pModel : pGadget->models )
 			{
-				vkCmdBindIndexBuffer( currentCB, pModel->buffers->indices.buffer, 0, VK_INDEX_TYPE_UINT32 );
-			}
+				VkDeviceSize offsets[1] = { 0 };
+				vkCmdBindVertexBuffers( currentCB, 0, 1, &pModel->buffers->vertices.buffer, offsets );
+				if ( pModel->buffers->indices.buffer != VK_NULL_HANDLE )
+				{
+					vkCmdBindIndexBuffer( currentCB, pModel->buffers->indices.buffer, 0, VK_INDEX_TYPE_UINT32 );
+				}
 
-			for ( auto node : pModel->nodes ) {
-				renderNode( node, i, eAlphaMode );
+				for ( auto node : pModel->nodes ) {
+					renderNode( node, i, eAlphaMode );
+				}
 			}
 		}
 	}
@@ -485,14 +545,20 @@ public:
 		// Environment samplers (radiance, irradiance, brdf lut)
 		imageSamplerCount += 3;
 
-		for (auto pModel : m_vecModelsToRender ) {
-			for (auto &material : pModel->materials) {
-				imageSamplerCount += 5;
-				materialCount++;
-			}
-			for (auto node : pModel->linearNodes) {
-				if (node->mesh) {
-					meshCount++;
+		for ( auto pGadget: m_vecGadgets ) 
+		{
+			for ( auto pModel : pGadget->models ) 
+			{
+				for ( auto &material : pModel->materials ) 
+				{
+					imageSamplerCount += 5;
+					materialCount++;
+				}
+				for ( auto node : pModel->linearNodes ) 
+				{
+					if ( node->mesh ) {
+						meshCount++;
+					}
 				}
 			}
 		}
@@ -657,11 +723,14 @@ public:
 				descriptorSetLayoutCI.bindingCount = static_cast<uint32_t>(setLayoutBindings.size());
 				VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCI, nullptr, &descriptorSetLayouts.node));
 
-				for ( auto pModel : m_vecModelsToRender )
+				for ( auto pGadget : m_vecGadgets )
 				{
-					// Per-Node descriptor set
-					for ( auto &node : pModel->nodes ) {
-						setupNodeDescriptorSet( node );
+					for ( auto pModel : pGadget->models )
+					{
+						// Per-Node descriptor set
+						for ( auto &node : pModel->nodes ) {
+							setupNodeDescriptorSet( node );
+						}
 					}
 				}
 			}
@@ -1686,9 +1755,9 @@ public:
 		
 		// Center and scale model
 		glm::mat4 aabb( 1.f );
-		if ( !m_vecModelsToRender.empty() )
+		if ( !m_vecGadgets.empty() && !m_vecGadgets.front()->models.empty() )
 		{
-			aabb = m_vecModelsToRender.front()->aabb;
+			aabb = m_vecGadgets.front()->models.front()->aabb;
 		}
 		float scale = (1.0f / std::max( aabb[0][0], std::max( aabb[1][1], aabb[2][2]))) * 0.5f;
 		glm::vec3 translate = -glm::vec3( aabb[3][0], aabb[3][1], aabb[3][2]);
@@ -1799,21 +1868,44 @@ public:
 		auto resNextFrame = m_pClient->Server().getNextVisualFrameRequest().send().wait( m_pClient->WaitScope() );
 		assert( resNextFrame.hasFrame() );
 
-		m_vecModelsToRender.clear();
+		m_vecGadgets.clear();
 
 		camera.setPosition( { 0.0f, 0.0f, 1.0f } );
 		camera.setRotation( { 0.0f, 0.0f, 0.0f } );
 
 		auto frame = resNextFrame.getFrame();
-		for ( auto & model : frame.getModels() )
+		for ( auto & gadget : frame.getGadgets() )
 		{
-			auto pSampleModel = findOrLoadModel( model.getSource() );
-			assert( pSampleModel );
-			if ( pSampleModel )
+			std::shared_ptr < Gadget > pGadget = std::make_shared<Gadget>();
+			UpdateTransformable( pGadget, gadget.getTransform() );
+		
+			for ( auto & model : gadget.getModels() )
 			{
-				std::shared_ptr<vkglTF::Model> pClonedModel = std::make_shared<vkglTF::Model>( *pSampleModel );
-				m_vecModelsToRender.push_back( pClonedModel );
+				auto pSampleModel = findOrLoadModel( model.getSource() );
+
+				assert( pSampleModel );
+				if ( pSampleModel )
+				{
+					std::shared_ptr<vkglTF::Model> pClonedModel = std::make_shared<vkglTF::Model>( *pSampleModel );
+
+					pClonedModel->translation.x = model.getTransform().getPosition().getX();
+					pClonedModel->translation.y = model.getTransform().getPosition().getY();
+					pClonedModel->translation.z = model.getTransform().getPosition().getZ();
+					pClonedModel->scale.x = model.getTransform().getScale().getX();
+					pClonedModel->scale.y = model.getTransform().getScale().getY();
+					pClonedModel->scale.z = model.getTransform().getScale().getZ();
+					pClonedModel->rotation.x = model.getTransform().getRotation().getX();
+					pClonedModel->rotation.y = model.getTransform().getRotation().getY();
+					pClonedModel->rotation.z = model.getTransform().getRotation().getZ();
+					pClonedModel->rotation.w = model.getTransform().getRotation().getZ();
+
+					pClonedModel->parent = &*pGadget;
+
+					pGadget->models.push_back( pClonedModel );
+				}
 			}
+
+			m_vecGadgets.push_back( pGadget );
 		}
 
 		setupDescriptors();
@@ -2101,9 +2193,9 @@ public:
 
 			if ( animate )
 			{
-				for ( auto pModel : m_vecModelsToRender )
+				for ( auto pGadget : m_vecGadgets )
 				{
-					pModel->animate( frameTimer  );
+					pGadget->animate( frameTimer  );
 				}
 			}
 			updateParams();
