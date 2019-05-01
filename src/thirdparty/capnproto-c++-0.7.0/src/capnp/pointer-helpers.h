@@ -84,7 +84,7 @@ struct PointerHelpers<List<T>, Kind::LIST> {
     builder.setList(value.reader, true);
   }
   static void set(PointerBuilder builder, kj::ArrayPtr<const ReaderFor<T>> value) {
-    auto l = init(builder, value.size());
+    auto l = init(builder, (capnp::uint) value.size());
     uint i = 0;
     for (auto& element: value) {
       l.set(i++, element);
