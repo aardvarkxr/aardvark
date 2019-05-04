@@ -14,7 +14,9 @@ interface AvApp
 	destroy @1 () -> ( success: Bool );
 
 	createGadget @2 ( name: Text ) -> ( gadget: AvGadget );
+	updateSceneGraph @3 (root: AvNodeRoot ) -> ( success: Bool );
 }
+
 
 
 interface AvGadget
@@ -97,5 +99,41 @@ struct AvVisualGadget
 struct AvVisualFrame
 {
 	id @0: UInt64;
-	gadgets @1: List( AvVisualGadget );
+	roots @1: List( AvNodeRoot );
+#	gadgets @1: List( AvVisualGadget );
+}
+
+struct AvNode
+{
+	enum Type
+	{
+		invalid @0;			# something is broken about this node
+
+		container @1;		# has no properties. Just contains other nodes
+		origin @2;			# Sets the origin path
+		transform @3;		# Contains a transform
+		model @4;			# Contains a model URI
+	}
+
+	id @0: UInt32;
+	name @1: Text;
+	children @2: List(UInt32);
+	type @3: Type = invalid;
+	flags @4: UInt32 = 0;
+
+	# These properties are allowed for a subset of node types
+	propOrigin @5: Text;			# origin
+	propTransform @6: AvTransform;	# transform
+	propModelUri @7: Text;			# model
+}
+
+struct AvNodeWrapper
+{
+	node @0 : AvNode;
+}
+
+struct AvNodeRoot
+{
+	nodes @0 : List( AvNodeWrapper );
+	sourceId @1 : UInt32;
 }

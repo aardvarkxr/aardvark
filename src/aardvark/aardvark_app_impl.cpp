@@ -8,7 +8,11 @@
 using namespace aardvark;
 
 CAardvarkApp::CAardvarkApp( const std::string & sName, AvServerImpl *pParentServer )
+	: m_sceneGraph( nullptr )
 {
+	static uint32_t s_uniqueId = 1;
+	m_id = s_uniqueId++;
+
 	m_sName = sName;
 	m_pParentServer = pParentServer;
 }
@@ -43,6 +47,15 @@ CAardvarkApp::CAardvarkApp( const std::string & sName, AvServerImpl *pParentServ
 	return kj::READY_NOW;
 }
 
+
+::kj::Promise<void> CAardvarkApp::updateSceneGraph( UpdateSceneGraphContext context )
+{
+	m_sceneGraph = tools::newOwnCapnp( context.getParams().getRoot() );
+	context.getResults().setSuccess( true );
+	return kj::READY_NOW;
+}
+
+
 void CAardvarkApp::removeGadget( CAardvarkGadget *pGadget )
 {
 	auto iApp = std::find( m_vecGadgets.begin(), m_vecGadgets.end(), pGadget );
@@ -55,9 +68,16 @@ void CAardvarkApp::removeGadget( CAardvarkGadget *pGadget )
 
 void CAardvarkApp::gatherVisuals( AvVisuals_t & visuals )
 {
-	for ( auto iGadget : m_vecGadgets )
+	if ( m_sceneGraph.hasNodes() )
 	{
-		iGadget->gatherVisuals( visuals );
+		AvSceneGraphRoot_t root;
+		root.root = m_sceneGraph;
+		root.appId = m_id;
+		visuals.vecSceneGraphs.push_back( root );
 	}
+	//for ( auto iGadget : m_vecGadgets )
+	//{
+	//	iGadget->gatherVisuals( visuals );
+	//}
 }
 

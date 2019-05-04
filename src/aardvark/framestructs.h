@@ -57,9 +57,16 @@ struct AvVisualGadget_t
 };
 
 
+struct AvSceneGraphRoot_t
+{
+	AvNodeRoot::Reader root;
+	uint32_t appId;
+};
+
 struct AvVisuals_t
 {
-	std::vector<AvVisualGadget_t> vecGadgets;
+//	std::vector<AvVisualGadget_t> vecGadgets;
+	std::vector<AvSceneGraphRoot_t> vecSceneGraphs;
 };
 
 AvVector_t VectorFromProto( const AvVector::Reader & from );

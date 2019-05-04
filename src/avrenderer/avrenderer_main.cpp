@@ -18,7 +18,6 @@
 #include <map>
 #include "algorithm"
 #include <filesystem>
-#include <tools/pathtools.h>
 
 #if defined(__ANDROID__)
 #define TINYGLTF_ANDROID_LOAD_FROM_ASSETS
@@ -34,6 +33,10 @@
 #include <aardvark/aardvark_apps.h>
 #include <aardvark/aardvark_server.h>
 #include <aardvark/aardvark_client.h>
+#include <aardvark/aardvark_scene_graph.h>
+
+#include <tools/pathtools.h>
+#include <tools/capnprototools.h>
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -41,41 +44,66 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 
+using namespace aardvark;
+
 void CreateExampleApp( aardvark::CAardvarkClient *pClient )
 {
 	auto reqCreateExampleApp = pClient->Server().createAppRequest();
 	reqCreateExampleApp.setName( "Example with renderer" );
 	auto app = reqCreateExampleApp.send().getApp();
-	auto reqCreateGadget = app.createGadgetRequest();
-	reqCreateGadget.setName( "My Gadget" );
-	auto gadget = reqCreateGadget.send().getGadget();
 
-	auto reqCreateModel = gadget.createModelInstanceRequest();
-	std::filesystem::path pathModel = VK_EXAMPLE_DATA_DIR;
-	pathModel /= "models/DamagedHelmet/glTF-Embedded/DamagedHelmet.gltf";
-	//pathModel = "d:\\Downloads\\glTF-Sample-Models-master\\2.0\\RiggedFigure\\glTF-Binary\\RiggedFigure.glb";
-	//pathModel = "d:\\Downloads\\glTF-Sample-Models-master\\2.0\\2CylinderEngine\\glTF-Binary\\2CylinderEngine.glb";
-	pathModel = "d:\\Downloads\\glTF-Sample-Models-master\\2.0\\InterpolationTest\\glTF-Binary\\InterpolationTest.glb";
+	AvSceneContext sceneContext;
+	avStartSceneContext( &sceneContext );
+	{
+		avStartNode( sceneContext, 1, "origin", EAvSceneGraphNodeType::Origin );
+		{
+			avStartNode( sceneContext, 2, "xform", EAvSceneGraphNodeType::Transform );
+			{
+				avSetTranslation( sceneContext, 0, 0.1f, 0 );
+				avSetScale( sceneContext, 1.f, 0.5f, 1.f );
+
+				avStartNode( sceneContext, 3, "model", EAvSceneGraphNodeType::Model );
+				{
+					avSetModelUri( sceneContext, tools::PathToFileUri( "d:\\Downloads\\glTF-Sample-Models-master\\2.0\\BoxAnimated\\glTF-Binary\\BoxAnimated.glb" ).c_str() );
+				}
+				avFinishNode( sceneContext );
+			}
+			avFinishNode( sceneContext );
+		}
+		avFinishNode( sceneContext );
+	}
+	avFinishSceneContext( sceneContext, &app, pClient );
+
+	//auto reqCreateGadget = app.createGadgetRequest();
+	//reqCreateGadget.setName( "My Gadget" );
+	//auto gadget = reqCreateGadget.send().getGadget();
+
+	//auto reqCreateModel = gadget.createModelInstanceRequest();
+	//std::filesystem::path pathModel = VK_EXAMPLE_DATA_DIR;
+	//pathModel /= "models/DamagedHelmet/glTF-Embedded/DamagedHelmet.gltf";
+	////pathModel = "d:\\Downloads\\glTF-Sample-Models-master\\2.0\\RiggedFigure\\glTF-Binary\\RiggedFigure.glb";
+	////pathModel = "d:\\Downloads\\glTF-Sample-Models-master\\2.0\\2CylinderEngine\\glTF-Binary\\2CylinderEngine.glb";
+	//pathModel = "d:\\Downloads\\glTF-Sample-Models-master\\2.0\\InterpolationTest\\glTF-Binary\\InterpolationTest.glb";
+	////pathModel = "d:\\Downloads\\glTF-Sample-Models-master\\2.0\\BoxAnimated\\glTF-Binary\\BoxAnimated.glb";
 	//pathModel = "d:\\Downloads\\glTF-Sample-Models-master\\2.0\\BoxAnimated\\glTF-Binary\\BoxAnimated.glb";
-	pathModel = "d:\\Downloads\\glTF-Sample-Models-master\\2.0\\BoxAnimated\\glTF-Binary\\BoxAnimated.glb";
-	reqCreateModel.setUri( tools::PathToFileUri( pathModel ) );
-	auto gadgetModel = reqCreateModel.send().getModel();
-	auto reqSetTransform = gadgetModel.setTransformRequest();
-	auto transform = reqSetTransform.initTransform();
-	transform.getPosition().setY( 0.1f );
-	transform.getScale().setX( 1.f );
-	transform.getScale().setY( 0.5f );
-	transform.getScale().setZ( 1.f );
-	reqSetTransform.send();
-	
-	reqCreateModel = gadget.createModelInstanceRequest();
-	pathModel = "d:\\Downloads\\glTF-Sample-Models-master\\2.0\\BoxAnimated\\glTF-Binary\\BoxAnimated.glb";
-	reqCreateModel.setUri( tools::PathToFileUri( pathModel ) );
-	gadgetModel = reqCreateModel.send().getModel();
-	reqSetTransform = gadgetModel.setTransformRequest();
-	transform = reqSetTransform.initTransform();
-	transform.getPosition().setX( -1.1f );
-	reqSetTransform.send().wait( pClient->WaitScope() );
+	//reqCreateModel.setUri( tools::PathToFileUri( pathModel ) );
+	//auto gadgetModel = reqCreateModel.send().getModel();
+	//auto reqSetTransform = gadgetModel.setTransformRequest();
+	//auto transform = reqSetTransform.initTransform();
+	//transform.getPosition().setY( 0.1f );
+	//transform.getScale().setX( 1.f );
+	//transform.getScale().setY( 0.5f );
+	//transform.getScale().setZ( 1.f );
+	//reqSetTransform.send();
+	//
+	//reqCreateModel = gadget.createModelInstanceRequest();
+	//pathModel = "d:\\Downloads\\glTF-Sample-Models-master\\2.0\\BoxAnimated\\glTF-Binary\\BoxAnimated.glb";
+	//reqCreateModel.setUri( tools::PathToFileUri( pathModel ) );
+	//gadgetModel = reqCreateModel.send().getModel();
+	//reqSetTransform = gadgetModel.setTransformRequest();
+	//transform = reqSetTransform.initTransform();
+	//transform.getPosition().setX( -1.1f );
+	//reqSetTransform.send().wait( pClient->WaitScope() );
 
 }
 
@@ -436,20 +464,17 @@ public:
 
 	void recordCommandsForModels( VkCommandBuffer currentCB, uint32_t i, vkglTF::Material::AlphaMode eAlphaMode )
 	{
-		for ( auto pGadget : m_vecGadgets)
+		for ( auto pModel : m_vecModelsToRender )
 		{
-			for ( auto pModel : pGadget->models )
+			VkDeviceSize offsets[1] = { 0 };
+			vkCmdBindVertexBuffers( currentCB, 0, 1, &pModel->buffers->vertices.buffer, offsets );
+			if ( pModel->buffers->indices.buffer != VK_NULL_HANDLE )
 			{
-				VkDeviceSize offsets[1] = { 0 };
-				vkCmdBindVertexBuffers( currentCB, 0, 1, &pModel->buffers->vertices.buffer, offsets );
-				if ( pModel->buffers->indices.buffer != VK_NULL_HANDLE )
-				{
-					vkCmdBindIndexBuffer( currentCB, pModel->buffers->indices.buffer, 0, VK_INDEX_TYPE_UINT32 );
-				}
+				vkCmdBindIndexBuffer( currentCB, pModel->buffers->indices.buffer, 0, VK_INDEX_TYPE_UINT32 );
+			}
 
-				for ( auto node : pModel->nodes ) {
-					renderNode( node, i, eAlphaMode );
-				}
+			for ( auto node : pModel->nodes ) {
+				renderNode( node, i, eAlphaMode );
 			}
 		}
 	}
@@ -575,6 +600,10 @@ public:
 			}
 		}
 
+		// TODO(Joe):Make these actually handle more descriptors coming from scene graphs
+		materialCount = std::max<uint32_t>( materialCount, 10 );
+		meshCount = std::max<uint32_t>( meshCount, 10 );
+
 		std::vector<VkDescriptorPoolSize> poolSizes = {
 			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, (4 + meshCount) * swapChain.imageCount },
 			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, imageSamplerCount * swapChain.imageCount }
@@ -673,54 +702,9 @@ public:
 			// Per-Material descriptor sets
 			for ( auto iModel : m_mapModels)
 			{
-				for (auto &material : iModel.second->materials) {
-					VkDescriptorSetAllocateInfo descriptorSetAllocInfo{};
-					descriptorSetAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-					descriptorSetAllocInfo.descriptorPool = descriptorPool;
-					descriptorSetAllocInfo.pSetLayouts = &descriptorSetLayouts.material;
-					descriptorSetAllocInfo.descriptorSetCount = 1;
-					VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &descriptorSetAllocInfo, &material.descriptorSet));
+				auto pModel = iModel.second;
 
-					std::vector<VkDescriptorImageInfo> imageDescriptors = {
-						textures.empty.descriptor,
-						textures.empty.descriptor,
-						material.normalTexture ? material.normalTexture->descriptor : textures.empty.descriptor,
-						material.occlusionTexture ? material.occlusionTexture->descriptor : textures.empty.descriptor,
-						material.emissiveTexture ? material.emissiveTexture->descriptor : textures.empty.descriptor
-					};
-
-					// TODO: glTF specs states that metallic roughness should be preferred, even if specular glosiness is present
-
-					if (material.pbrWorkflows.metallicRoughness) {
-						if (material.baseColorTexture) {
-							imageDescriptors[0] = material.baseColorTexture->descriptor;
-						}
-						if (material.metallicRoughnessTexture) {
-							imageDescriptors[1] = material.metallicRoughnessTexture->descriptor;
-						}
-					}
-
-					if (material.pbrWorkflows.specularGlossiness) {
-						if (material.extension.diffuseTexture) {
-							imageDescriptors[0] = material.extension.diffuseTexture->descriptor;
-						}
-						if (material.extension.specularGlossinessTexture) {
-							imageDescriptors[1] = material.extension.specularGlossinessTexture->descriptor;
-						}
-					}
-
-					std::array<VkWriteDescriptorSet, 5> writeDescriptorSets{};
-					for (size_t i = 0; i < imageDescriptors.size(); i++) {
-						writeDescriptorSets[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-						writeDescriptorSets[i].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-						writeDescriptorSets[i].descriptorCount = 1;
-						writeDescriptorSets[i].dstSet = material.descriptorSet;
-						writeDescriptorSets[i].dstBinding = static_cast<uint32_t>(i);
-						writeDescriptorSets[i].pImageInfo = &imageDescriptors[i];
-					}
-
-					vkUpdateDescriptorSets(device, static_cast<uint32_t>(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, NULL);
-				}
+				UpdateDescriptorSetsForModel( pModel );
 
 			}
 
@@ -782,6 +766,59 @@ public:
 			writeDescriptorSets[2].pImageInfo = &textures.prefilteredCube.descriptor;
 
 			vkUpdateDescriptorSets(device, static_cast<uint32_t>(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
+		}
+	}
+
+	void UpdateDescriptorSetsForModel( std::shared_ptr<vkglTF::Model> pModel )
+	{
+		for ( auto &material : pModel->materials ) {
+			VkDescriptorSetAllocateInfo descriptorSetAllocInfo{};
+			descriptorSetAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+			descriptorSetAllocInfo.descriptorPool = descriptorPool;
+			descriptorSetAllocInfo.pSetLayouts = &descriptorSetLayouts.material;
+			descriptorSetAllocInfo.descriptorSetCount = 1;
+			VkResult myres = vkAllocateDescriptorSets( device, &descriptorSetAllocInfo, &material.descriptorSet );
+			VK_CHECK_RESULT( myres );
+
+			std::vector<VkDescriptorImageInfo> imageDescriptors = {
+				textures.empty.descriptor,
+				textures.empty.descriptor,
+				material.normalTexture ? material.normalTexture->descriptor : textures.empty.descriptor,
+				material.occlusionTexture ? material.occlusionTexture->descriptor : textures.empty.descriptor,
+				material.emissiveTexture ? material.emissiveTexture->descriptor : textures.empty.descriptor
+			};
+
+			// TODO: glTF specs states that metallic roughness should be preferred, even if specular glosiness is present
+
+			if ( material.pbrWorkflows.metallicRoughness ) {
+				if ( material.baseColorTexture ) {
+					imageDescriptors[0] = material.baseColorTexture->descriptor;
+				}
+				if ( material.metallicRoughnessTexture ) {
+					imageDescriptors[1] = material.metallicRoughnessTexture->descriptor;
+				}
+			}
+
+			if ( material.pbrWorkflows.specularGlossiness ) {
+				if ( material.extension.diffuseTexture ) {
+					imageDescriptors[0] = material.extension.diffuseTexture->descriptor;
+				}
+				if ( material.extension.specularGlossinessTexture ) {
+					imageDescriptors[1] = material.extension.specularGlossinessTexture->descriptor;
+				}
+			}
+
+			std::array<VkWriteDescriptorSet, 5> writeDescriptorSets{};
+			for ( size_t i = 0; i < imageDescriptors.size(); i++ ) {
+				writeDescriptorSets[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+				writeDescriptorSets[i].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+				writeDescriptorSets[i].descriptorCount = 1;
+				writeDescriptorSets[i].dstSet = material.descriptorSet;
+				writeDescriptorSets[i].dstBinding = static_cast<uint32_t>( i );
+				writeDescriptorSets[i].pImageInfo = &imageDescriptors[i];
+			}
+
+			vkUpdateDescriptorSets( device, static_cast<uint32_t>( writeDescriptorSets.size() ), writeDescriptorSets.data(), 0, NULL );
 		}
 	}
 
@@ -1874,50 +1911,299 @@ public:
 		prepared = true;
 	}
 
+	struct SgRoot_t
+	{
+		std::unordered_map<uint32_t, size_t> mapIdToIndex;
+		tools::OwnCapnp<AvNodeRoot> root = nullptr;
+		std::vector<AvNode::Reader> nodes;
+		uint32_t appId;
+	};
+	std::vector<std::unique_ptr< SgRoot_t > > m_vecRoots;
+
+	struct SgNodeData_t
+	{
+		std::shared_ptr<vkglTF::Model> model;
+		vkglTF::Transformable modelParent;
+	};
+
+	void TraverseSceneGraphs( float fFrameTime )
+	{
+		m_fThisFrameTime = fFrameTime;
+		m_vecModelsToRender.clear();
+		for ( auto & root : m_vecRoots )
+		{
+			TraverseSceneGraph( &*root );
+		}
+		m_pCurrentRoot = nullptr;
+	}
+
+	const SgRoot_t *m_pCurrentRoot = nullptr;
+	std::vector<glm::mat4> m_vecTransforms;
+	bool m_bThisNodePushedTransform = false;
+	std::unordered_map<std::string, glm::mat4> m_mapOriginFromUniverseTransforms;
+	std::unordered_map<uint64_t, std::unique_ptr<SgNodeData_t>> m_mapNodeData;
+	float m_fThisFrameTime = 0;
+	std::vector<std::shared_ptr<vkglTF::Model>> m_vecModelsToRender;
+
+	uint64_t GetGlobalId( const AvNode::Reader & node )
+	{
+		if ( m_pCurrentRoot )
+		{
+			return ( (uint64_t)m_pCurrentRoot->appId ) << 32 | node.getId();
+		}
+		else
+		{
+			return 0;
+		}
+	}
+
+	SgNodeData_t *GetNodeData( const AvNode::Reader & node )
+	{
+		// TODO(Joe): Figure out when to delete these
+		uint64_t globalId = GetGlobalId( node );
+		if ( !globalId )
+			return nullptr;
+
+		auto iData = m_mapNodeData.find( globalId );
+		if ( iData != m_mapNodeData.end() )
+		{
+			return &*iData->second;
+		}
+		else
+		{
+			auto pData = std::make_unique<SgNodeData_t>();
+			SgNodeData_t *pRetVal = &*pData;
+			m_mapNodeData.insert( std::make_pair( globalId, std::move( pData ) ) );
+			return pRetVal;
+		}
+	}
+
+
+	void TraverseSceneGraph( const SgRoot_t *root )
+	{
+		if ( !root->nodes.empty() )
+		{
+			m_pCurrentRoot = root;
+			m_vecTransforms.clear();
+			m_vecTransforms.push_back( glm::mat4( 1.f ) );
+
+			// the 0th node is always the root
+			TraverseNode( root->nodes[0] );
+		}
+	}
+
+	void ConcatTransform( const glm::mat4 & matNodeFromParent )
+	{
+		if ( m_vecTransforms.empty() )
+		{
+			m_vecTransforms.push_back( matNodeFromParent );
+		}
+		else
+		{
+			glm::mat4 & matParentFromOrigin = m_vecTransforms.back();
+			glm::mat4 newMat = matNodeFromParent * matParentFromOrigin;
+			m_vecTransforms.push_back( newMat );
+		}
+		m_bThisNodePushedTransform = true;
+	}
+
+	void PushTransform( const glm::mat4 & matNodeFromUniverse )
+	{
+		m_vecTransforms.push_back( matNodeFromUniverse );
+		m_bThisNodePushedTransform = true;
+	}
+
+	const glm::mat4 & GetCurrentNodeFromUniverse()
+	{
+		assert( !m_vecTransforms.empty() );
+		return m_vecTransforms.back();
+	}
+
+
+	void TraverseNode( const AvNode::Reader & node )
+	{
+		m_bThisNodePushedTransform = false;
+		switch ( node.getType() )
+		{
+		case AvNode::Type::CONTAINER:
+			// nothing special to do here
+			break;
+
+		case AvNode::Type::ORIGIN:
+			TraverseOrigin( node );
+			break;
+
+		case AvNode::Type::TRANSFORM:
+			TraverseTransform( node );
+			break;
+
+		case AvNode::Type::MODEL:
+			TraverseModel( node );
+			break;
+
+		case AvNode::Type::INVALID:
+		default:
+			assert( false );
+		}
+
+		for ( const uint32_t unChildId : node.getChildren() )
+		{
+			auto iChild = m_pCurrentRoot->mapIdToIndex.find( unChildId );
+			if ( iChild != m_pCurrentRoot->mapIdToIndex.end() && iChild->second < m_pCurrentRoot->nodes.size() )
+			{
+				TraverseNode( m_pCurrentRoot->nodes[iChild->second] );
+			}
+		}
+
+		if ( m_bThisNodePushedTransform )
+		{
+			m_vecTransforms.pop_back();
+		}
+	}
+
+	void TraverseOrigin( const AvNode::Reader & node )
+	{
+		auto iOrigin = m_mapOriginFromUniverseTransforms.find( node.getPropOrigin() );
+		if ( iOrigin != m_mapOriginFromUniverseTransforms.end() )
+		{
+			PushTransform( iOrigin->second );
+		}
+	}
+
+	void TraverseTransform( const AvNode::Reader & node )
+	{
+		if ( node.hasPropTransform() )
+		{
+			const AvTransform::Reader & transform = node.getPropTransform();
+			glm::vec3 vTrans;
+			if ( transform.hasPosition() )
+			{
+				vTrans.x = transform.getPosition().getX();
+				vTrans.y = transform.getPosition().getY();
+				vTrans.z = transform.getPosition().getZ();
+			}
+			else
+			{
+				vTrans.x = vTrans.y = vTrans.z = 0.f;
+			}
+			glm::vec3 vScale;
+			if ( transform.hasScale() )
+			{
+				vScale.x = transform.getScale().getX();
+				vScale.y = transform.getScale().getY();
+				vScale.z = transform.getScale().getZ();
+			}
+			else
+			{
+				vScale.x = vScale.y = vScale.z = 1.f;
+			}
+			glm::quat qRot;
+			if ( transform.hasRotation() )
+			{
+				qRot.x = transform.getRotation().getX();
+				qRot.y = transform.getRotation().getY();
+				qRot.z = transform.getRotation().getZ();
+				qRot.w = transform.getRotation().getW();
+			}
+			else
+			{
+				qRot.x = qRot.y = qRot.z = 0.f;
+				qRot.w = 1.f;
+			}
+
+			glm::mat4 matNodeFromParent = glm::translate( glm::mat4( 1.0f ), vTrans ) * glm::mat4( qRot ) * glm::scale( glm::mat4( 1.0f ), vScale );
+			ConcatTransform( matNodeFromParent );
+		}
+	}
+
+	void TraverseModel( const AvNode::Reader & node )
+	{
+		SgNodeData_t *pData = GetNodeData( node );
+		assert( pData );
+
+		if ( !pData->model )
+		{
+			// TODO(Joe): Definitely don't block here waiting to get a model source
+			auto reqModelSource = m_pClient->Server().getModelSourceRequest();
+			reqModelSource.setUri( node.getPropModelUri() );
+			auto resModelSource = reqModelSource.send().wait( m_pClient->WaitScope() );
+			if ( resModelSource.hasSource() )
+			{
+				auto pModel = findOrLoadModel( resModelSource.getSource() );
+				pData->model = std::make_shared<vkglTF::Model>( *pModel );
+				pData->model->parent = &pData->modelParent;
+
+				// Per-Node descriptor set
+				for ( auto &node : pData->model->nodes ) {
+					setupNodeDescriptorSet( node );
+				}
+
+			}
+		}
+
+		if ( pData->model )
+		{
+			pData->modelParent.matrix = GetCurrentNodeFromUniverse();
+			pData->model->animate( m_fThisFrameTime );
+			m_vecModelsToRender.push_back( pData->model );
+		}
+	}
+
 	void UpdateFrameFromServer()
 	{
 		//TODO(Joe): Probably don't wait here and block rendering
 		auto resNextFrame = m_pClient->Server().getNextVisualFrameRequest().send().wait( m_pClient->WaitScope() );
 		assert( resNextFrame.hasFrame() );
 
-		m_vecGadgets.clear();
-
 		camera.setPosition( { 0.0f, 0.0f, 1.0f } );
 		camera.setRotation( { 0.0f, 0.0f, 0.0f } );
 
 		auto frame = resNextFrame.getFrame();
-		for ( auto & gadget : frame.getGadgets() )
+		for ( auto & root : frame.getRoots() )
 		{
-			std::shared_ptr < Gadget > pGadget = std::make_shared<Gadget>();
-			UpdateTransformable( pGadget, gadget.getTransform() );
-		
-			for ( auto & model : gadget.getModels() )
+			std::unique_ptr<SgRoot_t> rootStruct = std::make_unique<SgRoot_t>();
+			rootStruct->root = tools::newOwnCapnp( root );
+			rootStruct->nodes.reserve( root.getNodes().size() );
+			rootStruct->appId = root.getSourceId();
+
+			for ( auto & nodeWrapper : rootStruct->root.getNodes() )
 			{
-				auto pSampleModel = findOrLoadModel( model.getSource() );
-
-				assert( pSampleModel );
-				if ( pSampleModel )
-				{
-					std::shared_ptr<vkglTF::Model> pClonedModel = std::make_shared<vkglTF::Model>( *pSampleModel );
-
-					pClonedModel->translation.x = model.getTransform().getPosition().getX();
-					pClonedModel->translation.y = model.getTransform().getPosition().getY();
-					pClonedModel->translation.z = model.getTransform().getPosition().getZ();
-					pClonedModel->scale.x = model.getTransform().getScale().getX();
-					pClonedModel->scale.y = model.getTransform().getScale().getY();
-					pClonedModel->scale.z = model.getTransform().getScale().getZ();
-					pClonedModel->rotation.x = model.getTransform().getRotation().getX();
-					pClonedModel->rotation.y = model.getTransform().getRotation().getY();
-					pClonedModel->rotation.z = model.getTransform().getRotation().getZ();
-					pClonedModel->rotation.w = model.getTransform().getRotation().getZ();
-
-					pClonedModel->parent = &*pGadget;
-
-					pGadget->models.push_back( pClonedModel );
-				}
+				auto node = nodeWrapper.getNode();
+				rootStruct->mapIdToIndex[node.getId()] = rootStruct->nodes.size();
+				rootStruct->nodes.push_back( node );
 			}
 
-			m_vecGadgets.push_back( pGadget );
+			m_vecRoots.push_back( std::move( rootStruct ) );
+			//std::shared_ptr < Gadget > pGadget = std::make_shared<Gadget>();
+			//UpdateTransformable( pGadget, gadget.getTransform() );
+		
+			//for ( auto & model : gadget.getModels() )
+			//{
+			//	auto pSampleModel = findOrLoadModel( model.getSource() );
+
+			//	assert( pSampleModel );
+			//	if ( pSampleModel )
+			//	{
+			//		std::shared_ptr<vkglTF::Model> pClonedModel = std::make_shared<vkglTF::Model>( *pSampleModel );
+
+			//		pClonedModel->translation.x = model.getTransform().getPosition().getX();
+			//		pClonedModel->translation.y = model.getTransform().getPosition().getY();
+			//		pClonedModel->translation.z = model.getTransform().getPosition().getZ();
+			//		pClonedModel->scale.x = model.getTransform().getScale().getX();
+			//		pClonedModel->scale.y = model.getTransform().getScale().getY();
+			//		pClonedModel->scale.z = model.getTransform().getScale().getZ();
+			//		pClonedModel->rotation.x = model.getTransform().getRotation().getX();
+			//		pClonedModel->rotation.y = model.getTransform().getRotation().getY();
+			//		pClonedModel->rotation.z = model.getTransform().getRotation().getZ();
+			//		pClonedModel->rotation.w = model.getTransform().getRotation().getZ();
+
+			//		pClonedModel->parent = &*pGadget;
+
+			//		pGadget->models.push_back( pClonedModel );
+			//	}
+			//}
+
+			//m_vecGadgets.push_back( pGadget );
 		}
 
 		setupDescriptors();
@@ -1945,6 +2231,8 @@ public:
 		bool bLoaded = pModel->loadFromMemory( &resData.getData()[0], resData.getData().size(), vulkanDevice, queue );
 		assert( bLoaded );
 		m_mapModels.insert( std::make_pair( sUri, pModel ) );
+
+		UpdateDescriptorSetsForModel( pModel );
 		return pModel;
 	}
 
@@ -2150,6 +2438,9 @@ public:
 		}
 
 		updateOverlay();
+
+		TraverseSceneGraphs( frameTimer );
+		recordCommandBuffers(); // TODO(Joe): Probably don't call this every frame, but only when the set of models changes
 
 		VK_CHECK_RESULT(vkWaitForFences(device, 1, &waitFences[frameIndex], VK_TRUE, UINT64_MAX));
 		VK_CHECK_RESULT(vkResetFences(device, 1, &waitFences[frameIndex]));

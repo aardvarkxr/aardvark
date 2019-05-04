@@ -18,6 +18,7 @@ add_library(aardvark STATIC
 	aardvark_model_instance_impl.h
 	aardvark_model_source_impl.cpp
 	aardvark_model_source_impl.h
+	aardvark_scene_graph.cpp
 	aardvark_handle.cpp
 	aardvark_handle.h
 	aardvark_client.cpp
@@ -27,11 +28,14 @@ add_library(aardvark STATIC
 	${AV_SRC_PUBLIC}/aardvark/aardvark_client.h
 	aardvark_server.cpp
 	${AV_SRC_PUBLIC}/aardvark/aardvark_server.h
+	${AV_SRC_PUBLIC}/aardvark/aardvark_scene_graph.h
 	${CAPNP_SRCS}
 	${CAPNP_HDRS}
 	aardvark.capnp
 )
 
+target_compile_options(aardvark PRIVATE
+                           /W3 /IGNORE:4267 )
 target_link_libraries( aardvark PUBLIC CapnProto::capnp-rpc )
 target_link_libraries( aardvark PRIVATE tools )
 
