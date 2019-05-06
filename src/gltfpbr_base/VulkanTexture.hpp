@@ -1050,7 +1050,7 @@ namespace vks
 
 			VkFramebufferCreateInfo framebufferCreateInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
 			framebufferCreateInfo.renderPass = renderPass;
-			framebufferCreateInfo.attachmentCount = multiSample ? 2 : 4;
+			framebufferCreateInfo.attachmentCount = multiSample ? 4 : 2;
 			framebufferCreateInfo.pAttachments = attachments;
 			framebufferCreateInfo.width = width;
 			framebufferCreateInfo.height = height;
