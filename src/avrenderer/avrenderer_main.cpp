@@ -395,14 +395,20 @@ public:
 
 	void recordCommandBuffers( uint32_t cbIndex )
 	{
+		VkCommandBufferBeginInfo cmdBufferBeginInfo{};
+		cmdBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		VkCommandBuffer currentCB = commandBuffers[cbIndex];
+
+		VK_CHECK_RESULT( vkBeginCommandBuffer( currentCB, &cmdBufferBeginInfo ) );
+
 		renderScene( cbIndex, renderPass, frameBuffers[cbIndex], width, height, false );
 		renderScene( cbIndex, leftEyeRT.renderPass, leftEyeRT.frameBuffer, 1024, 1024, true );
+
+		VK_CHECK_RESULT( vkEndCommandBuffer( currentCB ) );
 	}
 
 	void renderScene( uint32_t cbIndex, VkRenderPass targetRenderPass, VkFramebuffer targetFrameBuffer, uint32_t targetWidth, uint32_t targetHeight, bool bDebug )
 	{
-		VkCommandBufferBeginInfo cmdBufferBeginInfo{};
-		cmdBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
 		VkClearValue clearValues[3];
 		if ( settings.multiSampling ) {
@@ -427,10 +433,10 @@ public:
 		renderPassBeginInfo.clearValueCount = settings.multiSampling ? 3 : 2;
 		renderPassBeginInfo.pClearValues = clearValues;
 
+
 		renderPassBeginInfo.framebuffer = targetFrameBuffer;
 
 
-		VK_CHECK_RESULT( vkBeginCommandBuffer( currentCB, &cmdBufferBeginInfo ) );
 		vkCmdBeginRenderPass( currentCB, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE );
 
 		VkViewport viewport{};
@@ -466,7 +472,6 @@ public:
 		ui->draw( currentCB );
 
 		vkCmdEndRenderPass( currentCB );
-		VK_CHECK_RESULT( vkEndCommandBuffer( currentCB ) );
 	}
 
 	void recordCommandsForModels( VkCommandBuffer currentCB, uint32_t i, vkglTF::Material::AlphaMode eAlphaMode )
