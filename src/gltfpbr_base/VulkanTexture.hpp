@@ -435,6 +435,7 @@ namespace vks
 			// Update descriptor image info member that can be used for setting up descriptor sets
 			updateDescriptor();
 		}
+
 	};
 
 	class TextureCubeMap : public Texture {
@@ -650,4 +651,430 @@ namespace vks
 		}
 	};
 
+	class RenderTarget
+	{
+	public:
+		vks::VulkanDevice *vulkanDevice;
+		Texture color;
+		Texture colorMultisample;
+		Texture depthStencil;
+		Texture depthStencilMultisample;
+		VkRenderPass renderPass = VK_NULL_HANDLE;
+		VkFramebuffer frameBuffer = VK_NULL_HANDLE;
+		VkImageLayout colorLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		VkImageLayout depthStencilLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		bool multiSample = false;
+		void destroy()
+		{
+			color.destroy();
+			depthStencil.destroy();
+
+			vkDestroyRenderPass( vulkanDevice->logicalDevice, renderPass, nullptr );
+			vkDestroyFramebuffer( vulkanDevice->logicalDevice, frameBuffer, nullptr );
+		}
+
+		void init(
+			VkFormat colorFormat,
+			uint32_t width,
+			uint32_t height,
+			vks::VulkanDevice *vulkanDevice,
+			VkQueue setupQueue,
+			bool multiSample,
+			VkFilter filter = VK_FILTER_LINEAR,
+			VkImageUsageFlags imageUsageFlags = ( VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT ),
+			VkImageLayout imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL )
+		{
+			this->vulkanDevice = vulkanDevice;
+			this->multiSample = multiSample;
+
+			//-----------------------------//
+			//      Create color target    //
+			//-----------------------------//
+
+			color.device = vulkanDevice;
+			color.width = width;
+			color.height = height;
+			color.mipLevels = 1;
+
+			VkMemoryAllocateInfo memAllocInfo{};
+			memAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+			VkMemoryRequirements memReqs;
+
+			// Create optimal tiled target image
+			VkImageCreateInfo imageCreateInfo{};
+			imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+			imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+			imageCreateInfo.format = colorFormat;
+			imageCreateInfo.mipLevels = color.mipLevels;
+			imageCreateInfo.arrayLayers = 1;
+			imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+			imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+			imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+			imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			imageCreateInfo.extent = { width, height, 1 };
+			imageCreateInfo.usage = imageUsageFlags;
+			// Ensure that the TRANSFER_DST bit is set for staging
+			if ( !( imageCreateInfo.usage & VK_IMAGE_USAGE_TRANSFER_DST_BIT ) )
+			{
+				imageCreateInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+			}
+			VK_CHECK_RESULT( vkCreateImage( vulkanDevice->logicalDevice, &imageCreateInfo, nullptr, &color.image ) );
+
+			vkGetImageMemoryRequirements( vulkanDevice->logicalDevice, color.image, &memReqs );
+
+			memAllocInfo.allocationSize = memReqs.size;
+
+			memAllocInfo.memoryTypeIndex = vulkanDevice->getMemoryType( memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT );
+			VK_CHECK_RESULT( vkAllocateMemory( vulkanDevice->logicalDevice, &memAllocInfo, nullptr, &color.deviceMemory ) );
+			VK_CHECK_RESULT( vkBindImageMemory( vulkanDevice->logicalDevice, color.image, color.deviceMemory, 0 ) );
+
+			VkImageSubresourceRange subresourceRange = {};
+			subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			subresourceRange.baseMipLevel = 0;
+			subresourceRange.levelCount = color.mipLevels;
+			subresourceRange.layerCount = 1;
+
+			color.imageLayout = imageLayout;
+
+			// Create image view
+			VkImageViewCreateInfo viewCreateInfo = {};
+			viewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+			viewCreateInfo.pNext = NULL;
+			viewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+			viewCreateInfo.format = colorFormat;
+			viewCreateInfo.components = { VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY };
+			viewCreateInfo.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+			viewCreateInfo.subresourceRange.levelCount = 1;
+			viewCreateInfo.image = color.image;
+			VK_CHECK_RESULT( vkCreateImageView( vulkanDevice->logicalDevice, &viewCreateInfo, nullptr, &color.view ) );
+
+			// Update descriptor image info member that can be used for setting up descriptor sets
+			color.updateDescriptor();
+
+			//-----------------------------//
+			// Create depth/stencil target //
+			//-----------------------------//
+
+			depthStencil.device = vulkanDevice;
+			depthStencil.width = width;
+			depthStencil.height = height;
+			depthStencil.mipLevels = 1;
+
+			imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+			imageCreateInfo.format = VK_FORMAT_D32_SFLOAT;
+			imageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+			VK_CHECK_RESULT( vkCreateImage( vulkanDevice->logicalDevice, &imageCreateInfo, nullptr, &depthStencil.image ) );
+
+			vkGetImageMemoryRequirements( vulkanDevice->logicalDevice, depthStencil.image, &memReqs );
+
+			memAllocInfo.allocationSize = memReqs.size;
+			memAllocInfo.memoryTypeIndex = vulkanDevice->getMemoryType( memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT );
+			VK_CHECK_RESULT( vkAllocateMemory( vulkanDevice->logicalDevice, &memAllocInfo, nullptr, &depthStencil.deviceMemory ) );
+			VkResult result = vkBindImageMemory( vulkanDevice->logicalDevice, depthStencil.image, depthStencil.deviceMemory, 0 );
+			VK_CHECK_RESULT( result );
+
+			viewCreateInfo.image = depthStencil.image;
+			viewCreateInfo.format = imageCreateInfo.format;
+			viewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+			VK_CHECK_RESULT( vkCreateImageView( vulkanDevice->logicalDevice, &viewCreateInfo, nullptr, &depthStencil.view ) );
+
+			if ( multiSample )
+			{
+				//-------------------------------------//
+				//  Create multisample color target    //
+				//-------------------------------------//
+				colorMultisample.device = vulkanDevice;
+				colorMultisample.width = width;
+				colorMultisample.height = height;
+				colorMultisample.mipLevels = 1;
+
+				VkImageCreateInfo imageCI{};
+				imageCI.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+				imageCI.imageType = VK_IMAGE_TYPE_2D;
+				imageCI.format = colorFormat;
+				imageCI.extent.width = width;
+				imageCI.extent.height = height;
+				imageCI.extent.depth = 1;
+				imageCI.mipLevels = 1;
+				imageCI.arrayLayers = 1;
+				imageCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+				imageCI.tiling = VK_IMAGE_TILING_OPTIMAL;
+				imageCI.samples = VK_SAMPLE_COUNT_4_BIT;
+				imageCI.usage = VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+				imageCI.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+				VK_CHECK_RESULT( vkCreateImage( vulkanDevice->logicalDevice, &imageCI, nullptr, &colorMultisample.image ) );
+
+				VkMemoryRequirements memReqs;
+				vkGetImageMemoryRequirements( vulkanDevice->logicalDevice, colorMultisample.image, &memReqs );
+				VkMemoryAllocateInfo memAllocInfo{};
+				memAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+				memAllocInfo.allocationSize = memReqs.size;
+				VkBool32 lazyMemTypePresent;
+				memAllocInfo.memoryTypeIndex = vulkanDevice->getMemoryType( memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT, &lazyMemTypePresent );
+				if ( !lazyMemTypePresent ) {
+					memAllocInfo.memoryTypeIndex = vulkanDevice->getMemoryType( memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT );
+				}
+				VK_CHECK_RESULT( vkAllocateMemory( vulkanDevice->logicalDevice, &memAllocInfo, nullptr, &colorMultisample.deviceMemory ) );
+				vkBindImageMemory( vulkanDevice->logicalDevice, colorMultisample.image, colorMultisample.deviceMemory, 0 );
+
+				// Create image view for the MSAA target
+				VkImageViewCreateInfo imageViewCI{};
+				imageViewCI.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+				imageViewCI.image = colorMultisample.image;
+				imageViewCI.viewType = VK_IMAGE_VIEW_TYPE_2D;
+				imageViewCI.format = colorFormat;
+				imageViewCI.components.r = VK_COMPONENT_SWIZZLE_R;
+				imageViewCI.components.g = VK_COMPONENT_SWIZZLE_G;
+				imageViewCI.components.b = VK_COMPONENT_SWIZZLE_B;
+				imageViewCI.components.a = VK_COMPONENT_SWIZZLE_A;
+				imageViewCI.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				imageViewCI.subresourceRange.levelCount = 1;
+				imageViewCI.subresourceRange.layerCount = 1;
+				VK_CHECK_RESULT( vkCreateImageView( vulkanDevice->logicalDevice, &imageViewCI, nullptr, &colorMultisample.view ) );
+
+				//-----------------------------------------//
+				// Create multisample depth/stencil target //
+				//-----------------------------------------//
+				depthStencilMultisample.device = vulkanDevice;
+				depthStencilMultisample.width = width;
+				depthStencilMultisample.height = height;
+				depthStencilMultisample.mipLevels = 1;
+
+				imageCI.imageType = VK_IMAGE_TYPE_2D;
+				imageCI.format = VK_FORMAT_D32_SFLOAT;
+				imageCI.extent.width = width;
+				imageCI.extent.height = height;
+				imageCI.extent.depth = 1;
+				imageCI.mipLevels = 1;
+				imageCI.arrayLayers = 1;
+				imageCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+				imageCI.tiling = VK_IMAGE_TILING_OPTIMAL;
+				imageCI.samples = VK_SAMPLE_COUNT_4_BIT;
+				imageCI.usage = VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+				imageCI.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+				VK_CHECK_RESULT( vkCreateImage( vulkanDevice->logicalDevice, &imageCI, nullptr, &depthStencilMultisample.image ) );
+
+				vkGetImageMemoryRequirements( vulkanDevice->logicalDevice, depthStencilMultisample.image, &memReqs );
+				memAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+				memAllocInfo.allocationSize = memReqs.size;
+				memAllocInfo.memoryTypeIndex = vulkanDevice->getMemoryType( memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT, &lazyMemTypePresent );
+				if ( !lazyMemTypePresent ) {
+					memAllocInfo.memoryTypeIndex = vulkanDevice->getMemoryType( memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT );
+				}
+				VK_CHECK_RESULT( vkAllocateMemory( vulkanDevice->logicalDevice, &memAllocInfo, nullptr, &depthStencilMultisample.deviceMemory ) );
+				vkBindImageMemory( vulkanDevice->logicalDevice, depthStencilMultisample.image, depthStencilMultisample.deviceMemory, 0 );
+
+				// Create image view for the MSAA target
+				imageViewCI.image = depthStencilMultisample.image;
+				imageViewCI.viewType = VK_IMAGE_VIEW_TYPE_2D;
+				imageViewCI.format = VK_FORMAT_D32_SFLOAT;
+				imageViewCI.components.r = VK_COMPONENT_SWIZZLE_R;
+				imageViewCI.components.g = VK_COMPONENT_SWIZZLE_G;
+				imageViewCI.components.b = VK_COMPONENT_SWIZZLE_B;
+				imageViewCI.components.a = VK_COMPONENT_SWIZZLE_A;
+				imageViewCI.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+				imageViewCI.subresourceRange.levelCount = 1;
+				imageViewCI.subresourceRange.layerCount = 1;
+				VK_CHECK_RESULT( vkCreateImageView( vulkanDevice->logicalDevice, &imageViewCI, nullptr, &depthStencilMultisample.view ) );
+			}
+
+			//-----------------------------//
+			// Create a renderpass         //
+			//-----------------------------//
+
+			if ( multiSample )
+			{
+				std::array<VkAttachmentDescription, 4> attachments = {};
+
+				// Multisampled attachment that we render to
+				attachments[0].format = colorFormat;
+				attachments[0].samples = VK_SAMPLE_COUNT_4_BIT;
+				attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+				attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+				attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+				attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+				attachments[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+				attachments[0].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+				// This is the frame buffer attachment to where the multisampled image
+				// will be resolved to and which will be presented to the swapchain
+				attachments[1].format = colorFormat;
+				attachments[1].samples = VK_SAMPLE_COUNT_1_BIT;
+				attachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+				attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+				attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+				attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+				attachments[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+				attachments[1].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+				// Multisampled depth attachment we render to
+				attachments[2].format = VK_FORMAT_D32_SFLOAT;
+				attachments[2].samples = VK_SAMPLE_COUNT_4_BIT;
+				attachments[2].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+				attachments[2].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+				attachments[2].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+				attachments[2].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+				attachments[2].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+				attachments[2].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+				// Depth resolve attachment
+				attachments[3].format = VK_FORMAT_D32_SFLOAT;
+				attachments[3].samples = VK_SAMPLE_COUNT_1_BIT;
+				attachments[3].loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+				attachments[3].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+				attachments[3].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+				attachments[3].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+				attachments[3].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+				attachments[3].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+				VkAttachmentReference colorReference = {};
+				colorReference.attachment = 0;
+				colorReference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+				VkAttachmentReference depthReference = {};
+				depthReference.attachment = 2;
+				depthReference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+				// Resolve attachment reference for the color attachment
+				VkAttachmentReference resolveReference = {};
+				resolveReference.attachment = 1;
+				resolveReference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+				VkSubpassDescription subpass = {};
+				subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+				subpass.colorAttachmentCount = 1;
+				subpass.pColorAttachments = &colorReference;
+				// Pass our resolve attachments to the sub pass
+				subpass.pResolveAttachments = &resolveReference;
+				subpass.pDepthStencilAttachment = &depthReference;
+
+				std::array<VkSubpassDependency, 2> dependencies;
+
+				dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+				dependencies[0].dstSubpass = 0;
+				dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+				dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+				dependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+				dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+				dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+				dependencies[1].srcSubpass = 0;
+				dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+				dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+				dependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+				dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+				dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+				dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+				VkRenderPassCreateInfo renderPassCI = {};
+				renderPassCI.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+				renderPassCI.attachmentCount = static_cast<uint32_t>( attachments.size() );
+				renderPassCI.pAttachments = attachments.data();
+				renderPassCI.subpassCount = 1;
+				renderPassCI.pSubpasses = &subpass;
+				renderPassCI.dependencyCount = 2;
+				renderPassCI.pDependencies = dependencies.data();
+				VK_CHECK_RESULT( vkCreateRenderPass( vulkanDevice->logicalDevice, &renderPassCI, nullptr, &renderPass ) );
+			}
+			else
+			{
+				uint32_t nTotalAttachments = 2;
+				VkAttachmentDescription attachmentDescs[2];
+				VkAttachmentReference attachmentReferences[2];
+				attachmentReferences[0].attachment = 0;
+				attachmentReferences[0].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+				attachmentReferences[1].attachment = 1;
+				attachmentReferences[1].layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+				attachmentDescs[0].format = colorFormat;
+				attachmentDescs[0].samples = imageCreateInfo.samples;
+				attachmentDescs[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+				attachmentDescs[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+				attachmentDescs[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+				attachmentDescs[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+				attachmentDescs[0].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+				attachmentDescs[0].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+				attachmentDescs[0].flags = 0;
+
+				attachmentDescs[1].format = VK_FORMAT_D32_SFLOAT;
+				attachmentDescs[1].samples = imageCreateInfo.samples;
+				attachmentDescs[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+				attachmentDescs[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+				attachmentDescs[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+				attachmentDescs[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+				attachmentDescs[1].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+				attachmentDescs[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+				attachmentDescs[1].flags = 0;
+
+				VkSubpassDescription subPassCreateInfo = { };
+				subPassCreateInfo.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+				subPassCreateInfo.flags = 0;
+				subPassCreateInfo.inputAttachmentCount = 0;
+				subPassCreateInfo.pInputAttachments = NULL;
+				subPassCreateInfo.colorAttachmentCount = 1;
+				subPassCreateInfo.pColorAttachments = &attachmentReferences[0];
+				subPassCreateInfo.pResolveAttachments = NULL;
+				subPassCreateInfo.pDepthStencilAttachment = &attachmentReferences[1];
+				subPassCreateInfo.preserveAttachmentCount = 0;
+				subPassCreateInfo.pPreserveAttachments = NULL;
+
+				VkRenderPassCreateInfo renderPassCreateInfo = { };
+				renderPassCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+				renderPassCreateInfo.flags = 0;
+				renderPassCreateInfo.attachmentCount = 2;
+				renderPassCreateInfo.pAttachments = &attachmentDescs[0];
+				renderPassCreateInfo.subpassCount = 1;
+				renderPassCreateInfo.pSubpasses = &subPassCreateInfo;
+				renderPassCreateInfo.dependencyCount = 0;
+				renderPassCreateInfo.pDependencies = NULL;
+
+				VK_CHECK_RESULT( vkCreateRenderPass( vulkanDevice->logicalDevice, &renderPassCreateInfo, NULL, &renderPass ) );
+
+			}
+
+			//-----------------------------//
+			// Create a frame buffer       //
+			//-----------------------------//
+
+			VkImageView attachments[4];
+			if ( multiSample ) {
+				attachments[0] = colorMultisample.view;
+				attachments[1] = color.view;
+				attachments[2] = depthStencilMultisample.view;
+				attachments[3] = depthStencil.view;
+			}
+			else {
+				attachments[0] = color.view;
+				attachments[1] = depthStencil.view;
+			}
+
+			VkFramebufferCreateInfo framebufferCreateInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
+			framebufferCreateInfo.renderPass = renderPass;
+			framebufferCreateInfo.attachmentCount = multiSample ? 2 : 4;
+			framebufferCreateInfo.pAttachments = attachments;
+			framebufferCreateInfo.width = width;
+			framebufferCreateInfo.height = height;
+			framebufferCreateInfo.layers = 1;
+			VK_CHECK_RESULT( vkCreateFramebuffer( vulkanDevice->logicalDevice, &framebufferCreateInfo, NULL, &frameBuffer ) );
+
+			colorLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			depthStencilLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+			// set textures to be writable
+			VkCommandBuffer layoutCmd = vulkanDevice->createCommandBuffer( VK_COMMAND_BUFFER_LEVEL_PRIMARY, true );
+			VkImageMemoryBarrier imageMemoryBarrier{};
+			imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			imageMemoryBarrier.image = color.image;
+			imageMemoryBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			imageMemoryBarrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			imageMemoryBarrier.srcAccessMask = 0;
+			imageMemoryBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			imageMemoryBarrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+			vkCmdPipelineBarrier( layoutCmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageMemoryBarrier );
+			imageMemoryBarrier.image = depthStencil.image;
+			vkCmdPipelineBarrier( layoutCmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageMemoryBarrier );
+			vulkanDevice->flushCommandBuffer( layoutCmd, setupQueue, true );
+			
+		}
+	};
 }

@@ -225,6 +225,7 @@ public:
 	kj::Own<aardvark::CAardvarkClient> m_pClient;
 	std::unordered_map < std::string, std::shared_ptr< vkglTF::Model > > m_mapModels;
 	std::vector< std::shared_ptr< Gadget > > m_vecGadgets;
+	vks::RenderTarget leftEyeRT;
 
 	const uint32_t renderAhead = 2;
 	uint32_t frameIndex = 0;
@@ -392,13 +393,19 @@ public:
 		}
 	}
 
-	void recordCommandBuffers()
+	void recordCommandBuffers( uint32_t cbIndex )
+	{
+		renderScene( cbIndex, renderPass, frameBuffers[cbIndex], width, height, false );
+		renderScene( cbIndex, leftEyeRT.renderPass, leftEyeRT.frameBuffer, 1024, 1024, true );
+	}
+
+	void renderScene( uint32_t cbIndex, VkRenderPass targetRenderPass, VkFramebuffer targetFrameBuffer, uint32_t targetWidth, uint32_t targetHeight, bool bDebug )
 	{
 		VkCommandBufferBeginInfo cmdBufferBeginInfo{};
 		cmdBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
 		VkClearValue clearValues[3];
-		if (settings.multiSampling) {
+		if ( settings.multiSampling ) {
 			clearValues[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
 			clearValues[1].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
 			clearValues[2].depthStencil = { 1.0f, 0 };
@@ -409,57 +416,57 @@ public:
 		}
 
 		VkRenderPassBeginInfo renderPassBeginInfo{};
+		VkCommandBuffer currentCB = commandBuffers[cbIndex];
+
 		renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderPassBeginInfo.renderPass = renderPass;
+		renderPassBeginInfo.renderPass = targetRenderPass;
 		renderPassBeginInfo.renderArea.offset.x = 0;
 		renderPassBeginInfo.renderArea.offset.y = 0;
-		renderPassBeginInfo.renderArea.extent.width = width;
-		renderPassBeginInfo.renderArea.extent.height = height;
+		renderPassBeginInfo.renderArea.extent.width = targetWidth;
+		renderPassBeginInfo.renderArea.extent.height = targetHeight;
 		renderPassBeginInfo.clearValueCount = settings.multiSampling ? 3 : 2;
 		renderPassBeginInfo.pClearValues = clearValues;
 
-		for (uint32_t i = 0; i < commandBuffers.size(); ++i) {
-			renderPassBeginInfo.framebuffer = frameBuffers[i];
-
-			VkCommandBuffer currentCB = commandBuffers[i];
-
-			VK_CHECK_RESULT(vkBeginCommandBuffer(currentCB, &cmdBufferBeginInfo));
-			vkCmdBeginRenderPass(currentCB, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-			VkViewport viewport{};
-			viewport.width = (float)width;
-			viewport.height = (float)height;
-			viewport.minDepth = 0.0f;
-			viewport.maxDepth = 1.0f;
-			vkCmdSetViewport(currentCB, 0, 1, &viewport);
-
-			VkRect2D scissor{};
-			scissor.extent = { width, height };
-			vkCmdSetScissor(currentCB, 0, 1, &scissor);
-
-			//if (displayBackground) {
-			//	vkCmdBindDescriptorSets(currentCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[i].skybox, 0, nullptr);
-			//	vkCmdBindPipeline(currentCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines.skybox);
-			//	models.skybox.draw(currentCB);
-			//}
-
-			vkCmdBindPipeline(currentCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines.pbr);
+		renderPassBeginInfo.framebuffer = targetFrameBuffer;
 
 
-			recordCommandsForModels( currentCB, i, vkglTF::Material::ALPHAMODE_OPAQUE );
-			recordCommandsForModels( currentCB, i, vkglTF::Material::ALPHAMODE_MASK );
+		VK_CHECK_RESULT( vkBeginCommandBuffer( currentCB, &cmdBufferBeginInfo ) );
+		vkCmdBeginRenderPass( currentCB, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE );
 
-			// Transparent primitives
-			// TODO: Correct depth sorting
-			vkCmdBindPipeline( currentCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines.pbrAlphaBlend );
-			recordCommandsForModels( currentCB, i, vkglTF::Material::ALPHAMODE_BLEND );
+		VkViewport viewport{};
+		viewport.width = (float)width;
+		viewport.height = (float)height;
+		viewport.minDepth = 0.0f;
+		viewport.maxDepth = 1.0f;
+		vkCmdSetViewport( currentCB, 0, 1, &viewport );
 
-			// User interface
-			ui->draw(currentCB);
+		VkRect2D scissor{};
+		scissor.extent = { width, height };
+		vkCmdSetScissor( currentCB, 0, 1, &scissor );
 
-			vkCmdEndRenderPass(currentCB);
-			VK_CHECK_RESULT(vkEndCommandBuffer(currentCB));
-		}
+		//if (displayBackground) {
+		//	vkCmdBindDescriptorSets(currentCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[i].skybox, 0, nullptr);
+		//	vkCmdBindPipeline(currentCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines.skybox);
+		//	models.skybox.draw(currentCB);
+		//}
+
+//		if( !bDebug )
+		vkCmdBindPipeline( currentCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines.pbr );
+
+
+		recordCommandsForModels( currentCB, cbIndex, vkglTF::Material::ALPHAMODE_OPAQUE );
+		recordCommandsForModels( currentCB, cbIndex, vkglTF::Material::ALPHAMODE_MASK );
+
+		// Transparent primitives
+		// TODO: Correct depth sorting
+		vkCmdBindPipeline( currentCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines.pbrAlphaBlend );
+		recordCommandsForModels( currentCB, cbIndex, vkglTF::Material::ALPHAMODE_BLEND );
+
+		// User interface
+		ui->draw( currentCB );
+
+		vkCmdEndRenderPass( currentCB );
+		VK_CHECK_RESULT( vkEndCommandBuffer( currentCB ) );
 	}
 
 	void recordCommandsForModels( VkCommandBuffer currentCB, uint32_t i, vkglTF::Material::AlphaMode eAlphaMode )
@@ -1841,7 +1848,7 @@ public:
 
 	void windowResized()
 	{
-		recordCommandBuffers();
+//		recordCommandBuffers();
 		vkDeviceWaitIdle(device);
 		updateUniformBuffers();
 		updateOverlay();
@@ -1889,6 +1896,8 @@ public:
 			VK_CHECK_RESULT(vkAllocateCommandBuffers(device, &cmdBufAllocateInfo, commandBuffers.data()));
 		}
 
+		leftEyeRT.init( VK_FORMAT_R8G8B8A8_UINT, 1024, 1024, vulkanDevice, queue, settings.multiSampling );
+
 		loadAssets();
 		generateBRDFLUT();
 		generateCubemaps();
@@ -1899,7 +1908,7 @@ public:
 		ui = new UI(vulkanDevice, renderPass, queue, pipelineCache, settings.sampleCount);
 		updateOverlay();
 
-		recordCommandBuffers();
+//		recordCommandBuffers();
 
 		m_serverThread.Start();
 
@@ -2207,7 +2216,7 @@ public:
 		}
 
 		setupDescriptors();
-		recordCommandBuffers();
+//		recordCommandBuffers();
 	}
 
 	std::shared_ptr<vkglTF::Model> findOrLoadModel( AvModelSource::Client & source )
@@ -2416,7 +2425,7 @@ public:
 
 		if (updateCBs) {
 			vkDeviceWaitIdle(device);
-			recordCommandBuffers();
+//			recordCommandBuffers();
 			vkDeviceWaitIdle(device);
 		}
 
@@ -2440,7 +2449,6 @@ public:
 		updateOverlay();
 
 		TraverseSceneGraphs( frameTimer );
-		recordCommandBuffers(); // TODO(Joe): Probably don't call this every frame, but only when the set of models changes
 
 		VK_CHECK_RESULT(vkWaitForFences(device, 1, &waitFences[frameIndex], VK_TRUE, UINT64_MAX));
 		VK_CHECK_RESULT(vkResetFences(device, 1, &waitFences[frameIndex]));
@@ -2452,6 +2460,8 @@ public:
 		else {
 			VK_CHECK_RESULT(acquire);
 		}
+
+		recordCommandBuffers( currentBuffer ); // TODO(Joe): Probably don't call this every frame, but only when the set of models changes
 
 		// Update UBOs
 		updateUniformBuffers();
