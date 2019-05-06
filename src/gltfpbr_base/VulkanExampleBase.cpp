@@ -7,6 +7,7 @@
 */
 
 #include "VulkanExampleBase.h"
+#include <openvr.h>
 
 std::vector<const char*> VulkanExampleBase::args;
 
@@ -62,6 +63,16 @@ VkResult VulkanExampleBase::createInstance(bool enableValidation)
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
 	instanceExtensions.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
 #endif
+	char rchOpenVRExtensions[4096];
+	uint32_t unBytesNeeded = vr::VRCompositor()->GetVulkanInstanceExtensionsRequired( rchOpenVRExtensions, sizeof( rchOpenVRExtensions ) );
+	assert( unBytesNeeded < sizeof( rchOpenVRExtensions ) );
+	char *pchTok = strtok( rchOpenVRExtensions, " " );
+	while ( pchTok )
+	{
+		instanceExtensions.push_back( pchTok );
+		pchTok = strtok( nullptr, " " );
+	}
+
 
 	VkInstanceCreateInfo instanceCreateInfo = {};
 	instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -1811,4 +1822,18 @@ void VulkanExampleBase::initSwapchain()
 void VulkanExampleBase::setupSwapChain()
 {
 	swapChain.create(&width, &height, settings.vsync);
+}
+
+void VulkanExampleBase::initOpenVR()
+{
+	vr::EVRInitError vrErr;
+	vr::VR_Init( &vrErr, vr::VRApplication_Scene );
+	if ( vrErr != vr::VRInitError_None )
+	{
+		std::cout << "FATAL: VR_Init failed" << std::endl;
+		return;
+	}
+
+	vr::VRCompositor()->SetTrackingSpace( vr::TrackingUniverseStanding );
+
 }

@@ -229,6 +229,7 @@ public:
 	virtual ~VulkanExampleBase();
 	
 	void initVulkan();
+	void initOpenVR();
 
 	virtual VkResult createInstance(bool enableValidation);
 	virtual void render() = 0;

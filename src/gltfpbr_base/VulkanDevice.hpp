@@ -17,6 +17,8 @@
 #include "vulkan/vulkan.h"
 #include "macros.h"
 
+#include <openvr.h>
+
 namespace vks
 {	
 	struct VulkanDevice
@@ -198,6 +200,16 @@ namespace vks
 			// Create the logical device representation
 			std::vector<const char*> deviceExtensions(enabledExtensions);
 			deviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+
+			char rchOpenVRExtensions[4096];
+			uint32_t unBytesNeeded = vr::VRCompositor()->GetVulkanDeviceExtensionsRequired( physicalDevice, rchOpenVRExtensions, sizeof( rchOpenVRExtensions ) );
+			assert( unBytesNeeded < sizeof( rchOpenVRExtensions ) );
+			char *pchTok = strtok( rchOpenVRExtensions, " " );
+			while ( pchTok )
+			{
+				deviceExtensions.push_back( pchTok );
+				pchTok = strtok( nullptr, " " );
+			}
 
 			VkDeviceCreateInfo deviceCreateInfo = {};
 			deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;

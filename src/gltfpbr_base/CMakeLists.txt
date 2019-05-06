@@ -13,6 +13,8 @@ target_compile_definitions( gltfpbr_base PUBLIC
 	VK_USE_PLATFORM_WIN32_KHR
 	VK_EXAMPLE_DATA_DIR="${AV_DATA}"
 	)
+target_link_libraries( gltfpbr_base ${OpenVR_LIB_DIR}/openvr_api.lib )
+target_include_directories( gltfpbr_base PRIVATE ${OpenVR_INCLUDE_DIR} )
 
 if(WIN32)
     target_link_libraries(gltfpbr_base ${Vulkan_LIBRARY} ${WINLIBS} ${DRACO_DECODER_LIBRARY})

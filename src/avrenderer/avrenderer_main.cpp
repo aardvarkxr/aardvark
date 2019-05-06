@@ -226,6 +226,13 @@ public:
 	std::unordered_map < std::string, std::shared_ptr< vkglTF::Model > > m_mapModels;
 	std::vector< std::shared_ptr< Gadget > > m_vecGadgets;
 	vks::RenderTarget leftEyeRT;
+	vks::RenderTarget rightEyeRT;
+
+	uint32_t eyeWidth = 0;
+	uint32_t eyeHeight = 0;
+	glm::mat4 m_matProjection[2];
+	glm::mat4 m_matEye[2];
+	glm::mat4 m_matHmd;
 
 	const uint32_t renderAhead = 2;
 	uint32_t frameIndex = 0;
@@ -402,7 +409,8 @@ public:
 		VK_CHECK_RESULT( vkBeginCommandBuffer( currentCB, &cmdBufferBeginInfo ) );
 
 		renderScene( cbIndex, renderPass, frameBuffers[cbIndex], width, height, false );
-		renderScene( cbIndex, leftEyeRT.renderPass, leftEyeRT.frameBuffer, 1024, 1024, true );
+		renderScene( cbIndex, leftEyeRT.renderPass,  leftEyeRT.frameBuffer,  eyeWidth, eyeHeight, true );
+		renderScene( cbIndex, rightEyeRT.renderPass, rightEyeRT.frameBuffer, eyeWidth, eyeHeight, true );
 
 		VK_CHECK_RESULT( vkEndCommandBuffer( currentCB ) );
 	}
@@ -1901,7 +1909,10 @@ public:
 			VK_CHECK_RESULT(vkAllocateCommandBuffers(device, &cmdBufAllocateInfo, commandBuffers.data()));
 		}
 
-		leftEyeRT.init( VK_FORMAT_R8G8B8A8_UINT, 1024, 1024, vulkanDevice, queue, settings.multiSampling );
+		vr::VRSystem()->GetRecommendedRenderTargetSize( &eyeWidth, &eyeHeight );
+
+		leftEyeRT.init( VK_FORMAT_R8G8B8A8_UINT, eyeWidth, eyeHeight, vulkanDevice, queue, settings.multiSampling );
+		rightEyeRT.init( VK_FORMAT_R8G8B8A8_UINT, eyeWidth, eyeHeight, vulkanDevice, queue, settings.multiSampling );
 
 		loadAssets();
 		generateBRDFLUT();
@@ -2445,6 +2456,67 @@ public:
 #endif
 	}
 
+	//-----------------------------------------------------------------------------
+// Purpose: Gets a Matrix Projection Eye with respect to nEye.
+//-----------------------------------------------------------------------------
+	glm::mat4 GetHMDMatrixProjectionEye( vr::Hmd_Eye nEye )
+	{
+		if ( !vr::VRSystem() )
+			return glm::mat4( 1.f );
+
+		vr::HmdMatrix44_t mat = vr::VRSystem()->GetProjectionMatrix( nEye, 0.1f, 50.f );
+
+		return glm::mat4(
+			mat.m[0][0], mat.m[1][0], mat.m[2][0], mat.m[3][0],
+			mat.m[0][1], mat.m[1][1], mat.m[2][1], mat.m[3][1],
+			mat.m[0][2], mat.m[1][2], mat.m[2][2], mat.m[3][2],
+			mat.m[0][3], mat.m[1][3], mat.m[2][3], mat.m[3][3]
+		);
+	}
+
+
+	//-----------------------------------------------------------------------------
+	// Purpose: Gets an HMDMatrixPoseEye with respect to nEye.
+	//-----------------------------------------------------------------------------
+	glm::mat4 GetHMDMatrixPoseEye( vr::Hmd_Eye nEye )
+	{
+		if ( !vr::VRSystem() )
+			return glm::mat4( 1.f );
+
+		vr::HmdMatrix34_t matEyeRight = vr::VRSystem()->GetEyeToHeadTransform( nEye );
+		glm::mat4 matrixObj(
+			matEyeRight.m[0][0], matEyeRight.m[1][0], matEyeRight.m[2][0], 0.0,
+			matEyeRight.m[0][1], matEyeRight.m[1][1], matEyeRight.m[2][1], 0.0,
+			matEyeRight.m[0][2], matEyeRight.m[1][2], matEyeRight.m[2][2], 0.0,
+			matEyeRight.m[0][3], matEyeRight.m[1][3], matEyeRight.m[2][3], 1.0f
+		);
+
+		return glm::inverse( matrixObj );
+	}
+
+	//-----------------------------------------------------------------------------
+	// Purpose: Gets a Current View Projection Matrix with respect to nEye,
+	//          which may be an Eye_Left or an Eye_Right.
+	//-----------------------------------------------------------------------------
+	glm::mat4 GetCurrentViewProjectionMatrix( vr::Hmd_Eye nEye )
+	{
+		glm::mat4 matMVP = m_matProjection[nEye] * m_matEye[nEye] * m_matHmd;
+	}
+
+	glm::mat4 glmMatFromVrMat( const vr::HmdMatrix34_t & mat )
+	{
+		glm::mat4 r;
+		for ( uint32_t y = 0; y < 4; y++ )
+		{
+			for ( uint32_t x = 0; x < 3; x++ )
+			{
+				r[x][y] = mat.m[x][y];
+			}
+			r[3][y] = y == 3 ? 0.f : 1.f;
+		}
+		return r;
+	}
+
 	virtual void render()
 	{
 		if (!prepared) {
@@ -2452,6 +2524,26 @@ public:
 		}
 
 		updateOverlay();
+
+		vr::TrackedDevicePose_t rRenderPoses[vr::k_unMaxTrackedDeviceCount];
+		vr::TrackedDevicePose_t rGamePoses[vr::k_unMaxTrackedDeviceCount];
+		vr::VRCompositor()->WaitGetPoses( rRenderPoses, vr::k_unMaxTrackedDeviceCount, rGamePoses, vr::k_unMaxTrackedDeviceCount );
+
+		vr::TrackedDeviceIndex_t unLeftHand = vr::VRSystem()->GetTrackedDeviceIndexForControllerRole( vr::TrackedControllerRole_LeftHand );
+		if ( unLeftHand != vr::k_unTrackedDeviceIndexInvalid )
+		{
+			glm::mat4 matLeftHand = glmMatFromVrMat( rRenderPoses[unLeftHand].mDeviceToAbsoluteTracking );
+			m_mapOriginFromUniverseTransforms["/user/hand/left"] = matLeftHand;
+		}
+		vr::TrackedDeviceIndex_t unRightHand = vr::VRSystem()->GetTrackedDeviceIndexForControllerRole( vr::TrackedControllerRole_RightHand );
+		if ( unRightHand != vr::k_unTrackedDeviceIndexInvalid )
+		{
+			glm::mat4 matRightHand = glmMatFromVrMat( rRenderPoses[unRightHand].mDeviceToAbsoluteTracking );
+			m_mapOriginFromUniverseTransforms["/user/hand/right"] = matRightHand;
+		}
+		m_matHmd = glmMatFromVrMat( rRenderPoses[vr::k_unTrackedDeviceIndex_Hmd].mDeviceToAbsoluteTracking );
+		m_mapOriginFromUniverseTransforms["/user/head"] = m_matHmd;
+		m_mapOriginFromUniverseTransforms["/space/stage"] = glm::mat4( 1.f );
 
 		TraverseSceneGraphs( frameTimer );
 
@@ -2466,7 +2558,7 @@ public:
 			VK_CHECK_RESULT(acquire);
 		}
 
-		recordCommandBuffers( currentBuffer ); // TODO(Joe): Probably don't call this every frame, but only when the set of models changes
+		recordCommandBuffers( currentBuffer );
 
 		// Update UBOs
 		updateUniformBuffers();
@@ -2486,6 +2578,8 @@ public:
 		submitInfo.pCommandBuffers = &commandBuffers[currentBuffer];
 		submitInfo.commandBufferCount = 1;
 		VK_CHECK_RESULT(vkQueueSubmit(queue, 1, &submitInfo, waitFences[frameIndex]));
+
+		submitEyeBuffers();
 
 		VkResult present = swapChain.queuePresent(queue, currentBuffer, renderCompleteSemaphores[frameIndex]);
 		if (!((present == VK_SUCCESS) || (present == VK_SUBOPTIMAL_KHR))) {
@@ -2525,6 +2619,36 @@ public:
 			updateUniformBuffers();
 		}
 	}
+
+	void submitEyeBuffers()
+	{
+		// Submit to OpenVR
+		vr::VRTextureBounds_t bounds;
+		bounds.uMin = 0.0f;
+		bounds.uMax = 1.0f;
+		bounds.vMin = 0.0f;
+		bounds.vMax = 1.0f;
+
+		vr::VRVulkanTextureData_t vulkanData;
+		vulkanData.m_nImage = (uint64_t)leftEyeRT.color.image;
+		vulkanData.m_pDevice = (VkDevice_T *)device;
+		vulkanData.m_pPhysicalDevice = (VkPhysicalDevice_T *)vulkanDevice->physicalDevice;
+		vulkanData.m_pInstance = (VkInstance_T *)instance;
+		vulkanData.m_pQueue = (VkQueue_T *)queue;
+		vulkanData.m_nQueueFamilyIndex = vulkanDevice->queueFamilyIndices.graphics;
+
+		vulkanData.m_nWidth = eyeWidth;
+		vulkanData.m_nHeight = eyeHeight;
+		vulkanData.m_nFormat = VK_FORMAT_R8G8B8A8_UINT;
+		vulkanData.m_nSampleCount = 1;
+
+		vr::Texture_t texture = { &vulkanData, vr::TextureType_Vulkan, vr::ColorSpace_Auto };
+		vr::VRCompositor()->Submit( vr::Eye_Left, &texture, &bounds );
+
+		vulkanData.m_nImage = (uint64_t)rightEyeRT.color.image;
+		vr::VRCompositor()->Submit( vr::Eye_Right, &texture, &bounds );
+
+	}
 };
 
 VulkanExample *vulkanExample;
@@ -2543,6 +2667,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 {
 	for (int32_t i = 0; i < __argc; i++) { VulkanExample::args.push_back(__argv[i]); };
 	vulkanExample = new VulkanExample();
+	vulkanExample->initOpenVR();
 	vulkanExample->initVulkan();
 	vulkanExample->setupWindow(hInstance, WndProc);
 	vulkanExample->prepare();
@@ -2572,6 +2697,7 @@ int main(const int argc, const char *argv[])
 {
 	for (size_t i = 0; i < argc; i++) { VulkanExample::args.push_back(argv[i]); };
 	vulkanExample = new VulkanExample();
+	vulkanExample->initOpenVR();
 	vulkanExample->initVulkan();
 	vulkanExample->prepare();
 	vulkanExample->renderLoop();
@@ -2583,6 +2709,7 @@ int main(const int argc, const char *argv[])
 {
 	for (size_t i = 0; i < argc; i++) { VulkanExample::args.push_back(argv[i]); };
 	vulkanExample = new VulkanExample();
+	vulkanExample->initOpenVR();
 	vulkanExample->initVulkan();
 	vulkanExample->setupWindow();
 	vulkanExample->prepare();
@@ -2602,6 +2729,7 @@ int main(const int argc, const char *argv[])
 {
 	for (size_t i = 0; i < argc; i++) { VulkanExample::args.push_back(argv[i]); };
 	vulkanExample = new VulkanExample();
+	vulkanExample->initOpenVR();
 	vulkanExample->initVulkan();
 	vulkanExample->setupWindow();
 	vulkanExample->prepare();

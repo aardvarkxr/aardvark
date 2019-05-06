@@ -11,6 +11,10 @@ set( CapnProto_DIR ${CMAKE_SOURCE_DIR}/packages/capnproto/lib/cmake/CapnProto  )
 set( Vulkan_LIBRARY ${CMAKE_SOURCE_DIR}/thirdparty/vulkan/libs/vulkan-1.lib  )
 set( Vulkan_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/thirdparty/vulkan  )
 
+set( OpenVR_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/thirdparty/openvr/headers )
+set( OpenVR_LIB_DIR ${CMAKE_SOURCE_DIR}/thirdparty/openvr/lib/win64 )
+set( OpenVR_BIN_DIR ${CMAKE_SOURCE_DIR}/thirdparty/openvr/bin/win64 )
+
 #add_compile_definitions(_ITERATOR_DEBUG_LEVEL=0)
 
 set( AV_SRC_PUBLIC ${CMAKE_SOURCE_DIR}/public )
