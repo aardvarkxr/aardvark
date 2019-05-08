@@ -175,6 +175,8 @@ public:
 		Buffer scene;
 		Buffer skybox;
 		Buffer params;
+		Buffer leftEye;
+		Buffer rightEye;
 	};
 
 	struct UBOMatrices {
@@ -182,7 +184,7 @@ public:
 		glm::mat4 model;
 		glm::mat4 view;
 		glm::vec3 camPos;
-	} shaderValuesScene, shaderValuesSkybox;
+	} shaderValuesScene, shaderValuesSkybox, shaderValuesLeftEye, shaderValuesRightEye;
 
 	struct shaderValuesParams {
 		glm::vec4 lightDir;
@@ -211,8 +213,16 @@ public:
 	struct DescriptorSets {
 		VkDescriptorSet scene;
 		VkDescriptorSet skybox;
+		VkDescriptorSet eye[2];
 	};
 	std::vector<DescriptorSets> descriptorSets;
+
+	enum class EEye
+	{
+		Left,
+		Right,
+		Mirror
+	};
 
 	std::vector<VkCommandBuffer> commandBuffers;
 	std::vector<UniformBufferSet> uniformBuffers;
@@ -232,7 +242,7 @@ public:
 	uint32_t eyeHeight = 0;
 	glm::mat4 m_matProjection[2];
 	glm::mat4 m_matEye[2];
-	glm::mat4 m_matHmd;
+	glm::mat4 m_matHmdFromStage;
 
 	const uint32_t renderAhead = 2;
 	uint32_t frameIndex = 0;
@@ -314,10 +324,13 @@ public:
 		m_vecGadgets.clear();
 		m_mapModels.clear();
 
-		for (auto buffer : uniformBuffers) {
+		for (auto buffer : uniformBuffers) 
+		{
 			buffer.params.destroy();
 			buffer.scene.destroy();
 			buffer.skybox.destroy();
+			buffer.leftEye.destroy();
+			buffer.rightEye.destroy();
 		}
 		for (auto fence : waitFences) {
 			vkDestroyFence(device, fence, nullptr);
@@ -338,14 +351,30 @@ public:
 		delete ui;
 	}
 
-	void renderNode( std::shared_ptr<vkglTF::Node> node, uint32_t cbIndex, vkglTF::Material::AlphaMode alphaMode) {
+	void renderNode( std::shared_ptr<vkglTF::Node> node, uint32_t cbIndex, vkglTF::Material::AlphaMode alphaMode, EEye eEye ) 
+	{
 		if (node->mesh) {
 			// Render mesh primitives
 			for (auto primitive : node->mesh->primitives) {
 				if (primitive->material.alphaMode == alphaMode) {
 
+					VkDescriptorSet descriptorSet;
+					switch ( eEye )
+					{
+					case EEye::Left:
+						descriptorSet = descriptorSets[cbIndex].eye[vr::Eye_Left];
+						break;
+					case EEye::Right:
+						descriptorSet = descriptorSets[cbIndex].eye[vr::Eye_Right];
+						break;
+					default:
+					case EEye::Mirror:
+						descriptorSet = descriptorSets[cbIndex].scene;
+						break;
+					}
+
 					const std::vector<VkDescriptorSet> descriptorsets = {
-						descriptorSets[cbIndex].scene,
+						descriptorSet,
 						primitive->material.descriptorSet,
 						node->mesh->uniformBuffer.descriptorSet,
 					};
@@ -396,7 +425,7 @@ public:
 
 		};
 		for (auto child : node->children) {
-			renderNode(child, cbIndex, alphaMode);
+			renderNode(child, cbIndex, alphaMode, eEye );
 		}
 	}
 
@@ -408,14 +437,14 @@ public:
 
 		VK_CHECK_RESULT( vkBeginCommandBuffer( currentCB, &cmdBufferBeginInfo ) );
 
-		renderScene( cbIndex, renderPass, frameBuffers[cbIndex], width, height, false );
-		renderScene( cbIndex, leftEyeRT.renderPass,  leftEyeRT.frameBuffer,  eyeWidth, eyeHeight, true );
-		renderScene( cbIndex, rightEyeRT.renderPass, rightEyeRT.frameBuffer, eyeWidth, eyeHeight, true );
+		renderScene( cbIndex, renderPass, frameBuffers[cbIndex], width, height, EEye::Mirror );
+		renderScene( cbIndex, leftEyeRT.renderPass,  leftEyeRT.frameBuffer,  eyeWidth, eyeHeight, EEye::Left );
+		renderScene( cbIndex, rightEyeRT.renderPass, rightEyeRT.frameBuffer, eyeWidth, eyeHeight, EEye::Right );
 
 		VK_CHECK_RESULT( vkEndCommandBuffer( currentCB ) );
 	}
 
-	void renderScene( uint32_t cbIndex, VkRenderPass targetRenderPass, VkFramebuffer targetFrameBuffer, uint32_t targetWidth, uint32_t targetHeight, bool bDebug )
+	void renderScene( uint32_t cbIndex, VkRenderPass targetRenderPass, VkFramebuffer targetFrameBuffer, uint32_t targetWidth, uint32_t targetHeight, EEye eEye )
 	{
 
 		VkClearValue clearValues[3];
@@ -448,14 +477,14 @@ public:
 		vkCmdBeginRenderPass( currentCB, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE );
 
 		VkViewport viewport{};
-		viewport.width = (float)width;
-		viewport.height = (float)height;
+		viewport.width = (float)targetWidth;
+		viewport.height = (float)targetHeight;
 		viewport.minDepth = 0.0f;
 		viewport.maxDepth = 1.0f;
 		vkCmdSetViewport( currentCB, 0, 1, &viewport );
 
 		VkRect2D scissor{};
-		scissor.extent = { width, height };
+		scissor.extent = { targetWidth, targetHeight };
 		vkCmdSetScissor( currentCB, 0, 1, &scissor );
 
 		//if (displayBackground) {
@@ -468,13 +497,13 @@ public:
 		vkCmdBindPipeline( currentCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines.pbr );
 
 
-		recordCommandsForModels( currentCB, cbIndex, vkglTF::Material::ALPHAMODE_OPAQUE );
-		recordCommandsForModels( currentCB, cbIndex, vkglTF::Material::ALPHAMODE_MASK );
+		recordCommandsForModels( currentCB, cbIndex, vkglTF::Material::ALPHAMODE_OPAQUE, eEye );
+		recordCommandsForModels( currentCB, cbIndex, vkglTF::Material::ALPHAMODE_MASK, eEye );
 
 		// Transparent primitives
 		// TODO: Correct depth sorting
 		vkCmdBindPipeline( currentCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines.pbrAlphaBlend );
-		recordCommandsForModels( currentCB, cbIndex, vkglTF::Material::ALPHAMODE_BLEND );
+		recordCommandsForModels( currentCB, cbIndex, vkglTF::Material::ALPHAMODE_BLEND, eEye );
 
 		// User interface
 		ui->draw( currentCB );
@@ -482,7 +511,7 @@ public:
 		vkCmdEndRenderPass( currentCB );
 	}
 
-	void recordCommandsForModels( VkCommandBuffer currentCB, uint32_t i, vkglTF::Material::AlphaMode eAlphaMode )
+	void recordCommandsForModels( VkCommandBuffer currentCB, uint32_t i, vkglTF::Material::AlphaMode eAlphaMode, EEye eEye )
 	{
 		for ( auto pModel : m_vecModelsToRender )
 		{
@@ -494,7 +523,7 @@ public:
 			}
 
 			for ( auto node : pModel->nodes ) {
-				renderNode( node, i, eAlphaMode );
+				renderNode( node, i, eAlphaMode, eEye );
 			}
 		}
 	}
@@ -662,6 +691,8 @@ public:
 				descriptorSetAllocInfo.pSetLayouts = &descriptorSetLayouts.scene;
 				descriptorSetAllocInfo.descriptorSetCount = 1;
 				VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &descriptorSetAllocInfo, &descriptorSets[i].scene));
+				VK_CHECK_RESULT( vkAllocateDescriptorSets( device, &descriptorSetAllocInfo, &descriptorSets[i].eye[ vr::Eye_Left ] ) );
+				VK_CHECK_RESULT( vkAllocateDescriptorSets( device, &descriptorSetAllocInfo, &descriptorSets[i].eye[ vr::Eye_Right ] ) );
 
 				std::array<VkWriteDescriptorSet, 5> writeDescriptorSets{};
 
@@ -700,7 +731,23 @@ public:
 				writeDescriptorSets[4].dstBinding = 4;
 				writeDescriptorSets[4].pImageInfo = &textures.lutBrdf.descriptor;
 
-				vkUpdateDescriptorSets(device, static_cast<uint32_t>(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, NULL);
+				vkUpdateDescriptorSets( device, static_cast<uint32_t>( writeDescriptorSets.size() ), writeDescriptorSets.data(), 0, NULL );
+
+				writeDescriptorSets[0].dstSet = descriptorSets[i].eye[ vr::Eye_Left ];
+				writeDescriptorSets[1].dstSet = descriptorSets[i].eye[vr::Eye_Left];
+				writeDescriptorSets[2].dstSet = descriptorSets[i].eye[vr::Eye_Left];
+				writeDescriptorSets[3].dstSet = descriptorSets[i].eye[vr::Eye_Left];
+				writeDescriptorSets[4].dstSet = descriptorSets[i].eye[vr::Eye_Left];
+				writeDescriptorSets[0].pBufferInfo = &uniformBuffers[i].leftEye.descriptor;
+				vkUpdateDescriptorSets( device, static_cast<uint32_t>( writeDescriptorSets.size() ), writeDescriptorSets.data(), 0, NULL );
+
+				writeDescriptorSets[0].dstSet = descriptorSets[i].eye[vr::Eye_Right];
+				writeDescriptorSets[1].dstSet = descriptorSets[i].eye[vr::Eye_Right];
+				writeDescriptorSets[2].dstSet = descriptorSets[i].eye[vr::Eye_Right];
+				writeDescriptorSets[3].dstSet = descriptorSets[i].eye[vr::Eye_Right];
+				writeDescriptorSets[4].dstSet = descriptorSets[i].eye[vr::Eye_Right];
+				writeDescriptorSets[0].pBufferInfo = &uniformBuffers[i].rightEye.descriptor;
+				vkUpdateDescriptorSets( device, static_cast<uint32_t>( writeDescriptorSets.size() ), writeDescriptorSets.data(), 0, NULL );
 			}
 		}
 
@@ -1812,6 +1859,8 @@ public:
 			uniformBuffer.scene.create(vulkanDevice, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, sizeof(shaderValuesScene));
 			uniformBuffer.skybox.create(vulkanDevice, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, sizeof(shaderValuesSkybox));
 			uniformBuffer.params.create(vulkanDevice, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, sizeof(shaderValuesParams));
+			uniformBuffer.leftEye.create( vulkanDevice, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, sizeof( shaderValuesLeftEye ) );
+			uniformBuffer.rightEye.create( vulkanDevice, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, sizeof( shaderValuesRightEye ) );
 		}
 		updateUniformBuffers();
 	}
@@ -1846,8 +1895,20 @@ public:
 
 		// Skybox
 		shaderValuesSkybox.projection = camera.matrices.perspective;
-		shaderValuesSkybox.view = camera.matrices.view;
+		shaderValuesSkybox.view = shaderValuesScene.projection;
 		shaderValuesSkybox.model = glm::mat4(glm::mat3(camera.matrices.view));
+
+		// left eye
+		shaderValuesLeftEye.projection = GetHMDMatrixProjectionEye( vr::Eye_Left );
+		shaderValuesLeftEye.view = GetHMDMatrixPoseEye( vr::Eye_Left );
+		shaderValuesLeftEye.model = glm::inverse( m_matHmdFromStage );
+		shaderValuesLeftEye.camPos = glm::vec3( 0, 0, 0 );
+
+		// right eye
+		shaderValuesRightEye.projection = GetHMDMatrixProjectionEye( vr::Eye_Right );
+		shaderValuesRightEye.view = GetHMDMatrixPoseEye( vr::Eye_Right );
+		shaderValuesRightEye.model = glm::inverse( m_matHmdFromStage );
+		shaderValuesRightEye.camPos = glm::vec3( 0, 0, 0 );
 	}
 
 	void updateParams()
@@ -2500,7 +2561,7 @@ public:
 	//-----------------------------------------------------------------------------
 	glm::mat4 GetCurrentViewProjectionMatrix( vr::Hmd_Eye nEye )
 	{
-		glm::mat4 matMVP = m_matProjection[nEye] * m_matEye[nEye] * m_matHmd;
+		glm::mat4 matMVP = m_matProjection[nEye] * m_matEye[nEye] * m_matHmdFromStage;
 	}
 
 	glm::mat4 glmMatFromVrMat( const vr::HmdMatrix34_t & mat )
@@ -2510,9 +2571,9 @@ public:
 		{
 			for ( uint32_t x = 0; x < 3; x++ )
 			{
-				r[x][y] = mat.m[x][y];
+				r[y][x] = mat.m[x][y];
 			}
-			r[3][y] = y == 3 ? 0.f : 1.f;
+			r[y][3] = y < 3 ? 0.f : 1.f;
 		}
 		return r;
 	}
@@ -2541,8 +2602,8 @@ public:
 			glm::mat4 matRightHand = glmMatFromVrMat( rRenderPoses[unRightHand].mDeviceToAbsoluteTracking );
 			m_mapOriginFromUniverseTransforms["/user/hand/right"] = matRightHand;
 		}
-		m_matHmd = glmMatFromVrMat( rRenderPoses[vr::k_unTrackedDeviceIndex_Hmd].mDeviceToAbsoluteTracking );
-		m_mapOriginFromUniverseTransforms["/user/head"] = m_matHmd;
+		m_matHmdFromStage = glmMatFromVrMat( rRenderPoses[vr::k_unTrackedDeviceIndex_Hmd].mDeviceToAbsoluteTracking );
+		m_mapOriginFromUniverseTransforms["/user/head"] = m_matHmdFromStage;
 		m_mapOriginFromUniverseTransforms["/space/stage"] = glm::mat4( 1.f );
 
 		TraverseSceneGraphs( frameTimer );
@@ -2563,10 +2624,12 @@ public:
 		// Update UBOs
 		updateUniformBuffers();
 		UniformBufferSet currentUB = uniformBuffers[currentBuffer];
-		memcpy(currentUB.scene.mapped, &shaderValuesScene, sizeof(shaderValuesScene));
+		memcpy( currentUB.scene.mapped, &shaderValuesScene, sizeof( shaderValuesScene ) );
+		memcpy( currentUB.leftEye.mapped, &shaderValuesLeftEye, sizeof( shaderValuesLeftEye ) );
+		memcpy( currentUB.rightEye.mapped, &shaderValuesRightEye, sizeof( shaderValuesRightEye ) );
 		memcpy(currentUB.params.mapped, &shaderValuesParams, sizeof(shaderValuesParams));
 		memcpy(currentUB.skybox.mapped, &shaderValuesSkybox, sizeof(shaderValuesSkybox));
-
+		
 		const VkPipelineStageFlags waitDstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 		VkSubmitInfo submitInfo{};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
