@@ -1911,8 +1911,8 @@ public:
 
 		vr::VRSystem()->GetRecommendedRenderTargetSize( &eyeWidth, &eyeHeight );
 
-		leftEyeRT.init( VK_FORMAT_R8G8B8A8_UINT, eyeWidth, eyeHeight, vulkanDevice, queue, settings.multiSampling );
-		rightEyeRT.init( VK_FORMAT_R8G8B8A8_UINT, eyeWidth, eyeHeight, vulkanDevice, queue, settings.multiSampling );
+		leftEyeRT.init( VK_FORMAT_R8G8B8A8_UNORM, eyeWidth, eyeHeight, vulkanDevice, queue, settings.multiSampling );
+		rightEyeRT.init( VK_FORMAT_R8G8B8A8_UNORM, eyeWidth, eyeHeight, vulkanDevice, queue, settings.multiSampling );
 
 		loadAssets();
 		generateBRDFLUT();
@@ -2639,7 +2639,7 @@ public:
 
 		vulkanData.m_nWidth = eyeWidth;
 		vulkanData.m_nHeight = eyeHeight;
-		vulkanData.m_nFormat = VK_FORMAT_R8G8B8A8_UINT;
+		vulkanData.m_nFormat = VK_FORMAT_R8G8B8A8_UNORM;
 		vulkanData.m_nSampleCount = 1;
 
 		vr::Texture_t texture = { &vulkanData, vr::TextureType_Vulkan, vr::ColorSpace_Auto };
