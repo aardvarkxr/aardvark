@@ -16,6 +16,7 @@
 #include <vector>
 #include <chrono>
 #include <map>
+#include <set>
 #include "algorithm"
 #include <filesystem>
 
@@ -57,10 +58,10 @@ void CreateExampleApp( aardvark::CAardvarkClient *pClient )
 	{
 		avStartNode( sceneContext, 1, "origin", EAvSceneGraphNodeType::Origin );
 		{
+			avSetOriginPath( sceneContext, "/user/hand/right" );
 			avStartNode( sceneContext, 2, "xform", EAvSceneGraphNodeType::Transform );
 			{
-				avSetTranslation( sceneContext, 0, 0.1f, 0 );
-				avSetScale( sceneContext, 1.f, 0.5f, 1.f );
+				avSetScale( sceneContext, 0.1f, 0.1f, 0.1f );
 
 				avStartNode( sceneContext, 3, "model", EAvSceneGraphNodeType::Model );
 				{
@@ -180,9 +181,9 @@ public:
 	};
 
 	struct UBOMatrices {
-		glm::mat4 projection;
-		glm::mat4 model;
-		glm::mat4 view;
+		glm::mat4 matProjectionFromView;
+		glm::mat4 matHmdFromStage;
+		glm::mat4 matViewFromHmd;
 		glm::vec3 camPos;
 	} shaderValuesScene, shaderValuesSkybox, shaderValuesLeftEye, shaderValuesRightEye;
 
@@ -1868,8 +1869,8 @@ public:
 	void updateUniformBuffers()
 	{
 		// Scene
-		shaderValuesScene.projection = camera.matrices.perspective;
-		shaderValuesScene.view = camera.matrices.view;
+		shaderValuesScene.matProjectionFromView = camera.matrices.perspective;
+		shaderValuesScene.matViewFromHmd = camera.matrices.view;
 		
 		// Center and scale model
 		glm::mat4 aabb( 1.f );
@@ -1881,11 +1882,11 @@ public:
 		glm::vec3 translate = -glm::vec3( aabb[3][0], aabb[3][1], aabb[3][2]);
 		translate += -0.5f * glm::vec3( aabb[0][0], aabb[1][1], aabb[2][2]);
 
-		shaderValuesScene.model = glm::mat4(1.0f);
-		shaderValuesScene.model[0][0] = scale;
-		shaderValuesScene.model[1][1] = scale;
-		shaderValuesScene.model[2][2] = scale;
-		shaderValuesScene.model = glm::translate(shaderValuesScene.model, translate);
+		shaderValuesScene.matHmdFromStage = glm::mat4(1.0f);
+		shaderValuesScene.matHmdFromStage[0][0] = scale;
+		shaderValuesScene.matHmdFromStage[1][1] = scale;
+		shaderValuesScene.matHmdFromStage[2][2] = scale;
+		shaderValuesScene.matHmdFromStage = glm::translate(shaderValuesScene.matHmdFromStage, translate);
 
 		shaderValuesScene.camPos = glm::vec3(
 			-camera.position.z * sin(glm::radians(camera.rotation.y)) * cos(glm::radians(camera.rotation.x)),
@@ -1894,20 +1895,20 @@ public:
 		);
 
 		// Skybox
-		shaderValuesSkybox.projection = camera.matrices.perspective;
-		shaderValuesSkybox.view = shaderValuesScene.projection;
-		shaderValuesSkybox.model = glm::mat4(glm::mat3(camera.matrices.view));
+		shaderValuesSkybox.matProjectionFromView = camera.matrices.perspective;
+		shaderValuesSkybox.matViewFromHmd = shaderValuesScene.matProjectionFromView;
+		shaderValuesSkybox.matHmdFromStage = glm::mat4(glm::mat3(camera.matrices.view));
 
 		// left eye
-		shaderValuesLeftEye.projection = GetHMDMatrixProjectionEye( vr::Eye_Left );
-		shaderValuesLeftEye.view = GetHMDMatrixPoseEye( vr::Eye_Left );
-		shaderValuesLeftEye.model = glm::inverse( m_matHmdFromStage );
+		shaderValuesLeftEye.matProjectionFromView = GetHMDMatrixProjectionEye( vr::Eye_Left );
+		shaderValuesLeftEye.matViewFromHmd = GetHMDMatrixPoseEye( vr::Eye_Left );
+		shaderValuesLeftEye.matHmdFromStage =  m_matHmdFromStage ;
 		shaderValuesLeftEye.camPos = glm::vec3( 0, 0, 0 );
 
 		// right eye
-		shaderValuesRightEye.projection = GetHMDMatrixProjectionEye( vr::Eye_Right );
-		shaderValuesRightEye.view = GetHMDMatrixPoseEye( vr::Eye_Right );
-		shaderValuesRightEye.model = glm::inverse( m_matHmdFromStage );
+		shaderValuesRightEye.matProjectionFromView = GetHMDMatrixProjectionEye( vr::Eye_Right );
+		shaderValuesRightEye.matViewFromHmd = GetHMDMatrixPoseEye( vr::Eye_Right );
+		shaderValuesRightEye.matHmdFromStage = m_matHmdFromStage ;
 		shaderValuesRightEye.camPos = glm::vec3( 0, 0, 0 );
 	}
 
@@ -2014,6 +2015,7 @@ public:
 
 	void TraverseSceneGraphs( float fFrameTime )
 	{
+		setVisitedNodes.clear();
 		m_fThisFrameTime = fFrameTime;
 		m_vecModelsToRender.clear();
 		for ( auto & root : m_vecRoots )
@@ -2030,6 +2032,7 @@ public:
 	std::unordered_map<uint64_t, std::unique_ptr<SgNodeData_t>> m_mapNodeData;
 	float m_fThisFrameTime = 0;
 	std::vector<std::shared_ptr<vkglTF::Model>> m_vecModelsToRender;
+	std::set<uint64_t> setVisitedNodes;
 
 	uint64_t GetGlobalId( const AvNode::Reader & node )
 	{
@@ -2078,24 +2081,24 @@ public:
 		}
 	}
 
-	void ConcatTransform( const glm::mat4 & matNodeFromParent )
+	void ConcatTransform( const glm::mat4 & matParentFromNode )
 	{
 		if ( m_vecTransforms.empty() )
 		{
-			m_vecTransforms.push_back( matNodeFromParent );
+			m_vecTransforms.push_back( matParentFromNode );
 		}
 		else
 		{
-			glm::mat4 & matParentFromOrigin = m_vecTransforms.back();
-			glm::mat4 newMat = matNodeFromParent * matParentFromOrigin;
+			glm::mat4 & matOriginFromParent = m_vecTransforms.back();
+			glm::mat4 newMat = matOriginFromParent * matParentFromNode;
 			m_vecTransforms.push_back( newMat );
 		}
 		m_bThisNodePushedTransform = true;
 	}
 
-	void PushTransform( const glm::mat4 & matNodeFromUniverse )
+	void PushTransform( const glm::mat4 & matUniverseFromNode )
 	{
-		m_vecTransforms.push_back( matNodeFromUniverse );
+		m_vecTransforms.push_back( matUniverseFromNode );
 		m_bThisNodePushedTransform = true;
 	}
 
@@ -2108,6 +2111,13 @@ public:
 
 	void TraverseNode( const AvNode::Reader & node )
 	{
+		uint64_t globalId = GetGlobalId( node );
+		if ( setVisitedNodes.find( globalId ) != setVisitedNodes.end() )
+		{
+			return;
+		}
+		setVisitedNodes.insert( globalId );
+
 		m_bThisNodePushedTransform = false;
 		switch ( node.getType() )
 		{
@@ -2229,7 +2239,7 @@ public:
 
 		if ( pData->model )
 		{
-			pData->modelParent.matrix = GetCurrentNodeFromUniverse();
+			pData->modelParent.matParentFromNode = GetCurrentNodeFromUniverse();
 			pData->model->animate( m_fThisFrameTime );
 			m_vecModelsToRender.push_back( pData->model );
 		}
@@ -2566,16 +2576,22 @@ public:
 
 	glm::mat4 glmMatFromVrMat( const vr::HmdMatrix34_t & mat )
 	{
-		glm::mat4 r;
-		for ( uint32_t y = 0; y < 4; y++ )
-		{
-			for ( uint32_t x = 0; x < 3; x++ )
-			{
-				r[y][x] = mat.m[x][y];
-			}
-			r[y][3] = y < 3 ? 0.f : 1.f;
-		}
-		return r;
+		//glm::mat4 r;
+		glm::mat4 matrixObj (
+			mat.m[0][0], mat.m[1][0], mat.m[2][0], 0.0,
+			mat.m[0][1], mat.m[1][1], mat.m[2][1], 0.0,
+			mat.m[0][2], mat.m[1][2], mat.m[2][2], 0.0,
+			mat.m[0][3], mat.m[1][3], mat.m[2][3], 1.0f
+		);
+		//for ( uint32_t y = 0; y < 4; y++ )
+		//{
+		//	for ( uint32_t x = 0; x < 3; x++ )
+		//	{
+		//		r[x][y] = mat.m[x][y];
+		//	}
+		//	r[3][y] = y < 3 ? 0.f : 1.f;
+		//}
+		return matrixObj;
 	}
 
 	virtual void render()
@@ -2593,16 +2609,16 @@ public:
 		vr::TrackedDeviceIndex_t unLeftHand = vr::VRSystem()->GetTrackedDeviceIndexForControllerRole( vr::TrackedControllerRole_LeftHand );
 		if ( unLeftHand != vr::k_unTrackedDeviceIndexInvalid )
 		{
-			glm::mat4 matLeftHand = glmMatFromVrMat( rRenderPoses[unLeftHand].mDeviceToAbsoluteTracking );
-			m_mapOriginFromUniverseTransforms["/user/hand/left"] = matLeftHand;
+			glm::mat4 matLeftHandFromUniverse = /*glm::inverse*/( glmMatFromVrMat( rRenderPoses[unLeftHand].mDeviceToAbsoluteTracking ) );
+			m_mapOriginFromUniverseTransforms["/user/hand/left"] = matLeftHandFromUniverse;
 		}
 		vr::TrackedDeviceIndex_t unRightHand = vr::VRSystem()->GetTrackedDeviceIndexForControllerRole( vr::TrackedControllerRole_RightHand );
 		if ( unRightHand != vr::k_unTrackedDeviceIndexInvalid )
 		{
-			glm::mat4 matRightHand = glmMatFromVrMat( rRenderPoses[unRightHand].mDeviceToAbsoluteTracking );
-			m_mapOriginFromUniverseTransforms["/user/hand/right"] = matRightHand;
+			glm::mat4 matRightHandFromUniverse = /*glm::inverse*/( glmMatFromVrMat( rRenderPoses[unRightHand].mDeviceToAbsoluteTracking ) );
+			m_mapOriginFromUniverseTransforms["/user/hand/right"] = matRightHandFromUniverse;
 		}
-		m_matHmdFromStage = glmMatFromVrMat( rRenderPoses[vr::k_unTrackedDeviceIndex_Hmd].mDeviceToAbsoluteTracking );
+		m_matHmdFromStage = glm::inverse( glmMatFromVrMat( rRenderPoses[vr::k_unTrackedDeviceIndex_Hmd].mDeviceToAbsoluteTracking ) );
 		m_mapOriginFromUniverseTransforms["/user/head"] = m_matHmdFromStage;
 		m_mapOriginFromUniverseTransforms["/space/stage"] = glm::mat4( 1.f );
 

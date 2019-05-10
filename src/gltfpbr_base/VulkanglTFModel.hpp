@@ -514,13 +514,14 @@ namespace vkglTF
 	{
 		glm::vec3 translation{};
 		glm::vec3 scale{ 1.0f };
-		glm::quat rotation{};
-		glm::mat4 matrix{ 1.0f };
+		glm::quat rotation{ 1.f, 0, 0, 0 };
+		glm::mat4 matParentFromNode{ 1.0f };
 
 		Transformable *parent = nullptr;
 
-		glm::mat4 localMatrix() {
-			return glm::translate( glm::mat4( 1.0f ), translation ) * glm::mat4( rotation ) * glm::scale( glm::mat4( 1.0f ), scale ) * matrix;
+		glm::mat4 parentFromNodeMatrix() {
+			glm::mat4 matNodeFromMesh = glm::translate( glm::mat4( 1.0f ), translation ) * glm::mat4( rotation ) * glm::scale( glm::mat4( 1.0f ), scale );
+			return matParentFromNode * matNodeFromMesh;
 		}
 
 	};
@@ -565,14 +566,14 @@ namespace vkglTF
 		}
 
 		glm::mat4 getMatrix() {
-			glm::mat4 m = localMatrix();
+			glm::mat4 matCurrentParentFromNode = parentFromNodeMatrix();
 			vkglTF::Transformable *p = parent;
 			while (p) {
-				glm::mat4 mp = p->localMatrix();
-				m = mp * m;
+				glm::mat4 matGrandparentFromParent = p->parentFromNodeMatrix();
+				matCurrentParentFromNode = matGrandparentFromParent * matCurrentParentFromNode;
 				p = p->parent;
 			}
-			return m;
+			return matCurrentParentFromNode;
 		}
 
 		void update() {
@@ -821,7 +822,7 @@ namespace vkglTF
 			newNode->parent = &*parent;
 			newNode->name = node.name;
 			newNode->skinIndex = node.skin;
-			newNode->matrix = glm::mat4(1.0f);
+			newNode->matParentFromNode = glm::mat4(1.0f);
 
 			// Generate local node matrix
 			glm::vec3 translation = glm::vec3(0.0f);
@@ -840,7 +841,7 @@ namespace vkglTF
 				newNode->scale = scale;
 			}
 			if (node.matrix.size() == 16) {
-				newNode->matrix = glm::make_mat4x4(node.matrix.data());
+				newNode->matParentFromNode = glm::make_mat4x4(node.matrix.data());
 			};
 
 			// Node with children
@@ -853,7 +854,7 @@ namespace vkglTF
 			// Node contains mesh data
 			if (node.mesh > -1) {
 				const tinygltf::Mesh mesh = model.meshes[node.mesh];
-				std::shared_ptr<Mesh> newMesh = std::make_shared<Mesh>(device, newNode->matrix);
+				std::shared_ptr<Mesh> newMesh = std::make_shared<Mesh>(device, newNode->matParentFromNode);
 				newMesh->name = mesh.name;
 				for (size_t j = 0; j < mesh.primitives.size(); j++) {
 					const tinygltf::Primitive &primitive = mesh.primitives[j];
