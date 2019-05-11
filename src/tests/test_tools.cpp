@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// Purpose: Test gadget API in Aardvark
+// Purpose: Test tool module
 // ---------------------------------------------------------------------------
 #include <catch/catch.hpp>
 #include <tools/pathtools.h>

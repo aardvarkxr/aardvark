@@ -76,37 +76,6 @@ void CreateExampleApp( aardvark::CAardvarkClient *pClient )
 	}
 	avFinishSceneContext( sceneContext, &app, pClient );
 
-	//auto reqCreateGadget = app.createGadgetRequest();
-	//reqCreateGadget.setName( "My Gadget" );
-	//auto gadget = reqCreateGadget.send().getGadget();
-
-	//auto reqCreateModel = gadget.createModelInstanceRequest();
-	//std::filesystem::path pathModel = VK_EXAMPLE_DATA_DIR;
-	//pathModel /= "models/DamagedHelmet/glTF-Embedded/DamagedHelmet.gltf";
-	////pathModel = "d:\\Downloads\\glTF-Sample-Models-master\\2.0\\RiggedFigure\\glTF-Binary\\RiggedFigure.glb";
-	////pathModel = "d:\\Downloads\\glTF-Sample-Models-master\\2.0\\2CylinderEngine\\glTF-Binary\\2CylinderEngine.glb";
-	//pathModel = "d:\\Downloads\\glTF-Sample-Models-master\\2.0\\InterpolationTest\\glTF-Binary\\InterpolationTest.glb";
-	////pathModel = "d:\\Downloads\\glTF-Sample-Models-master\\2.0\\BoxAnimated\\glTF-Binary\\BoxAnimated.glb";
-	//pathModel = "d:\\Downloads\\glTF-Sample-Models-master\\2.0\\BoxAnimated\\glTF-Binary\\BoxAnimated.glb";
-	//reqCreateModel.setUri( tools::PathToFileUri( pathModel ) );
-	//auto gadgetModel = reqCreateModel.send().getModel();
-	//auto reqSetTransform = gadgetModel.setTransformRequest();
-	//auto transform = reqSetTransform.initTransform();
-	//transform.getPosition().setY( 0.1f );
-	//transform.getScale().setX( 1.f );
-	//transform.getScale().setY( 0.5f );
-	//transform.getScale().setZ( 1.f );
-	//reqSetTransform.send();
-	//
-	//reqCreateModel = gadget.createModelInstanceRequest();
-	//pathModel = "d:\\Downloads\\glTF-Sample-Models-master\\2.0\\BoxAnimated\\glTF-Binary\\BoxAnimated.glb";
-	//reqCreateModel.setUri( tools::PathToFileUri( pathModel ) );
-	//gadgetModel = reqCreateModel.send().getModel();
-	//reqSetTransform = gadgetModel.setTransformRequest();
-	//transform = reqSetTransform.initTransform();
-	//transform.getPosition().setX( -1.1f );
-	//reqSetTransform.send().wait( pClient->WaitScope() );
-
 }
 
 void UpdateTransformable( std::shared_ptr<vkglTF::Transformable> pTransformable, AvTransform::Reader & transform )
