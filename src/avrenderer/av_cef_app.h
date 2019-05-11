@@ -8,10 +8,17 @@
 
 #include <thread>
 
+class IApplication
+{
+public:
+	virtual void allBrowsersClosed() = 0;
+};
+
+
 // Implement application-level callbacks for the browser process.
 class SimpleApp : public CefApp, public CefBrowserProcessHandler {
  public:
-  SimpleApp();
+  SimpleApp( IApplication *application );
 
   // CefApp methods:
   virtual CefRefPtr<CefBrowserProcessHandler> GetBrowserProcessHandler()
@@ -23,23 +30,9 @@ class SimpleApp : public CefApp, public CefBrowserProcessHandler {
   virtual void OnContextInitialized() OVERRIDE;
 
  private:
+	 IApplication *application_ = nullptr;
+
   // Include the default reference counting implementation.
   IMPLEMENT_REFCOUNTING(SimpleApp);
-};
-
-class CCefThread
-{
-public:
-	CCefThread( const CefMainArgs & mainArgs, void *sandbox_info );
-
-	void Start();
-	void Join();
-
-private:
-	void Run();
-
-	CefMainArgs m_mainArgs;
-	void *m_sandboxInfo = nullptr;
-	std::thread m_thread;
 };
 

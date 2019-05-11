@@ -33,6 +33,7 @@
 
 #include "include/cef_sandbox_win.h"
 #include "av_cef_app.h"
+#include "av_cef_handler.h"
 
 // When generating projects with CMake the CEF_USE_SANDBOX value will be defined
 // automatically if using the required compiler version. Pass -DUSE_SANDBOX=OFF
@@ -135,7 +136,7 @@ void UpdateTransformable( std::shared_ptr<vkglTF::Transformable> pTransformable,
 /*
 	PBR example main class
 */
-class VulkanExample : public VulkanExampleBase, public kj::TaskSet::ErrorHandler
+class VulkanExample : public VulkanExampleBase, public kj::TaskSet::ErrorHandler, public IApplication
 {
 public:
 	struct Textures {
@@ -1937,6 +1938,16 @@ public:
 		prepared = true;
 	}
 
+	virtual void onWindowClose() override
+	{
+		SimpleHandler::GetInstance()->CloseAllBrowsers( true );
+	}
+
+	virtual void allBrowsersClosed()
+	{
+		wantToQuit = true;
+	}
+
 	struct SgRoot_t
 	{
 		std::unordered_map<uint32_t, size_t> mapIdToIndex;
@@ -2508,7 +2519,12 @@ public:
 
 	virtual void render()
 	{
-		if (!prepared) {
+		if (!prepared) 
+		{
+			// still pump the message loops
+			m_pClient->WaitScope().poll();
+			CefDoMessageLoopWork();
+
 			return;
 		}
 
@@ -2611,6 +2627,9 @@ public:
 
 		// pump messages from RPC
 		m_pClient->WaitScope().poll();
+
+		// pump messages for CEF
+		CefDoMessageLoopWork();
 	}
 
 	void submitEyeBuffers()
@@ -2672,22 +2691,36 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 #endif
 
 	// Provide CEF with command-line arguments.
-	CefMainArgs main_args( hInstance );
+	CefMainArgs mainArgs( hInstance );
 
 	// CEF applications have multiple sub-processes (render, plugin, GPU, etc)
 	// that share the same executable. This function checks the command-line and,
 	// if this is a sub-process, executes the appropriate logic.
-	int exit_code = CefExecuteProcess( main_args, NULL, sandbox_info );
+	int exit_code = CefExecuteProcess( mainArgs, NULL, sandbox_info );
 	if ( exit_code >= 0 ) {
 		// The sub-process has completed so return here.
 		return exit_code;
 	}
 
-	CCefThread cefThread( main_args, sandbox_info );
-	cefThread.Start();
+	// Specify CEF global settings here.
+	CefSettings settings;
+
+#if !defined(CEF_USE_SANDBOX)
+	settings.no_sandbox = true;
+#endif
+
+	vulkanExample = new VulkanExample();
+
+	// SimpleApp implements application-level callbacks for the browser process.
+	// It will create the first browser instance in OnContextInitialized() after
+	// CEF has initialized.
+	CefRefPtr<SimpleApp> app( new SimpleApp( vulkanExample ) );
+
+	// Initialize CEF.
+	CefInitialize( mainArgs, settings, app.get(), sandbox_info );
+
 
 	for (int32_t i = 0; i < __argc; i++) { VulkanExample::args.push_back(__argv[i]); };
-	vulkanExample = new VulkanExample();
 	vulkanExample->initOpenVR();
 	vulkanExample->initVulkan();
 	vulkanExample->setupWindow(hInstance, WndProc);
@@ -2695,7 +2728,11 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 	vulkanExample->renderLoop();
 	delete(vulkanExample);
 
-	cefThread.Join();
+	app = nullptr;
+
+	// Shut down CEF.
+	CefShutdown();
+
 
 	return 0;
 }

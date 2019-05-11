@@ -335,7 +335,7 @@ void VulkanExampleBase::renderLoop()
 #if defined(_WIN32)
 	MSG msg;
 	bool quitMessageReceived = false;
-	while (!quitMessageReceived) {
+	while (!quitMessageReceived && !wantToQuit) {
 		while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
@@ -817,6 +817,7 @@ void VulkanExampleBase::handleMessages(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
 	case WM_CLOSE:
 		prepared = false;
 		DestroyWindow(hWnd);
+		onWindowClose();
 		PostQuitMessage(0);
 		break;
 	case WM_PAINT:

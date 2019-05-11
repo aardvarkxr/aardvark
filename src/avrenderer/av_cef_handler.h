@@ -9,12 +9,14 @@
 
 #include <list>
 
+class IApplication;
+
 class SimpleHandler : public CefClient,
                       public CefDisplayHandler,
                       public CefLifeSpanHandler,
                       public CefLoadHandler {
  public:
-  explicit SimpleHandler(bool use_views);
+  explicit SimpleHandler(bool use_views, IApplication *application );
   ~SimpleHandler();
 
   // Provide access to the single global instance of this object.
@@ -63,6 +65,7 @@ class SimpleHandler : public CefClient,
   BrowserList browser_list_;
 
   bool is_closing_;
+  IApplication *application_ = nullptr;
 
   // Include the default reference counting implementation.
   IMPLEMENT_REFCOUNTING(SimpleHandler);

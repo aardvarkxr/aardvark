@@ -105,6 +105,7 @@ public:
 	glm::vec2 mousePos;
 	bool paused = false;
 	uint32_t lastFPS = 0;
+	bool wantToQuit = false;
 
 	struct Settings {
 		bool validation = false;
@@ -233,6 +234,7 @@ public:
 
 	virtual VkResult createInstance(bool enableValidation);
 	virtual void render() = 0;
+	virtual void onWindowClose() {}
 	virtual void windowResized();
 	virtual void setupFrameBuffer();
 	virtual void prepare();

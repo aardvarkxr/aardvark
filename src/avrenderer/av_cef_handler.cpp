@@ -3,6 +3,7 @@
 // can be found in the LICENSE file.
 
 #include "av_cef_handler.h"
+#include "av_cef_app.h"
 
 #include <sstream>
 #include <string>
@@ -20,10 +21,11 @@ SimpleHandler* g_instance = NULL;
 
 }  // namespace
 
-SimpleHandler::SimpleHandler(bool use_views)
+SimpleHandler::SimpleHandler(bool use_views, IApplication *application )
     : use_views_(use_views), is_closing_(false) {
   DCHECK(!g_instance);
   g_instance = this;
+  application_ = application;
 }
 
 SimpleHandler::~SimpleHandler() {
@@ -89,9 +91,12 @@ void SimpleHandler::OnBeforeClose(CefRefPtr<CefBrowser> browser) {
     }
   }
 
-  if (browser_list_.empty()) {
-    // All browser windows have closed. Quit the application message loop.
-    CefQuitMessageLoop();
+  if (browser_list_.empty()) 
+  {
+	  if ( application_ )
+	  {
+		  application_->allBrowsersClosed();
+	  }
   }
 }
 
@@ -130,3 +135,5 @@ void SimpleHandler::CloseAllBrowsers(bool force_close) {
   for (; it != browser_list_.end(); ++it)
     (*it)->GetHost()->CloseBrowser(force_close);
 }
+
+

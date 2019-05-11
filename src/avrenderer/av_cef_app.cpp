@@ -54,7 +54,10 @@ class SimpleWindowDelegate : public CefWindowDelegate {
 
 }  // namespace
 
-SimpleApp::SimpleApp() {}
+SimpleApp::SimpleApp(IApplication *application) 
+{
+	application_ = application;
+}
 
 void SimpleApp::OnContextInitialized() {
   CEF_REQUIRE_UI_THREAD();
@@ -73,7 +76,7 @@ void SimpleApp::OnContextInitialized() {
 #endif
 
   // SimpleHandler implements browser-level callbacks.
-  CefRefPtr<SimpleHandler> handler(new SimpleHandler(use_views));
+  CefRefPtr<SimpleHandler> handler(new SimpleHandler(use_views, application_ ));
 
   // Specify CEF browser settings here.
   CefBrowserSettings browser_settings;
@@ -109,49 +112,4 @@ void SimpleApp::OnContextInitialized() {
   }
 }
 
-
-CCefThread::CCefThread( const CefMainArgs & mainArgs, void *sandboxInfo )
-{
-	m_mainArgs = mainArgs;
-	m_sandboxInfo = sandboxInfo;
-}
-
-void CCefThread::Start()
-{
-	m_thread = std::thread( [&]() { this->Run(); } );
-}
-
-void CCefThread::Join()
-{
-	CefQuitMessageLoop();
-	m_thread.join();
-}
-
-
-void CCefThread::Run()
-{
-	SetThreadDescription( GetCurrentThread(), L"CEF App Thread" );
-
-	// Specify CEF global settings here.
-	CefSettings settings;
-
-#if !defined(CEF_USE_SANDBOX)
-	settings.no_sandbox = true;
-#endif
-
-	// SimpleApp implements application-level callbacks for the browser process.
-	// It will create the first browser instance in OnContextInitialized() after
-	// CEF has initialized.
-	CefRefPtr<SimpleApp> app( new SimpleApp );
-
-	// Initialize CEF.
-	CefInitialize( m_mainArgs, settings, app.get(), m_sandboxInfo );
-
-	// Run the CEF message loop. This will block until CefQuitMessageLoop() is
-	// called.
-	CefRunMessageLoop();
-
-	// Shut down CEF.
-	CefShutdown();
-}
 
