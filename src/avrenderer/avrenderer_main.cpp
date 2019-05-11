@@ -62,6 +62,7 @@ void CreateExampleApp( aardvark::CAardvarkClient *pClient )
 			avStartNode( sceneContext, 2, "xform", EAvSceneGraphNodeType::Transform );
 			{
 				avSetScale( sceneContext, 0.1f, 0.1f, 0.1f );
+				//avSetTranslation( sceneContext, 0, 0, -0.5f );
 
 				avStartNode( sceneContext, 3, "model", EAvSceneGraphNodeType::Model );
 				{
@@ -506,8 +507,11 @@ public:
 		vkCmdBindPipeline( currentCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines.pbrAlphaBlend );
 		recordCommandsForModels( currentCB, cbIndex, vkglTF::Material::ALPHAMODE_BLEND, eEye );
 
-		// User interface
-		ui->draw( currentCB );
+		if ( eEye == EEye::Mirror )
+		{
+			// User interface
+			ui->draw( currentCB );
+		}
 
 		vkCmdEndRenderPass( currentCB );
 	}
