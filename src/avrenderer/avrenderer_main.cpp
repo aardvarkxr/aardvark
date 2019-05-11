@@ -1940,7 +1940,7 @@ public:
 
 	virtual void onWindowClose() override
 	{
-		SimpleHandler::GetInstance()->CloseAllBrowsers( true );
+		CAardvarkCefHandler::GetInstance()->CloseAllBrowsers( true );
 	}
 
 	virtual void allBrowsersClosed()
@@ -2711,10 +2711,10 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 
 	vulkanExample = new VulkanExample();
 
-	// SimpleApp implements application-level callbacks for the browser process.
+	// CAardvarkCefApp implements application-level callbacks for the browser process.
 	// It will create the first browser instance in OnContextInitialized() after
 	// CEF has initialized.
-	CefRefPtr<SimpleApp> app( new SimpleApp( vulkanExample ) );
+	CefRefPtr<CAardvarkCefApp> app( new CAardvarkCefApp( vulkanExample ) );
 
 	// Initialize CEF.
 	CefInitialize( mainArgs, settings, app.get(), sandbox_info );

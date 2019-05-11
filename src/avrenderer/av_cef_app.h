@@ -16,23 +16,24 @@ public:
 
 
 // Implement application-level callbacks for the browser process.
-class SimpleApp : public CefApp, public CefBrowserProcessHandler {
- public:
-  SimpleApp( IApplication *application );
+class CAardvarkCefApp : public CefApp, public CefBrowserProcessHandler 
+{
+public:
+	CAardvarkCefApp( IApplication *application );
 
-  // CefApp methods:
-  virtual CefRefPtr<CefBrowserProcessHandler> GetBrowserProcessHandler()
-      OVERRIDE {
-    return this;
-  }
+	// CefApp methods:
+	virtual CefRefPtr<CefBrowserProcessHandler> GetBrowserProcessHandler() override
+	{
+		return this;
+	}
 
-  // CefBrowserProcessHandler methods:
-  virtual void OnContextInitialized() OVERRIDE;
+	// CefBrowserProcessHandler methods:
+	virtual void OnContextInitialized() OVERRIDE;
 
- private:
-	 IApplication *application_ = nullptr;
+	private:
+	IApplication *m_application = nullptr;
 
-  // Include the default reference counting implementation.
-  IMPLEMENT_REFCOUNTING(SimpleApp);
+	// Include the default reference counting implementation.
+	IMPLEMENT_REFCOUNTING(CAardvarkCefApp);
 };
 
