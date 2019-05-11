@@ -49,14 +49,6 @@ struct AvLight_t
 	AvColor_t diffuse;
 };
 
-struct AvVisualGadget_t
-{
-	AvTransform_t transform;
-	std::vector<AvModel_t> vecModels;
-	std::vector<AvLight_t> vecLights;
-};
-
-
 struct AvSceneGraphRoot_t
 {
 	AvNodeRoot::Reader root;
@@ -65,7 +57,6 @@ struct AvSceneGraphRoot_t
 
 struct AvVisuals_t
 {
-//	std::vector<AvVisualGadget_t> vecGadgets;
 	std::vector<AvSceneGraphRoot_t> vecSceneGraphs;
 };
 

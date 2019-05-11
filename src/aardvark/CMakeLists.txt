@@ -11,11 +11,6 @@ add_library(aardvark STATIC
 	aardvark_frame_impl.cpp
 	aardvark_frame_impl.h
 	aardvark_frames.cpp
-	aardvark_gadget_impl.cpp
-	aardvark_gadget_impl.h
-	aardvark_gadgets.cpp
-	aardvark_model_instance_impl.cpp
-	aardvark_model_instance_impl.h
 	aardvark_model_source_impl.cpp
 	aardvark_model_source_impl.h
 	aardvark_scene_graph.cpp

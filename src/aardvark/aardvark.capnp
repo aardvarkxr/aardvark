@@ -13,31 +13,7 @@ interface AvApp
 
 	destroy @1 () -> ( success: Bool );
 
-	createGadget @2 ( name: Text ) -> ( gadget: AvGadget );
-	updateSceneGraph @3 (root: AvNodeRoot ) -> ( success: Bool );
-}
-
-
-
-interface AvGadget
-{
-	name @0 () -> ( name: Text );
-	destroy @1 () -> ( success: Bool );
-
-	setTransform @2 ( transform: AvTransform, parentPath : Text ) -> ( success: Bool );
-	getTransform @3 () -> ( transform: AvTransform, parentPath : Text );
-
-	createModelInstance @4 ( uri : Text) -> ( model: AvModelInstance );
-	models @5 () -> ( models: List( AvModelInstance ) );
-}
-
-interface AvModelInstance
-{
-	source @0 () -> ( source : AvModelSource );
-	destroy @1 () -> ( success: Bool );
-
-	setTransform @2 ( transform: AvTransform, parentPath : Text ) -> ( success: Bool );
-	getTransform @3 () -> ( transform: AvTransform, parentPath : Text );
+	updateSceneGraph @2 (root: AvNodeRoot ) -> ( success: Bool );
 }
 
 
@@ -89,18 +65,10 @@ struct AvLight
 	diffuse @1: AvColor;
 }
 
-struct AvVisualGadget
-{
-	transform @0: AvTransform;
-	models @1: List( AvModel );
-	lights @2: List( AvLight );
-}
-
 struct AvVisualFrame
 {
 	id @0: UInt64;
 	roots @1: List( AvNodeRoot );
-#	gadgets @1: List( AvVisualGadget );
 }
 
 struct AvNode

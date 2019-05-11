@@ -1,6 +1,6 @@
 #include "aardvark_app_impl.h"
-#include "aardvark_gadget_impl.h"
 #include "aardvark/aardvark_server.h"
+#include "framestructs.h"
 
 #include <algorithm>
 #include <assert.h>
@@ -32,22 +32,6 @@ CAardvarkApp::CAardvarkApp( const std::string & sName, AvServerImpl *pParentServ
 }
 
 
-::kj::Promise<void> CAardvarkApp::createGadget( CreateGadgetContext context )
-{
-	auto gadget = kj::heap<CAardvarkGadget>( context.getParams().getName(), this );
-	auto& gadgetRef = *gadget;
-	AvGadget::Client capability = kj::mv( gadget );
-
-	context.getResults().setGadget( capability );
-
-	gadgetRef.AddClient( capability );
-
-	m_vecGadgets.push_back( &gadgetRef );
-
-	return kj::READY_NOW;
-}
-
-
 ::kj::Promise<void> CAardvarkApp::updateSceneGraph( UpdateSceneGraphContext context )
 {
 	m_sceneGraph = tools::newOwnCapnp( context.getParams().getRoot() );
@@ -55,16 +39,6 @@ CAardvarkApp::CAardvarkApp( const std::string & sName, AvServerImpl *pParentServ
 	return kj::READY_NOW;
 }
 
-
-void CAardvarkApp::removeGadget( CAardvarkGadget *pGadget )
-{
-	auto iApp = std::find( m_vecGadgets.begin(), m_vecGadgets.end(), pGadget );
-	if ( iApp != m_vecGadgets.end() )
-	{
-		pGadget->clearClients();
-		m_vecGadgets.erase( iApp );
-	}
-}
 
 void CAardvarkApp::gatherVisuals( AvVisuals_t & visuals )
 {

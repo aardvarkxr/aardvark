@@ -4,7 +4,6 @@ find_package( CapnProto 0.7.0 REQUIRED)
 add_executable( tests
 	test_aardvark_apps.cpp
 	test_frames.cpp
-	test_gadget.cpp
 	test_models.cpp
 	test_tools.cpp
 	tests.cpp

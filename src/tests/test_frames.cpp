@@ -25,10 +25,6 @@ TEST_CASE( "Aardvark frames", "[frames]" )
 
 		SECTION( "empty frame" )
 		{
-			auto reqCreateGadget = promCreateApp.getApp().createGadgetRequest();
-			reqCreateGadget.setName( "foo" );
-			auto promCreateGadget = reqCreateGadget.send();
-
 			auto promFrame = client.Server().getNextVisualFrameRequest().send();
 			auto resFrame = promFrame.wait( client.WaitScope() );
 
