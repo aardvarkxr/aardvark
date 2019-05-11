@@ -283,6 +283,7 @@ public:
 
 	~VulkanExample() noexcept
 	{
+		getFrameTasks = nullptr;
 		m_pClient->Stop();
 		m_pClient = nullptr;
 		m_serverThread.Join();
@@ -1940,7 +1941,10 @@ public:
 
 	virtual void onWindowClose() override
 	{
-		CAardvarkCefHandler::GetInstance()->CloseAllBrowsers( true );
+		if ( CAardvarkCefHandler::GetInstance() )
+		{
+			CAardvarkCefHandler::GetInstance()->CloseAllBrowsers( true );
+		}
 	}
 
 	virtual void allBrowsersClosed()
@@ -2693,15 +2697,19 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 	// Provide CEF with command-line arguments.
 	CefMainArgs mainArgs( hInstance );
 
+	// CAardvarkCefApp implements application-level callbacks for the browser process.
+	// It will create the first browser instance in OnContextInitialized() after
+	// CEF has initialized.
+	CefRefPtr<CAardvarkCefApp> app( new CAardvarkCefApp( ) );
+
 	// CEF applications have multiple sub-processes (render, plugin, GPU, etc)
 	// that share the same executable. This function checks the command-line and,
 	// if this is a sub-process, executes the appropriate logic.
-	int exit_code = CefExecuteProcess( mainArgs, NULL, sandbox_info );
+	int exit_code = CefExecuteProcess( mainArgs, app, sandbox_info );
 	if ( exit_code >= 0 ) {
 		// The sub-process has completed so return here.
 		return exit_code;
 	}
-
 	// Specify CEF global settings here.
 	CefSettings settings;
 
@@ -2710,15 +2718,10 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 #endif
 
 	vulkanExample = new VulkanExample();
-
-	// CAardvarkCefApp implements application-level callbacks for the browser process.
-	// It will create the first browser instance in OnContextInitialized() after
-	// CEF has initialized.
-	CefRefPtr<CAardvarkCefApp> app( new CAardvarkCefApp( vulkanExample ) );
+	app->setApplication( vulkanExample );
 
 	// Initialize CEF.
 	CefInitialize( mainArgs, settings, app.get(), sandbox_info );
-
 
 	for (int32_t i = 0; i < __argc; i++) { VulkanExample::args.push_back(__argv[i]); };
 	vulkanExample->initOpenVR();

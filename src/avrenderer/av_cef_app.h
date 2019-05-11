@@ -19,19 +19,25 @@ public:
 class CAardvarkCefApp : public CefApp, public CefBrowserProcessHandler 
 {
 public:
-	CAardvarkCefApp( IApplication *application );
+	CAardvarkCefApp();
+
+	void setApplication( IApplication *application ) { m_application = application; }
 
 	// CefApp methods:
 	virtual CefRefPtr<CefBrowserProcessHandler> GetBrowserProcessHandler() override
 	{
 		return this;
 	}
+	virtual CefRefPtr<CefRenderProcessHandler> GetRenderProcessHandler() override;
 
 	// CefBrowserProcessHandler methods:
-	virtual void OnContextInitialized() OVERRIDE;
+	virtual void OnContextInitialized() override;
+	virtual void OnBeforeCommandLineProcessing( const CefString& processType, CefRefPtr<CefCommandLine> commandLine ) override;
 
-	private:
+
+private:
 	IApplication *m_application = nullptr;
+	CefRefPtr<CefRenderProcessHandler> m_renderProcessHandler;
 
 	// Include the default reference counting implementation.
 	IMPLEMENT_REFCOUNTING(CAardvarkCefApp);

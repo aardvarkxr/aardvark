@@ -11,6 +11,8 @@ add_executable(avrenderer
 	av_cef_handler_win.cpp
 	av_cef_handler.cpp
 	av_cef_handler.h
+	av_cef_javascript.cpp
+	av_cef_javascript.h
 
 	${SHADERS}
 	)

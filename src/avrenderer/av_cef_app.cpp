@@ -12,6 +12,7 @@
 #include "include/views/cef_window.h"
 #include "include/wrapper/cef_helpers.h"
 #include "av_cef_handler.h"
+#include "av_cef_javascript.h"
 
 #include <processthreadsapi.h>
 
@@ -59,9 +60,8 @@ private:
 
 }  // namespace
 
-CAardvarkCefApp::CAardvarkCefApp(IApplication *application) 
+CAardvarkCefApp::CAardvarkCefApp() 
 {
-	m_application = application;
 }
 
 void CAardvarkCefApp::OnContextInitialized() 
@@ -122,3 +122,19 @@ void CAardvarkCefApp::OnContextInitialized()
 }
 
 
+void CAardvarkCefApp::OnBeforeCommandLineProcessing( const CefString& processType, CefRefPtr<CefCommandLine> commandLine )
+{
+	// turn on chrome dev tools
+	commandLine->AppendSwitchWithValue( "remote-debugging-port", std::to_string( 8042 ) );
+}
+
+
+CefRefPtr<CefRenderProcessHandler> CAardvarkCefApp::GetRenderProcessHandler()
+{
+	if ( !m_renderProcessHandler )
+	{
+		CefRefPtr<CefRenderProcessHandler> newHandler( new CAardvarkRenderProcessHandler() );
+		m_renderProcessHandler = newHandler;
+	}
+	return m_renderProcessHandler;
+}
