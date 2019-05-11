@@ -15,6 +15,12 @@ set( OpenVR_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/thirdparty/openvr/headers )
 set( OpenVR_LIB_DIR ${CMAKE_SOURCE_DIR}/thirdparty/openvr/lib/win64 )
 set( OpenVR_BIN_DIR ${CMAKE_SOURCE_DIR}/thirdparty/openvr/bin/win64 )
 
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
+
+set( CEF_ROOT ${CMAKE_SOURCE_DIR}/thirdparty/cef_binary_74.1.16 )
+find_package( CEF )
+
 #add_compile_definitions(_ITERATOR_DEBUG_LEVEL=0)
 
 set( AV_SRC_PUBLIC ${CMAKE_SOURCE_DIR}/public )
@@ -31,5 +37,6 @@ add_subdirectory(tools)
 add_subdirectory(tests)
 add_subdirectory(gltfpbr_base)
 add_subdirectory(avrenderer)
+add_subdirectory(thirdparty/cef_binary_74.1.16/libcef_dll )
 
 

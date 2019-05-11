@@ -6,8 +6,15 @@ source_group("Shaders" FILES ${SHADERS})
 
 add_executable(avrenderer 
 	avrenderer_main.cpp
+	av_cef_app.cpp
+	av_cef_app.h
+	av_cef_handler_win.cpp
+	av_cef_handler.cpp
+	av_cef_handler.h
+
 	${SHADERS}
 	)
+
 target_link_libraries(avrenderer ${Vulkan_LIBRARY} ${WINLIBS})
 target_link_libraries( avrenderer aardvark )
 target_link_libraries( avrenderer tools )
@@ -24,6 +31,8 @@ target_compile_definitions(avrenderer PRIVATE
 	VK_EXAMPLE_DATA_DIR="${AV_DATA}"
 	)
 
+target_link_directories( avrenderer PRIVATE ${CEF_BINARY_DIR} )
+
 if(RESOURCE_INSTALL_DIR)
 	install(TARGETS avrenderer DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()
@@ -34,3 +43,30 @@ message ( "out" ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/openvr_api.dll )
 add_custom_command(TARGET avrenderer POST_BUILD
                    COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${OpenVR_BIN_DIR}/openvr_api.dll" "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/"
 )
+
+set( CEF_TARGET_OUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/")
+
+#
+# Windows configuration.
+#
+
+if(OS_WINDOWS)
+  # Executable target.
+  set( CEF_TARGET avrenderer )
+  SET_EXECUTABLE_TARGET_PROPERTIES(${CEF_TARGET})
+  target_link_libraries(avrenderer libcef libcef_dll_wrapper ${CEF_STANDARD_LIBS})
+
+  if(USE_SANDBOX)
+    # Logical target used to link the cef_sandbox library.
+    ADD_LOGICAL_TARGET("cef_sandbox_lib" "${CEF_SANDBOX_LIB_DEBUG}" "${CEF_SANDBOX_LIB_RELEASE}")
+    target_link_libraries(${CEF_TARGET} cef_sandbox_lib ${CEF_SANDBOX_STANDARD_LIBS})
+  endif()
+
+  # Add the custom manifest files to the executable.
+#  ADD_WINDOWS_MANIFEST("${CMAKE_CURRENT_SOURCE_DIR}" "${CEF_TARGET}" "exe")
+
+  # Copy binary and resource files to the target output directory.
+  COPY_FILES("${CEF_TARGET}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "${CEF_TARGET_OUT_DIR}")
+  COPY_FILES("${CEF_TARGET}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "${CEF_TARGET_OUT_DIR}")
+endif()
+

@@ -15,6 +15,9 @@ if(NOT HAS_CXX14)
   message(SEND_ERROR "Requires a C++14 compiler and standard library.")
 endif()
 
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
+
 # these arguments are passed to all install(TARGETS) calls
 set(INSTALL_TARGETS_DEFAULT_ARGS
   EXPORT CapnProtoTargets
