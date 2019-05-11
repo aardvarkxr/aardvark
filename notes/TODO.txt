@@ -1,47 +1,14 @@
 Current:
-====== * Get gadget transforms to apply to rendering
-====== * get model transforms to apply to rendering
 * Let N clients connect to one server
-* Get Server into a different process
-====== * model caching
-====== * multiple instances of the same model - should work. Need to test
-====== * multiple models for real - should work. need to test
 * some kind of default lighting that isn't blue
-====== * Animation in models (and per-model)
-* get more than one frame
-* probably don't wait on the frame promise, but switch to the next one when it's available
 * Show frame info in the UI?
-
-
-
-Step 1 - Make some pixels from C++ on screen
-* Pick a PBR/graphics library
-* Pick a GLTF parser
 * Maybe switch to named pipes?
 
-Candidates:
-* vulkan-gltf-pbr by Sascha Willems
-  . Uses Vulkan
-  . Is more example app than library. Maybe that's good?
-
-* Filament
-  . Doesn't support rendering to texture
-  . Doesn't support rendering from procedural texture (like web quads)
-  . Mostly aimed at Android, apparently
-  . Requires Clang to build
-  . Uses lots of graphics back ends
-  . Is an active project
 
 
-* YoctoGL - https://github.com/xelatihy/yocto-gl
-  . Uses OpenGL
-  . Is an active project
-
-
-
-
-Step 2 - Make some pixels from Javascript on screen
-Step 3 - Make the pixels appear in a scene app
+Step 1 - Make some pixels from C++ on screen (done)
+Step 2 - Make the pixels appear in a scene app (done)
+Step 3 - Make some pixels from Javascript on screen
 Step 4 - Make a quad from Javascript
 Step 5 - Make input work back to Javascript/HTML/CSS
 Step 6 - Make the pixels/input layer on top of other apps
