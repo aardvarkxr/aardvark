@@ -49,9 +49,5 @@ void CAardvarkApp::gatherVisuals( AvVisuals_t & visuals )
 		root.appId = m_id;
 		visuals.vecSceneGraphs.push_back( root );
 	}
-	//for ( auto iGadget : m_vecGadgets )
-	//{
-	//	iGadget->gatherVisuals( visuals );
-	//}
 }
 

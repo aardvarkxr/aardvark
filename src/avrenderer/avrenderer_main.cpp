@@ -109,19 +109,6 @@ void CreateExampleApp( aardvark::CAardvarkClient *pClient )
 
 }
 
-struct Gadget : public vkglTF::Transformable
-{
-	std::vector<std::shared_ptr<vkglTF::Model>> models;
-
-	void animate( float frameTimer )
-	{
-		for ( auto pModel : models )
-		{
-			pModel->animate( frameTimer );
-		}
-	}
-};
-
 void UpdateTransformable( std::shared_ptr<vkglTF::Transformable> pTransformable, AvTransform::Reader & transform )
 {
 	if ( transform.hasPosition() )
@@ -162,7 +149,7 @@ void UpdateTransformable( std::shared_ptr<vkglTF::Transformable> pTransformable,
 /*
 	PBR example main class
 */
-class VulkanExample : public VulkanExampleBase
+class VulkanExample : public VulkanExampleBase, public kj::TaskSet::ErrorHandler
 {
 public:
 	struct Textures {
@@ -236,7 +223,6 @@ public:
 	aardvark::CServerThread m_serverThread;
 	kj::Own<aardvark::CAardvarkClient> m_pClient;
 	std::unordered_map < std::string, std::shared_ptr< vkglTF::Model > > m_mapModels;
-	std::vector< std::shared_ptr< Gadget > > m_vecGadgets;
 	vks::RenderTarget leftEyeRT;
 	vks::RenderTarget rightEyeRT;
 
@@ -323,7 +309,6 @@ public:
 		vkDestroyDescriptorSetLayout(device, descriptorSetLayouts.material, nullptr);
 		vkDestroyDescriptorSetLayout(device, descriptorSetLayouts.node, nullptr);
 
-		m_vecGadgets.clear();
 		m_mapModels.clear();
 
 		for (auto buffer : uniformBuffers) 
@@ -636,24 +621,6 @@ public:
 		// Environment samplers (radiance, irradiance, brdf lut)
 		imageSamplerCount += 3;
 
-		for ( auto pGadget: m_vecGadgets ) 
-		{
-			for ( auto pModel : pGadget->models ) 
-			{
-				for ( auto &material : pModel->materials ) 
-				{
-					imageSamplerCount += 5;
-					materialCount++;
-				}
-				for ( auto node : pModel->linearNodes ) 
-				{
-					if ( node->mesh ) {
-						meshCount++;
-					}
-				}
-			}
-		}
-
 		// TODO(Joe):Make these actually handle more descriptors coming from scene graphs
 		materialCount = std::max<uint32_t>( materialCount, 10 );
 		meshCount = std::max<uint32_t>( meshCount, 10 );
@@ -790,17 +757,6 @@ public:
 				descriptorSetLayoutCI.pBindings = setLayoutBindings.data();
 				descriptorSetLayoutCI.bindingCount = static_cast<uint32_t>(setLayoutBindings.size());
 				VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCI, nullptr, &descriptorSetLayouts.node));
-
-				for ( auto pGadget : m_vecGadgets )
-				{
-					for ( auto pModel : pGadget->models )
-					{
-						// Per-Node descriptor set
-						for ( auto &node : pModel->nodes ) {
-							setupNodeDescriptorSet( node );
-						}
-					}
-				}
 			}
 
 		}
@@ -1878,10 +1834,6 @@ public:
 		
 		// Center and scale model
 		glm::mat4 aabb( 1.f );
-		if ( !m_vecGadgets.empty() && !m_vecGadgets.front()->models.empty() )
-		{
-			aabb = m_vecGadgets.front()->models.front()->aabb;
-		}
 		float scale = (1.0f / std::max( aabb[0][0], std::max( aabb[1][1], aabb[2][2]))) * 0.5f;
 		glm::vec3 translate = -glm::vec3( aabb[3][0], aabb[3][1], aabb[3][2]);
 		translate += -0.5f * glm::vec3( aabb[0][0], aabb[1][1], aabb[2][2]);
@@ -1927,7 +1879,6 @@ public:
 
 	void windowResized()
 	{
-//		recordCommandBuffers();
 		vkDeviceWaitIdle(device);
 		updateUniformBuffers();
 		updateOverlay();
@@ -1990,15 +1941,13 @@ public:
 		ui = new UI(vulkanDevice, renderPass, queue, pipelineCache, settings.sampleCount);
 		updateOverlay();
 
-//		recordCommandBuffers();
-
 		m_serverThread.Start();
 
 		m_pClient = kj::heap<aardvark::CAardvarkClient>();
 		m_pClient->Start();
 
 		CreateExampleApp( m_pClient );
-		UpdateFrameFromServer();
+
 		prepared = true;
 	}
 
@@ -2249,17 +2198,33 @@ public:
 		}
 	}
 
-	void UpdateFrameFromServer()
+	kj::Own< kj::TaskSet > getFrameTasks = kj::heap<kj::TaskSet>( *this );
+	
+	virtual void taskFailed( kj::Exception&& exception ) override
 	{
-		//TODO(Joe): Probably don't wait here and block rendering
-		auto resNextFrame = m_pClient->Server().getNextVisualFrameRequest().send().wait( m_pClient->WaitScope() );
-		assert( resNextFrame.hasFrame() );
+		assert( false );
+	}
 
+	void requestFrameFromServer()
+	{
+		auto promNextFrame = m_pClient->Server().getNextVisualFrameRequest().send()
+		.then( [this]( AvServer::GetNextVisualFrameResults::Reader && result ) 
+		{
+			assert( result.hasFrame() );
+			if ( result.hasFrame() )
+			{
+				applyFrame( result.getFrame() );
+			}
+		} );
+		getFrameTasks->add( std::move( promNextFrame ) );
+	}
+
+	void applyFrame( AvVisualFrame::Reader & newFrame )
+	{
 		camera.setPosition( { 0.0f, 0.0f, 1.0f } );
 		camera.setRotation( { 0.0f, 0.0f, 0.0f } );
 
-		auto frame = resNextFrame.getFrame();
-		for ( auto & root : frame.getRoots() )
+		for ( auto & root : newFrame.getRoots() )
 		{
 			std::unique_ptr<SgRoot_t> rootStruct = std::make_unique<SgRoot_t>();
 			rootStruct->root = tools::newOwnCapnp( root );
@@ -2274,40 +2239,9 @@ public:
 			}
 
 			m_vecRoots.push_back( std::move( rootStruct ) );
-			//std::shared_ptr < Gadget > pGadget = std::make_shared<Gadget>();
-			//UpdateTransformable( pGadget, gadget.getTransform() );
-		
-			//for ( auto & model : gadget.getModels() )
-			//{
-			//	auto pSampleModel = findOrLoadModel( model.getSource() );
-
-			//	assert( pSampleModel );
-			//	if ( pSampleModel )
-			//	{
-			//		std::shared_ptr<vkglTF::Model> pClonedModel = std::make_shared<vkglTF::Model>( *pSampleModel );
-
-			//		pClonedModel->translation.x = model.getTransform().getPosition().getX();
-			//		pClonedModel->translation.y = model.getTransform().getPosition().getY();
-			//		pClonedModel->translation.z = model.getTransform().getPosition().getZ();
-			//		pClonedModel->scale.x = model.getTransform().getScale().getX();
-			//		pClonedModel->scale.y = model.getTransform().getScale().getY();
-			//		pClonedModel->scale.z = model.getTransform().getScale().getZ();
-			//		pClonedModel->rotation.x = model.getTransform().getRotation().getX();
-			//		pClonedModel->rotation.y = model.getTransform().getRotation().getY();
-			//		pClonedModel->rotation.z = model.getTransform().getRotation().getZ();
-			//		pClonedModel->rotation.w = model.getTransform().getRotation().getZ();
-
-			//		pClonedModel->parent = &*pGadget;
-
-			//		pGadget->models.push_back( pClonedModel );
-			//	}
-			//}
-
-			//m_vecGadgets.push_back( pGadget );
 		}
 
 		setupDescriptors();
-//		recordCommandBuffers();
 	}
 
 	std::shared_ptr<vkglTF::Model> findOrLoadModel( AvModelSource::Client & source )
@@ -2355,7 +2289,6 @@ public:
 		ui->pushConstBlock.translate = glm::vec2(-1.0f);
 
 		bool updateShaderParams = false;
-		bool updateCBs = false;
 		float scale = 1.0f;
 
 #if defined(VK_USE_PLATFORM_ANDROID_KHR)
@@ -2507,17 +2440,6 @@ public:
 			ui->vertexBuffer.flush();
 			ui->indexBuffer.flush();
 
-			updateCBs = updateCBs || updateBuffers;
-		}
-
-		if (lastDisplaySize.x != io.DisplaySize.x || lastDisplaySize.y != io.DisplaySize.y) {
-			updateCBs = true;
-		}
-
-		if (updateCBs) {
-			vkDeviceWaitIdle(device);
-//			recordCommandBuffers();
-			vkDeviceWaitIdle(device);
 		}
 
 		if (updateShaderParams) {
@@ -2606,6 +2528,12 @@ public:
 
 		updateOverlay();
 
+		// if we don't already have a request outstanding, request a new frame
+		if ( getFrameTasks->isEmpty() )
+		{
+			requestFrameFromServer();
+		}
+
 		vr::TrackedDevicePose_t rRenderPoses[vr::k_unMaxTrackedDeviceCount];
 		vr::TrackedDevicePose_t rGamePoses[vr::k_unMaxTrackedDeviceCount];
 		vr::VRCompositor()->WaitGetPoses( rRenderPoses, vr::k_unMaxTrackedDeviceCount, rGamePoses, vr::k_unMaxTrackedDeviceCount );
@@ -2686,13 +2614,6 @@ public:
 				}
 			}
 
-			if ( animate )
-			{
-				for ( auto pGadget : m_vecGadgets )
-				{
-					pGadget->animate( frameTimer  );
-				}
-			}
 			updateParams();
 			if (rotateModel) {
 				updateUniformBuffers();
@@ -2701,6 +2622,9 @@ public:
 		if (camera.updated) {
 			updateUniformBuffers();
 		}
+
+		// pump messages from RPC
+		m_pClient->WaitScope().poll();
 	}
 
 	void submitEyeBuffers()
