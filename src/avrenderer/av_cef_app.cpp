@@ -2,7 +2,7 @@
 // reserved. Use of this source code is governed by a BSD-style license that
 // can be found in the LICENSE file.
 
-#include "tests/cefsimple/simple_app.h"
+#include "av_cef_app.h"
 
 #include <string>
 
@@ -11,7 +11,9 @@
 #include "include/views/cef_browser_view.h"
 #include "include/views/cef_window.h"
 #include "include/wrapper/cef_helpers.h"
-#include "tests/cefsimple/simple_handler.h"
+#include "av_cef_handler.h"
+
+#include <processthreadsapi.h>
 
 namespace {
 
@@ -98,7 +100,7 @@ void SimpleApp::OnContextInitialized() {
 #if defined(OS_WIN)
     // On Windows we need to specify certain flags that will be passed to
     // CreateWindowEx().
-    window_info.SetAsPopup(NULL, "cefsimple");
+    window_info.SetAsPopup(NULL, "aardvark");
 #endif
 
     // Create the first browser window.
@@ -106,3 +108,50 @@ void SimpleApp::OnContextInitialized() {
                                   NULL);
   }
 }
+
+
+CCefThread::CCefThread( const CefMainArgs & mainArgs, void *sandboxInfo )
+{
+	m_mainArgs = mainArgs;
+	m_sandboxInfo = sandboxInfo;
+}
+
+void CCefThread::Start()
+{
+	m_thread = std::thread( [&]() { this->Run(); } );
+}
+
+void CCefThread::Join()
+{
+	CefQuitMessageLoop();
+	m_thread.join();
+}
+
+
+void CCefThread::Run()
+{
+	SetThreadDescription( GetCurrentThread(), L"CEF App Thread" );
+
+	// Specify CEF global settings here.
+	CefSettings settings;
+
+#if !defined(CEF_USE_SANDBOX)
+	settings.no_sandbox = true;
+#endif
+
+	// SimpleApp implements application-level callbacks for the browser process.
+	// It will create the first browser instance in OnContextInitialized() after
+	// CEF has initialized.
+	CefRefPtr<SimpleApp> app( new SimpleApp );
+
+	// Initialize CEF.
+	CefInitialize( m_mainArgs, settings, app.get(), m_sandboxInfo );
+
+	// Run the CEF message loop. This will block until CefQuitMessageLoop() is
+	// called.
+	CefRunMessageLoop();
+
+	// Shut down CEF.
+	CefShutdown();
+}
+

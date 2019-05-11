@@ -2,7 +2,7 @@
 // reserved. Use of this source code is governed by a BSD-style license that
 // can be found in the LICENSE file.
 
-#include "tests/cefsimple/simple_handler.h"
+#include "av_cef_handler.h"
 
 #include <sstream>
 #include <string>

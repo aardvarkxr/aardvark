@@ -2,10 +2,11 @@
 // reserved. Use of this source code is governed by a BSD-style license that
 // can be found in the LICENSE file.
 
-#ifndef CEF_TESTS_CEFSIMPLE_SIMPLE_APP_H_
-#define CEF_TESTS_CEFSIMPLE_SIMPLE_APP_H_
+#pragma once
 
 #include "include/cef_app.h"
+
+#include <thread>
 
 // Implement application-level callbacks for the browser process.
 class SimpleApp : public CefApp, public CefBrowserProcessHandler {
@@ -26,4 +27,19 @@ class SimpleApp : public CefApp, public CefBrowserProcessHandler {
   IMPLEMENT_REFCOUNTING(SimpleApp);
 };
 
-#endif  // CEF_TESTS_CEFSIMPLE_SIMPLE_APP_H_
+class CCefThread
+{
+public:
+	CCefThread( const CefMainArgs & mainArgs, void *sandbox_info );
+
+	void Start();
+	void Join();
+
+private:
+	void Run();
+
+	CefMainArgs m_mainArgs;
+	void *m_sandboxInfo = nullptr;
+	std::thread m_thread;
+};
+

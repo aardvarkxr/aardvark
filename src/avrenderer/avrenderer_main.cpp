@@ -31,6 +31,23 @@
 #include "VulkanUtils.hpp"
 #include "ui.hpp"
 
+#include "include/cef_sandbox_win.h"
+#include "av_cef_app.h"
+
+// When generating projects with CMake the CEF_USE_SANDBOX value will be defined
+// automatically if using the required compiler version. Pass -DUSE_SANDBOX=OFF
+// to the CMake command-line to disable use of the sandbox.
+// Uncomment this line to manually enable sandbox support.
+// #define CEF_USE_SANDBOX 1
+
+#if defined(CEF_USE_SANDBOX)
+// The cef_sandbox.lib static library may not link successfully with all VS
+// versions.
+#pragma comment(lib, "cef_sandbox.lib")
+#endif
+
+
+
 #include <aardvark/aardvark_apps.h>
 #include <aardvark/aardvark_server.h>
 #include <aardvark/aardvark_client.h>
@@ -2641,6 +2658,34 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 }
 int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 {
+	// give the CEF subprocess the first crack
+	  // Enable High-DPI support on Windows 7 or newer.
+	CefEnableHighDPISupport();
+
+	void* sandbox_info = NULL;
+
+#if defined(CEF_USE_SANDBOX)
+	// Manage the life span of the sandbox information object. This is necessary
+	// for sandbox support on Windows. See cef_sandbox_win.h for complete details.
+	CefScopedSandboxInfo scoped_sandbox;
+	sandbox_info = scoped_sandbox.sandbox_info();
+#endif
+
+	// Provide CEF with command-line arguments.
+	CefMainArgs main_args( hInstance );
+
+	// CEF applications have multiple sub-processes (render, plugin, GPU, etc)
+	// that share the same executable. This function checks the command-line and,
+	// if this is a sub-process, executes the appropriate logic.
+	int exit_code = CefExecuteProcess( main_args, NULL, sandbox_info );
+	if ( exit_code >= 0 ) {
+		// The sub-process has completed so return here.
+		return exit_code;
+	}
+
+	CCefThread cefThread( main_args, sandbox_info );
+	cefThread.Start();
+
 	for (int32_t i = 0; i < __argc; i++) { VulkanExample::args.push_back(__argv[i]); };
 	vulkanExample = new VulkanExample();
 	vulkanExample->initOpenVR();
@@ -2649,6 +2694,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 	vulkanExample->prepare();
 	vulkanExample->renderLoop();
 	delete(vulkanExample);
+
+	cefThread.Join();
+
 	return 0;
 }
 #elif defined(VK_USE_PLATFORM_ANDROID_KHR)
