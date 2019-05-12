@@ -1,14 +1,16 @@
 Current:
-* Let N clients connect to one server
+* Let N clients connect to one server -- seems to be working
 * some kind of default lighting that isn't blue
 * Show frame info in the UI?
 * Maybe switch to named pipes?
+* Clients hanging up should clear apps/SGs
 
 
 
 Step 1 - Make some pixels from C++ on screen (done)
 Step 2 - Make the pixels appear in a scene app (done)
-Step 3 - Make some pixels from Javascript on screen
+Step 3 - Make some pixels from Javascript (done)
+
 Step 4 - Make a quad from Javascript
 Step 5 - Make input work back to Javascript/HTML/CSS
 Step 6 - Make the pixels/input layer on top of other apps

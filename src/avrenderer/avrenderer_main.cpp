@@ -1934,7 +1934,7 @@ public:
 		m_pClient = kj::heap<aardvark::CAardvarkClient>();
 		m_pClient->Start();
 
-		CreateExampleApp( m_pClient );
+//		CreateExampleApp( m_pClient );
 
 		prepared = true;
 	}
@@ -1959,7 +1959,9 @@ public:
 		std::vector<AvNode::Reader> nodes;
 		uint32_t appId;
 	};
-	std::vector<std::unique_ptr< SgRoot_t > > m_vecRoots;
+	std::unique_ptr< std::vector<std::unique_ptr< SgRoot_t > > > m_roots, m_nextRoots;
+	bool inFrameTraversal = false;
+
 
 	struct SgNodeData_t
 	{
@@ -1969,14 +1971,19 @@ public:
 
 	void TraverseSceneGraphs( float fFrameTime )
 	{
+		if ( !m_roots )
+			return;
+
+		inFrameTraversal = true;
 		setVisitedNodes.clear();
 		m_fThisFrameTime = fFrameTime;
 		m_vecModelsToRender.clear();
-		for ( auto & root : m_vecRoots )
+		for ( auto & root : *m_roots )
 		{
 			TraverseSceneGraph( &*root );
 		}
 		m_pCurrentRoot = nullptr;
+		inFrameTraversal = false;
 	}
 
 	const SgRoot_t *m_pCurrentRoot = nullptr;
@@ -2225,6 +2232,7 @@ public:
 		camera.setPosition( { 0.0f, 0.0f, 1.0f } );
 		camera.setRotation( { 0.0f, 0.0f, 0.0f } );
 
+		auto nextRoots = std::make_unique < std::vector<std::unique_ptr<SgRoot_t>>>();
 		for ( auto & root : newFrame.getRoots() )
 		{
 			std::unique_ptr<SgRoot_t> rootStruct = std::make_unique<SgRoot_t>();
@@ -2239,10 +2247,9 @@ public:
 				rootStruct->nodes.push_back( node );
 			}
 
-			m_vecRoots.push_back( std::move( rootStruct ) );
+			nextRoots->push_back( std::move( rootStruct ) );
 		}
-
-		setupDescriptors();
+		m_nextRoots = std::move( nextRoots );
 	}
 
 	std::shared_ptr<vkglTF::Model> findOrLoadModel( AvModelSource::Client & source )
@@ -2530,6 +2537,13 @@ public:
 			CefDoMessageLoopWork();
 
 			return;
+		}
+
+		if ( m_nextRoots )
+		{
+			m_roots = std::move( m_nextRoots );
+
+			setupDescriptors();
 		}
 
 		updateOverlay();

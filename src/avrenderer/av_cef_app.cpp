@@ -93,7 +93,8 @@ void CAardvarkCefApp::OnContextInitialized()
 	// that instead of the default URL.
 	url = command_line->GetSwitchValue("url");
 	if (url.empty())
-		url = "http://www.google.com";
+		url = "file:///D:/homedev/aardvark/data/webui/scenegraphtest.html";
+	//url = "http://google.com";
 
 	if (use_views) 
 	{
