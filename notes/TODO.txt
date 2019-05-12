@@ -3,7 +3,7 @@ Current:
 * some kind of default lighting that isn't blue
 * Show frame info in the UI?
 * Maybe switch to named pipes?
-* Clients hanging up should clear apps/SGs
+* Clients hanging up should clear apps/SGs (for now the renderer cleans up apps on the way out.)
 
 
 
