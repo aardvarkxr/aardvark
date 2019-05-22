@@ -1,5 +1,9 @@
 Current:
 * Let N clients connect to one server -- seems to be working
+* Upgrade vulkan SDK to the latest (1.1.something)
+* Use the new core external memory stuff in 1.1 to pull in the shared DXGI handles from CEF. Example using older NV extensions here: https://developer.nvidia.com/getting-vulkan-ready-vr
+* Make panel node type pick the model automatically
+* Add a function to set DXGI handle for the panel
 * some kind of default lighting that isn't blue
 * Show frame info in the UI?
 * Maybe switch to named pipes?
