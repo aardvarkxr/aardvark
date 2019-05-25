@@ -36,6 +36,9 @@ namespace aardvark
 		// valid for Model nodes
 		EAvSceneGraphResult avSetModelUri( const char *pchModelUri );
 
+		// valid for Panel nodes
+		EAvSceneGraphResult avSetPanelTextureSource( const char *pchSourceName );
+
 		AvNode::Builder & CurrentNode();
 	private:
 		struct NodeInProgress_t
@@ -160,6 +163,15 @@ namespace aardvark
 
 	}
 
+	EAvSceneGraphResult avSetPanelTextureSource( AvSceneContext context, const char *pchSourceName )
+	{
+		CSceneGraphContext *pContext = (CSceneGraphContext *)context;
+		if ( pContext )
+			return pContext->avSetPanelTextureSource( pchSourceName );
+		else
+			return EAvSceneGraphResult::InvalidContext;
+	}
+
 	// -------------------------- CSceneGraphContext implementation ------------------------------------
 
 	EAvSceneGraphResult CSceneGraphContext::avStartSceneContext()
@@ -215,6 +227,7 @@ namespace aardvark
 		case EAvSceneGraphNodeType::Origin: return AvNode::Type::ORIGIN;
 		case EAvSceneGraphNodeType::Transform: return AvNode::Type::TRANSFORM;
 		case EAvSceneGraphNodeType::Model: return AvNode::Type::MODEL;
+		case EAvSceneGraphNodeType::Panel: return AvNode::Type::PANEL;
 
 		default: return AvNode::Type::INVALID;
 		}
@@ -341,9 +354,39 @@ namespace aardvark
 		return EAvSceneGraphResult::Success;
 	}
 
+	EAvSceneGraphResult CSceneGraphContext::avSetPanelTextureSource( const char *pchTextureSource )
+	{
+		if ( CurrentNode().getType() != AvNode::Type::PANEL )
+			return EAvSceneGraphResult::InvalidNodeType;
+		CurrentNode().setPropTextureSource( pchTextureSource );
+		return EAvSceneGraphResult::Success;
+	}
+
 	AvNode::Builder & CSceneGraphContext::CurrentNode()
 	{
 		return m_currentNodeBuilder;
+	}
+
+	// tells the renderer what DXGI to use for a scene graph node
+	EAvSceneGraphResult avUpdateDxgiTextureForApps( aardvark::CAardvarkClient *pClient, const char **pchAppName, uint32_t unNameCount, void *pvSharedTextureHandle )
+	{
+		auto reqUpdate = pClient->Server().updateDxgiTextureForAppsRequest();
+		if ( unNameCount )
+		{
+			auto names = reqUpdate.initAppNames( unNameCount );
+			for ( uint32_t n = 0; n < unNameCount; n++ )
+			{
+				names.set( n, pchAppName[n] );
+			}
+		}
+		reqUpdate.setSharedTextureHandle( reinterpret_cast<uint64_t>( pvSharedTextureHandle ) );
+		auto promUpdate = reqUpdate.send()
+		.then( []( AvServer::UpdateDxgiTextureForAppsResults::Reader && result )
+		{
+			// nothing to do when the update happens
+		} );
+		pClient->addToTasks( std::move( promUpdate ) );
+		return EAvSceneGraphResult::Success;
 	}
 
 }

@@ -25,6 +25,7 @@ namespace aardvark
 		Origin = 1,		// Sets the origin path for its children
 		Transform = 2,	// Sets the transform for its children
 		Model = 3,		// Draws a model
+		Panel = 4,		// Draws a quad in the world with some texture
 	};
 
 	struct AvSceneContextStruct;
@@ -52,4 +53,11 @@ namespace aardvark
 
 	// valid for Model nodes
 	EAvSceneGraphResult avSetModelUri( AvSceneContext context, const char *pchModelUri );
+
+	// valid for Panel nodes
+	EAvSceneGraphResult avSetPanelTextureSource( AvSceneContext context, const char *pchSourceName );
+
+	// tells the renderer what DXGI to use for a scene graph app
+	EAvSceneGraphResult avUpdateDxgiTextureForApps( aardvark::CAardvarkClient *pClient, const char **pchAppName, uint32_t unNameCount, void *pvSharedTextureHandle );
+
 }

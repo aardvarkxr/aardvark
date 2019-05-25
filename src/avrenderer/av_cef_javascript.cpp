@@ -6,6 +6,7 @@
 #include <aardvark/aardvark_scene_graph.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <set>
 
 using aardvark::AvSceneContext;
 using aardvark::EAvSceneGraphResult;
@@ -82,16 +83,20 @@ class CAardvarkAppObject : public CJavascriptObjectWithFunctions
 {
 	friend class CSceneContextObject;
 public:
-	CAardvarkAppObject( CAardvarkRenderProcessHandler *pRenderProcessHandler, AvApp::Client client );
+	CAardvarkAppObject( CAardvarkRenderProcessHandler *pRenderProcessHandler, AvApp::Client client, const std::string & name );
 
 	virtual bool init() override;
 	virtual void cleanup() override;
 
 	void finishSceneContext( CSceneContextObject *contextObject );
+	void updateNodeIdsForThisTexture( const std::vector<uint32_t> vecNewNodeIds );
+	const std::string & getName() const { return m_name; }
 private:
 	AvApp::Client m_appClient;
 	CAardvarkRenderProcessHandler *m_handler = nullptr;
+	std::string m_name;
 	std::list<std::unique_ptr<CSceneContextObject>> m_sceneContexts;
+	std::set<uint32_t> m_nodeIdsThatNeedThisTexture;
 };
 
 
@@ -104,10 +109,14 @@ public:
 	virtual void cleanup() override;
 	AvSceneContext getContext() { return m_context; }
 
+	uint32_t getCurrentNodeId();
+	std::vector<uint32_t> getNodeIdsThatWillNeedThisTexture() { return m_nodeIdsThatWillNeedThisTexture;  }
 private:
 	aardvark::AvSceneContext m_context;
 	CAardvarkRenderProcessHandler *m_handler = nullptr;
 	CAardvarkAppObject *m_parentApp = nullptr;
+	std::vector<uint32_t> m_nodeIdsThatWillNeedThisTexture;
+	std::vector<uint32_t> m_nodeIdStack;
 };
 
 CSceneContextObject::CSceneContextObject( CAardvarkAppObject *parentApp, CAardvarkRenderProcessHandler *renderProcessHandler, aardvark::AvSceneContext context )
@@ -115,6 +124,19 @@ CSceneContextObject::CSceneContextObject( CAardvarkAppObject *parentApp, CAardva
 	m_handler = renderProcessHandler;
 	m_context = context;
 	m_parentApp = parentApp;
+}
+
+
+uint32_t CSceneContextObject::getCurrentNodeId()
+{
+	if ( m_nodeIdStack.empty() )
+	{
+		return 0;
+	}
+	else
+	{
+		return m_nodeIdStack.back();
+	}
 }
 
 
@@ -152,10 +174,15 @@ bool CSceneContextObject::init()
 
 		EAvSceneGraphNodeType eType = (EAvSceneGraphNodeType)arguments[2]->GetIntValue();
 
-		EAvSceneGraphResult res = aardvark::avStartNode( m_context, arguments[0]->GetUIntValue(), name.empty() ? nullptr : name.c_str(), eType );
+		uint32_t nodeId = arguments[0]->GetUIntValue();
+		EAvSceneGraphResult res = aardvark::avStartNode( m_context, nodeId, name.empty() ? nullptr : name.c_str(), eType );
 		if ( res != EAvSceneGraphResult::Success )
 		{
 			exception = "avStartNode failed";
+		}
+		else
+		{
+			m_nodeIdStack.push_back( nodeId );
 		}
 	} );
 
@@ -164,6 +191,7 @@ bool CSceneContextObject::init()
 	typeEnum->SetValue( "Origin",		CefV8Value::CreateInt( (int32_t)EAvSceneGraphNodeType::Origin ),		V8_PROPERTY_ATTRIBUTE_READONLY );
 	typeEnum->SetValue( "Transform",	CefV8Value::CreateInt( (int32_t)EAvSceneGraphNodeType::Transform ),	V8_PROPERTY_ATTRIBUTE_READONLY );
 	typeEnum->SetValue( "Model",		CefV8Value::CreateInt( (int32_t)EAvSceneGraphNodeType::Model ),		V8_PROPERTY_ATTRIBUTE_READONLY );
+	typeEnum->SetValue( "Panel", CefV8Value::CreateInt( (int32_t)EAvSceneGraphNodeType::Panel ), V8_PROPERTY_ATTRIBUTE_READONLY );
 	m_container->SetValue( "type", typeEnum, V8_PROPERTY_ATTRIBUTE_READONLY );
 
 	RegisterFunction( "finishNode", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
@@ -178,6 +206,13 @@ bool CSceneContextObject::init()
 		if ( res != EAvSceneGraphResult::Success )
 		{
 			exception = "avFinishNode failed";
+		}
+		else
+		{
+			if ( !m_nodeIdStack.empty() )
+			{
+				m_nodeIdStack.pop_back();
+			}
 		}
 	} );
 
@@ -320,6 +355,26 @@ bool CSceneContextObject::init()
 		}
 	} );
 
+	RegisterFunction( "setTextureSource", [this, handler = m_handler ]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 1 )
+		{
+			exception = "Invalid argument count";
+			return;
+		}
+		if ( !arguments[0]->IsString() )
+		{
+			exception = "Invalid arguments";
+			return;
+		}
+
+		EAvSceneGraphResult res = aardvark::avSetPanelTextureSource( m_context, std::string( arguments[0]->GetStringValue() ).c_str() );
+		if ( res != EAvSceneGraphResult::Success )
+		{
+			exception = "avSetModelUri failed " + std::to_string( (int)res );
+		}
+	} );
+
 	return true;
 }
 
@@ -330,10 +385,11 @@ void CSceneContextObject::cleanup()
 }
 
 
-CAardvarkAppObject::CAardvarkAppObject( CAardvarkRenderProcessHandler *renderProcessHandler, AvApp::Client client )
+CAardvarkAppObject::CAardvarkAppObject( CAardvarkRenderProcessHandler *renderProcessHandler, AvApp::Client client, const std::string & name )
 	: m_appClient( client )
 {
 	m_handler = renderProcessHandler;
+	m_name = name;
 }
 
 
@@ -405,6 +461,7 @@ void CAardvarkAppObject::cleanup()
 void CAardvarkAppObject::finishSceneContext( CSceneContextObject *contextObject )
 {
 	avFinishSceneContext( contextObject->getContext(), &m_appClient, m_handler->getClient() );
+
 	for ( auto iEntry = m_sceneContexts.begin(); iEntry != m_sceneContexts.end(); iEntry++ )
 	{
 		if ( &*(*iEntry) == contextObject )
@@ -424,7 +481,7 @@ public:
 
 	virtual bool init() override;
 	void cleanup() override;
-
+	std::list<std::unique_ptr<CAardvarkAppObject>> & getApps() { return m_apps;  }
 private:
 	CAardvarkRenderProcessHandler *m_handler = nullptr;
 	std::list<std::unique_ptr<CAardvarkAppObject>> m_apps;
@@ -460,7 +517,7 @@ bool CAardvarkObject::init()
 		}
 		else
 		{
-			auto app = std::make_unique<CAardvarkAppObject>( m_handler, resCreateApp.getApp() );
+			auto app = std::make_unique<CAardvarkAppObject>( m_handler, resCreateApp.getApp(), std::string( arguments[0]->GetStringValue() ) );
 			if ( !app->init() )
 			{
 				retval = CefV8Value::CreateNull();
@@ -469,6 +526,7 @@ bool CAardvarkObject::init()
 			{
 				retval = app->getContainer();
 				m_apps.push_back( std::move( app ) );
+				m_handler->updateAppNamesForBrowser();
 			}
 		}
 	} );
@@ -497,6 +555,8 @@ void CAardvarkRenderProcessHandler::OnContextCreated(
 	CefRefPtr<CefFrame> frame,
 	CefRefPtr<CefV8Context> context )
 {
+	assert( !m_browser );
+	m_browser = browser;
 	m_client->Start();
 
 	// Retrieve the context's window object.
@@ -516,7 +576,31 @@ void CAardvarkRenderProcessHandler::OnContextReleased( CefRefPtr<CefBrowser> bro
 	m_aardvarkObject->cleanup();
 	m_aardvarkObject = nullptr;
 	m_client->Stop();
+	m_browser = nullptr;
 }
 
 
+bool CAardvarkRenderProcessHandler::OnProcessMessageReceived( CefRefPtr<CefBrowser> browser,
+	CefProcessId source_process,
+	CefRefPtr<CefProcessMessage> message )
+{
+	std::string messageName = message->GetName();
 
+	return false;
+}
+
+
+void CAardvarkRenderProcessHandler::updateAppNamesForBrowser()
+{
+	size_t listIndex = 0;
+	CefRefPtr< CefListValue> nameList = CefListValue::Create();
+	for ( auto & app : m_aardvarkObject->getApps() )
+	{
+		nameList->SetString( listIndex++, app->getName() );
+	}
+
+	CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "update_browser_app_names" );
+
+	msg->GetArgumentList()->SetList( 0, nameList );
+	m_browser->SendProcessMessage( PID_BROWSER, msg );
+}

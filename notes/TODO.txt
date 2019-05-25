@@ -9,6 +9,8 @@ Current:
 * Maybe switch to named pipes?
 * Clients hanging up should clear apps/SGs (for now the renderer cleans up apps on the way out.)
 
+panel node is added on the client side. Need to add renderer for panels
+texture is null when the scene graph is generated. Maybe have a "regen scene graph" function when the texture updates? Or maybe remember on the C++ side that we set a panel to this browser and do that automatically with a new API?
 
 
 Step 1 - Make some pixels from C++ on screen (done)

@@ -5,6 +5,7 @@ interface AvServer
 	createApp @0 ( name: Text ) -> ( app: AvApp );
 	getNextVisualFrame @1 () -> ( frame: AvVisualFrame );
 	getModelSource @2 ( uri: Text ) -> ( success: Bool, source: AvModelSource );
+	updateDxgiTextureForApps @3 ( appNames: List( Text ), sharedTextureHandle: UInt64 ) -> ( success: Bool );
 }
 
 interface AvApp
@@ -65,10 +66,17 @@ struct AvLight
 	diffuse @1: AvColor;
 }
 
+struct AvAppTextureHandle
+{
+	appName @0: Text;
+	dxgiSharedTextureHandle @1: UInt64;
+}
+
 struct AvVisualFrame
 {
 	id @0: UInt64;
 	roots @1: List( AvNodeRoot );
+	appTextures @2: List( AvAppTextureHandle );
 }
 
 struct AvNode
@@ -81,6 +89,7 @@ struct AvNode
 		origin @2;			# Sets the origin path
 		transform @3;		# Contains a transform
 		model @4;			# Contains a model URI
+		panel @5;			# Contains a shared texture handle
 	}
 
 	id @0: UInt32;
@@ -93,6 +102,7 @@ struct AvNode
 	propOrigin @5: Text;			# origin
 	propTransform @6: AvTransform;	# transform
 	propModelUri @7: Text;			# model
+	propTextureSource @8: Text;		# panel
 }
 
 struct AvNodeWrapper

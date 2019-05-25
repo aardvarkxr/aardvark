@@ -8,6 +8,8 @@
 #include <sstream>
 #include <string>
 
+#include <aardvark/aardvark_scene_graph.h>
+
 #include "include/base/cef_bind.h"
 #include "include/cef_app.h"
 #include "include/views/cef_browser_view.h"
@@ -27,10 +29,15 @@ CAardvarkCefHandler::CAardvarkCefHandler(bool use_views, IApplication *applicati
 	DCHECK(!g_instance);
 	g_instance = this;
 	m_application = application;
+	m_client = std::make_unique<aardvark::CAardvarkClient>();
+	m_client->Start();
+
+	CefPostDelayedTask( TID_UI, base::Bind( &CAardvarkCefHandler::RunFrame, this ), 0 );
 }
 
 CAardvarkCefHandler::~CAardvarkCefHandler() 
 {
+	m_client->Stop();
 	g_instance = NULL;
 }
 
@@ -71,6 +78,8 @@ void CAardvarkCefHandler::OnAfterCreated(CefRefPtr<CefBrowser> browser)
 
 	// Add to the list of existing browsers.
 	m_browserList.push_back(browser);
+
+	m_browserInfo.insert( std::pair( browser->GetIdentifier(), std::make_unique<BrowserInfo_t>() ) );
 }
 
 bool CAardvarkCefHandler::DoClose(CefRefPtr<CefBrowser> browser) 
@@ -105,6 +114,8 @@ void CAardvarkCefHandler::OnBeforeClose(CefRefPtr<CefBrowser> browser)
 			break;
 		}
 	}
+
+	m_browserInfo.erase( browser->GetIdentifier() );
 
 	if (m_browserList.empty()) 
 	{
@@ -158,3 +169,87 @@ void CAardvarkCefHandler::CloseAllBrowsers(bool force_close)
 }
 
 
+void CAardvarkCefHandler::GetViewRect( CefRefPtr<CefBrowser> browser, CefRect& rect )
+{
+	rect.x = 0;
+	rect.y = 0;
+	rect.width = m_width;
+	rect.height = m_height;
+}
+
+void CAardvarkCefHandler::OnPaint( CefRefPtr<CefBrowser> browser,
+	PaintElementType type,
+	const RectList& dirtyRects,
+	const void* buffer,
+	int width,
+	int height )
+{
+	// we don't care about the slow paint, just the GPU paint in OnAcceleratedPaint
+	m_width = width;
+	m_height = height;
+}
+
+
+void CAardvarkCefHandler::OnAcceleratedPaint( CefRefPtr<CefBrowser> browser,
+	PaintElementType type,
+	const RectList& dirtyRects,
+	void* shared_handle )
+{
+	auto & browserInfo = *m_browserInfo[browser->GetIdentifier()];
+	browserInfo.m_sharedTexture = shared_handle;
+	updateSceneGraphTextures( browserInfo );
+}
+
+
+bool CAardvarkCefHandler::OnProcessMessageReceived( CefRefPtr<CefBrowser> browser,
+	CefProcessId source_process,
+	CefRefPtr<CefProcessMessage> message )
+{
+	if ( message->GetName() == "update_browser_app_names" )
+	{
+		BrowserInfo_t & browserInfo = *m_browserInfo[browser->GetIdentifier()];
+
+		browserInfo.m_apps.clear();
+		auto nameList = message->GetArgumentList()->GetList( 0 );
+		for ( size_t n = 0; n < nameList->GetSize(); n++ )
+		{
+			browserInfo.m_apps.push_back( nameList->GetString( n ).ToString() );
+		}
+		updateSceneGraphTextures( browserInfo );
+		return true;
+	}
+
+	return false;
+}
+
+
+void CAardvarkCefHandler::updateSceneGraphTextures( CAardvarkCefHandler::BrowserInfo_t & browserInfo )
+{
+	if ( !browserInfo.m_sharedTexture )
+	{
+		// if we don't have a shared texture yet, there's nothing to update
+		return;
+	}
+
+	std::vector< const char *> namePointers;
+	for ( auto & appName : browserInfo.m_apps )
+	{
+		namePointers.push_back( appName.c_str() );
+	}
+
+	if ( namePointers.empty() )
+	{
+		aardvark::avUpdateDxgiTextureForApps( &*m_client, nullptr, 0, browserInfo.m_sharedTexture );
+	}
+	else
+	{
+		aardvark::avUpdateDxgiTextureForApps( &*m_client, &namePointers[0], (uint32_t)namePointers.size(), browserInfo.m_sharedTexture );
+	}
+}
+
+void CAardvarkCefHandler::RunFrame()
+{
+	m_client->WaitScope().poll();
+
+	CefPostDelayedTask( TID_UI, base::Bind( &CAardvarkCefHandler::RunFrame, this ), 11 );
+}

@@ -116,6 +116,15 @@ void CAardvarkCefApp::OnContextInitialized()
 		window_info.SetAsPopup(NULL, "aardvark");
 #endif
 
+		window_info.windowless_rendering_enabled = true;
+		window_info.shared_texture_enabled = true;
+
+		window_info.width = 1024;
+		window_info.height = 1024;
+		window_info.x = window_info.y = 0;
+		
+		browser_settings.windowless_frame_rate = 90;
+
 		// Create the first browser window.
 		CefBrowserHost::CreateBrowser(window_info, handler, url, browser_settings,
 									NULL);

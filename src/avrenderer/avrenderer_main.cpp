@@ -1962,6 +1962,8 @@ public:
 	std::unique_ptr< std::vector<std::unique_ptr< SgRoot_t > > > m_roots, m_nextRoots;
 	bool inFrameTraversal = false;
 
+	std::unique_ptr< std::map< std::string, uint64_t> > m_textureDxgiSharedHandles, m_nextTextureDxgiSharedHandles;
+
 
 	struct SgNodeData_t
 	{
@@ -2098,6 +2100,10 @@ public:
 			TraverseModel( node );
 			break;
 
+		case AvNode::Type::PANEL:
+			TraversePanel( node );
+			break;
+
 		case AvNode::Type::INVALID:
 		default:
 			assert( false );
@@ -2202,6 +2208,51 @@ public:
 		{
 			pData->modelParent.matParentFromNode = GetCurrentNodeFromUniverse();
 			pData->model->animate( m_fThisFrameTime );
+
+			// TODO(Joe): Figure out how to only do this when a parent is changing
+			for ( auto &node : pData->model->nodes ) {
+				node->update();
+			}
+
+			m_vecModelsToRender.push_back( pData->model );
+		}
+	}
+
+	void TraversePanel( const AvNode::Reader & node )
+	{
+		SgNodeData_t *pData = GetNodeData( node );
+		assert( pData );
+
+		if ( !pData->model )
+		{
+			// TODO(Joe): Definitely don't block here waiting to get a model source
+			auto reqModelSource = m_pClient->Server().getModelSourceRequest();
+			reqModelSource.setUri( "file:///d:/homedev/aardvark/data/models/panel/panel.glb" );
+			auto resModelSource = reqModelSource.send().wait( m_pClient->WaitScope() );
+			if ( resModelSource.hasSource() )
+			{
+				auto pModel = findOrLoadModel( resModelSource.getSource() );
+				pData->model = std::make_shared<vkglTF::Model>( *pModel );
+				pData->model->parent = &pData->modelParent;
+
+				// Per-Node descriptor set
+				for ( auto &node : pData->model->nodes ) {
+					setupNodeDescriptorSet( node );
+				}
+
+			}
+		}
+
+		if ( pData->model )
+		{
+			pData->modelParent.matParentFromNode = GetCurrentNodeFromUniverse();
+			pData->model->animate( m_fThisFrameTime );
+
+			// TODO(Joe): Figure out how to only do this when a parent is changing
+			for ( auto &node : pData->model->nodes ) {
+				node->update();
+			}
+
 			m_vecModelsToRender.push_back( pData->model );
 		}
 	}
@@ -2249,7 +2300,15 @@ public:
 
 			nextRoots->push_back( std::move( rootStruct ) );
 		}
+
+		auto nextTextures = std::make_unique < std::map<std::string, uint64_t> >();
+		for ( auto & texture : newFrame.getAppTextures() )
+		{
+			nextTextures->insert_or_assign( texture.getAppName(), texture.getDxgiSharedTextureHandle() );
+		}
+
 		m_nextRoots = std::move( nextRoots );
+		m_nextTextureDxgiSharedHandles = std::move( nextTextures );
 	}
 
 	std::shared_ptr<vkglTF::Model> findOrLoadModel( AvModelSource::Client & source )
@@ -2534,7 +2593,7 @@ public:
 		{
 			// still pump the message loops
 			m_pClient->WaitScope().poll();
-			CefDoMessageLoopWork();
+//			CefDoMessageLoopWork();
 
 			return;
 		}
@@ -2544,6 +2603,10 @@ public:
 			m_roots = std::move( m_nextRoots );
 
 			setupDescriptors();
+		}
+		if ( m_nextTextureDxgiSharedHandles )
+		{
+			m_textureDxgiSharedHandles = std::move( m_nextTextureDxgiSharedHandles );
 		}
 
 		updateOverlay();
@@ -2647,7 +2710,7 @@ public:
 		m_pClient->WaitScope().poll();
 
 		// pump messages for CEF
-		CefDoMessageLoopWork();
+		//CefDoMessageLoopWork();
 	}
 
 	void submitEyeBuffers()
@@ -2730,6 +2793,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 #if !defined(CEF_USE_SANDBOX)
 	settings.no_sandbox = true;
 #endif
+
+	settings.multi_threaded_message_loop = true;
+	settings.windowless_rendering_enabled = true;
 
 	vulkanExample = new VulkanExample();
 	app->setApplication( vulkanExample );

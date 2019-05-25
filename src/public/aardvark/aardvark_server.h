@@ -18,6 +18,7 @@ namespace aardvark
 		virtual ::kj::Promise<void> createApp( CreateAppContext context ) override;
 		virtual ::kj::Promise<void> getNextVisualFrame( GetNextVisualFrameContext context ) override;
 		virtual ::kj::Promise<void> getModelSource( GetModelSourceContext context ) override;
+		virtual ::kj::Promise<void> updateDxgiTextureForApps( UpdateDxgiTextureForAppsContext context ) override;
 
 		void removeApp( CAardvarkApp *pApp );
 	protected:

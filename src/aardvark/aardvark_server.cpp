@@ -4,7 +4,7 @@
 #include "framestructs.h"
 #include "tools/filetools.h"
 #include "tools/pathtools.h"
-
+#include <map>
 #include <capnp/ez-rpc.h>
 
 namespace aardvark
@@ -60,10 +60,16 @@ namespace aardvark
 
 	::kj::Promise<void> AvServerImpl::getNextVisualFrame( GetNextVisualFrameContext context )
 	{
+		std::map<std::string, uint64_t> textureHandles;
 		AvVisuals_t visuals;
-		for ( auto iApp : m_vecApps )
+		for ( auto app : m_vecApps )
 		{
-			iApp->gatherVisuals( visuals );
+			app->gatherVisuals( visuals );
+
+			if ( app->getDxgiSharedTextureHandle() )
+			{
+				textureHandles.insert_or_assign( app->getName(), app->getDxgiSharedTextureHandle() );
+			}
 		}
 
 		AvVisualFrame::Builder bldFrame( context.getResults().initFrame() );
@@ -76,6 +82,36 @@ namespace aardvark
 			{
 				bldRoots[unIndex].setNodes( visuals.vecSceneGraphs[unIndex].root.getNodes() );
 				bldRoots[unIndex].setSourceId( visuals.vecSceneGraphs[unIndex].appId );
+			}
+
+			auto bldTextures = bldFrame.initAppTextures( (uint32_t)textureHandles.size() );
+			uint32_t unIndex = 0;
+			for ( auto handle : textureHandles )
+			{
+				bldTextures[unIndex].setAppName( handle.first );
+				bldTextures[unIndex].setDxgiSharedTextureHandle( handle.second );
+				unIndex++;
+			}
+		}
+
+		return kj::READY_NOW;
+	}
+
+	::kj::Promise<void> AvServerImpl::updateDxgiTextureForApps( UpdateDxgiTextureForAppsContext context )
+	{
+		if ( context.getParams().hasAppNames() )
+		{
+			for ( auto app : m_vecApps )
+			{
+				bool bSetThisOne = false;
+				for ( auto appName : context.getParams().getAppNames() )
+				{
+					if ( appName == app->getName() )
+					{
+						app->setDxgiSharedTextureHandle( context.getParams().getSharedTextureHandle() );
+						break;
+					}
+				}
 			}
 		}
 

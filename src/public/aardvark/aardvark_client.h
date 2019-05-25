@@ -6,10 +6,10 @@
 namespace aardvark
 {
 
-	class CAardvarkClient
+	class CAardvarkClient: public kj::TaskSet::ErrorHandler
 	{
 	public:
-		CAardvarkClient() {}
+		CAardvarkClient();
 		~CAardvarkClient();
 
 		void Start();
@@ -17,8 +17,12 @@ namespace aardvark
 
 		AvServer::Client & Server() { return *m_pMainInterface; }
 		kj::WaitScope & WaitScope() { return m_pClient->getWaitScope(); }
+		void addToTasks( kj::Promise<void> && promRequest );
 	private:
+		virtual void taskFailed( kj::Exception&& exception ) override;
+
 		capnp::EzRpcClient *m_pClient = nullptr;
 		kj::Own< AvServer::Client > m_pMainInterface;
+		kj::Own< kj::TaskSet > m_tasks;
 	};
 }
