@@ -239,11 +239,11 @@ void CAardvarkCefHandler::updateSceneGraphTextures( CAardvarkCefHandler::Browser
 
 	if ( namePointers.empty() )
 	{
-		aardvark::avUpdateDxgiTextureForApps( &*m_client, nullptr, 0, browserInfo.m_sharedTexture );
+		aardvark::avUpdateDxgiTextureForApps( &*m_client, nullptr, 0, m_width, m_height, browserInfo.m_sharedTexture );
 	}
 	else
 	{
-		aardvark::avUpdateDxgiTextureForApps( &*m_client, &namePointers[0], (uint32_t)namePointers.size(), browserInfo.m_sharedTexture );
+		aardvark::avUpdateDxgiTextureForApps( &*m_client, &namePointers[0], (uint32_t)namePointers.size(), m_width, m_height, browserInfo.m_sharedTexture );
 	}
 }
 

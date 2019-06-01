@@ -22,8 +22,9 @@ namespace aardvark
 		void AddClient( AvApp::Client & client ) { m_vecClients.push_back( AvApp::Client( client ) ); }
 		void clearClients() { m_vecClients.clear(); }
 		const std::string & getName() const { return m_sName;  }
-		void setDxgiSharedTextureHandle( uint64_t sharedTextureHandle ) { m_dxgiSharedTextureHandle = sharedTextureHandle; }
-		uint64_t getDxgiSharedTextureHandle( ) { return m_dxgiSharedTextureHandle; }
+		bool hasSharedTextureInfo() const { return m_sharedTexture.isSet();  }
+		void setSharedTextureInfo( AvSharedTextureInfo::Reader sharedTextureInfo );
+		AvSharedTextureInfo::Reader getSharedTextureInfo();
 
 		void gatherVisuals( AvVisuals_t & visuals );
 
@@ -33,9 +34,9 @@ namespace aardvark
 	private:
 		std::string m_sName;
 		std::vector< AvApp::Client > m_vecClients;
-		tools::OwnCapnp<AvNodeRoot> m_sceneGraph;
+		tools::OwnCapnp<AvNodeRoot> m_sceneGraph = nullptr;
+		tools::OwnCapnp<AvSharedTextureInfo> m_sharedTexture = nullptr;
 		AvServerImpl *m_pParentServer = nullptr;
-		uint64_t m_dxgiSharedTextureHandle = 0;
 		uint32_t m_id = 0;
 	};
 

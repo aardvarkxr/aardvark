@@ -60,15 +60,15 @@ namespace aardvark
 
 	::kj::Promise<void> AvServerImpl::getNextVisualFrame( GetNextVisualFrameContext context )
 	{
-		std::map<std::string, uint64_t> textureHandles;
+		std::map<std::string, AvSharedTextureInfo::Reader> textureHandles;
 		AvVisuals_t visuals;
 		for ( auto app : m_vecApps )
 		{
 			app->gatherVisuals( visuals );
 
-			if ( app->getDxgiSharedTextureHandle() )
+			if ( app->hasSharedTextureInfo() )
 			{
-				textureHandles.insert_or_assign( app->getName(), app->getDxgiSharedTextureHandle() );
+				textureHandles.insert_or_assign( app->getName(), app->getSharedTextureInfo() );
 			}
 		}
 
@@ -89,7 +89,7 @@ namespace aardvark
 			for ( auto handle : textureHandles )
 			{
 				bldTextures[unIndex].setAppName( handle.first );
-				bldTextures[unIndex].setDxgiSharedTextureHandle( handle.second );
+				bldTextures[unIndex].setSharedTextureInfo( handle.second );
 				unIndex++;
 			}
 		}
@@ -108,7 +108,7 @@ namespace aardvark
 				{
 					if ( appName == app->getName() )
 					{
-						app->setDxgiSharedTextureHandle( context.getParams().getSharedTextureHandle() );
+						app->setSharedTextureInfo( context.getParams().getSharedTextureInfo() );
 						break;
 					}
 				}

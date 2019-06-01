@@ -84,7 +84,7 @@ void CreateExampleApp( aardvark::CAardvarkClient *pClient )
 
 				avStartNode( sceneContext, 3, "model", EAvSceneGraphNodeType::Model );
 				{
-					avSetModelUri( sceneContext, tools::PathToFileUri( "d:\\Downloads\\glTF-Sample-Models-master\\2.0\\BoxAnimated\\glTF-Binary\\BoxAnimated.glb" ).c_str() );
+					avSetModelUri( sceneContext, tools::PathToFileUri( "e:\\Downloads\\glTF-Sample-Models-master\\2.0\\BoxAnimated\\glTF-Binary\\BoxAnimated.glb" ).c_str() );
 				}
 				avFinishNode( sceneContext );
 			}
@@ -1962,7 +1962,7 @@ public:
 	std::unique_ptr< std::vector<std::unique_ptr< SgRoot_t > > > m_roots, m_nextRoots;
 	bool inFrameTraversal = false;
 
-	std::unique_ptr< std::map< std::string, uint64_t> > m_textureDxgiSharedHandles, m_nextTextureDxgiSharedHandles;
+	std::unique_ptr< std::map< std::string, AvSharedTextureInfo::Reader> > m_sharedTextureInfo, m_nextSharedTextureInfo;
 
 
 	struct SgNodeData_t
@@ -2227,7 +2227,7 @@ public:
 		{
 			// TODO(Joe): Definitely don't block here waiting to get a model source
 			auto reqModelSource = m_pClient->Server().getModelSourceRequest();
-			reqModelSource.setUri( "file:///d:/homedev/aardvark/data/models/panel/panel.glb" );
+			reqModelSource.setUri( "file:///e:/homedev/aardvark/data/models/panel/panel.glb" );
 			auto resModelSource = reqModelSource.send().wait( m_pClient->WaitScope() );
 			if ( resModelSource.hasSource() )
 			{
@@ -2301,14 +2301,14 @@ public:
 			nextRoots->push_back( std::move( rootStruct ) );
 		}
 
-		auto nextTextures = std::make_unique < std::map<std::string, uint64_t> >();
+		auto nextTextures = std::make_unique < std::map<std::string, AvSharedTextureInfo::Reader> >();
 		for ( auto & texture : newFrame.getAppTextures() )
 		{
-			nextTextures->insert_or_assign( texture.getAppName(), texture.getDxgiSharedTextureHandle() );
+			nextTextures->insert_or_assign( texture.getAppName(), texture.getSharedTextureInfo() );
 		}
 
 		m_nextRoots = std::move( nextRoots );
-		m_nextTextureDxgiSharedHandles = std::move( nextTextures );
+		m_nextSharedTextureInfo = std::move( nextTextures );
 	}
 
 	std::shared_ptr<vkglTF::Model> findOrLoadModel( AvModelSource::Client & source )
@@ -2604,9 +2604,9 @@ public:
 
 			setupDescriptors();
 		}
-		if ( m_nextTextureDxgiSharedHandles )
+		if ( m_nextSharedTextureInfo )
 		{
-			m_textureDxgiSharedHandles = std::move( m_nextTextureDxgiSharedHandles );
+			m_sharedTextureInfo = std::move( m_nextSharedTextureInfo );
 		}
 
 		updateOverlay();

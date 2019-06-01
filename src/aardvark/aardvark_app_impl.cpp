@@ -8,7 +8,6 @@
 using namespace aardvark;
 
 CAardvarkApp::CAardvarkApp( const std::string & sName, AvServerImpl *pParentServer )
-	: m_sceneGraph( nullptr )
 {
 	static uint32_t s_uniqueId = 1;
 	m_id = s_uniqueId++;
@@ -49,5 +48,16 @@ void CAardvarkApp::gatherVisuals( AvVisuals_t & visuals )
 		root.appId = m_id;
 		visuals.vecSceneGraphs.push_back( root );
 	}
+}
+
+
+void CAardvarkApp::setSharedTextureInfo( AvSharedTextureInfo::Reader sharedTextureInfo )
+{
+	m_sharedTexture = tools::newOwnCapnp( sharedTextureInfo );
+}
+
+AvSharedTextureInfo::Reader CAardvarkApp::getSharedTextureInfo()
+{
+	return m_sharedTexture;
 }
 

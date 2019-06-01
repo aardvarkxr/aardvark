@@ -5,7 +5,7 @@ interface AvServer
 	createApp @0 ( name: Text ) -> ( app: AvApp );
 	getNextVisualFrame @1 () -> ( frame: AvVisualFrame );
 	getModelSource @2 ( uri: Text ) -> ( success: Bool, source: AvModelSource );
-	updateDxgiTextureForApps @3 ( appNames: List( Text ), sharedTextureHandle: UInt64 ) -> ( success: Bool );
+	updateDxgiTextureForApps @3 ( appNames: List( Text ), sharedTextureInfo: AvSharedTextureInfo ) -> ( success: Bool );
 }
 
 interface AvApp
@@ -17,6 +17,26 @@ interface AvApp
 	updateSceneGraph @2 (root: AvNodeRoot ) -> ( success: Bool );
 }
 
+
+struct AvSharedTextureInfo
+{
+	enum Type
+	{
+		invalid @0;			#Somebody didn't set something
+		d3d11Texture2D @1;	# An ID3D11Texture2D object
+	}
+
+	enum Format
+	{
+		r8g8b8a8 @0;
+	}
+
+	type @0 : Type;
+	format @1 : Format;
+	width @2 : UInt32;
+	height @3 : UInt32;
+	handle @4 : UInt64;
+}
 
 interface AvModelSource
 {
@@ -69,7 +89,7 @@ struct AvLight
 struct AvAppTextureHandle
 {
 	appName @0: Text;
-	dxgiSharedTextureHandle @1: UInt64;
+	sharedTextureInfo @1: AvSharedTextureInfo;
 }
 
 struct AvVisualFrame

@@ -18,6 +18,8 @@ namespace tools
 	public:
 		OwnCapnp( decltype( nullptr ) ) {}
 
+		bool isSet() const { return words.size() > 0; }
+
 		// Inherits methods of reader.
 
 	private:

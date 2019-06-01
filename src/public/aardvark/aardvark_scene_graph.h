@@ -58,6 +58,6 @@ namespace aardvark
 	EAvSceneGraphResult avSetPanelTextureSource( AvSceneContext context, const char *pchSourceName );
 
 	// tells the renderer what DXGI to use for a scene graph app
-	EAvSceneGraphResult avUpdateDxgiTextureForApps( aardvark::CAardvarkClient *pClient, const char **pchAppName, uint32_t unNameCount, void *pvSharedTextureHandle );
+	EAvSceneGraphResult avUpdateDxgiTextureForApps( aardvark::CAardvarkClient *pClient, const char **pchAppName, uint32_t unNameCount, uint32_t unWidth, uint32_t unHeight, void *pvSharedTextureHandle );
 
 }
