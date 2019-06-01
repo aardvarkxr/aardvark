@@ -200,6 +200,7 @@ namespace vks
 			std::vector<const char*> deviceExtensions(enabledExtensions);
 			deviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 			deviceExtensions.push_back( VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME );
+			deviceExtensions.push_back( VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME );
 			char rchOpenVRExtensions[4096];
 			uint32_t unBytesNeeded = vr::VRCompositor()->GetVulkanDeviceExtensionsRequired( physicalDevice, rchOpenVRExtensions, sizeof( rchOpenVRExtensions ) );
 			assert( unBytesNeeded < sizeof( rchOpenVRExtensions ) );

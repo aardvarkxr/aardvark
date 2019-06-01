@@ -88,13 +88,31 @@ namespace aardvark
 			uint32_t unIndex = 0;
 			for ( auto handle : textureHandles )
 			{
-				bldTextures[unIndex].setAppName( handle.first );
-				bldTextures[unIndex].setSharedTextureInfo( handle.second );
-				unIndex++;
+				CAardvarkApp *pApp = findAppByName( handle.first );
+				if ( pApp )
+				{
+					bldTextures[unIndex].setAppName( handle.first );
+					bldTextures[unIndex].setAppId( pApp->getId() );
+					bldTextures[unIndex].setSharedTextureInfo( handle.second );
+					unIndex++;
+				}
 			}
 		}
 
 		return kj::READY_NOW;
+	}
+
+	CAardvarkApp *AvServerImpl::findAppByName( const std::string & sAppName )
+	{
+		for ( auto pApp : m_vecApps )
+		{
+			if ( pApp->getName() == sAppName )
+			{
+				return pApp;
+			}
+		}
+
+		return nullptr;
 	}
 
 	::kj::Promise<void> AvServerImpl::updateDxgiTextureForApps( UpdateDxgiTextureForAppsContext context )

@@ -193,6 +193,7 @@ namespace vks
 				imageCreateInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 			}
 			VK_CHECK_RESULT(vkCreateImage(device->logicalDevice, &imageCreateInfo, nullptr, &image));
+			printf( "Image 0x%llX function %s\n", (size_t)image, __FUNCTION__ );
 
 			vkGetImageMemoryRequirements(device->logicalDevice, image, &memReqs);
 
@@ -365,6 +366,7 @@ namespace vks
 				imageCreateInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 			}
 			VK_CHECK_RESULT(vkCreateImage(device->logicalDevice, &imageCreateInfo, nullptr, &image));
+			printf( "Image 0x%llX function %s\n", (size_t)image, __FUNCTION__ );
 
 			vkGetImageMemoryRequirements(device->logicalDevice, image, &memReqs);
 
@@ -457,7 +459,6 @@ namespace vks
 			VkFormat format,
 			uint32_t width, uint32_t height,
 			vks::VulkanDevice *device,
-			VkQueue copyQueue,
 			VkImageUsageFlags imageUsageFlags = VK_IMAGE_USAGE_SAMPLED_BIT,
 			VkImageLayout imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL )
 		{
@@ -528,6 +529,7 @@ namespace vks
 			imageCreateInfo.pNext = &externalCreateInfo;
 
 			VK_CHECK_RESULT( vkCreateImage( device->logicalDevice, &imageCreateInfo, nullptr, &image ) );
+			printf( "Image 0x%llX function %s\n", (size_t)image, __FUNCTION__ );
 
 			memInfo.image = image;
 
@@ -544,10 +546,7 @@ namespace vks
 			}
 
 			VK_CHECK_RESULT( vkAllocateMemory( device->logicalDevice, &memAllocInfo, nullptr, &deviceMemory ) );
-			if ( !dedicatedReqs.requiresDedicatedAllocation )
-			{
-				VK_CHECK_RESULT( vkBindImageMemory( device->logicalDevice, image, deviceMemory, 0 ) );
-			}
+			VK_CHECK_RESULT( vkBindImageMemory( device->logicalDevice, image, deviceMemory, 0 ) );
 
 			VkImageSubresourceRange subresourceRange = {};
 			subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -557,8 +556,6 @@ namespace vks
 
 			// Change texture image layout to shader read after all mip levels have been copied
 			this->imageLayout = imageLayout;
-
-			device->flushCommandBuffer( copyCmd, copyQueue );
 
 			VkSamplerCreateInfo samplerCreateInfo{};
 			samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -672,6 +669,8 @@ namespace vks
 			imageCreateInfo.extent = { width, height, 1 };
 			imageCreateInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 			VK_CHECK_RESULT( vkCreateImage( device->logicalDevice, &imageCreateInfo, nullptr, &image ) );
+			printf( "Image 0x%llX function %s\n", (size_t)image, __FUNCTION__ );
+
 			vkGetImageMemoryRequirements( device->logicalDevice, image, &memReqs );
 			memAllocInfo.allocationSize = memReqs.size;
 			memAllocInfo.memoryTypeIndex = device->getMemoryType( memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT );
@@ -950,6 +949,7 @@ namespace vks
 
 
 			VK_CHECK_RESULT(vkCreateImage(device->logicalDevice, &imageCreateInfo, nullptr, &image));
+			printf( "Image 0x%llX function %s\n", (size_t)image, __FUNCTION__ );
 
 			vkGetImageMemoryRequirements(device->logicalDevice, image, &memReqs);
 
@@ -1068,8 +1068,24 @@ namespace vks
 			vkDestroyFramebuffer( vulkanDevice->logicalDevice, frameBuffer, nullptr );
 		}
 
+		bool formatHasStencil( VkFormat format )
+		{
+			switch ( format )
+			{
+			case VK_FORMAT_S8_UINT:
+			case VK_FORMAT_D16_UNORM_S8_UINT:
+			case VK_FORMAT_D24_UNORM_S8_UINT:
+			case VK_FORMAT_D32_SFLOAT_S8_UINT:
+				return true;
+
+			default: 
+				return false;
+			}
+		}
+
 		void init(
 			VkFormat colorFormat,
+			VkFormat depthFormat,
 			uint32_t width,
 			uint32_t height,
 			vks::VulkanDevice *vulkanDevice,
@@ -1114,6 +1130,7 @@ namespace vks
 				imageCreateInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 			}
 			VK_CHECK_RESULT( vkCreateImage( vulkanDevice->logicalDevice, &imageCreateInfo, nullptr, &color.image ) );
+			printf( "Image 0x%llX function %s\n", (size_t)color.image, __FUNCTION__ );
 
 			vkGetImageMemoryRequirements( vulkanDevice->logicalDevice, color.image, &memReqs );
 
@@ -1156,9 +1173,10 @@ namespace vks
 			depthStencil.mipLevels = 1;
 
 			imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
-			imageCreateInfo.format = VK_FORMAT_D32_SFLOAT;
+			imageCreateInfo.format = depthFormat;
 			imageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 			VK_CHECK_RESULT( vkCreateImage( vulkanDevice->logicalDevice, &imageCreateInfo, nullptr, &depthStencil.image ) );
+			printf( "Image 0x%llX function %s\n", (size_t)depthStencil.image, __FUNCTION__ );
 
 			vkGetImageMemoryRequirements( vulkanDevice->logicalDevice, depthStencil.image, &memReqs );
 
@@ -1198,6 +1216,7 @@ namespace vks
 				imageCI.usage = VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 				imageCI.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 				VK_CHECK_RESULT( vkCreateImage( vulkanDevice->logicalDevice, &imageCI, nullptr, &colorMultisample.image ) );
+				printf( "Image 0x%llX function %s\n", (size_t)colorMultisample.image, __FUNCTION__ );
 
 				VkMemoryRequirements memReqs;
 				vkGetImageMemoryRequirements( vulkanDevice->logicalDevice, colorMultisample.image, &memReqs );
@@ -1236,7 +1255,7 @@ namespace vks
 				depthStencilMultisample.mipLevels = 1;
 
 				imageCI.imageType = VK_IMAGE_TYPE_2D;
-				imageCI.format = VK_FORMAT_D32_SFLOAT;
+				imageCI.format = depthFormat;
 				imageCI.extent.width = width;
 				imageCI.extent.height = height;
 				imageCI.extent.depth = 1;
@@ -1248,6 +1267,7 @@ namespace vks
 				imageCI.usage = VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 				imageCI.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 				VK_CHECK_RESULT( vkCreateImage( vulkanDevice->logicalDevice, &imageCI, nullptr, &depthStencilMultisample.image ) );
+				printf( "Image 0x%llX function %s\n", (size_t)depthStencilMultisample.image, __FUNCTION__ );
 
 				vkGetImageMemoryRequirements( vulkanDevice->logicalDevice, depthStencilMultisample.image, &memReqs );
 				memAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -1262,12 +1282,16 @@ namespace vks
 				// Create image view for the MSAA target
 				imageViewCI.image = depthStencilMultisample.image;
 				imageViewCI.viewType = VK_IMAGE_VIEW_TYPE_2D;
-				imageViewCI.format = VK_FORMAT_D32_SFLOAT;
+				imageViewCI.format = depthFormat;
 				imageViewCI.components.r = VK_COMPONENT_SWIZZLE_R;
 				imageViewCI.components.g = VK_COMPONENT_SWIZZLE_G;
 				imageViewCI.components.b = VK_COMPONENT_SWIZZLE_B;
 				imageViewCI.components.a = VK_COMPONENT_SWIZZLE_A;
-				imageViewCI.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+				imageViewCI.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+				if ( formatHasStencil( depthFormat ) )
+				{
+					imageViewCI.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+				}
 				imageViewCI.subresourceRange.levelCount = 1;
 				imageViewCI.subresourceRange.layerCount = 1;
 				VK_CHECK_RESULT( vkCreateImageView( vulkanDevice->logicalDevice, &imageViewCI, nullptr, &depthStencilMultisample.view ) );
@@ -1303,7 +1327,7 @@ namespace vks
 				attachments[1].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
 				// Multisampled depth attachment we render to
-				attachments[2].format = VK_FORMAT_D32_SFLOAT;
+				attachments[2].format = depthFormat;
 				attachments[2].samples = VK_SAMPLE_COUNT_4_BIT;
 				attachments[2].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 				attachments[2].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -1313,7 +1337,7 @@ namespace vks
 				attachments[2].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
 				// Depth resolve attachment
-				attachments[3].format = VK_FORMAT_D32_SFLOAT;
+				attachments[3].format = depthFormat;
 				attachments[3].samples = VK_SAMPLE_COUNT_1_BIT;
 				attachments[3].loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 				attachments[3].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -1391,7 +1415,7 @@ namespace vks
 				attachmentDescs[0].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 				attachmentDescs[0].flags = 0;
 
-				attachmentDescs[1].format = VK_FORMAT_D32_SFLOAT;
+				attachmentDescs[1].format = depthFormat;
 				attachmentDescs[1].samples = imageCreateInfo.samples;
 				attachmentDescs[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 				attachmentDescs[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -1466,10 +1490,31 @@ namespace vks
 			imageMemoryBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 			imageMemoryBarrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
 			vkCmdPipelineBarrier( layoutCmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageMemoryBarrier );
+			imageMemoryBarrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+			imageMemoryBarrier.subresourceRange = { VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1 };
+			if ( formatHasStencil( depthFormat ) )
+			{
+				imageMemoryBarrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+			}
 			imageMemoryBarrier.image = depthStencil.image;
 			vkCmdPipelineBarrier( layoutCmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageMemoryBarrier );
 			vulkanDevice->flushCommandBuffer( layoutCmd, setupQueue, true );
 			
 		}
+
+		void transitionColorLayout( VkCommandBuffer buffer, VkImageLayout newLayout )
+		{
+			VkImageMemoryBarrier imageMemoryBarrier{};
+			imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			imageMemoryBarrier.image = color.image;
+			imageMemoryBarrier.oldLayout = colorLayout;
+			imageMemoryBarrier.newLayout = newLayout;
+			imageMemoryBarrier.srcAccessMask = 0;
+			imageMemoryBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			imageMemoryBarrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+			vkCmdPipelineBarrier( buffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageMemoryBarrier );
+			colorLayout = newLayout;
+		}
+
 	};
 }

@@ -24,6 +24,7 @@ namespace aardvark
 	protected:
 		void clearApps();
 		CAardvarkModelSource *findOrCreateSource( const std::string & sUri );
+		CAardvarkApp *findAppByName( const std::string & sAppName );
 
 	private:
 		std::unordered_map< std::string, CAardvarkModelSource *> m_mapModelSources;

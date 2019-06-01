@@ -22,6 +22,7 @@ namespace aardvark
 		void AddClient( AvApp::Client & client ) { m_vecClients.push_back( AvApp::Client( client ) ); }
 		void clearClients() { m_vecClients.clear(); }
 		const std::string & getName() const { return m_sName;  }
+		uint32_t getId() const { return m_id; }
 		bool hasSharedTextureInfo() const { return m_sharedTexture.isSet();  }
 		void setSharedTextureInfo( AvSharedTextureInfo::Reader sharedTextureInfo );
 		AvSharedTextureInfo::Reader getSharedTextureInfo();

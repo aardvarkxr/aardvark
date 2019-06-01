@@ -89,7 +89,8 @@ struct AvLight
 struct AvAppTextureHandle
 {
 	appName @0: Text;
-	sharedTextureInfo @1: AvSharedTextureInfo;
+	appId @1: UInt32;
+	sharedTextureInfo @2: AvSharedTextureInfo;
 }
 
 struct AvVisualFrame

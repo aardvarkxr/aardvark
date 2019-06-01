@@ -413,10 +413,21 @@ public:
 		VK_CHECK_RESULT( vkBeginCommandBuffer( currentCB, &cmdBufferBeginInfo ) );
 
 		renderScene( cbIndex, renderPass, frameBuffers[cbIndex], width, height, EEye::Mirror );
-		renderScene( cbIndex, leftEyeRT.renderPass,  leftEyeRT.frameBuffer,  eyeWidth, eyeHeight, EEye::Left );
-		renderScene( cbIndex, rightEyeRT.renderPass, rightEyeRT.frameBuffer, eyeWidth, eyeHeight, EEye::Right );
+		renderSceneToTarget( cbIndex, leftEyeRT,  eyeWidth, eyeHeight, EEye::Left );
+		renderSceneToTarget( cbIndex, rightEyeRT, eyeWidth, eyeHeight, EEye::Right );
 
 		VK_CHECK_RESULT( vkEndCommandBuffer( currentCB ) );
+	}
+
+	void renderSceneToTarget( uint32_t cbIndex, vks::RenderTarget target, uint32_t targetWidth, uint32_t targetHeight, EEye eEye )
+	{
+		VkCommandBuffer currentCB = commandBuffers[cbIndex];
+
+		target.transitionColorLayout( currentCB, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
+
+		renderScene( cbIndex, target.renderPass, target.frameBuffer, targetWidth, targetHeight, eEye );
+
+		target.transitionColorLayout( currentCB, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL );
 	}
 
 	void renderScene( uint32_t cbIndex, VkRenderPass targetRenderPass, VkFramebuffer targetFrameBuffer, uint32_t targetWidth, uint32_t targetHeight, EEye eEye )
@@ -1002,6 +1013,8 @@ public:
 		imageCI.tiling = VK_IMAGE_TILING_OPTIMAL;
 		imageCI.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 		VK_CHECK_RESULT(vkCreateImage(device, &imageCI, nullptr, &textures.lutBrdf.image));
+		printf( "Image 0x%llX function %s\n", (size_t)textures.lutBrdf.image, __FUNCTION__ );
+
 		VkMemoryRequirements memReqs;
 		vkGetImageMemoryRequirements(device, textures.lutBrdf.image, &memReqs);
 		VkMemoryAllocateInfo memAllocInfo{};
@@ -1286,6 +1299,8 @@ public:
 				imageCI.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 				imageCI.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 				VK_CHECK_RESULT(vkCreateImage(device, &imageCI, nullptr, &cubemap.image));
+				printf( "Image 0x%llX function %s\n", (size_t)cubemap.image, __FUNCTION__ );
+
 				VkMemoryRequirements memReqs;
 				vkGetImageMemoryRequirements(device, cubemap.image, &memReqs);
 				VkMemoryAllocateInfo memAllocInfo{};
@@ -1395,6 +1410,8 @@ public:
 				imageCI.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 				imageCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 				VK_CHECK_RESULT(vkCreateImage(device, &imageCI, nullptr, &offscreen.image));
+				printf( "Image 0x%llX function %s\n", (size_t)offscreen.image, __FUNCTION__ );
+
 				VkMemoryRequirements memReqs;
 				vkGetImageMemoryRequirements(device, offscreen.image, &memReqs);
 				VkMemoryAllocateInfo memAllocInfo{};
@@ -1916,8 +1933,8 @@ public:
 
 		vr::VRSystem()->GetRecommendedRenderTargetSize( &eyeWidth, &eyeHeight );
 
-		leftEyeRT.init( VK_FORMAT_R8G8B8A8_UNORM, eyeWidth, eyeHeight, vulkanDevice, queue, settings.multiSampling );
-		rightEyeRT.init( VK_FORMAT_R8G8B8A8_UNORM, eyeWidth, eyeHeight, vulkanDevice, queue, settings.multiSampling );
+		leftEyeRT.init( swapChain.colorFormat, depthFormat, eyeWidth, eyeHeight, vulkanDevice, queue, settings.multiSampling );
+		rightEyeRT.init( swapChain.colorFormat, depthFormat, eyeWidth, eyeHeight, vulkanDevice, queue, settings.multiSampling );
 
 		loadAssets();
 		generateBRDFLUT();
@@ -1962,13 +1979,16 @@ public:
 	std::unique_ptr< std::vector<std::unique_ptr< SgRoot_t > > > m_roots, m_nextRoots;
 	bool inFrameTraversal = false;
 
-	std::unique_ptr< std::map< std::string, AvSharedTextureInfo::Reader> > m_sharedTextureInfo, m_nextSharedTextureInfo;
+	std::unique_ptr< std::map< uint32_t, tools::OwnCapnp< AvSharedTextureInfo > > > m_sharedTextureInfo, m_nextSharedTextureInfo;
 
 
 	struct SgNodeData_t
 	{
 		std::shared_ptr<vkglTF::Model> model;
 		vkglTF::Transformable modelParent;
+
+		void *lastDxgiHandle = nullptr;
+		std::shared_ptr< vks::Texture2D > overrideTexture;
 	};
 
 	void TraverseSceneGraphs( float fFrameTime )
@@ -2236,7 +2256,8 @@ public:
 				pData->model->parent = &pData->modelParent;
 
 				// Per-Node descriptor set
-				for ( auto &node : pData->model->nodes ) {
+				for ( auto &node : pData->model->nodes ) 
+				{
 					setupNodeDescriptorSet( node );
 				}
 
@@ -2245,6 +2266,44 @@ public:
 
 		if ( pData->model )
 		{
+			void *pvNewDxgiHandle = nullptr;
+			uint32_t width = 0, height = 0;
+			VkFormat textureFormat = VK_FORMAT_R8G8B8A8_UINT;
+			auto iSharedTexture = m_sharedTextureInfo->find( m_pCurrentRoot->appId );
+			if ( iSharedTexture != m_sharedTextureInfo->end() )
+			{
+				pvNewDxgiHandle = reinterpret_cast<void*>(iSharedTexture->second.getHandle() );
+				width = iSharedTexture->second.getWidth();
+				height = iSharedTexture->second.getHeight();
+				switch ( iSharedTexture->second.getFormat() )
+				{
+				default:
+					assert( false );
+					break;
+
+				case AvSharedTextureInfo::Format::R8G8B8A8:
+					textureFormat = VK_FORMAT_R8G8B8A8_UINT;
+					break;
+				}
+			}
+
+			if ( pData->lastDxgiHandle != pvNewDxgiHandle )
+			{
+				pData->overrideTexture = std::make_shared<vks::Texture2D>();
+				pData->overrideTexture->loadFromDxgiSharedHandle( pvNewDxgiHandle, textureFormat,
+					width, height,
+					vulkanDevice );
+
+				for ( auto & material : pData->model->materials )
+				{
+					material.baseColorTexture = pData->overrideTexture;
+				}
+
+				UpdateDescriptorSetsForModel( pData->model );
+				
+				pData->lastDxgiHandle = pvNewDxgiHandle;
+			}
+
 			pData->modelParent.matParentFromNode = GetCurrentNodeFromUniverse();
 			pData->model->animate( m_fThisFrameTime );
 
@@ -2301,10 +2360,10 @@ public:
 			nextRoots->push_back( std::move( rootStruct ) );
 		}
 
-		auto nextTextures = std::make_unique < std::map<std::string, AvSharedTextureInfo::Reader> >();
+		auto nextTextures = std::make_unique < std::map<uint32_t, tools::OwnCapnp< AvSharedTextureInfo > > >();
 		for ( auto & texture : newFrame.getAppTextures() )
 		{
-			nextTextures->insert_or_assign( texture.getAppName(), texture.getSharedTextureInfo() );
+			nextTextures->insert_or_assign( texture.getAppId(), tools::newOwnCapnp( texture.getSharedTextureInfo() ) );
 		}
 
 		m_nextRoots = std::move( nextRoots );
@@ -2736,10 +2795,10 @@ public:
 		vulkanData.m_nSampleCount = 1;
 
 		vr::Texture_t texture = { &vulkanData, vr::TextureType_Vulkan, vr::ColorSpace_Auto };
-		vr::VRCompositor()->Submit( vr::Eye_Left, &texture, &bounds );
+		//vr::VRCompositor()->Submit( vr::Eye_Left, &texture, &bounds );
 
 		vulkanData.m_nImage = (uint64_t)rightEyeRT.color.image;
-		vr::VRCompositor()->Submit( vr::Eye_Right, &texture, &bounds );
+		//vr::VRCompositor()->Submit( vr::Eye_Right, &texture, &bounds );
 
 	}
 };
@@ -2797,13 +2856,15 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 	settings.multi_threaded_message_loop = true;
 	settings.windowless_rendering_enabled = true;
 
+	// have to build the arg list before creating the example object
+	for ( int32_t i = 0; i < __argc; i++ ) { VulkanExample::args.push_back( __argv[i] ); };
+
 	vulkanExample = new VulkanExample();
 	app->setApplication( vulkanExample );
 
 	// Initialize CEF.
 	CefInitialize( mainArgs, settings, app.get(), sandbox_info );
 
-	for (int32_t i = 0; i < __argc; i++) { VulkanExample::args.push_back(__argv[i]); };
 	vulkanExample->initOpenVR();
 	vulkanExample->initVulkan();
 	vulkanExample->setupWindow(hInstance, WndProc);

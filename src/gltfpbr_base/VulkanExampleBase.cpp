@@ -47,7 +47,7 @@ VkResult VulkanExampleBase::createInstance(bool enableValidation)
 	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 	appInfo.pApplicationName = name.c_str();
 	appInfo.pEngineName = name.c_str();
-	appInfo.apiVersion = VK_API_VERSION_1_0;
+	appInfo.apiVersion = VK_API_VERSION_1_1;
 
 	std::vector<const char*> instanceExtensions = { VK_KHR_SURFACE_EXTENSION_NAME };
 
@@ -1591,6 +1591,7 @@ void VulkanExampleBase::setupFrameBuffer()
 		imageCI.usage = VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 		imageCI.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		VK_CHECK_RESULT(vkCreateImage(device, &imageCI, nullptr, &multisampleTarget.color.image));
+		printf( "Image 0x%llX function %s\n", (size_t)multisampleTarget.color.image, __FUNCTION__ );
 
 		VkMemoryRequirements memReqs;
 		vkGetImageMemoryRequirements(device, multisampleTarget.color.image, &memReqs);
@@ -1634,6 +1635,7 @@ void VulkanExampleBase::setupFrameBuffer()
 		imageCI.usage = VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 		imageCI.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		VK_CHECK_RESULT(vkCreateImage(device, &imageCI, nullptr, &multisampleTarget.depth.image));
+		printf( "Image 0x%llX function %s\n", (size_t)multisampleTarget.depth.image, __FUNCTION__ );
 
 		vkGetImageMemoryRequirements(device, multisampleTarget.depth.image, &memReqs);
 		memAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -1696,6 +1698,8 @@ void VulkanExampleBase::setupFrameBuffer()
 
 	VkMemoryRequirements memReqs;
 	VK_CHECK_RESULT(vkCreateImage(device, &image, nullptr, &depthStencil.image));
+	printf( "Image 0x%llX function %s\n", (size_t)depthStencil.image, __FUNCTION__ );
+
 	vkGetImageMemoryRequirements(device, depthStencil.image, &memReqs);
 	mem_alloc.allocationSize = memReqs.size;
 	mem_alloc.memoryTypeIndex = vulkanDevice->getMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
