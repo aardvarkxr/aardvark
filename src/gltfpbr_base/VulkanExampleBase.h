@@ -48,6 +48,7 @@
 
 #include "VulkanDevice.hpp"
 #include "VulkanSwapChain.hpp"
+#include "descriptormanager.h"
 
 #include "imgui/imgui.h"
 
@@ -83,13 +84,13 @@ protected:
 	VkPhysicalDeviceMemoryProperties deviceMemoryProperties;
 	VkDevice device;
 	vks::VulkanDevice *vulkanDevice;
+	vks::CDescriptorManager *m_descriptorManager = nullptr;
 	VkQueue queue;
 	VkFormat depthFormat;
 	VkCommandPool cmdPool;
 	VkRenderPass renderPass;
 	std::vector<VkFramebuffer>frameBuffers;
 	uint32_t currentBuffer = 0;
-	VkDescriptorPool descriptorPool;
 	VkPipelineCache pipelineCache;
 	VulkanSwapChain swapChain;
 	std::string title = "Vulkan Example";

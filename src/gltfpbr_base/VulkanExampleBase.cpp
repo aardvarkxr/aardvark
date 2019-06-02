@@ -543,7 +543,6 @@ VulkanExampleBase::~VulkanExampleBase()
 {
 	// Clean up Vulkan resources
 	swapChain.cleanup();
-	vkDestroyDescriptorPool(device, descriptorPool, nullptr);
 	vkDestroyRenderPass(device, renderPass, nullptr);
 	for (uint32_t i = 0; i < frameBuffers.size(); i++) {
 		vkDestroyFramebuffer(device, frameBuffers[i], nullptr);
@@ -707,6 +706,9 @@ void VulkanExampleBase::initVulkan()
 	};
 	LOGD("androidProduct = %s", androidProduct.c_str());
 #endif	
+
+	m_descriptorManager = new vks::CDescriptorManager( vulkanDevice );
+	m_descriptorManager->init();
 }
 
 #if defined(_WIN32)

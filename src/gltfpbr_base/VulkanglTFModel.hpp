@@ -16,6 +16,7 @@
 
 #include "vulkan/vulkan.h"
 #include "VulkanDevice.hpp"
+#include "descriptormanager.h"
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -117,7 +118,7 @@ namespace vkglTF
 			bool metallicRoughness = true;
 			bool specularGlossiness = false;
 		} pbrWorkflows;
-		VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
+		vks::CDescriptorSet *descriptorSet = nullptr;
 	};
 
 	/*
@@ -148,6 +149,7 @@ namespace vkglTF
 	*/
 	struct Mesh {
 		vks::VulkanDevice *device;
+		vks::CDescriptorManager *descriptorManager;
 
 		std::string name;
 		std::vector<std::shared_ptr<Primitive>> primitives;
@@ -158,8 +160,7 @@ namespace vkglTF
 		struct UniformBuffer {
 			VkBuffer buffer;
 			VkDeviceMemory memory;
-			VkDescriptorBufferInfo descriptor;
-			VkDescriptorSet descriptorSet;
+			vks::CDescriptorSet *descriptor;
 			void *mapped;
 		} uniformBuffer;
 
@@ -169,8 +170,9 @@ namespace vkglTF
 			float jointcount{ 0 };
 		} uniformBlock;
 
-		Mesh(vks::VulkanDevice *device, glm::mat4 matrix) {
+		Mesh(vks::VulkanDevice *device, vks::CDescriptorManager *descriptorManager, glm::mat4 matrix) {
 			this->device = device;
+			this->descriptorManager = descriptorManager;
 			this->uniformBlock.matrix = matrix;
 			VK_CHECK_RESULT(device->createBuffer(
 				VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
@@ -180,11 +182,13 @@ namespace vkglTF
 				&uniformBuffer.memory,
 				&uniformBlock));
 			VK_CHECK_RESULT(vkMapMemory(device->logicalDevice, uniformBuffer.memory, 0, sizeof(uniformBlock), 0, &uniformBuffer.mapped));
-			uniformBuffer.descriptor = { uniformBuffer.buffer, 0, sizeof(uniformBlock) };
+
+			uniformBuffer.descriptor = descriptorManager->createUniformBufferDescriptorSet( uniformBuffer.buffer, sizeof( uniformBlock ) );
 		};
 
 		Mesh( const Mesh & src ) {
 			device = src.device;
+			descriptorManager = src.descriptorManager;
 			name = src.name;
 			primitives = src.primitives;
 			bb = src.bb;
@@ -199,7 +203,8 @@ namespace vkglTF
 				&uniformBuffer.memory,
 				&uniformBlock ) );
 			VK_CHECK_RESULT( vkMapMemory( device->logicalDevice, uniformBuffer.memory, 0, sizeof( uniformBlock ), 0, &uniformBuffer.mapped ) );
-			uniformBuffer.descriptor = { uniformBuffer.buffer, 0, sizeof( uniformBlock ) };
+
+			uniformBuffer.descriptor = descriptorManager->createUniformBufferDescriptorSet( uniformBuffer.buffer, sizeof( uniformBlock ) );
 		};
 
 		~Mesh() {
@@ -393,6 +398,7 @@ namespace vkglTF
 	{
 
 		vks::VulkanDevice *device;
+		vks::CDescriptorManager *descriptorManager;
 
 		struct Vertex {
 			glm::vec3 pos;
@@ -571,7 +577,7 @@ namespace vkglTF
 			// Node contains mesh data
 			if (node.mesh > -1) {
 				const tinygltf::Mesh mesh = model.meshes[node.mesh];
-				std::shared_ptr<Mesh> newMesh = std::make_shared<Mesh>(device, newNode->matParentFromNode);
+				std::shared_ptr<Mesh> newMesh = std::make_shared<Mesh>(device, descriptorManager, newNode->matParentFromNode);
 				newMesh->name = mesh.name;
 				for (size_t j = 0; j < mesh.primitives.size(); j++) {
 					const tinygltf::Primitive &primitive = mesh.primitives[j];
@@ -1006,7 +1012,7 @@ namespace vkglTF
 			}
 		}
 
-		void loadFromFile(std::string filename, vks::VulkanDevice *device, VkQueue transferQueue, float scale = 1.0f)
+		void loadFromFile(std::string filename, vks::VulkanDevice *device, vks::CDescriptorManager *descriptorManager, VkQueue transferQueue, float scale = 1.0f)
 		{
 			tinygltf::Model gltfModel;
 			tinygltf::TinyGLTF gltfContext;
@@ -1028,10 +1034,10 @@ namespace vkglTF
 				return;
 			}
 
-			loadFromGltfModel( device, gltfModel, transferQueue, scale );
+			loadFromGltfModel( device, descriptorManager, gltfModel, transferQueue, scale );
 		}
 
-		bool loadFromMemory( const void *pvData, size_t unSize, vks::VulkanDevice *device, VkQueue transferQueue, float scale = 1.0f )
+		bool loadFromMemory( const void *pvData, size_t unSize, vks::VulkanDevice *device, vks::CDescriptorManager *descriptorManager, VkQueue transferQueue, float scale = 1.0f )
 		{
 			tinygltf::Model gltfModel;
 			tinygltf::TinyGLTF gltfContext;
@@ -1060,13 +1066,14 @@ namespace vkglTF
 				return false;
 			}
 
-			loadFromGltfModel( device, gltfModel, transferQueue, scale );
+			loadFromGltfModel( device, descriptorManager, gltfModel, transferQueue, scale );
 			return true;
 		}
 
-		void loadFromGltfModel( vks::VulkanDevice * device, tinygltf::Model &gltfModel, VkQueue transferQueue, float scale )
+		void loadFromGltfModel( vks::VulkanDevice * device, vks::CDescriptorManager *descriptorManager, tinygltf::Model &gltfModel, VkQueue transferQueue, float scale )
 		{
 			this->device = device;
+			this->descriptorManager = descriptorManager;
 
 			std::vector<uint32_t> indexBuffer;
 			std::vector<Vertex> vertexBuffer;

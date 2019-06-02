@@ -14,6 +14,7 @@
 #include <assert.h>
 #include <algorithm>
 #include <vector>
+#include <iostream>
 #include "vulkan/vulkan.h"
 #include "macros.h"
 

@@ -1,7 +1,28 @@
-file(GLOB BASE_SRC "*.cpp" "../thirdparty/imgui/*.cpp")
-file(GLOB BASE_HEADERS "*.hpp")
 
-add_library(gltfpbr_base STATIC ${BASE_SRC} ${BASE_HEADERS})
+add_library(gltfpbr_base STATIC 
+	camera.hpp
+	descriptormanager.cpp
+	descriptormanager.h
+	keycodes.hpp
+	macros.h
+	ui.hpp
+	VulkanAndroid.cpp
+	VulkanAndroid.h
+	VulkanDevice.hpp
+	VulkanExampleBase.cpp
+	VulkanExampleBase.h
+	VulkanglTFModel.hpp
+	VulkanSwapChain.hpp
+	VulkanTexture.hpp
+	VulkanUtils.hpp
+
+	../thirdparty/imgui/imgui.cpp
+	../thirdparty/imgui/imgui_demo.cpp
+	../thirdparty/imgui/imgui_draw.cpp
+	../thirdparty/imgui/imgui_widgets.cpp
+	)
+
+
 
 target_compile_definitions(gltfpbr_base PRIVATE -D_CRT_SECURE_NO_WARNINGS)
 target_include_directories( gltfpbr_base PUBLIC ${AV_SRC_THIRDPARTY} )
