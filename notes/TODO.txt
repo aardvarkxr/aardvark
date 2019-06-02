@@ -9,8 +9,6 @@ Current:
 * Maybe switch to named pipes?
 * Clients hanging up should clear apps/SGs (for now the renderer cleans up apps on the way out.)
 
-texture handles are being sent to the renderer
-app name to get a handle from is being sent with the panel scene graph node
 
 Need to make sure texture is actually rendering.
 Need to write code to:
@@ -18,6 +16,14 @@ Need to write code to:
 * Turn the DXGI handle into a Vulkan texture
 * Use that vulkan texture to override the placeholder texture in the model itself
 
+========= DEAL WITH THIS NEXT ===========
+descriptor pools are being allocated over and over. Then new descriptors are
+being created for everything. The old stuff is never freed (and "reset pools") 
+is probably better anyway. It also looks like the copies of models don't have
+their descriptors created when this happens. Need a better scheme for all of
+this.
+
+========= DEAL WITH THIS NEXT ===========
 panel node is added on the client side. Need to add renderer for panels
 texture is null when the scene graph is generated. Maybe have a "regen scene graph" function when the texture updates? Or maybe remember on the C++ side that we set a panel to this browser and do that automatically with a new API?
 
