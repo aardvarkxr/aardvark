@@ -319,12 +319,15 @@ public:
 		delete ui;
 	}
 
-	void renderNode( std::shared_ptr<vkglTF::Node> node, uint32_t cbIndex, vkglTF::Material::AlphaMode alphaMode, EEye eEye ) 
+	void renderNode( std::shared_ptr<vkglTF::Model> pModel, std::shared_ptr<vkglTF::Node> node, uint32_t cbIndex, vkglTF::Material::AlphaMode alphaMode, EEye eEye ) 
 	{
 		if (node->mesh) {
 			// Render mesh primitives
 			for (auto primitive : node->mesh->primitives) {
-				if (primitive->material.alphaMode == alphaMode) {
+				vkglTF::Material & primitiveMaterial = primitive->materialIndex >= pModel->materials.size()
+					? pModel->materials.back() : pModel->materials[primitive->materialIndex];
+
+				if ( primitiveMaterial.alphaMode == alphaMode) {
 
 					VkDescriptorSet descriptorSet;
 					switch ( eEye )
@@ -344,42 +347,43 @@ public:
 					const std::vector<VkDescriptorSet> descriptorsets = 
 					{
 						descriptorSet,
-						primitive->material.descriptorSet->set(),
+						primitiveMaterial.descriptorSet->set(),
 						node->mesh->uniformBuffer.descriptor->set(),
 					};
 					vkCmdBindDescriptorSets(commandBuffers[cbIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, static_cast<uint32_t>(descriptorsets.size()), descriptorsets.data(), 0, NULL);
 
+
 					// Pass material parameters as push constants
 					PushConstBlockMaterial pushConstBlockMaterial{};					
-					pushConstBlockMaterial.emissiveFactor = primitive->material.emissiveFactor;
+					pushConstBlockMaterial.emissiveFactor = primitiveMaterial.emissiveFactor;
 					// To save push constant space, availability and texture coordinate set are combined
 					// -1 = texture not used for this material, >= 0 texture used and index of texture coordinate set
-					pushConstBlockMaterial.colorTextureSet = primitive->material.baseColorTexture != nullptr ? primitive->material.texCoordSets.baseColor : -1;
-					pushConstBlockMaterial.normalTextureSet = primitive->material.normalTexture != nullptr ? primitive->material.texCoordSets.normal : -1;
-					pushConstBlockMaterial.occlusionTextureSet = primitive->material.occlusionTexture != nullptr ? primitive->material.texCoordSets.occlusion : -1;
-					pushConstBlockMaterial.emissiveTextureSet = primitive->material.emissiveTexture != nullptr ? primitive->material.texCoordSets.emissive : -1;
-					pushConstBlockMaterial.alphaMask = static_cast<float>(primitive->material.alphaMode == vkglTF::Material::ALPHAMODE_MASK);
-					pushConstBlockMaterial.alphaMaskCutoff = primitive->material.alphaCutoff;
+					pushConstBlockMaterial.colorTextureSet = primitiveMaterial.baseColorTexture != nullptr ? primitiveMaterial.texCoordSets.baseColor : -1;
+					pushConstBlockMaterial.normalTextureSet = primitiveMaterial.normalTexture != nullptr ? primitiveMaterial.texCoordSets.normal : -1;
+					pushConstBlockMaterial.occlusionTextureSet = primitiveMaterial.occlusionTexture != nullptr ? primitiveMaterial.texCoordSets.occlusion : -1;
+					pushConstBlockMaterial.emissiveTextureSet = primitiveMaterial.emissiveTexture != nullptr ? primitiveMaterial.texCoordSets.emissive : -1;
+					pushConstBlockMaterial.alphaMask = static_cast<float>( primitiveMaterial.alphaMode == vkglTF::Material::ALPHAMODE_MASK);
+					pushConstBlockMaterial.alphaMaskCutoff = primitiveMaterial.alphaCutoff;
 
 					// TODO: glTF specs states that metallic roughness should be preferred, even if specular glossiness is present
 
-					if (primitive->material.pbrWorkflows.metallicRoughness) {
+					if ( primitiveMaterial.pbrWorkflows.metallicRoughness) {
 						// Metallic roughness workflow
 						pushConstBlockMaterial.workflow = static_cast<float>(PBR_WORKFLOW_METALLIC_ROUGHNESS);
-						pushConstBlockMaterial.baseColorFactor = primitive->material.baseColorFactor;
-						pushConstBlockMaterial.metallicFactor = primitive->material.metallicFactor;
-						pushConstBlockMaterial.roughnessFactor = primitive->material.roughnessFactor;
-						pushConstBlockMaterial.PhysicalDescriptorTextureSet = primitive->material.metallicRoughnessTexture != nullptr ? primitive->material.texCoordSets.metallicRoughness : -1;
-						pushConstBlockMaterial.colorTextureSet = primitive->material.baseColorTexture != nullptr ? primitive->material.texCoordSets.baseColor : -1;
+						pushConstBlockMaterial.baseColorFactor = primitiveMaterial.baseColorFactor;
+						pushConstBlockMaterial.metallicFactor = primitiveMaterial.metallicFactor;
+						pushConstBlockMaterial.roughnessFactor = primitiveMaterial.roughnessFactor;
+						pushConstBlockMaterial.PhysicalDescriptorTextureSet = primitiveMaterial.metallicRoughnessTexture != nullptr ? primitiveMaterial.texCoordSets.metallicRoughness : -1;
+						pushConstBlockMaterial.colorTextureSet = primitiveMaterial.baseColorTexture != nullptr ? primitiveMaterial.texCoordSets.baseColor : -1;
 					}
 
-					if (primitive->material.pbrWorkflows.specularGlossiness) {
+					if ( primitiveMaterial.pbrWorkflows.specularGlossiness) {
 						// Specular glossiness workflow
 						pushConstBlockMaterial.workflow = static_cast<float>(PBR_WORKFLOW_SPECULAR_GLOSINESS);
-						pushConstBlockMaterial.PhysicalDescriptorTextureSet = primitive->material.extension.specularGlossinessTexture != nullptr ? primitive->material.texCoordSets.specularGlossiness : -1;
-						pushConstBlockMaterial.colorTextureSet = primitive->material.extension.diffuseTexture != nullptr ? primitive->material.texCoordSets.baseColor : -1;
-						pushConstBlockMaterial.diffuseFactor = primitive->material.extension.diffuseFactor;
-						pushConstBlockMaterial.specularFactor = glm::vec4(primitive->material.extension.specularFactor, 1.0f);
+						pushConstBlockMaterial.PhysicalDescriptorTextureSet = primitiveMaterial.extension.specularGlossinessTexture != nullptr ? primitiveMaterial.texCoordSets.specularGlossiness : -1;
+						pushConstBlockMaterial.colorTextureSet = primitiveMaterial.extension.diffuseTexture != nullptr ? primitiveMaterial.texCoordSets.baseColor : -1;
+						pushConstBlockMaterial.diffuseFactor = primitiveMaterial.extension.diffuseFactor;
+						pushConstBlockMaterial.specularFactor = glm::vec4( primitiveMaterial.extension.specularFactor, 1.0f);
 					}
 
 					vkCmdPushConstants(commandBuffers[cbIndex], pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstBlockMaterial), &pushConstBlockMaterial);
@@ -394,7 +398,7 @@ public:
 
 		};
 		for (auto child : node->children) {
-			renderNode(child, cbIndex, alphaMode, eEye );
+			renderNode(pModel, child, cbIndex, alphaMode, eEye );
 		}
 	}
 
@@ -506,7 +510,7 @@ public:
 			}
 
 			for ( auto node : pModel->nodes ) {
-				renderNode( node, i, eAlphaMode, eEye );
+				renderNode( pModel, node, i, eAlphaMode, eEye );
 			}
 		}
 	}
@@ -2196,7 +2200,7 @@ public:
 				pData->overrideTexture = std::make_shared<vks::Texture2D>();
 				pData->overrideTexture->loadFromDxgiSharedHandle( pvNewDxgiHandle, textureFormat,
 					width, height,
-					vulkanDevice );
+					vulkanDevice, queue );
 
 				for ( auto & material : pData->model->materials )
 				{

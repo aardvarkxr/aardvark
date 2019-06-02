@@ -459,6 +459,7 @@ namespace vks
 			VkFormat format,
 			uint32_t width, uint32_t height,
 			vks::VulkanDevice *device,
+			VkQueue queue,
 			VkImageUsageFlags imageUsageFlags = VK_IMAGE_USAGE_SAMPLED_BIT,
 			VkImageLayout imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL )
 		{
@@ -508,14 +509,12 @@ namespace vks
 				memReqs.pNext = &dedicatedReqs;
 			}
 
-			// Use a separate command buffer for texture loading
-			VkCommandBuffer copyCmd = device->createCommandBuffer( VK_COMMAND_BUFFER_LEVEL_PRIMARY, true );
-
 			// Create optimal tiled target image
 			VkImageCreateInfo imageCreateInfo{};
 			imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 			imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
 			imageCreateInfo.format = format;
+			imageCreateInfo.flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
 			imageCreateInfo.mipLevels = mipLevels;
 			imageCreateInfo.arrayLayers = 1;
 			imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -579,12 +578,29 @@ namespace vks
 			VkImageViewCreateInfo viewCreateInfo{};
 			viewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 			viewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-			viewCreateInfo.format = format;
+			viewCreateInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
 			viewCreateInfo.components = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
 			viewCreateInfo.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
 			viewCreateInfo.subresourceRange.levelCount = mipLevels;
 			viewCreateInfo.image = image;
 			VK_CHECK_RESULT( vkCreateImageView( device->logicalDevice, &viewCreateInfo, nullptr, &view ) );
+
+			VkCommandBuffer layoutCmd = device->createCommandBuffer( VK_COMMAND_BUFFER_LEVEL_PRIMARY, true );
+
+			this->imageLayout = imageLayout;
+			{
+				VkImageMemoryBarrier imageMemoryBarrier{};
+				imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+				imageMemoryBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+				imageMemoryBarrier.newLayout = imageLayout;
+				imageMemoryBarrier.srcAccessMask = 0;
+				imageMemoryBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+				imageMemoryBarrier.image = image;
+				imageMemoryBarrier.subresourceRange = subresourceRange;
+				vkCmdPipelineBarrier( layoutCmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1, &imageMemoryBarrier );
+			}
+
+			device->flushCommandBuffer( layoutCmd, queue, true );
 
 			updateDescriptor();
 		}

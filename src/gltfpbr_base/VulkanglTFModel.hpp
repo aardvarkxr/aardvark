@@ -128,12 +128,13 @@ namespace vkglTF
 		uint32_t firstIndex;
 		uint32_t indexCount;
 		uint32_t vertexCount;
-		Material &material;
+		uint32_t materialIndex;
 		bool hasIndices;
 
 		BoundingBox bb;
 
-		Primitive(uint32_t firstIndex, uint32_t indexCount, uint32_t vertexCount, Material &material) : firstIndex(firstIndex), indexCount(indexCount), vertexCount(vertexCount), material(material) {
+		Primitive(uint32_t firstIndex, uint32_t indexCount, uint32_t vertexCount, uint32_t materialIndex ) 
+			: firstIndex(firstIndex), indexCount(indexCount), vertexCount(vertexCount), materialIndex( materialIndex ) {
 			hasIndices = indexCount > 0;
 		};
 
@@ -690,7 +691,7 @@ namespace vkglTF
 							return;
 						}
 					}					
-					auto newPrimitive = std::make_shared<Primitive>(indexStart, indexCount, vertexCount, primitive.material > -1 ? materials[primitive.material] : materials.back());
+					auto newPrimitive = std::make_shared<Primitive>(indexStart, indexCount, vertexCount, primitive.material );
 					newPrimitive->setBoundingBox(posMin, posMax);
 					newMesh->primitives.push_back(newPrimitive);
 				}
