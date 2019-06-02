@@ -1,6 +1,5 @@
 Current:
 * Let N clients connect to one server -- seems to be working
-* Upgrade vulkan SDK to the latest (1.1.something)
 * Use the new core external memory stuff in 1.1 to pull in the shared DXGI handles from CEF. Example using older NV extensions here: https://developer.nvidia.com/getting-vulkan-ready-vr
 * Make panel node type pick the model automatically
 * Add a function to set DXGI handle for the panel
@@ -10,22 +9,19 @@ Current:
 * Clients hanging up should clear apps/SGs (for now the renderer cleans up apps on the way out.)
 
 
-Need to make sure texture is actually rendering.
-Need to write code to:
-* turn the string reference into a DXGI handle
-* Turn the DXGI handle into a Vulkan texture
-* Use that vulkan texture to override the placeholder texture in the model itself
 
 ========= DEAL WITH THIS NEXT ===========
-descriptor pools are being allocated over and over. Then new descriptors are
-being created for everything. The old stuff is never freed (and "reset pools") 
-is probably better anyway. It also looks like the copies of models don't have
-their descriptors created when this happens. Need a better scheme for all of
-this.
+
+Vulkan isn't complaining about textures anymore. They still seem to be blank. 
+
+Maybe this is the CEF draw bug? Maybe something else?
+
+Maybe read the texture back and write it to disk at the CEF level? 
+Maybe put something that updates into the page to make sure it's updating?
+
 
 ========= DEAL WITH THIS NEXT ===========
-panel node is added on the client side. Need to add renderer for panels
-texture is null when the scene graph is generated. Maybe have a "regen scene graph" function when the texture updates? Or maybe remember on the C++ side that we set a panel to this browser and do that automatically with a new API?
+
 
 
 Step 1 - Make some pixels from C++ on screen (done)
