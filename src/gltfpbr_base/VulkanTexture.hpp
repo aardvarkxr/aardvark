@@ -464,6 +464,8 @@ namespace vks
 		{
 			this->device = device;
 			mipLevels = 1;
+			this->width = width;
+			this->height = height;
 
 			VkExternalMemoryHandleTypeFlagBits handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_D3D11_TEXTURE_BIT;
 
