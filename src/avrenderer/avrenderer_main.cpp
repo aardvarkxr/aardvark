@@ -2707,10 +2707,10 @@ public:
 		vulkanData.m_nSampleCount = 1;
 
 		vr::Texture_t texture = { &vulkanData, vr::TextureType_Vulkan, vr::ColorSpace_Auto };
-		//vr::VRCompositor()->Submit( vr::Eye_Left, &texture, &bounds );
+		vr::VRCompositor()->Submit( vr::Eye_Left, &texture, &bounds );
 
 		vulkanData.m_nImage = (uint64_t)rightEyeRT.color.image;
-		//vr::VRCompositor()->Submit( vr::Eye_Right, &texture, &bounds );
+		vr::VRCompositor()->Submit( vr::Eye_Right, &texture, &bounds );
 
 	}
 };
