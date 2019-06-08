@@ -468,7 +468,7 @@ namespace vks
 			this->width = width;
 			this->height = height;
 
-			VkExternalMemoryHandleTypeFlagBits handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_D3D11_TEXTURE_BIT;
+			VkExternalMemoryHandleTypeFlagBits handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_D3D11_TEXTURE_KMT_BIT;
 
 			// Get device properties for the requested texture format
 			VkPhysicalDeviceImageFormatInfo2 formatInfo{};
@@ -494,15 +494,7 @@ namespace vks
 			memReqs.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
 			VkImageMemoryRequirementsInfo2 memInfo{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_REQUIREMENTS_INFO_2 };
 
-			VkMemoryAllocateInfo memAllocInfo{};
-			memAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-			VkImportMemoryWin32HandleInfoKHR memAllocInfoWin32{ VK_STRUCTURE_TYPE_IMPORT_MEMORY_WIN32_HANDLE_INFO_KHR };
-			memAllocInfoWin32.handleType = handleType;
-			memAllocInfoWin32.handle = sharedTextureHandle;
-			memAllocInfo.pNext = &memAllocInfoWin32;
-
 			VkMemoryDedicatedRequirements dedicatedReqs{};
-			VkMemoryDedicatedAllocateInfo dedicatedAllocInfo{};
 			if ( externalImageFormatProperties.externalMemoryProperties.externalMemoryFeatures & VK_EXTERNAL_MEMORY_FEATURE_DEDICATED_ONLY_BIT )
 			{
 				dedicatedReqs.sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_REQUIREMENTS;
@@ -526,8 +518,15 @@ namespace vks
 
 			VkExternalMemoryImageCreateInfo externalCreateInfo{};
 			externalCreateInfo.sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO;
-			externalCreateInfo.handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_D3D11_TEXTURE_BIT;
+			externalCreateInfo.handleTypes = handleType;
 			imageCreateInfo.pNext = &externalCreateInfo;
+
+			VkDedicatedAllocationImageCreateInfoNV dedicatedAllocationImageCreateInfo = { VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_IMAGE_CREATE_INFO_NV };
+			if ( externalImageFormatProperties.externalMemoryProperties.externalMemoryFeatures & VK_EXTERNAL_MEMORY_FEATURE_DEDICATED_ONLY_BIT )
+			{
+				externalCreateInfo.pNext = &dedicatedAllocationImageCreateInfo;
+				dedicatedAllocationImageCreateInfo.dedicatedAllocation = VK_TRUE;
+			}
 
 			VK_CHECK_RESULT( vkCreateImage( device->logicalDevice, &imageCreateInfo, nullptr, &image ) );
 			printf( "Image 0x%llX function %s\n", (size_t)image, __FUNCTION__ );
@@ -536,13 +535,22 @@ namespace vks
 
 			vkGetImageMemoryRequirements2( device->logicalDevice, &memInfo, &memReqs );
 
+			VkMemoryAllocateInfo memAllocInfo{};
+			memAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+
 			memAllocInfo.allocationSize = memReqs.memoryRequirements.size;
 			memAllocInfo.memoryTypeIndex = device->getMemoryType( memReqs.memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT );
 
+			VkImportMemoryWin32HandleInfoKHR memAllocInfoWin32{ VK_STRUCTURE_TYPE_IMPORT_MEMORY_WIN32_HANDLE_INFO_KHR };
+			memAllocInfoWin32.handleType = handleType;
+			memAllocInfoWin32.handle = sharedTextureHandle;
+			memAllocInfo.pNext = &memAllocInfoWin32;
+
+			VkMemoryDedicatedAllocateInfo dedicatedAllocInfo{};
 			if ( dedicatedReqs.requiresDedicatedAllocation )
 			{
 				dedicatedAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO;
-				memAllocInfo.pNext = &dedicatedAllocInfo;
+				memAllocInfoWin32.pNext = &dedicatedAllocInfo;
 				dedicatedAllocInfo.image = image;
 			}
 
