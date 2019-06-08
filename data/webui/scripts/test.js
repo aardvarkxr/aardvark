@@ -1,3 +1,15 @@
+var counter = 1;
+
+function updateStuff()
+{
+	var oElem = document.getElementById( 'stuff' );
+	oElem.innerHTML = "blah " + counter;
+	counter++;
+
+}
+
+var t = setInterval( updateStuff, 1000 );
+
 var myApp = window.aardvark.createApp( "Fnord the App" );
 var myAppName = myApp.getName();
 console.log( "My app is named", myAppName );
