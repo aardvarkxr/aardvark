@@ -357,6 +357,8 @@ TINYGLTF_VALUE_GET(Value::Object, object_value_)
 /// Agregate object for representing a color
 using ColorValue = std::array<double, 4>;
 
+typedef std::map<std::string, Value> ExtensionMap;
+
 struct Parameter {
   bool bool_value = false;
   bool has_number_value = false;
@@ -364,6 +366,7 @@ struct Parameter {
   std::vector<double> number_array;
   std::map<std::string, double> json_double_value;
   double number_value = 0.0;
+  ExtensionMap extensions;
   // context sensitive methods. depending the type of the Parameter you are
   // accessing, these are either valid or not
   // If this parameter represent a texture map in a material, will return the
@@ -406,6 +409,8 @@ struct Parameter {
          (number_array.size() > 3 ? number_array[3] : 1.0)}};
   }
 
+  const ExtensionMap & Extensions() const { return extensions; }
+
   bool operator==(const Parameter &) const;
 };
 
@@ -419,7 +424,6 @@ struct Parameter {
 #endif
 
 typedef std::map<std::string, Parameter> ParameterMap;
-typedef std::map<std::string, Value> ExtensionMap;
 
 struct AnimationChannel {
   int sampler;              // required
@@ -2399,6 +2403,34 @@ static bool ParseJSONProperty(std::map<std::string, double> *ret,
   return true;
 }
 
+static bool ParseExtensionsProperty( ExtensionMap *ret, std::string *err,
+	const json &o ) {
+	(void)err;
+
+	json::const_iterator it = o.find( "extensions" );
+	if ( it == o.end() ) {
+		return false;
+	}
+	if ( !it.value().is_object() ) {
+		return false;
+	}
+	ExtensionMap extensions;
+	json::const_iterator extIt = it.value().begin();
+	for ( ; extIt != it.value().end(); extIt++ ) {
+		if ( !extIt.value().is_object() ) continue;
+		if ( !ParseJsonAsValue( &extensions[extIt.key()], extIt.value() ) ) {
+			if ( !extIt.key().empty() ) {
+				// create empty object so that an extension object is still of type object
+				extensions[extIt.key()] = Value{ Value::Object{} };
+			}
+		}
+	}
+	if ( ret ) {
+		( *ret ) = extensions;
+	}
+	return true;
+}
+
 static bool ParseParameterProperty(Parameter *param, std::string *err,
                                    const json &o, const std::string &prop,
                                    bool required) {
@@ -2407,6 +2439,13 @@ static bool ParseParameterProperty(Parameter *param, std::string *err,
   // complicates the Parameter structure and breaks it semantically in the sense
   // that the client probably works off the assumption that if the string is
   // empty the vector is used, etc. Would a tagged union work?
+
+  // any parameter could have extensions, so parse those first
+  json::const_iterator itObj = o.find( prop );
+  if ( itObj != o.end() && itObj->is_object() ) {
+	  ParseExtensionsProperty( &param->extensions, nullptr, *itObj );
+  }
+
   if (ParseStringProperty(&param->string_value, err, o, prop, false)) {
     // Found string property.
     return true;
@@ -2429,34 +2468,6 @@ static bool ParseParameterProperty(Parameter *param, std::string *err,
     }
     return false;
   }
-}
-
-static bool ParseExtensionsProperty(ExtensionMap *ret, std::string *err,
-                                    const json &o) {
-  (void)err;
-
-  json::const_iterator it = o.find("extensions");
-  if (it == o.end()) {
-    return false;
-  }
-  if (!it.value().is_object()) {
-    return false;
-  }
-  ExtensionMap extensions;
-  json::const_iterator extIt = it.value().begin();
-  for (; extIt != it.value().end(); extIt++) {
-    if (!extIt.value().is_object()) continue;
-	if (!ParseJsonAsValue(&extensions[extIt.key()], extIt.value())) {
-      if (!extIt.key().empty()) {
-        // create empty object so that an extension object is still of type object
-        extensions[extIt.key()] = Value{ Value::Object{} };
-      }
-	}
-  }
-  if (ret) {
-    (*ret) = extensions;
-  }
-  return true;
 }
 
 static bool ParseAsset(Asset *asset, std::string *err, const json &o) {

@@ -368,7 +368,7 @@ namespace aardvark
 	}
 
 	// tells the renderer what DXGI to use for a scene graph node
-	EAvSceneGraphResult avUpdateDxgiTextureForApps( aardvark::CAardvarkClient *pClient, const char **pchAppName, uint32_t unNameCount, uint32_t unWidth, uint32_t unHeight, void *pvSharedTextureHandle )
+	EAvSceneGraphResult avUpdateDxgiTextureForApps( aardvark::CAardvarkClient *pClient, const char **pchAppName, uint32_t unNameCount, uint32_t unWidth, uint32_t unHeight, void *pvSharedTextureHandle, bool bInvertY )
 	{
 		auto reqUpdate = pClient->Server().updateDxgiTextureForAppsRequest();
 		if ( unNameCount )
@@ -386,6 +386,7 @@ namespace aardvark
 		paramInfo.setWidth( unWidth );
 		paramInfo.setHeight( unHeight );
 		paramInfo.setHandle( reinterpret_cast<uint64_t>( pvSharedTextureHandle ) );
+		paramInfo.setInvertY( bInvertY );
 
 		auto promUpdate = reqUpdate.send()
 		.then( []( AvServer::UpdateDxgiTextureForAppsResults::Reader && result )

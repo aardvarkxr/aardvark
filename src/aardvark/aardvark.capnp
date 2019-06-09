@@ -37,6 +37,7 @@ struct AvSharedTextureInfo
 	width @2 : UInt32;
 	height @3 : UInt32;
 	handle @4 : UInt64;
+	invertY @5 : Bool;
 }
 
 interface AvModelSource

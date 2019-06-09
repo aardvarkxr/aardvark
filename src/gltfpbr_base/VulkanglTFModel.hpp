@@ -100,6 +100,9 @@ namespace vkglTF
 		std::shared_ptr<vks::Texture2D> normalTexture;
 		std::shared_ptr<vks::Texture2D> occlusionTexture;
 		std::shared_ptr<vks::Texture2D> emissiveTexture;
+		glm::vec2 baseColorScale = glm::vec2( 1.0f );
+		glm::vec2 baseColorOffset = glm::vec2( 0.0f );
+		float baseColorRotation = 0;
 		struct TexCoordSets {
 			uint8_t baseColor = 0;
 			uint8_t metallicRoughness = 0;
@@ -825,6 +828,43 @@ namespace vkglTF
 				if (mat.values.find("baseColorTexture") != mat.values.end()) {
 					material.baseColorTexture = textures[mat.values["baseColorTexture"].TextureIndex()];
 					material.texCoordSets.baseColor = mat.values["baseColorTexture"].TextureTexCoord();
+
+					const tinygltf::ExtensionMap & ext = mat.values["baseColorTexture"].Extensions();
+					auto textureTransform = ext.find( "KHR_texture_transform" );
+					if ( textureTransform != ext.end() )
+					{
+						if ( textureTransform->second.Has( "offset" ) )
+						{
+							auto offset = textureTransform->second.Get( "offset" );
+							for ( uint32_t i = 0; i < offset.ArrayLen() && i < 2; i++ )
+							{
+								auto val = offset.Get( i );
+								material.baseColorOffset[i] = val.IsNumber() ? (float)val.Get<double>() : (float)val.Get<int>();
+							}
+						}
+
+						if ( textureTransform->second.Has( "scale" ) )
+						{
+							auto scale = textureTransform->second.Get( "scale" );
+							for ( uint32_t i = 0; i < scale.ArrayLen() && i < 2; i++ )
+							{
+								auto val = scale.Get( i );
+								material.baseColorScale[i] = val.IsNumber() ? (float)val.Get<double>() : (float)val.Get<int>();
+							}
+						}
+
+						if ( textureTransform->second.Has( "rotation" ) )
+						{
+							auto rotation = textureTransform->second.Get( "rotation" );
+							material.baseColorRotation = rotation.IsNumber() ? (float)rotation.Get<double>() : (float)rotation.Get<int>();
+						}
+
+						if ( textureTransform->second.Has( "texCoord" ) )
+						{
+							auto texCoord = textureTransform->second.Get( "texCoord" );
+							material.baseColorRotation = texCoord.IsInt() ? texCoord.Get<int>() : material.texCoordSets.baseColor;
+						}
+					}
 				}
 				if (mat.values.find("metallicRoughnessTexture") != mat.values.end()) {
 					material.metallicRoughnessTexture = textures[mat.values["metallicRoughnessTexture"].TextureIndex()];

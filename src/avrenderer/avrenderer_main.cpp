@@ -261,7 +261,12 @@ public:
 		float roughnessFactor;
 		float alphaMask;
 		float alphaMaskCutoff;
-	} pushConstBlockMaterial;
+	};
+
+	struct PushConstBlockVertex 
+	{
+		glm::vec4 uvScaleAndOffset;
+	};
 
 	std::map<std::string, std::string> environments;
 	std::string selectedEnvironment = "papermill";
@@ -397,7 +402,16 @@ public:
 						break;
 					}
 
-					vkCmdPushConstants(commandBuffers[cbIndex], pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstBlockMaterial), &pushConstBlockMaterial);
+					vkCmdPushConstants( commandBuffers[cbIndex], pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( PushConstBlockMaterial ), &pushConstBlockMaterial );
+
+					PushConstBlockVertex pushConstVertex{};
+					pushConstVertex.uvScaleAndOffset = 
+					{ 
+						primitiveMaterial.baseColorScale[0], primitiveMaterial.baseColorScale[1], 
+						primitiveMaterial.baseColorOffset[0], primitiveMaterial.baseColorOffset[1] 
+					};
+
+					vkCmdPushConstants( commandBuffers[cbIndex], pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 112, sizeof( PushConstBlockVertex ), &pushConstVertex );
 
 					if (primitive->hasIndices) {
 						vkCmdDrawIndexed(commandBuffers[cbIndex], primitive->indexCount, 1, primitive->firstIndex, 0, 0);
@@ -846,15 +860,20 @@ public:
 			m_descriptorManager->getLayout( vks::EDescriptorLayout::Material ),
 			m_descriptorManager->getLayout( vks::EDescriptorLayout::Node ),
 		};
+
+		std::array<VkPushConstantRange, 2> arrayConstantRanges{};
+		arrayConstantRanges[0].size = sizeof( PushConstBlockMaterial );
+		arrayConstantRanges[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		arrayConstantRanges[1].size = sizeof( PushConstBlockVertex );
+		arrayConstantRanges[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+		arrayConstantRanges[1].offset = 112;// ( uint32_t )sizeof( PushConstBlockMaterial );
+
 		VkPipelineLayoutCreateInfo pipelineLayoutCI{};
 		pipelineLayoutCI.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		pipelineLayoutCI.setLayoutCount = static_cast<uint32_t>(setLayouts.size());
 		pipelineLayoutCI.pSetLayouts = setLayouts.data();
-		VkPushConstantRange pushConstantRange{};
-		pushConstantRange.size = sizeof(PushConstBlockMaterial);
-		pushConstantRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		pipelineLayoutCI.pushConstantRangeCount = 1;
-		pipelineLayoutCI.pPushConstantRanges = &pushConstantRange;
+		pipelineLayoutCI.pushConstantRangeCount = (uint32_t)arrayConstantRanges.size();
+		pipelineLayoutCI.pPushConstantRanges = arrayConstantRanges.data();
 		VK_CHECK_RESULT(vkCreatePipelineLayout(device, &pipelineLayoutCI, nullptr, &pipelineLayout));
 
 		// Vertex bindings an attributes
@@ -2181,11 +2200,19 @@ public:
 		SgNodeData_t *pData = GetNodeData( node );
 		assert( pData );
 
-		if ( !pData->model )
+		auto iSharedTexture = m_sharedTextureInfo->find( m_pCurrentRoot->appId );
+
+		if ( !pData->model && iSharedTexture != m_sharedTextureInfo->end() )
 		{
+			std::string sPanelModelUri = "file:///e:/homedev/aardvark/data/models/panel/panel.glb";
+			if ( iSharedTexture->second.getInvertY() )
+			{
+				sPanelModelUri = "file:///e:/homedev/aardvark/data/models/panel/panel_inverted.glb";
+			}
+
 			// TODO(Joe): Definitely don't block here waiting to get a model source
 			auto reqModelSource = m_pClient->Server().getModelSourceRequest();
-			reqModelSource.setUri( "file:///e:/homedev/aardvark/data/models/panel/panel.glb" );
+			reqModelSource.setUri( sPanelModelUri );
 			auto resModelSource = reqModelSource.send().wait( m_pClient->WaitScope() );
 			if ( resModelSource.hasSource() )
 			{
@@ -2201,7 +2228,6 @@ public:
 			uint32_t width = 0, height = 0;
 			VkFormat textureFormat = VK_FORMAT_R8G8B8A8_UINT;
 			VkFormat viewTextureFormat = VK_FORMAT_R8G8B8A8_UNORM;
-			auto iSharedTexture = m_sharedTextureInfo->find( m_pCurrentRoot->appId );
 			if ( iSharedTexture != m_sharedTextureInfo->end() )
 			{
 				pvNewDxgiHandle = reinterpret_cast<void*>(iSharedTexture->second.getHandle() );

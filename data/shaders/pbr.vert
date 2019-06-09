@@ -33,6 +33,10 @@ out gl_PerVertex
 	vec4 gl_Position;
 };
 
+layout ( push_constant ) uniform VertConstants {
+	layout (offset = 112 ) vec4 uvScaleAndOffset;
+} vertConstants;
+
 void main() 
 {
 	vec4 locPos;
@@ -52,7 +56,8 @@ void main()
 	}
 	locPos.y = -locPos.y;
 	outWorldPos = locPos.xyz / locPos.w;
-	outUV0 = inUV0;
-	outUV1 = inUV1;
+
+	outUV0 = inUV0.xy * vertConstants.uvScaleAndOffset.xy + vertConstants.uvScaleAndOffset.zw;
+	outUV1 = inUV1.xy * vertConstants.uvScaleAndOffset.xy + vertConstants.uvScaleAndOffset.zw;
 	gl_Position =  ubo.projection * ubo.view * vec4(outWorldPos, 1.0);
 }
