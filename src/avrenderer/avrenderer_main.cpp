@@ -170,7 +170,7 @@ public:
 		float gamma = 2.2f;
 		float prefilteredCubeMipLevels;
 		float scaleIBLAmbient = 1.0f;
-		float debugViewInputs = 0;
+		float debugViewInputs = 1;
 		float debugViewEquation = 0;
 	} shaderValuesParams;
 
@@ -536,6 +536,8 @@ public:
 		generateCubemaps();
 	}
 
+	vkglTF::Model m_skybox;
+
 	void loadAssets()
 	{
 #if defined(VK_USE_PLATFORM_ANDROID_KHR)
@@ -579,7 +581,9 @@ public:
 		//loadScene(sceneFile.c_str());
 		//models.skybox.loadFromFile(assetpath + "models/Box/glTF-Embedded/Box.gltf", vulkanDevice, queue);
 
+		m_skybox.loadFromFile( assetpath + "models/Box/glTF-Embedded/Box.gltf", vulkanDevice, m_descriptorManager, queue );
 		loadEnvironment(envMapFile.c_str());
+
 	}
 
 	void UpdateDescriptorForScene( VkDescriptorSet descriptorSet, VkBuffer buffer, uint32_t bufferSize )
@@ -1624,7 +1628,7 @@ public:
 
 					VkDeviceSize offsets[1] = { 0 };
 
-					//models.skybox.draw(cmdBuf);
+					m_skybox.draw(cmdBuf);
 
 					vkCmdEndRenderPass(cmdBuf);
 
@@ -1784,13 +1788,13 @@ public:
 		shaderValuesLeftEye.matProjectionFromView = GetHMDMatrixProjectionEye( vr::Eye_Left );
 		shaderValuesLeftEye.matViewFromHmd = GetHMDMatrixPoseEye( vr::Eye_Left );
 		shaderValuesLeftEye.matHmdFromStage =  m_matHmdFromStage ;
-		shaderValuesLeftEye.camPos = glm::vec3( 0, 0, 0 );
+		shaderValuesLeftEye.camPos = glm::vec3( 1, 0, 0 );
 
 		// right eye
 		shaderValuesRightEye.matProjectionFromView = GetHMDMatrixProjectionEye( vr::Eye_Right );
 		shaderValuesRightEye.matViewFromHmd = GetHMDMatrixPoseEye( vr::Eye_Right );
 		shaderValuesRightEye.matHmdFromStage = m_matHmdFromStage ;
-		shaderValuesRightEye.camPos = glm::vec3( 0, 0, 0 );
+		shaderValuesRightEye.camPos = glm::vec3( 1, 0, 0 );
 	}
 
 	void updateParams()
@@ -1800,6 +1804,7 @@ public:
 			sin(glm::radians(lightSource.rotation.y)),
 			cos(glm::radians(lightSource.rotation.x)) * cos(glm::radians(lightSource.rotation.y)),
 			0.0f);
+		shaderValuesParams.debugViewInputs = 1;
 	}
 
 	void windowResized()
@@ -2177,6 +2182,7 @@ public:
 			void *pvNewDxgiHandle = nullptr;
 			uint32_t width = 0, height = 0;
 			VkFormat textureFormat = VK_FORMAT_R8G8B8A8_UINT;
+			VkFormat viewTextureFormat = VK_FORMAT_R8G8B8A8_UNORM;
 			auto iSharedTexture = m_sharedTextureInfo->find( m_pCurrentRoot->appId );
 			if ( iSharedTexture != m_sharedTextureInfo->end() )
 			{
@@ -2191,6 +2197,12 @@ public:
 
 				case AvSharedTextureInfo::Format::R8G8B8A8:
 					textureFormat = VK_FORMAT_R8G8B8A8_UINT;
+					viewTextureFormat = VK_FORMAT_R8G8B8A8_UNORM;
+					break;
+
+				case AvSharedTextureInfo::Format::B8G8R8A8:
+					textureFormat = VK_FORMAT_B8G8R8A8_UINT;
+					viewTextureFormat = VK_FORMAT_B8G8R8A8_UNORM;
 					break;
 				}
 			}
@@ -2198,7 +2210,8 @@ public:
 			if ( pData->lastDxgiHandle != pvNewDxgiHandle )
 			{
 				pData->overrideTexture = std::make_shared<vks::Texture2D>();
-				pData->overrideTexture->loadFromDxgiSharedHandle( pvNewDxgiHandle, textureFormat,
+				pData->overrideTexture->loadFromDxgiSharedHandle( pvNewDxgiHandle, 
+					textureFormat, viewTextureFormat,
 					width, height,
 					vulkanDevice, queue );
 

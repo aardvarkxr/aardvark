@@ -382,7 +382,7 @@ namespace aardvark
 
 		auto paramInfo = reqUpdate.initSharedTextureInfo();
 		paramInfo.setType( AvSharedTextureInfo::Type::D3D11_TEXTURE2_D );
-		paramInfo.setFormat( AvSharedTextureInfo::Format::R8G8B8A8 );
+		paramInfo.setFormat( AvSharedTextureInfo::Format::B8G8R8A8 );
 		paramInfo.setWidth( unWidth );
 		paramInfo.setHeight( unHeight );
 		paramInfo.setHandle( reinterpret_cast<uint64_t>( pvSharedTextureHandle ) );

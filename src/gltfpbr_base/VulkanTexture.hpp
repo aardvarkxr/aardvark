@@ -457,6 +457,7 @@ namespace vks
 		void loadFromDxgiSharedHandle(
 			void *sharedTextureHandle,
 			VkFormat format,
+			VkFormat viewFormat,
 			uint32_t width, uint32_t height,
 			vks::VulkanDevice *device,
 			VkQueue queue,
@@ -506,7 +507,7 @@ namespace vks
 			imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 			imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
 			imageCreateInfo.format = format;
-			imageCreateInfo.flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
+			imageCreateInfo.flags = 0;
 			imageCreateInfo.mipLevels = mipLevels;
 			imageCreateInfo.arrayLayers = 1;
 			imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -515,6 +516,11 @@ namespace vks
 			imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 			imageCreateInfo.extent = { width, height, 1 };
 			imageCreateInfo.usage = imageUsageFlags;
+
+			if ( format != viewFormat )
+			{
+				imageCreateInfo.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
+			}
 
 			VkExternalMemoryImageCreateInfo externalCreateInfo{};
 			externalCreateInfo.sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO;
@@ -586,7 +592,7 @@ namespace vks
 			VkImageViewCreateInfo viewCreateInfo{};
 			viewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 			viewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-			viewCreateInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
+			viewCreateInfo.format = viewFormat;
 			viewCreateInfo.components = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
 			viewCreateInfo.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
 			viewCreateInfo.subresourceRange.levelCount = mipLevels;

@@ -29,6 +29,7 @@ struct AvSharedTextureInfo
 	enum Format
 	{
 		r8g8b8a8 @0;
+		b8g8r8a8 @1;
 	}
 
 	type @0 : Type;
