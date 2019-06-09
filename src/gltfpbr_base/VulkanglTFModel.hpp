@@ -114,10 +114,15 @@ namespace vkglTF
 			glm::vec4 diffuseFactor = glm::vec4(1.0f);
 			glm::vec3 specularFactor = glm::vec3(0.0f);
 		} extension;
-		struct PbrWorkflows {
-			bool metallicRoughness = true;
-			bool specularGlossiness = false;
-		} pbrWorkflows;
+
+		enum class Workflow
+		{
+			MetallicRoughness,
+			SpecularGlossiness,
+			Unlit,
+		};
+		Workflow workflow = Workflow::MetallicRoughness;
+
 		vks::CDescriptorSet *descriptorSet = nullptr;
 	};
 
@@ -873,7 +878,7 @@ namespace vkglTF
 						material.extension.specularGlossinessTexture = textures[index.Get<int>()];
 						auto texCoordSet = ext->second.Get("specularGlossinessTexture").Get("texCoord");
 						material.texCoordSets.specularGlossiness = texCoordSet.Get<int>();
-						material.pbrWorkflows.specularGlossiness = true;
+						material.workflow = Material::Workflow::SpecularGlossiness;
 					}
 					if (ext->second.Has("diffuseTexture")) {
 						auto index = ext->second.Get("diffuseTexture").Get("index");
@@ -893,6 +898,10 @@ namespace vkglTF
 							material.extension.specularFactor[i] = val.IsNumber() ? (float)val.Get<double>() : (float)val.Get<int>();
 						}
 					}
+				}
+				else if ( mat.extensions.find( "KHR_materials_unlit" ) != mat.extensions.end() )
+				{
+					material.workflow = Material::Workflow::Unlit;
 				}
 
 				materials.push_back(material);

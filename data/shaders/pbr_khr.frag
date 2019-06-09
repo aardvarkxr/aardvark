@@ -83,6 +83,7 @@ const float c_MinRoughness = 0.04;
 
 const float PBR_WORKFLOW_METALLIC_ROUGHNESS = 0.0;
 const float PBR_WORKFLOW_SPECULAR_GLOSINESS = 1.0f;
+const float PBR_WORKFLOW_UNLIT = 2.0f;
 
 #define MANUAL_SRGB 1
 
@@ -235,6 +236,20 @@ void main()
 		if (baseColor.a < material.alphaMaskCutoff) {
 			discard;
 		}
+	}
+
+	if( material.workflow == PBR_WORKFLOW_UNLIT )
+	{
+		// The color may be defined from a base texture or a flat color
+		if (material.baseColorTextureSet > -1) 
+		{
+			outColor = SRGBtoLINEAR(texture(colorMap, material.baseColorTextureSet == 0 ? inUV0 : inUV1)) * material.baseColorFactor;
+		} 
+		else 
+		{
+			outColor = material.baseColorFactor;
+		}
+		return;
 	}
 
 	if (material.workflow == PBR_WORKFLOW_METALLIC_ROUGHNESS) {
@@ -411,5 +426,4 @@ void main()
 				break;				
 		}
 	}
-
 }

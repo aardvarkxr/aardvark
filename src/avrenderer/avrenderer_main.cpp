@@ -239,7 +239,12 @@ public:
 	glm::vec3 modelrot = glm::vec3(0.0f);
 	glm::vec3 modelPos = glm::vec3(0.0f);
 
-	enum PBRWorkflows{ PBR_WORKFLOW_METALLIC_ROUGHNESS = 0, PBR_WORKFLOW_SPECULAR_GLOSINESS = 1 };
+	enum PBRWorkflows 
+	{
+		PBR_WORKFLOW_METALLIC_ROUGHNESS = 0, 
+		PBR_WORKFLOW_SPECULAR_GLOSINESS = 1, 
+		PBR_WORKFLOW_UNLIT = 2,
+	};
 
 	struct PushConstBlockMaterial {
 		glm::vec4 baseColorFactor;
@@ -367,23 +372,29 @@ public:
 
 					// TODO: glTF specs states that metallic roughness should be preferred, even if specular glossiness is present
 
-					if ( primitiveMaterial.pbrWorkflows.metallicRoughness) {
-						// Metallic roughness workflow
+					switch( primitiveMaterial.workflow )
+					{
+					case vkglTF::Material::Workflow::MetallicRoughness:
 						pushConstBlockMaterial.workflow = static_cast<float>(PBR_WORKFLOW_METALLIC_ROUGHNESS);
 						pushConstBlockMaterial.baseColorFactor = primitiveMaterial.baseColorFactor;
 						pushConstBlockMaterial.metallicFactor = primitiveMaterial.metallicFactor;
 						pushConstBlockMaterial.roughnessFactor = primitiveMaterial.roughnessFactor;
 						pushConstBlockMaterial.PhysicalDescriptorTextureSet = primitiveMaterial.metallicRoughnessTexture != nullptr ? primitiveMaterial.texCoordSets.metallicRoughness : -1;
 						pushConstBlockMaterial.colorTextureSet = primitiveMaterial.baseColorTexture != nullptr ? primitiveMaterial.texCoordSets.baseColor : -1;
-					}
+						break;
 
-					if ( primitiveMaterial.pbrWorkflows.specularGlossiness) {
-						// Specular glossiness workflow
-						pushConstBlockMaterial.workflow = static_cast<float>(PBR_WORKFLOW_SPECULAR_GLOSINESS);
+					case vkglTF::Material::Workflow::SpecularGlossiness:
+						pushConstBlockMaterial.workflow = static_cast<float>( PBR_WORKFLOW_SPECULAR_GLOSINESS );
 						pushConstBlockMaterial.PhysicalDescriptorTextureSet = primitiveMaterial.extension.specularGlossinessTexture != nullptr ? primitiveMaterial.texCoordSets.specularGlossiness : -1;
 						pushConstBlockMaterial.colorTextureSet = primitiveMaterial.extension.diffuseTexture != nullptr ? primitiveMaterial.texCoordSets.baseColor : -1;
 						pushConstBlockMaterial.diffuseFactor = primitiveMaterial.extension.diffuseFactor;
-						pushConstBlockMaterial.specularFactor = glm::vec4( primitiveMaterial.extension.specularFactor, 1.0f);
+						pushConstBlockMaterial.specularFactor = glm::vec4( primitiveMaterial.extension.specularFactor, 1.0f );
+						break;
+
+					case vkglTF::Material::Workflow::Unlit:
+						pushConstBlockMaterial.workflow = static_cast<float>( PBR_WORKFLOW_UNLIT );
+						pushConstBlockMaterial.baseColorFactor = primitiveMaterial.baseColorFactor;
+						break;
 					}
 
 					vkCmdPushConstants(commandBuffers[cbIndex], pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstBlockMaterial), &pushConstBlockMaterial);
@@ -728,10 +739,10 @@ public:
 					material.emissiveTexture ? material.emissiveTexture->descriptor : textures.empty.descriptor
 				};
 
-				// TODO: glTF specs states that metallic roughness should be preferred, even if specular glossiness is present
-
-				if ( material.pbrWorkflows.metallicRoughness ) 
+				switch( material.workflow )
 				{
+				case vkglTF::Material::Workflow::MetallicRoughness:
+					// TODO: glTF specs states that metallic roughness should be preferred, even if specular glossiness is present
 					if ( material.baseColorTexture ) 
 					{
 						imageDescriptors[0] = material.baseColorTexture->descriptor;
@@ -740,18 +751,25 @@ public:
 					{
 						imageDescriptors[1] = material.metallicRoughnessTexture->descriptor;
 					}
-				}
+					break;
 
-				if ( material.pbrWorkflows.specularGlossiness ) 
-				{
-					if ( material.extension.diffuseTexture ) 
+				case vkglTF::Material::Workflow::SpecularGlossiness:
+					if ( material.extension.diffuseTexture )
 					{
 						imageDescriptors[0] = material.extension.diffuseTexture->descriptor;
 					}
-					if ( material.extension.specularGlossinessTexture ) 
+					if ( material.extension.specularGlossinessTexture )
 					{
 						imageDescriptors[1] = material.extension.specularGlossinessTexture->descriptor;
 					}
+					break;
+
+				case vkglTF::Material::Workflow::Unlit:
+					if ( material.baseColorTexture )
+					{
+						imageDescriptors[0] = material.baseColorTexture->descriptor;
+					}
+					break;
 				}
 
 				std::array<VkWriteDescriptorSet, 5> writeDescriptorSets{};
