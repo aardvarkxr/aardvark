@@ -261,6 +261,7 @@ public:
 		float roughnessFactor;
 		float alphaMask;
 		float alphaMaskCutoff;
+		float padding[2]; // the vertex shader push constants need to be 16 byte aligned
 	};
 
 	struct PushConstBlockVertex 
@@ -411,7 +412,7 @@ public:
 						primitiveMaterial.baseColorOffset[0], primitiveMaterial.baseColorOffset[1] 
 					};
 
-					vkCmdPushConstants( commandBuffers[cbIndex], pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 112, sizeof( PushConstBlockVertex ), &pushConstVertex );
+					vkCmdPushConstants( commandBuffers[cbIndex], pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof( PushConstBlockMaterial ), sizeof( PushConstBlockVertex ), &pushConstVertex );
 
 					if (primitive->hasIndices) {
 						vkCmdDrawIndexed(commandBuffers[cbIndex], primitive->indexCount, 1, primitive->firstIndex, 0, 0);
@@ -866,7 +867,7 @@ public:
 		arrayConstantRanges[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 		arrayConstantRanges[1].size = sizeof( PushConstBlockVertex );
 		arrayConstantRanges[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-		arrayConstantRanges[1].offset = 112;// ( uint32_t )sizeof( PushConstBlockMaterial );
+		arrayConstantRanges[1].offset = sizeof( PushConstBlockMaterial );
 
 		VkPipelineLayoutCreateInfo pipelineLayoutCI{};
 		pipelineLayoutCI.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
