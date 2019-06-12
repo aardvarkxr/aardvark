@@ -480,6 +480,9 @@ public:
 	virtual bool init() override;
 	void cleanup() override;
 	std::list<std::unique_ptr<CAardvarkAppObject>> & getApps() { return m_apps;  }
+
+	bool hasPermission( const std::string & permission );
+
 private:
 	CAardvarkRenderProcessHandler *m_handler = nullptr;
 	std::list<std::unique_ptr<CAardvarkAppObject>> m_apps;
@@ -490,44 +493,92 @@ CAardvarkObject::CAardvarkObject( CAardvarkRenderProcessHandler *renderProcessHa
 	m_handler = renderProcessHandler;
 }
 
+bool CAardvarkObject::hasPermission( const std::string & permission )
+{
+	return m_handler->hasPermission( permission );
+}
+
 
 bool CAardvarkObject::init()
 {
-	RegisterFunction( "createApp", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	if ( hasPermission( "scenegraph" ) )
 	{
-		if ( arguments.size() != 1 )
+		RegisterFunction( "createApp", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 		{
-			exception = "Invalid arguments";
-			return;
-		}
-		if ( !arguments[0]->IsString() )
-		{
-			exception = "Invalid name argument";
-			return;
-		}
+			if ( arguments.size() != 1 )
+			{
+				exception = "Invalid arguments";
+				return;
+			}
+			if ( !arguments[0]->IsString() )
+			{
+				exception = "Invalid name argument";
+				return;
+			}
 
-		auto reqCreateExampleApp = m_handler->getClient()->Server().createAppRequest();
-		reqCreateExampleApp.setName( std::string( arguments[0]->GetStringValue()).c_str() );
-		auto resCreateApp = reqCreateExampleApp.send().wait( m_handler->getClient()->WaitScope() );
-		if ( !resCreateApp.hasApp() )
-		{
-			retval = CefV8Value::CreateNull();
-		}
-		else
-		{
-			auto app = std::make_unique<CAardvarkAppObject>( m_handler, resCreateApp.getApp(), std::string( arguments[0]->GetStringValue() ) );
-			if ( !app->init() )
+			auto reqCreateExampleApp = m_handler->getClient()->Server().createAppRequest();
+			reqCreateExampleApp.setName( std::string( arguments[0]->GetStringValue() ).c_str() );
+			auto resCreateApp = reqCreateExampleApp.send().wait( m_handler->getClient()->WaitScope() );
+			if ( !resCreateApp.hasApp() )
 			{
 				retval = CefV8Value::CreateNull();
 			}
 			else
 			{
-				retval = app->getContainer();
-				m_apps.push_back( std::move( app ) );
-				m_handler->updateAppNamesForBrowser();
+				auto app = std::make_unique<CAardvarkAppObject>( m_handler, resCreateApp.getApp(), std::string( arguments[0]->GetStringValue() ) );
+				if ( !app->init() )
+				{
+					retval = CefV8Value::CreateNull();
+				}
+				else
+				{
+					retval = app->getContainer();
+					m_apps.push_back( std::move( app ) );
+					m_handler->updateAppNamesForBrowser();
+				}
 			}
-		}
-	} );
+		} );
+	}
+
+	if ( hasPermission( "master" ) )
+	{
+		RegisterFunction( "startApp", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+		{
+			if ( arguments.size() != 2 )
+			{
+				exception = "Invalid arguments";
+				return;
+			}
+			if ( !arguments[0]->IsString() )
+			{
+				exception = "Invalid url argument";
+				return;
+			}
+			if ( !arguments[1]->IsArray() )
+			{
+				exception = "Invalid permission argument";
+				return;
+			}
+
+			size_t listIndex = 0;
+			CefRefPtr< CefListValue> permissionList = CefListValue::Create();
+			for ( size_t n = 0; n < arguments[1]->GetArrayLength(); n++ )
+			{
+				auto arrayValue = arguments[1]->GetValue( (int)n );
+				if ( arrayValue->IsString() )
+				{
+					permissionList->SetString( listIndex++, arrayValue->GetStringValue() );
+				}
+			}
+
+			CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "start_app" );
+
+			msg->GetArgumentList()->SetString( 0, arguments[0]->GetStringValue() );
+			msg->GetArgumentList()->SetList( 1, permissionList );
+			m_handler->getBrowser()->SendProcessMessage( PID_BROWSER, msg );
+		} );
+	}
+
 	return true;
 
 }
@@ -555,10 +606,11 @@ void CAardvarkRenderProcessHandler::OnContextCreated(
 {
 	assert( !m_browser );
 	m_browser = browser;
+	m_context = context;
 	m_client->Start();
 
 	// Retrieve the context's window object.
-	CefRefPtr<CefV8Value> windowObj = context->GetGlobal();
+	CefRefPtr<CefV8Value> windowObj = m_context->GetGlobal();
 
 	// Create an object to store our functions in
 	m_aardvarkObject = std::make_unique<CAardvarkObject>( this );
@@ -584,6 +636,16 @@ bool CAardvarkRenderProcessHandler::OnProcessMessageReceived( CefRefPtr<CefBrows
 {
 	std::string messageName = message->GetName();
 
+	if ( messageName == "set_browser_permissions" )
+	{
+		m_permissions.clear();
+		auto permList = message->GetArgumentList()->GetList( 0 );
+		for ( size_t n = 0; n < permList->GetSize(); n++ )
+		{
+			std::string perm( permList->GetString( n ) );
+			m_permissions.insert( perm );
+		}
+	}
 	return false;
 }
 
@@ -601,4 +663,9 @@ void CAardvarkRenderProcessHandler::updateAppNamesForBrowser()
 
 	msg->GetArgumentList()->SetList( 0, nameList );
 	m_browser->SendProcessMessage( PID_BROWSER, msg );
+}
+
+bool CAardvarkRenderProcessHandler::hasPermission( const std::string & permission )
+{
+	return m_permissions.find( permission ) != m_permissions.end();
 }

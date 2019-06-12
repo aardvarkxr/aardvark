@@ -103,7 +103,6 @@ void CAardvarkCefApp::OnContextInitialized()
 	// Check if a "--url=" value was provided via the command-line. If so, use
 	// that instead of the default URL.
 	std::string url = "file:///E:/homedev/aardvark/data/webui/aardvark_master.html";
-	url = "file:///E:/homedev/aardvark/data/webui/scenegraphtest.html";
 
 	if (use_views) 
 	{
@@ -138,6 +137,38 @@ void CAardvarkCefApp::OnContextInitialized()
 		CefBrowserHost::CreateBrowser(window_info, handler, url, browser_settings,
 									NULL);
 	}
+}
+
+
+void CAardvarkCefApp::startApp( std::string & uri, const std::vector<std::string> & permissions )
+{
+	CEF_REQUIRE_UI_THREAD();
+
+	// CAardvarkCefHandler implements browser-level callbacks.
+	CefRefPtr<CAardvarkCefHandler> handler( new CAardvarkCefHandler( false, m_application, permissions ) );
+	m_browsers.push_back( handler );
+
+	// Specify CEF browser settings here.
+	CefBrowserSettings browser_settings;
+
+	CefWindowInfo window_info;
+
+	// On Windows we need to specify certain flags that will be passed to
+	// CreateWindowEx().
+	window_info.SetAsPopup( NULL, "aardvark app" );
+
+	window_info.windowless_rendering_enabled = true;
+	window_info.shared_texture_enabled = true;
+
+	window_info.width = 1024;
+	window_info.height = 1024;
+	window_info.x = window_info.y = 0;
+
+	browser_settings.windowless_frame_rate = 90;
+
+	// Create the first browser window.
+	CefBrowserHost::CreateBrowser( window_info, handler, uri, browser_settings,
+		NULL );
 }
 
 

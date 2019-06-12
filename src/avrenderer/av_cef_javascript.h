@@ -34,13 +34,17 @@ public:
 
 
 	aardvark::CAardvarkClient *getClient() { return &*m_client; }
+	CefRefPtr<CefBrowser> getBrowser() { return m_browser;  }
 
 	void updateAppNamesForBrowser();
+	bool hasPermission( const std::string & permission );
 private:
 
 	std::unique_ptr<aardvark::CAardvarkClient> m_client;
 	std::unique_ptr<CAardvarkObject> m_aardvarkObject;
 	CefRefPtr<CefBrowser> m_browser;
+	CefRefPtr<CefV8Context> m_context;
+	std::set<std::string> m_permissions;
 
 	// Include the default reference counting implementation.
 	IMPLEMENT_REFCOUNTING( CAardvarkRenderProcessHandler );

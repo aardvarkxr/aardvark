@@ -41,6 +41,8 @@ public:
 	// Request that all existing browser windows close.
 	void CloseAllBrowsers( bool force_close );
 
+	void startApp( std::string & uri, const std::vector<std::string> & permissions );
+
 
 
 private:

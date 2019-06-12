@@ -64,7 +64,20 @@ void CAardvarkCefHandler::OnAfterCreated(CefRefPtr<CefBrowser> browser)
 	CEF_REQUIRE_UI_THREAD();
 
 	m_browser = browser;
+
+	size_t listIndex = 0;
+	CefRefPtr< CefListValue> permissionList = CefListValue::Create();
+	for ( auto & permission : m_permissions )
+	{
+		permissionList->SetString( listIndex++, permission );
+	}
+
+	CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "set_browser_permissions" );
+
+	msg->GetArgumentList()->SetList( 0, permissionList );
+	m_browser->SendProcessMessage( PID_RENDERER, msg );
 }
+
 
 bool CAardvarkCefHandler::DoClose(CefRefPtr<CefBrowser> browser) 
 {
@@ -155,6 +168,19 @@ bool CAardvarkCefHandler::OnProcessMessageReceived( CefRefPtr<CefBrowser> browse
 		}
 		updateSceneGraphTextures();
 		return true;
+	}
+	else if ( message->GetName() == "start_app" )
+	{
+		std::string uri( message->GetArgumentList()->GetString( 0 ) );
+		std::vector<std::string> permissions;
+		auto permissionList = message->GetArgumentList()->GetList( 1 );
+		for ( size_t n = 0; n < permissionList->GetSize(); n++ )
+		{
+			permissions.push_back( permissionList->GetString( n ).ToString() );
+		}
+
+		CAardvarkCefApp::instance()->startApp( uri, permissions );
+
 	}
 
 	return false;
