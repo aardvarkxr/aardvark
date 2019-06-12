@@ -195,5 +195,13 @@ void CAardvarkCefHandler::RunFrame()
 
 void CAardvarkCefHandler::triggerClose( bool forceClose )
 {
+	if ( !CefCurrentlyOn( TID_UI ) )
+	{
+		// Execute on the UI thread.
+		CefPostTask( TID_UI, base::Bind( &CAardvarkCefHandler::triggerClose, this,
+			forceClose ) );
+		return;
+	}
+
 	m_browser->GetHost()->CloseBrowser( forceClose );
 }

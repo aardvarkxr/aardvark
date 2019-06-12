@@ -160,14 +160,6 @@ CefRefPtr<CefRenderProcessHandler> CAardvarkCefApp::GetRenderProcessHandler()
 
 void CAardvarkCefApp::CloseAllBrowsers( bool forceClose )
 {
-	if ( !CefCurrentlyOn( TID_UI ) )
-	{
-		// Execute on the UI thread.
-//		CefPostTask( TID_UI, base::Bind( &CAardvarkCefApp::CloseAllBrowsers, this,
-//			forceClose ) );
-		return;
-	}
-
 	for ( auto browser : m_browsers )
 	{
 		browser->triggerClose( forceClose );
