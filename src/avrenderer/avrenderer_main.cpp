@@ -48,6 +48,25 @@
 #endif
 
 
+class AvFrameListenerImpl final : public AvFrameListener::Server
+{
+public:
+	AvFrameListenerImpl( std::function<void( AvVisualFrame::Reader )> fn )
+	{
+		m_fn = fn;
+	}
+
+	virtual ::kj::Promise<void> newFrame( NewFrameContext context ) override
+	{
+		m_fn( context.getParams().getFrame() );
+		return kj::READY_NOW;
+	}
+
+protected:
+
+private:
+	std::function<void( AvVisualFrame::Reader )> m_fn;
+};
 
 #include <aardvark/aardvark_apps.h>
 #include <aardvark/aardvark_server.h>
@@ -64,39 +83,6 @@
 
 
 using namespace aardvark;
-
-void CreateExampleApp( aardvark::CAardvarkClient *pClient )
-{
-	auto reqCreateExampleApp = pClient->Server().createAppRequest();
-	reqCreateExampleApp.setName( "Example with renderer" );
-	auto app = reqCreateExampleApp.send().getApp();
-
-	AvSceneContext sceneContext;
-	avStartSceneContext( &sceneContext );
-	{
-		avStartNode( sceneContext, 1, "origin", EAvSceneGraphNodeType::Origin );
-		{
-			avSetOriginPath( sceneContext, "/user/hand/right" );
-			avStartNode( sceneContext, 2, "xform", EAvSceneGraphNodeType::Transform );
-			{
-				avSetScale( sceneContext, 0.1f, 0.1f, 0.1f );
-				//avSetTranslation( sceneContext, 0, 0, -0.5f );
-
-				avStartNode( sceneContext, 3, "model", EAvSceneGraphNodeType::Model );
-				{
-					avSetModelUri( sceneContext, tools::PathToFileUri( "e:\\Downloads\\glTF-Sample-Models-master\\2.0\\BoxAnimated\\glTF-Binary\\BoxAnimated.glb" ).c_str() );
-				}
-				avFinishNode( sceneContext );
-			}
-			avFinishNode( sceneContext );
-		}
-		avFinishNode( sceneContext );
-	}
-	avFinishSceneContext( sceneContext, &app, pClient );
-
-}
-
-
 
 void UpdateTransformable( std::shared_ptr<vkglTF::Transformable> pTransformable, AvTransform::Reader & transform )
 {
@@ -138,7 +124,7 @@ void UpdateTransformable( std::shared_ptr<vkglTF::Transformable> pTransformable,
 /*
 	PBR example main class
 */
-class VulkanExample : public VulkanExampleBase, public kj::TaskSet::ErrorHandler, public IApplication
+class VulkanExample : public VulkanExampleBase, public IApplication
 {
 public:
 	struct Textures {
@@ -290,7 +276,6 @@ public:
 
 	~VulkanExample() noexcept
 	{
-		getFrameTasks = nullptr;
 		m_pClient->Stop();
 		m_pClient = nullptr;
 		m_serverThread.Join();
@@ -1852,6 +1837,8 @@ public:
 		updateOverlay();
 	}
 
+	kj::Own< AvFrameListenerImpl > m_frameListener;
+
 	void prepare()
 	{
 		VulkanExampleBase::prepare();
@@ -1914,7 +1901,14 @@ public:
 		m_pClient = kj::heap<aardvark::CAardvarkClient>();
 		m_pClient->Start();
 
-//		CreateExampleApp( m_pClient );
+		m_frameListener = kj::heap<AvFrameListenerImpl>( [this]( AvVisualFrame::Reader newFrame ) -> void
+		{
+			applyFrame( newFrame );
+		} );
+		auto reqListen = m_pClient->Server().listenForFramesRequest();
+		AvFrameListener::Client listenerClient = std::move( m_frameListener );
+		reqListen.setListener( listenerClient );
+		reqListen.send().wait( m_pClient->WaitScope() );
 
 		prepared = true;
 	}
@@ -2282,27 +2276,7 @@ public:
 		}
 	}
 
-	kj::Own< kj::TaskSet > getFrameTasks = kj::heap<kj::TaskSet>( *this );
 	
-	virtual void taskFailed( kj::Exception&& exception ) override
-	{
-		assert( false );
-	}
-
-	void requestFrameFromServer()
-	{
-		auto promNextFrame = m_pClient->Server().getNextVisualFrameRequest().send()
-		.then( [this]( AvServer::GetNextVisualFrameResults::Reader && result ) 
-		{
-			assert( result.hasFrame() );
-			if ( result.hasFrame() )
-			{
-				applyFrame( result.getFrame() );
-			}
-		} );
-		getFrameTasks->add( std::move( promNextFrame ) );
-	}
-
 	void applyFrame( AvVisualFrame::Reader & newFrame )
 	{
 		camera.setPosition( { 0.0f, 0.0f, 1.0f } );
@@ -2633,12 +2607,6 @@ public:
 		}
 
 		updateOverlay();
-
-		// if we don't already have a request outstanding, request a new frame
-		if ( getFrameTasks->isEmpty() )
-		{
-			requestFrameFromServer();
-		}
 
 		vr::TrackedDevicePose_t rRenderPoses[vr::k_unMaxTrackedDeviceCount];
 		vr::TrackedDevicePose_t rGamePoses[vr::k_unMaxTrackedDeviceCount];

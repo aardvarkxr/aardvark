@@ -35,6 +35,7 @@ CAardvarkApp::CAardvarkApp( const std::string & sName, AvServerImpl *pParentServ
 {
 	m_sceneGraph = tools::newOwnCapnp( context.getParams().getRoot() );
 	context.getResults().setSuccess( true );
+	m_pParentServer->markFrameDirty();
 	return kj::READY_NOW;
 }
 

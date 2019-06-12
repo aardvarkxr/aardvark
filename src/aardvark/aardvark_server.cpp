@@ -10,6 +10,11 @@
 namespace aardvark
 {
 
+	void AvServerImpl::taskFailed( kj::Exception&& exception )
+	{
+		// we don't really care about failed requests on our task set
+	}
+
 	::kj::Promise<void> AvServerImpl::createApp( CreateAppContext context )
 	{
 		auto server = kj::heap<CAardvarkApp>( context.getParams().getName(), this );
@@ -58,7 +63,23 @@ namespace aardvark
 		out.getScale().setZ( in.scale.z );
 	}
 
-	::kj::Promise<void> AvServerImpl::getNextVisualFrame( GetNextVisualFrameContext context )
+	::kj::Promise<void> AvServerImpl::listenForFrames( ListenForFramesContext context )
+	{
+		AvServer::Server::ListenForFramesParams::Reader params = context.getParams();
+		m_frameListeners.push_back( context.getParams().getListener() );
+		markFrameDirty();
+		return kj::READY_NOW;
+	}
+
+	void AvServerImpl::sendFrameToAllListeners()
+	{
+		for ( auto & listener : m_frameListeners )
+		{
+			sendFrameToListener( listener );
+		}
+	}
+
+	void AvServerImpl::sendFrameToListener( AvFrameListener::Client listener )
 	{
 		std::map<std::string, AvSharedTextureInfo::Reader> textureHandles;
 		AvVisuals_t visuals;
@@ -72,7 +93,8 @@ namespace aardvark
 			}
 		}
 
-		AvVisualFrame::Builder bldFrame( context.getResults().initFrame() );
+		auto reqNewFrame = listener.newFrameRequest();
+		auto bldFrame = reqNewFrame.initFrame();
 		bldFrame.setId( m_unNextFrame++ );
 
 		if ( !visuals.vecSceneGraphs.empty() )
@@ -99,7 +121,12 @@ namespace aardvark
 			}
 		}
 
-		return kj::READY_NOW;
+		auto promResult = reqNewFrame.send()
+		.then( [this]( AvFrameListener::NewFrameResults::Reader && result )
+		{
+		} );
+
+		m_eventTasks->add( std::move( promResult ) );
 	}
 
 	CAardvarkApp *AvServerImpl::findAppByName( const std::string & sAppName )
@@ -131,6 +158,8 @@ namespace aardvark
 					}
 				}
 			}
+
+			markFrameDirty();
 		}
 
 		return kj::READY_NOW;
@@ -198,6 +227,16 @@ namespace aardvark
 	}
 
 
+	void AvServerImpl::runFrame()
+	{
+		if ( m_frameDirty )
+		{
+			sendFrameToAllListeners();
+			m_frameDirty = false;
+		}
+	}
+
+
 	CServerThread::CServerThread()
 	{
 	}
@@ -253,6 +292,7 @@ namespace aardvark
 			} );
 
 			waitScope.poll();
+			pServer->runFrame();
 		}
 
 		pServer->clearApps();
