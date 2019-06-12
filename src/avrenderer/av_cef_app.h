@@ -5,6 +5,7 @@
 #pragma once
 
 #include "include/cef_app.h"
+#include "av_cef_handler.h"
 
 #include <thread>
 
@@ -20,8 +21,11 @@ class CAardvarkCefApp : public CefApp, public CefBrowserProcessHandler
 {
 public:
 	CAardvarkCefApp();
+	virtual ~CAardvarkCefApp();
 
 	void setApplication( IApplication *application ) { m_application = application; }
+
+	static CAardvarkCefApp* instance();
 
 	// CefApp methods:
 	virtual CefRefPtr<CefBrowserProcessHandler> GetBrowserProcessHandler() override
@@ -34,10 +38,16 @@ public:
 	virtual void OnContextInitialized() override;
 	virtual void OnBeforeCommandLineProcessing( const CefString& processType, CefRefPtr<CefCommandLine> commandLine ) override;
 
+	// Request that all existing browser windows close.
+	void CloseAllBrowsers( bool force_close );
+
+
 
 private:
 	IApplication *m_application = nullptr;
 	CefRefPtr<CefRenderProcessHandler> m_renderProcessHandler;
+
+	std::vector< CefRefPtr<CAardvarkCefHandler> > m_browsers;
 
 	// Include the default reference counting implementation.
 	IMPLEMENT_REFCOUNTING(CAardvarkCefApp);

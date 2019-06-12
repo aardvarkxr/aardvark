@@ -19,6 +19,10 @@
 namespace 
 {
 
+	CAardvarkCefApp* g_instance = NULL;
+
+
+
 // When using the Views framework this object provides the delegate
 // implementation for the CefWindow that hosts the Views-based browser.
 class SimpleWindowDelegate : public CefWindowDelegate 
@@ -62,9 +66,15 @@ private:
 
 CAardvarkCefApp::CAardvarkCefApp() 
 {
+	g_instance = this;
 }
 
-void CAardvarkCefApp::OnContextInitialized() 
+CAardvarkCefApp::~CAardvarkCefApp()
+{
+	g_instance = nullptr;
+}
+
+void CAardvarkCefApp::OnContextInitialized()
 {
 	CEF_REQUIRE_UI_THREAD();
 
@@ -81,20 +91,19 @@ void CAardvarkCefApp::OnContextInitialized()
 	const bool use_views = false;
 #endif
 
+	std::vector<std::string> vecPermissions = { "master" };
+
 	// CAardvarkCefHandler implements browser-level callbacks.
-	CefRefPtr<CAardvarkCefHandler> handler(new CAardvarkCefHandler(use_views, m_application ));
+	CefRefPtr<CAardvarkCefHandler> handler(new CAardvarkCefHandler(use_views, m_application, vecPermissions ));
+	m_browsers.push_back( handler );
 
 	// Specify CEF browser settings here.
 	CefBrowserSettings browser_settings;
 
-	std::string url;
-
 	// Check if a "--url=" value was provided via the command-line. If so, use
 	// that instead of the default URL.
-	url = command_line->GetSwitchValue("url");
-	if (url.empty())
-		url = "file:///E:/homedev/aardvark/data/webui/scenegraphtest.html";
-	//url = "http://google.com";
+	std::string url = "file:///E:/homedev/aardvark/data/webui/aardvark_master.html";
+	url = "file:///E:/homedev/aardvark/data/webui/scenegraphtest.html";
 
 	if (use_views) 
 	{
@@ -147,4 +156,25 @@ CefRefPtr<CefRenderProcessHandler> CAardvarkCefApp::GetRenderProcessHandler()
 		m_renderProcessHandler = newHandler;
 	}
 	return m_renderProcessHandler;
+}
+
+void CAardvarkCefApp::CloseAllBrowsers( bool forceClose )
+{
+	if ( !CefCurrentlyOn( TID_UI ) )
+	{
+		// Execute on the UI thread.
+//		CefPostTask( TID_UI, base::Bind( &CAardvarkCefApp::CloseAllBrowsers, this,
+//			forceClose ) );
+		return;
+	}
+
+	for ( auto browser : m_browsers )
+	{
+		browser->triggerClose( forceClose );
+	}
+}
+
+CAardvarkCefApp* CAardvarkCefApp::instance()
+{
+	return g_instance;
 }

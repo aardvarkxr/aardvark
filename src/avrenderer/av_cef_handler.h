@@ -23,11 +23,8 @@ class CAardvarkCefHandler : public CefClient,
 					  public CefRenderHandler
 {
 public:
-	explicit CAardvarkCefHandler(bool use_views, IApplication *application );
+	explicit CAardvarkCefHandler(bool use_views, IApplication *application, const std::vector<std::string> & vecPermissions );
 	~CAardvarkCefHandler();
-
-	// Provide access to the single global instance of this object.
-	static CAardvarkCefHandler* GetInstance();
 
 	// CefClient methods:
 	virtual CefRefPtr<CefDisplayHandler> GetDisplayHandler() override 
@@ -73,10 +70,9 @@ public:
 		const RectList& dirtyRects,
 		void* shared_handle ) override;
 
-	// Request that all existing browser windows close.
-	void CloseAllBrowsers(bool force_close);
-
 	bool IsClosing() const { return m_isClosing; }
+
+	void triggerClose( bool forceClose );
 
 	private:
 	// Platform-specific implementation.
@@ -89,25 +85,20 @@ public:
 	// True if the application is using the Views framework.
 	const bool m_useViews;
 
-	// List of existing browser windows. Only accessed on the CEF UI thread.
-	typedef std::list<CefRefPtr<CefBrowser>> BrowserList;
-	BrowserList m_browserList;
+	CefRefPtr<CefBrowser> m_browser;
 
 	bool m_isClosing;
 	IApplication *m_application = nullptr;
 
 	int m_width = 1024, m_height = 1024;
 
-	struct BrowserInfo_t
-	{
-		std::vector<std::string> m_apps;
-		void *m_sharedTexture = nullptr;
-	};
-	std::map<int, std::unique_ptr<BrowserInfo_t> > m_browserInfo;
+	std::vector<std::string> m_apps;
+	void *m_sharedTexture = nullptr;
 
-	void updateSceneGraphTextures( CAardvarkCefHandler::BrowserInfo_t & browserInfo );
+	void updateSceneGraphTextures();
 
 	std::unique_ptr< aardvark::CAardvarkClient > m_client;
+	std::vector<std::string> m_permissions;
 
 	// Include the default reference counting implementation.
 	IMPLEMENT_REFCOUNTING(CAardvarkCefHandler);

@@ -17,20 +17,14 @@
 #include "include/wrapper/cef_closure_task.h"
 #include "include/wrapper/cef_helpers.h"
 
-namespace {
-
-	CAardvarkCefHandler* g_instance = NULL;
-
-}  // namespace
-
-CAardvarkCefHandler::CAardvarkCefHandler(bool use_views, IApplication *application )
+CAardvarkCefHandler::CAardvarkCefHandler(bool use_views, IApplication *application, const std::vector<std::string> & permissions )
     : m_useViews(use_views), m_isClosing(false) 
 {
-	DCHECK(!g_instance);
-	g_instance = this;
 	m_application = application;
 	m_client = std::make_unique<aardvark::CAardvarkClient>();
 	m_client->Start();
+
+	m_permissions = permissions;
 
 	CefPostDelayedTask( TID_UI, base::Bind( &CAardvarkCefHandler::RunFrame, this ), 0 );
 }
@@ -38,13 +32,6 @@ CAardvarkCefHandler::CAardvarkCefHandler(bool use_views, IApplication *applicati
 CAardvarkCefHandler::~CAardvarkCefHandler() 
 {
 	m_client->Stop();
-	g_instance = NULL;
-}
-
-// static
-CAardvarkCefHandler* CAardvarkCefHandler::GetInstance() 
-{
-	return g_instance;
 }
 
 void CAardvarkCefHandler::OnTitleChange(CefRefPtr<CefBrowser> browser,
@@ -76,10 +63,7 @@ void CAardvarkCefHandler::OnAfterCreated(CefRefPtr<CefBrowser> browser)
 {
 	CEF_REQUIRE_UI_THREAD();
 
-	// Add to the list of existing browsers.
-	m_browserList.push_back(browser);
-
-	m_browserInfo.insert( std::pair( browser->GetIdentifier(), std::make_unique<BrowserInfo_t>() ) );
+	m_browser = browser;
 }
 
 bool CAardvarkCefHandler::DoClose(CefRefPtr<CefBrowser> browser) 
@@ -89,11 +73,9 @@ bool CAardvarkCefHandler::DoClose(CefRefPtr<CefBrowser> browser)
 	// Closing the main window requires special handling. See the DoClose()
 	// documentation in the CEF header for a detailed destription of this
 	// process.
-	if (m_browserList.size() == 1) 
-	{
-		// Set a flag to indicate that the window close should be allowed.
-		m_isClosing = true;
-	}
+
+	// Set a flag to indicate that the window close should be allowed.
+	m_isClosing = true;
 
 	// Allow the close. For windowed browsers this will result in the OS close
 	// event being sent.
@@ -104,26 +86,6 @@ void CAardvarkCefHandler::OnBeforeClose(CefRefPtr<CefBrowser> browser)
 {
 	CEF_REQUIRE_UI_THREAD();
 
-	// Remove from the list of existing browsers.
-	BrowserList::iterator bit = m_browserList.begin();
-	for (; bit != m_browserList.end(); ++bit) 
-	{
-		if ((*bit)->IsSame(browser)) 
-		{
-			m_browserList.erase(bit);
-			break;
-		}
-	}
-
-	m_browserInfo.erase( browser->GetIdentifier() );
-
-	if (m_browserList.empty()) 
-	{
-		if ( m_application )
-		{
-			m_application->allBrowsersClosed();
-		}
-	}
 }
 
 void CAardvarkCefHandler::OnLoadError(CefRefPtr<CefBrowser> browser,
@@ -145,27 +107,6 @@ void CAardvarkCefHandler::OnLoadError(CefRefPtr<CefBrowser> browser,
 		<< std::string(failedUrl) << " with error " << std::string(errorText)
 		<< " (" << errorCode << ").</h2></body></html>";
 	frame->LoadString(ss.str(), failedUrl);
-}
-
-void CAardvarkCefHandler::CloseAllBrowsers(bool force_close) 
-{
-	if (!CefCurrentlyOn(TID_UI)) 
-	{
-		// Execute on the UI thread.
-		CefPostTask(TID_UI, base::Bind(&CAardvarkCefHandler::CloseAllBrowsers, this,
-									force_close));
-		return;
-	}
-
-	if (m_browserList.empty())
-		return;
-
-	BrowserList::const_iterator it = m_browserList.begin();
-	for ( ; it != m_browserList.end(); ++it )
-	{
-		( *it )->GetHost()->CloseBrowser( force_close );
-
-	}
 }
 
 
@@ -195,9 +136,8 @@ void CAardvarkCefHandler::OnAcceleratedPaint( CefRefPtr<CefBrowser> browser,
 	const RectList& dirtyRects,
 	void* shared_handle )
 {
-	auto & browserInfo = *m_browserInfo[browser->GetIdentifier()];
-	browserInfo.m_sharedTexture = shared_handle;
-	updateSceneGraphTextures( browserInfo );
+	m_sharedTexture = shared_handle;
+	updateSceneGraphTextures();
 }
 
 
@@ -207,15 +147,13 @@ bool CAardvarkCefHandler::OnProcessMessageReceived( CefRefPtr<CefBrowser> browse
 {
 	if ( message->GetName() == "update_browser_app_names" )
 	{
-		BrowserInfo_t & browserInfo = *m_browserInfo[browser->GetIdentifier()];
-
-		browserInfo.m_apps.clear();
+		m_apps.clear();
 		auto nameList = message->GetArgumentList()->GetList( 0 );
 		for ( size_t n = 0; n < nameList->GetSize(); n++ )
 		{
-			browserInfo.m_apps.push_back( nameList->GetString( n ).ToString() );
+			m_apps.push_back( nameList->GetString( n ).ToString() );
 		}
-		updateSceneGraphTextures( browserInfo );
+		updateSceneGraphTextures();
 		return true;
 	}
 
@@ -223,27 +161,27 @@ bool CAardvarkCefHandler::OnProcessMessageReceived( CefRefPtr<CefBrowser> browse
 }
 
 
-void CAardvarkCefHandler::updateSceneGraphTextures( CAardvarkCefHandler::BrowserInfo_t & browserInfo )
+void CAardvarkCefHandler::updateSceneGraphTextures()
 {
-	if ( !browserInfo.m_sharedTexture )
+	if ( !m_sharedTexture )
 	{
 		// if we don't have a shared texture yet, there's nothing to update
 		return;
 	}
 
 	std::vector< const char *> namePointers;
-	for ( auto & appName : browserInfo.m_apps )
+	for ( auto & appName : m_apps )
 	{
 		namePointers.push_back( appName.c_str() );
 	}
 
 	if ( namePointers.empty() )
 	{
-		aardvark::avUpdateDxgiTextureForApps( &*m_client, nullptr, 0, m_width, m_height, browserInfo.m_sharedTexture, true );
+		aardvark::avUpdateDxgiTextureForApps( &*m_client, nullptr, 0, m_width, m_height, m_sharedTexture, true );
 	}
 	else
 	{
-		aardvark::avUpdateDxgiTextureForApps( &*m_client, &namePointers[0], (uint32_t)namePointers.size(), m_width, m_height, browserInfo.m_sharedTexture, true );
+		aardvark::avUpdateDxgiTextureForApps( &*m_client, &namePointers[0], (uint32_t)namePointers.size(), m_width, m_height, m_sharedTexture, true );
 	}
 }
 
@@ -252,4 +190,10 @@ void CAardvarkCefHandler::RunFrame()
 	m_client->WaitScope().poll();
 
 	CefPostDelayedTask( TID_UI, base::Bind( &CAardvarkCefHandler::RunFrame, this ), 11 );
+}
+
+
+void CAardvarkCefHandler::triggerClose( bool forceClose )
+{
+	m_browser->GetHost()->CloseBrowser( forceClose );
 }

@@ -1921,9 +1921,9 @@ public:
 
 	virtual void onWindowClose() override
 	{
-		if ( CAardvarkCefHandler::GetInstance() )
+		if ( CAardvarkCefApp::instance() )
 		{
-			CAardvarkCefHandler::GetInstance()->CloseAllBrowsers( true );
+			CAardvarkCefApp::instance()->CloseAllBrowsers( true );
 		}
 	}
 
