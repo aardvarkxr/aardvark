@@ -452,8 +452,6 @@ void CAardvarkAppObject::cleanup()
 	}
 	m_sceneContexts.clear();
 
-	m_appClient.destroyRequest().send().wait( m_handler->getClient()->WaitScope() );
-
 	m_appClient = nullptr;
 }
 
