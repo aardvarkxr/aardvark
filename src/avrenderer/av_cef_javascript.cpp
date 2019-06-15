@@ -178,7 +178,7 @@ bool CSceneContextObject::init()
 		EAvSceneGraphResult res = aardvark::avStartNode( m_context, nodeId, name.empty() ? nullptr : name.c_str(), eType );
 		if ( res != EAvSceneGraphResult::Success )
 		{
-			exception = "avStartNode failed";
+			exception = "avStartNode failed " + std::to_string( (int)res );
 		}
 		else
 		{
@@ -192,6 +192,7 @@ bool CSceneContextObject::init()
 	typeEnum->SetValue( "Transform",	CefV8Value::CreateInt( (int32_t)EAvSceneGraphNodeType::Transform ),	V8_PROPERTY_ATTRIBUTE_READONLY );
 	typeEnum->SetValue( "Model",		CefV8Value::CreateInt( (int32_t)EAvSceneGraphNodeType::Model ),		V8_PROPERTY_ATTRIBUTE_READONLY );
 	typeEnum->SetValue( "Panel",		CefV8Value::CreateInt( (int32_t)EAvSceneGraphNodeType::Panel ), V8_PROPERTY_ATTRIBUTE_READONLY );
+	typeEnum->SetValue( "Poker",		CefV8Value::CreateInt( (int32_t)EAvSceneGraphNodeType::Poker ), V8_PROPERTY_ATTRIBUTE_READONLY );
 	m_container->SetValue( "type", typeEnum, V8_PROPERTY_ATTRIBUTE_READONLY );
 
 	RegisterFunction( "finishNode", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )

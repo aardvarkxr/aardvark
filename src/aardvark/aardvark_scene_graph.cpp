@@ -248,6 +248,7 @@ namespace aardvark
 		case EAvSceneGraphNodeType::Transform: return AvNode::Type::TRANSFORM;
 		case EAvSceneGraphNodeType::Model: return AvNode::Type::MODEL;
 		case EAvSceneGraphNodeType::Panel: return AvNode::Type::PANEL;
+		case EAvSceneGraphNodeType::Poker: return AvNode::Type::POKER;
 
 		default: return AvNode::Type::INVALID;
 		}

@@ -2082,6 +2082,10 @@ public:
 			TraversePanel( node );
 			break;
 
+		case AvNode::Type::POKER:
+			TraversePoker( node );
+			break;
+
 		case AvNode::Type::INVALID:
 		default:
 			assert( false );
@@ -2276,7 +2280,11 @@ public:
 		}
 	}
 
-	
+	void TraversePoker( const AvNode::Reader & node )
+	{
+	}
+
+
 	void applyFrame( AvVisualFrame::Reader & newFrame )
 	{
 		camera.setPosition( { 0.0f, 0.0f, 1.0f } );
