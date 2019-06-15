@@ -372,7 +372,27 @@ bool CSceneContextObject::init()
 		EAvSceneGraphResult res = aardvark::avSetPanelTextureSource( m_context, std::string( arguments[0]->GetStringValue() ).c_str() );
 		if ( res != EAvSceneGraphResult::Success )
 		{
-			exception = "avSetModelUri failed " + std::to_string( (int)res );
+			exception = "avSetPanelTextureSource failed " + std::to_string( (int)res );
+		}
+	} );
+
+	RegisterFunction( "setInteractive", [this, handler = m_handler ]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 1 )
+		{
+			exception = "Invalid argument count";
+			return;
+		}
+		if ( !arguments[0]->IsBool() )
+		{
+			exception = "Invalid arguments";
+			return;
+		}
+
+		EAvSceneGraphResult res = aardvark::avSetPanelInteractive( m_context, arguments[0]->GetBoolValue() );
+		if ( res != EAvSceneGraphResult::Success )
+		{
+			exception = "avSetPanelInteractive failed " + std::to_string( (int)res );
 		}
 	} );
 

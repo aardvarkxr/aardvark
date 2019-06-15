@@ -15,6 +15,8 @@ add_executable(avrenderer
 	av_cef_handler.h
 	av_cef_javascript.cpp
 	av_cef_javascript.h
+	intersection_tester.cpp
+	intersection_tester.h
 
 	${SHADERS}
 	)

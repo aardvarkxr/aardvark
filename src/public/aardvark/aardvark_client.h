@@ -21,6 +21,17 @@ namespace aardvark
 		kj::WaitScope & WaitScope() { return m_pClient->getWaitScope(); }
 		void addToTasks( kj::Promise<void> && promRequest );
 
+		template <typename TRequest, typename TResult>
+		void addRequestToTasks( capnp::Request<TRequest, TResult> && req )
+		{
+			auto prom = req.send().then(
+				[]( TResult::Reader && results )
+			{
+			}
+			);
+			addToTasks( std::move( prom ) );
+		}
+
 		AvPokerHandler::Client getPokerHandler();
 		AvPanelHandler::Client getPanelHandler();
 

@@ -25,6 +25,7 @@ sceneContext.setOriginPath( "/user/hand/left" );
 
 		sceneContext.startNode( 3, "panel", EAvSceneGraphNodeType.Panel );
 		sceneContext.setTextureSource( "Fnord the App" ); 
+		sceneContext.setInteractive( true );
 
 		sceneContext.finishNode();
 	sceneContext.finishNode();
@@ -35,15 +36,15 @@ sceneContext.startNode( 11, "pokerorigin", EAvSceneGraphNodeType.Origin );
 sceneContext.setOriginPath( "/user/hand/right" );
 
 	sceneContext.startNode( 12, "pokerxform", EAvSceneGraphNodeType.Transform );
-	sceneContext.setScale( 0.1, 0.1, 0.1 );
+	sceneContext.setScale( 0.03, 0.03, 0.03 );
 
 		sceneContext.startNode( 13, "pokermodel", EAvSceneGraphNodeType.Model );
 		sceneContext.setModelUri( "file:///e:/homedev/aardvark/data/models/sphere/sphere.glb" );
 		sceneContext.finishNode();
 
-		sceneContext.startNode( 14, "poker", EAvSceneGraphNodeType.Poker );
-		sceneContext.finishNode();
+	sceneContext.finishNode();
 
+	sceneContext.startNode( 14, "poker", EAvSceneGraphNodeType.Poker );
 	sceneContext.finishNode();
 
 sceneContext.finishNode();

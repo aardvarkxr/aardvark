@@ -22,6 +22,7 @@
 #include "include/cef_sandbox_win.h"
 #include "av_cef_app.h"
 #include "av_cef_handler.h"
+#include "intersection_tester.h"
 
 #include <tools/capnprototools.h>
 
@@ -162,6 +163,7 @@ public:
 	float m_fThisFrameTime = 0;
 	std::vector<std::shared_ptr<vkglTF::Model>> m_vecModelsToRender;
 	std::set<uint64_t> setVisitedNodes;
+	CIntersectionTester m_intersections;
 
 	struct Textures {
 		vks::TextureCubeMap environmentCube;

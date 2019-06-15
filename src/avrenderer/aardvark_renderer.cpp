@@ -1751,6 +1751,7 @@ void VulkanExample::TraverseSceneGraphs( float fFrameTime )
 	setVisitedNodes.clear();
 	m_fThisFrameTime = fFrameTime;
 	m_vecModelsToRender.clear();
+	m_intersections.reset();
 	for ( auto & root : *m_roots )
 	{
 		TraverseSceneGraph( &*root );
@@ -2062,10 +2063,20 @@ void VulkanExample::TraversePanel( const AvNode::Reader & node )
 
 		m_vecModelsToRender.push_back( pData->model );
 	}
+
+	if ( node.getPropInteractive() )
+	{
+//	glm::mat4 matUniverseFromPoker = glm::inverse( GetCurrentNodeFromUniverse() );
+
+		m_intersections.addActivePanel( GetGlobalId( node ), GetCurrentNodeFromUniverse() );
+	}
 }
 
 void VulkanExample::TraversePoker( const AvNode::Reader & node )
 {
+	glm::mat4 matUniverseFromPoker = glm::inverse( GetCurrentNodeFromUniverse() );
+	glm::vec4 vPokerInUniverse = matUniverseFromPoker * glm::vec4( 0, 0, 0, 1.f );
+	m_intersections.addActivePoker( GetGlobalId( node ), vPokerInUniverse );
 }
 
 
@@ -2485,6 +2496,8 @@ void VulkanExample::render()
 	if ( camera.updated ) {
 		updateUniformBuffers();
 	}
+
+	m_intersections.updatePokerProximity( m_pClient );
 
 	// pump messages from RPC
 	m_pClient->WaitScope().poll();
