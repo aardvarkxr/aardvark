@@ -5,6 +5,7 @@ file(GLOB SHADERS "${AV_DATA}/shaders/*.vert" "${AV_DATA}/shaders/*.frag" "${AV_
 source_group("Shaders" FILES ${SHADERS})
 
 add_executable(avrenderer 
+	aardvark_renderer.cpp
 	aardvark_renderer.h
 	avrenderer_main.cpp
 	av_cef_app.cpp

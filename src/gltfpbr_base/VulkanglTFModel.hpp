@@ -34,7 +34,6 @@
 #pragma message ("ERROR constant already defined, undefining")
 #endif
 
-#define TINYGLTF_IMPLEMENTATION
 #define TINYGLTF_NO_STB_IMAGE_WRITE
 #define STB_IMAGE_IMPLEMENTATION
 #define STBI_MSC_SECURE_CRT

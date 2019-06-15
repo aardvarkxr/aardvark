@@ -14,6 +14,7 @@ add_library(gltfpbr_base STATIC
 	VulkanglTFModel.hpp
 	VulkanSwapChain.hpp
 	VulkanTexture.hpp
+	VulkanUtils.cpp
 	VulkanUtils.hpp
 
 	../thirdparty/imgui/imgui.cpp
