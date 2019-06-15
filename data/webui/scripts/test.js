@@ -17,21 +17,37 @@ console.log( "My app is named", myAppName );
 var sceneContext = myApp.startSceneContext();
 var EAvSceneGraphNodeType = sceneContext.type;
 
-sceneContext.startNode( 1, "origin", EAvSceneGraphNodeType.Origin );
-sceneContext.setOriginPath( "/user/hand/right" );
+sceneContext.startNode( 1, "panelorigin", EAvSceneGraphNodeType.Origin );
+sceneContext.setOriginPath( "/user/hand/left" );
 
 	sceneContext.startNode( 2, "xform", EAvSceneGraphNodeType.Transform );
-	sceneContext.setScale( 0.1, 0.1, 0.1 );
+	//sceneContext.setScale( 0.1, 0.1, 0.1 );
 
 		sceneContext.startNode( 3, "panel", EAvSceneGraphNodeType.Panel );
 		sceneContext.setTextureSource( "Fnord the App" ); 
-		//sceneContext.startNode( 3, "model", EAvSceneGraphNodeType.Model );
-		//sceneContext.setModelUri( "file:///d:/Downloads/gltf-sample-models-master/2.0/BoxAnimated/glTF-Binary/BoxAnimated.glb" );
-		//sceneContext.setModelUri( "file:///d:/homedev/aardvark/data/models/panel/panel.glb" );
 
 		sceneContext.finishNode();
 	sceneContext.finishNode();
 
 sceneContext.finishNode();
+
+sceneContext.startNode( 11, "pokerorigin", EAvSceneGraphNodeType.Origin );
+sceneContext.setOriginPath( "/user/hand/right" );
+
+	sceneContext.startNode( 12, "pokerxform", EAvSceneGraphNodeType.Transform );
+	sceneContext.setScale( 0.1, 0.1, 0.1 );
+
+		sceneContext.startNode( 13, "pokermodel", EAvSceneGraphNodeType.Model );
+		sceneContext.setModelUri( "file:///e:/homedev/aardvark/data/models/sphere/sphere.glb" );
+		sceneContext.finishNode();
+
+		sceneContext.startNode( 14, "poker", EAvSceneGraphNodeType.Poker );
+		sceneContext.finishNode();
+
+	sceneContext.finishNode();
+
+sceneContext.finishNode();
+
+
 sceneContext.finish();
 
