@@ -9,6 +9,8 @@
 // glTF format: https://github.com/KhronosGroup/glTF
 // tinyglTF loader: https://github.com/syoyo/tinygltf
 
+#include "aardvark_renderer.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -48,33 +50,8 @@
 #endif
 
 
-class AvFrameListenerImpl final : public AvFrameListener::Server
-{
-public:
-	AvFrameListenerImpl( std::function<void( AvVisualFrame::Reader )> fn )
-	{
-		m_fn = fn;
-	}
-
-	virtual ::kj::Promise<void> newFrame( NewFrameContext context ) override
-	{
-		m_fn( context.getParams().getFrame() );
-		return kj::READY_NOW;
-	}
-
-protected:
-
-private:
-	std::function<void( AvVisualFrame::Reader )> m_fn;
-};
-
-#include <aardvark/aardvark_apps.h>
-#include <aardvark/aardvark_server.h>
-#include <aardvark/aardvark_client.h>
-#include <aardvark/aardvark_scene_graph.h>
 
 #include <tools/pathtools.h>
-#include <tools/capnprototools.h>
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -121,152 +98,9 @@ void UpdateTransformable( std::shared_ptr<vkglTF::Transformable> pTransformable,
 	}
 }
 
-/*
-	PBR example main class
-*/
-class VulkanExample : public VulkanExampleBase, public IApplication
-{
-public:
-	struct Textures {
-		vks::TextureCubeMap environmentCube;
-		vks::Texture2D empty;
-		vks::Texture2D lutBrdf;
-		vks::TextureCubeMap irradianceCube;
-		vks::TextureCubeMap prefilteredCube;
-	} textures;
 
-	struct UniformBufferSet {
-		Buffer scene;
-		Buffer skybox;
-		Buffer params;
-		Buffer leftEye;
-		Buffer rightEye;
-	};
-
-	struct UBOMatrices {
-		glm::mat4 matProjectionFromView;
-		glm::mat4 matHmdFromStage;
-		glm::mat4 matViewFromHmd;
-		glm::vec3 camPos;
-	} shaderValuesScene, shaderValuesSkybox, shaderValuesLeftEye, shaderValuesRightEye;
-
-	struct shaderValuesParams {
-		glm::vec4 lightDir;
-		float exposure = 4.5f;
-		float gamma = 2.2f;
-		float prefilteredCubeMipLevels;
-		float scaleIBLAmbient = 1.0f;
-		float debugViewInputs = 1;
-		float debugViewEquation = 0;
-	} shaderValuesParams;
-
-	VkPipelineLayout pipelineLayout;
-
-	struct Pipelines {
-		VkPipeline skybox;
-		VkPipeline pbr;
-		VkPipeline pbrAlphaBlend;
-	} pipelines;
-
-	struct DescriptorSets {
-		vks::CDescriptorSet *scene;
-		vks::CDescriptorSet *skybox;
-		vks::CDescriptorSet *eye[2];
-	};
-	std::vector<DescriptorSets> descriptorSets;
-
-	enum class EEye
-	{
-		Left,
-		Right,
-		Mirror
-	};
-
-	std::vector<VkCommandBuffer> commandBuffers;
-	std::vector<UniformBufferSet> uniformBuffers;
-
-	std::vector<VkFence> waitFences;
-	std::vector<VkSemaphore> renderCompleteSemaphores;
-	std::vector<VkSemaphore> presentCompleteSemaphores;
-
-	aardvark::CServerThread m_serverThread;
-	kj::Own<aardvark::CAardvarkClient> m_pClient;
-	std::unordered_map < std::string, std::shared_ptr< vkglTF::Model > > m_mapModels;
-	vks::RenderTarget leftEyeRT;
-	vks::RenderTarget rightEyeRT;
-
-	uint32_t eyeWidth = 0;
-	uint32_t eyeHeight = 0;
-	glm::mat4 m_matProjection[2];
-	glm::mat4 m_matEye[2];
-	glm::mat4 m_matHmdFromStage;
-
-	const uint32_t renderAhead = 2;
-	uint32_t frameIndex = 0;
-
-	bool animate = true;
-
-	bool displayBackground = true;
-	
-	struct LightSource {
-		glm::vec3 color = glm::vec3(1.0f);
-		glm::vec3 rotation = glm::vec3(75.0f, 40.0f, 0.0f);
-	} lightSource;
-
-	UI *ui;
-
-#if defined(VK_USE_PLATFORM_ANDROID_KHR)
-	const std::string assetpath = "";
-#else
-	const std::string assetpath = std::string( VK_EXAMPLE_DATA_DIR ) + "/";
-#endif
-
-	bool rotateModel = false;
-	glm::vec3 modelrot = glm::vec3(0.0f);
-	glm::vec3 modelPos = glm::vec3(0.0f);
-
-	enum PBRWorkflows 
-	{
-		PBR_WORKFLOW_METALLIC_ROUGHNESS = 0, 
-		PBR_WORKFLOW_SPECULAR_GLOSINESS = 1, 
-		PBR_WORKFLOW_UNLIT = 2,
-	};
-
-	struct PushConstBlockMaterial {
-		glm::vec4 baseColorFactor;
-		glm::vec4 emissiveFactor;
-		glm::vec4 diffuseFactor;
-		glm::vec4 specularFactor;
-		float workflow;
-		int colorTextureSet;
-		int PhysicalDescriptorTextureSet;
-		int normalTextureSet;
-		int occlusionTextureSet;
-		int emissiveTextureSet;
-		float metallicFactor;
-		float roughnessFactor;
-		float alphaMask;
-		float alphaMaskCutoff;
-		float padding[2]; // the vertex shader push constants need to be 16 byte aligned
-	};
-
-	struct PushConstBlockVertex 
-	{
-		glm::vec4 uvScaleAndOffset;
-	};
-
-	std::map<std::string, std::string> environments;
-	std::string selectedEnvironment = "papermill";
-
-#if !defined(_WIN32)
-	std::map<std::string, std::string> scenes;
-	std::string selectedScene = "DamagedHelmet";
-#endif
-
-	int32_t debugViewInputs = 0;
-	int32_t debugViewEquation = 0;
-
-	VulkanExample() : VulkanExampleBase()
+	VulkanExample::VulkanExample() 
+		: VulkanExampleBase()
 	{
 		title = "Aardvark Renderer";
 #if defined(TINYGLTF_ENABLE_DRACO)
@@ -274,7 +108,7 @@ public:
 #endif
 	}
 
-	~VulkanExample() noexcept
+	VulkanExample::~VulkanExample() noexcept
 	{
 		m_pClient->Stop();
 		m_pClient = nullptr;
@@ -315,7 +149,7 @@ public:
 		delete ui;
 	}
 
-	void renderNode( std::shared_ptr<vkglTF::Model> pModel, std::shared_ptr<vkglTF::Node> node, uint32_t cbIndex, vkglTF::Material::AlphaMode alphaMode, EEye eEye ) 
+	void VulkanExample::renderNode( std::shared_ptr<vkglTF::Model> pModel, std::shared_ptr<vkglTF::Node> node, uint32_t cbIndex, vkglTF::Material::AlphaMode alphaMode, EEye eEye )
 	{
 		if (node->mesh) {
 			// Render mesh primitives
@@ -413,7 +247,7 @@ public:
 		}
 	}
 
-	void recordCommandBuffers( uint32_t cbIndex )
+	void VulkanExample::recordCommandBuffers( uint32_t cbIndex )
 	{
 		VkCommandBufferBeginInfo cmdBufferBeginInfo{};
 		cmdBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -428,7 +262,7 @@ public:
 		VK_CHECK_RESULT( vkEndCommandBuffer( currentCB ) );
 	}
 
-	void renderSceneToTarget( uint32_t cbIndex, vks::RenderTarget target, uint32_t targetWidth, uint32_t targetHeight, EEye eEye )
+	void VulkanExample::renderSceneToTarget( uint32_t cbIndex, vks::RenderTarget target, uint32_t targetWidth, uint32_t targetHeight, EEye eEye )
 	{
 		VkCommandBuffer currentCB = commandBuffers[cbIndex];
 
@@ -439,7 +273,7 @@ public:
 		target.transitionColorLayout( currentCB, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL );
 	}
 
-	void renderScene( uint32_t cbIndex, VkRenderPass targetRenderPass, VkFramebuffer targetFrameBuffer, uint32_t targetWidth, uint32_t targetHeight, EEye eEye )
+	void VulkanExample::renderScene( uint32_t cbIndex, VkRenderPass targetRenderPass, VkFramebuffer targetFrameBuffer, uint32_t targetWidth, uint32_t targetHeight, EEye eEye )
 	{
 
 		VkClearValue clearValues[3];
@@ -509,7 +343,7 @@ public:
 		vkCmdEndRenderPass( currentCB );
 	}
 
-	void recordCommandsForModels( VkCommandBuffer currentCB, uint32_t i, vkglTF::Material::AlphaMode eAlphaMode, EEye eEye )
+	void VulkanExample::recordCommandsForModels( VkCommandBuffer currentCB, uint32_t i, vkglTF::Material::AlphaMode eAlphaMode, EEye eEye )
 	{
 		for ( auto pModel : m_vecModelsToRender )
 		{
@@ -526,16 +360,8 @@ public:
 		}
 	}
 
-	//void loadScene(std::string filename)
-	//{
-	//	std::cout << "Loading scene from " << filename << std::endl;
-	//	models.scene.destroy(device);
-	//	models.scene.loadFromFile(filename, vulkanDevice, queue);
-	//	camera.setPosition({ 0.0f, 0.0f, 1.0f });
-	//	camera.setRotation({ 0.0f, 0.0f, 0.0f });
-	//}
 
-	void loadEnvironment(std::string filename)
+	void VulkanExample::loadEnvironment(std::string filename)
 	{
 		std::cout << "Loading environment from " << filename << std::endl;
 		if (textures.environmentCube.image) {
@@ -547,9 +373,7 @@ public:
 		generateCubemaps();
 	}
 
-	vkglTF::Model m_skybox;
-
-	void loadAssets()
+	void VulkanExample::loadAssets()
 	{
 #if defined(VK_USE_PLATFORM_ANDROID_KHR)
 		tinygltf::asset_manager = androidApp->activity->assetManager;
@@ -597,7 +421,7 @@ public:
 
 	}
 
-	void UpdateDescriptorForScene( VkDescriptorSet descriptorSet, VkBuffer buffer, uint32_t bufferSize )
+	void VulkanExample::UpdateDescriptorForScene( VkDescriptorSet descriptorSet, VkBuffer buffer, uint32_t bufferSize )
 	{
 		VkDescriptorBufferInfo bufferInfo = { buffer, 0, bufferSize };
 
@@ -641,7 +465,7 @@ public:
 		vkUpdateDescriptorSets( device, static_cast<uint32_t>( writeDescriptorSets.size() ), writeDescriptorSets.data(), 0, NULL );
 	}
 
-	void setupDescriptors()
+	void VulkanExample::setupDescriptors()
 	{
 
 		/*
@@ -724,7 +548,7 @@ public:
 		}
 	}
 
-	void setupDescriptorSetsForModel( std::shared_ptr<vkglTF::Model> pModel )
+	void VulkanExample::setupDescriptorSetsForModel( std::shared_ptr<vkglTF::Model> pModel )
 	{
 		for ( auto &material : pModel->materials ) 
 		{
@@ -788,7 +612,7 @@ public:
 		}
 	}
 
-	void preparePipelines()
+	void VulkanExample::preparePipelines()
 	{
 		VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateCI{};
 		inputAssemblyStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -939,7 +763,7 @@ public:
 	/*
 		Generate a BRDF integration map storing roughness/NdotV as a look-up-table
 	*/
-	void generateBRDFLUT()
+	void VulkanExample::generateBRDFLUT()
 	{
 		auto tStart = std::chrono::high_resolution_clock::now();
 
@@ -1203,7 +1027,7 @@ public:
 		- Irradiance cube map
 		- Pre-filterd environment cubemap
 	*/
-	void generateCubemaps()
+	void VulkanExample::generateCubemaps()
 	{
 		enum Target { IRRADIANCE = 0, PREFILTEREDENV = 1 };
 
@@ -1766,7 +1590,7 @@ public:
 	/* 
 		Prepare and initialize uniform buffers containing shader parameters
 	*/
-	void prepareUniformBuffers()
+	void VulkanExample::prepareUniformBuffers()
 	{
 		for (auto &uniformBuffer : uniformBuffers) {
 			uniformBuffer.scene.create(vulkanDevice, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, sizeof(shaderValuesScene));
@@ -1778,7 +1602,7 @@ public:
 		updateUniformBuffers();
 	}
 
-	void updateUniformBuffers()
+	void VulkanExample::updateUniformBuffers()
 	{
 		// Scene
 		shaderValuesScene.matProjectionFromView = camera.matrices.perspective;
@@ -1820,7 +1644,7 @@ public:
 		shaderValuesRightEye.camPos = glm::vec3( 1, 0, 0 );
 	}
 
-	void updateParams()
+	void VulkanExample::updateParams()
 	{
 		shaderValuesParams.lightDir = glm::vec4(
 			sin(glm::radians(lightSource.rotation.x)) * cos(glm::radians(lightSource.rotation.y)),
@@ -1830,16 +1654,14 @@ public:
 		shaderValuesParams.debugViewInputs = 1;
 	}
 
-	void windowResized()
+	void VulkanExample::windowResized()
 	{
 		vkDeviceWaitIdle(device);
 		updateUniformBuffers();
 		updateOverlay();
 	}
 
-	kj::Own< AvFrameListenerImpl > m_frameListener;
-
-	void prepare()
+	void VulkanExample::prepare()
 	{
 		VulkanExampleBase::prepare();
 
@@ -1913,7 +1735,7 @@ public:
 		prepared = true;
 	}
 
-	virtual void onWindowClose() override
+	void VulkanExample::onWindowClose() 
 	{
 		if ( CAardvarkCefApp::instance() )
 		{
@@ -1921,35 +1743,15 @@ public:
 		}
 	}
 
-	virtual void allBrowsersClosed()
+	void VulkanExample::allBrowsersClosed()
 	{
 		wantToQuit = true;
 	}
 
-	struct SgRoot_t
-	{
-		std::unordered_map<uint32_t, size_t> mapIdToIndex;
-		tools::OwnCapnp<AvNodeRoot> root = nullptr;
-		std::vector<AvNode::Reader> nodes;
-		uint32_t appId;
-	};
-	std::unique_ptr< std::vector<std::unique_ptr< SgRoot_t > > > m_roots, m_nextRoots;
-	bool inFrameTraversal = false;
-	bool m_updateDescriptors = false;
-
-	std::unique_ptr< std::map< uint32_t, tools::OwnCapnp< AvSharedTextureInfo > > > m_sharedTextureInfo, m_nextSharedTextureInfo;
 
 
-	struct SgNodeData_t
-	{
-		std::shared_ptr<vkglTF::Model> model;
-		vkglTF::Transformable modelParent;
 
-		void *lastDxgiHandle = nullptr;
-		std::shared_ptr< vks::Texture2D > overrideTexture;
-	};
-
-	void TraverseSceneGraphs( float fFrameTime )
+	void VulkanExample::TraverseSceneGraphs( float fFrameTime )
 	{
 		if ( !m_roots )
 			return;
@@ -1966,16 +1768,7 @@ public:
 		inFrameTraversal = false;
 	}
 
-	const SgRoot_t *m_pCurrentRoot = nullptr;
-	std::vector<glm::mat4> m_vecTransforms;
-	bool m_bThisNodePushedTransform = false;
-	std::unordered_map<std::string, glm::mat4> m_mapOriginFromUniverseTransforms;
-	std::unordered_map<uint64_t, std::unique_ptr<SgNodeData_t>> m_mapNodeData;
-	float m_fThisFrameTime = 0;
-	std::vector<std::shared_ptr<vkglTF::Model>> m_vecModelsToRender;
-	std::set<uint64_t> setVisitedNodes;
-
-	uint64_t GetGlobalId( const AvNode::Reader & node )
+	uint64_t VulkanExample::GetGlobalId( const AvNode::Reader & node )
 	{
 		if ( m_pCurrentRoot )
 		{
@@ -1987,7 +1780,7 @@ public:
 		}
 	}
 
-	SgNodeData_t *GetNodeData( const AvNode::Reader & node )
+	VulkanExample::SgNodeData_t *VulkanExample::GetNodeData( const AvNode::Reader & node )
 	{
 		// TODO(Joe): Figure out when to delete these
 		uint64_t globalId = GetGlobalId( node );
@@ -2009,7 +1802,7 @@ public:
 	}
 
 
-	void TraverseSceneGraph( const SgRoot_t *root )
+	void VulkanExample::TraverseSceneGraph( const SgRoot_t *root )
 	{
 		if ( !root->nodes.empty() )
 		{
@@ -2022,7 +1815,7 @@ public:
 		}
 	}
 
-	void ConcatTransform( const glm::mat4 & matParentFromNode )
+	void VulkanExample::ConcatTransform( const glm::mat4 & matParentFromNode )
 	{
 		if ( m_vecTransforms.empty() )
 		{
@@ -2037,20 +1830,20 @@ public:
 		m_bThisNodePushedTransform = true;
 	}
 
-	void PushTransform( const glm::mat4 & matUniverseFromNode )
+	void VulkanExample::PushTransform( const glm::mat4 & matUniverseFromNode )
 	{
 		m_vecTransforms.push_back( matUniverseFromNode );
 		m_bThisNodePushedTransform = true;
 	}
 
-	const glm::mat4 & GetCurrentNodeFromUniverse()
+	const glm::mat4 & VulkanExample::GetCurrentNodeFromUniverse()
 	{
 		assert( !m_vecTransforms.empty() );
 		return m_vecTransforms.back();
 	}
 
 
-	void TraverseNode( const AvNode::Reader & node )
+	void VulkanExample::TraverseNode( const AvNode::Reader & node )
 	{
 		uint64_t globalId = GetGlobalId( node );
 		if ( setVisitedNodes.find( globalId ) != setVisitedNodes.end() )
@@ -2106,7 +1899,7 @@ public:
 		}
 	}
 
-	void TraverseOrigin( const AvNode::Reader & node )
+	void VulkanExample::TraverseOrigin( const AvNode::Reader & node )
 	{
 		auto iOrigin = m_mapOriginFromUniverseTransforms.find( node.getPropOrigin() );
 		if ( iOrigin != m_mapOriginFromUniverseTransforms.end() )
@@ -2115,7 +1908,7 @@ public:
 		}
 	}
 
-	void TraverseTransform( const AvNode::Reader & node )
+	void VulkanExample::TraverseTransform( const AvNode::Reader & node )
 	{
 		if ( node.hasPropTransform() )
 		{
@@ -2161,7 +1954,7 @@ public:
 		}
 	}
 
-	void TraverseModel( const AvNode::Reader & node )
+	void VulkanExample::TraverseModel( const AvNode::Reader & node )
 	{
 		SgNodeData_t *pData = GetNodeData( node );
 		assert( pData );
@@ -2194,7 +1987,7 @@ public:
 		}
 	}
 
-	void TraversePanel( const AvNode::Reader & node )
+	void VulkanExample::TraversePanel( const AvNode::Reader & node )
 	{
 		SgNodeData_t *pData = GetNodeData( node );
 		assert( pData );
@@ -2280,12 +2073,12 @@ public:
 		}
 	}
 
-	void TraversePoker( const AvNode::Reader & node )
+	void VulkanExample::TraversePoker( const AvNode::Reader & node )
 	{
 	}
 
 
-	void applyFrame( AvVisualFrame::Reader & newFrame )
+	void VulkanExample::applyFrame( AvVisualFrame::Reader & newFrame )
 	{
 		camera.setPosition( { 0.0f, 0.0f, 1.0f } );
 		camera.setRotation( { 0.0f, 0.0f, 0.0f } );
@@ -2318,7 +2111,7 @@ public:
 		m_nextSharedTextureInfo = std::move( nextTextures );
 	}
 
-	std::shared_ptr<vkglTF::Model> findOrLoadModel( AvModelSource::Client & source )
+	std::shared_ptr<vkglTF::Model> VulkanExample::findOrLoadModel( AvModelSource::Client & source )
 	{
 		auto resUri = source.uriRequest().send().wait( m_pClient->WaitScope() );
 		if ( !resUri.hasUri() || resUri.getUri().size() == 0 )
@@ -2347,7 +2140,7 @@ public:
 	/*
 		Update ImGui user interface
 	*/
-	void updateOverlay()
+	void VulkanExample::updateOverlay()
 	{
 		ImGuiIO& io = ImGui::GetIO();
 
@@ -2530,7 +2323,7 @@ public:
 	//-----------------------------------------------------------------------------
 // Purpose: Gets a Matrix Projection Eye with respect to nEye.
 //-----------------------------------------------------------------------------
-	glm::mat4 GetHMDMatrixProjectionEye( vr::Hmd_Eye nEye )
+	glm::mat4 VulkanExample::GetHMDMatrixProjectionEye( vr::Hmd_Eye nEye )
 	{
 		if ( !vr::VRSystem() )
 			return glm::mat4( 1.f );
@@ -2549,7 +2342,7 @@ public:
 	//-----------------------------------------------------------------------------
 	// Purpose: Gets an HMDMatrixPoseEye with respect to nEye.
 	//-----------------------------------------------------------------------------
-	glm::mat4 GetHMDMatrixPoseEye( vr::Hmd_Eye nEye )
+	glm::mat4 VulkanExample::GetHMDMatrixPoseEye( vr::Hmd_Eye nEye )
 	{
 		if ( !vr::VRSystem() )
 			return glm::mat4( 1.f );
@@ -2565,16 +2358,7 @@ public:
 		return glm::inverse( matrixObj );
 	}
 
-	//-----------------------------------------------------------------------------
-	// Purpose: Gets a Current View Projection Matrix with respect to nEye,
-	//          which may be an Eye_Left or an Eye_Right.
-	//-----------------------------------------------------------------------------
-	glm::mat4 GetCurrentViewProjectionMatrix( vr::Hmd_Eye nEye )
-	{
-		glm::mat4 matMVP = m_matProjection[nEye] * m_matEye[nEye] * m_matHmdFromStage;
-	}
-
-	glm::mat4 glmMatFromVrMat( const vr::HmdMatrix34_t & mat )
+	glm::mat4 VulkanExample::glmMatFromVrMat( const vr::HmdMatrix34_t & mat )
 	{
 		//glm::mat4 r;
 		glm::mat4 matrixObj (
@@ -2594,7 +2378,7 @@ public:
 		return matrixObj;
 	}
 
-	virtual void render()
+	void VulkanExample::render()
 	{
 		if (!prepared) 
 		{
@@ -2718,7 +2502,7 @@ public:
 		//CefDoMessageLoopWork();
 	}
 
-	void submitEyeBuffers()
+	void VulkanExample::submitEyeBuffers()
 	{
 		// Submit to OpenVR
 		vr::VRTextureBounds_t bounds;
@@ -2747,7 +2531,6 @@ public:
 		vr::VRCompositor()->Submit( vr::Eye_Right, &texture, &bounds );
 
 	}
-};
 
 VulkanExample *vulkanExample;
 
