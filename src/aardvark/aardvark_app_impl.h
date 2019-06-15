@@ -7,6 +7,8 @@
 #include <tools/capnprototools.h>
 #include <string>
 #include <vector>
+#include <unordered_map>
+
 namespace aardvark
 {
 	class AvServerImpl;
@@ -26,17 +28,22 @@ namespace aardvark
 		bool hasSharedTextureInfo() const { return m_sharedTexture.isSet();  }
 		void setSharedTextureInfo( AvSharedTextureInfo::Reader sharedTextureInfo );
 		AvSharedTextureInfo::Reader getSharedTextureInfo();
+		kj::Maybe < AvPokerHandler::Client > findPokerHandler( uint32_t pokerLocalId );
+		kj::Maybe < AvPanelHandler::Client > findPanelHandler( uint32_t pokerLocalId );
 
 		void gatherVisuals( AvVisuals_t & visuals );
 
 		virtual ::kj::Promise<void> destroy( DestroyContext context ) override;
 		virtual ::kj::Promise<void> name( NameContext context ) override;
 		virtual ::kj::Promise<void> updateSceneGraph( UpdateSceneGraphContext context ) override;
+		virtual ::kj::Promise<void> pushMouseEvent( PushMouseEventContext context )override;
 	private:
 		std::string m_sName;
 		std::vector< AvApp::Client > m_vecClients;
 		tools::OwnCapnp<AvNodeRoot> m_sceneGraph = nullptr;
 		tools::OwnCapnp<AvSharedTextureInfo> m_sharedTexture = nullptr;
+		std::unordered_map<uint32_t, AvPokerHandler::Client> m_pokerHandlers;
+		std::unordered_map<uint32_t, AvPanelHandler::Client> m_panelHandlers;
 		AvServerImpl *m_pParentServer = nullptr;
 		uint32_t m_id = 0;
 	};

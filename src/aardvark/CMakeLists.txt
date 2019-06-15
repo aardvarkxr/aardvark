@@ -13,6 +13,10 @@ add_library(aardvark STATIC
 	aardvark_frames.cpp
 	aardvark_model_source_impl.cpp
 	aardvark_model_source_impl.h
+	aardvark_panel_handler.cpp
+	aardvark_panel_handler.h
+	aardvark_poker_handler.cpp
+	aardvark_poker_handler.h
 	aardvark_scene_graph.cpp
 	aardvark_handle.cpp
 	aardvark_handle.h

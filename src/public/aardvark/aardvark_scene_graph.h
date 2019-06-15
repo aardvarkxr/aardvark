@@ -17,6 +17,8 @@ namespace aardvark
 		IdInUse = 5,
 		InvalidNodeType = 6,
 		RequestFailed = 7,
+		NoEvents = 8,
+		InsufficientBufferSize = 9,
 	};
 
 	enum class EAvSceneGraphNodeType
@@ -26,13 +28,14 @@ namespace aardvark
 		Transform = 2,	// Sets the transform for its children
 		Model = 3,		// Draws a model
 		Panel = 4,		// Draws a quad in the world with some texture
+		Poker = 5,		// Interacts with panels on touch
 	};
 
 	struct AvSceneContextStruct;
 	typedef AvSceneContextStruct *AvSceneContext;
 
-	EAvSceneGraphResult avStartSceneContext( AvSceneContext *pContext );
-	EAvSceneGraphResult avFinishSceneContext( AvSceneContext context, AvApp::Client *pApp, aardvark::CAardvarkClient *pClient );
+	EAvSceneGraphResult avStartSceneContext( aardvark::CAardvarkClient *pClient, AvSceneContext *pContext );
+	EAvSceneGraphResult avFinishSceneContext( AvSceneContext context, AvApp::Client *pApp );
 
 	// Starts a node as a child of the current node
 	EAvSceneGraphResult avStartNode( AvSceneContext context, uint32_t id, const char *pchName, EAvSceneGraphNodeType type );
@@ -56,6 +59,39 @@ namespace aardvark
 
 	// valid for Panel nodes
 	EAvSceneGraphResult avSetPanelTextureSource( AvSceneContext context, const char *pchSourceName );
+	EAvSceneGraphResult avSetPanelInteractive( AvSceneContext context, bool interactive );
+
+	// valid for poker nodes
+	struct PokerProximity_t
+	{
+		uint64_t panelId; // used for uniquely identifying panels and generating mouse events
+		float x, y; // 0..1 from upper left of panel
+		float distance; // distance from the panel in meters
+	};
+	EAvSceneGraphResult avGetNextPokerProximity( aardvark::CAardvarkClient *pClient, uint32_t pokerNodeId, PokerProximity_t *pokerProximities, uint32_t pokerProximityCount, uint32_t *usedPokerProximityCount );
+
+	enum class EPanelMouseEventType
+	{
+		Unknown = 0,
+		Down = 1,
+		Up = 2,
+		Enter = 3,
+		Leave = 4,
+		Move = 5,
+	};
+
+	struct PanelMouseEvent_t
+	{
+		EPanelMouseEventType type;
+		uint64_t panelId;
+		uint64_t pokerId;
+		float x, y;
+	};
+
+	EAvSceneGraphResult avGetNextMouseEvent( aardvark::CAardvarkClient *pClient, uint32_t panelNodeId, PanelMouseEvent_t *mouseEvent );
+	EAvSceneGraphResult avPushMouseEventFromPoker( aardvark::CAardvarkClient *pClient,
+		AvApp::Client *pApp, uint32_t pokerNodeId,
+		uint64_t panelId, EPanelMouseEventType type, float x, float y );
 
 	// tells the renderer what DXGI to use for a scene graph app
 	EAvSceneGraphResult avUpdateDxgiTextureForApps( aardvark::CAardvarkClient *pClient, const char **pchAppName, uint32_t unNameCount, uint32_t unWidth, uint32_t unHeight, void *pvSharedTextureHandle, bool bInvertY );

@@ -5,16 +5,20 @@
 #include <cassert>
 
 #include "aardvark.capnp.h"
+#include "aardvark_panel_handler.h"
+#include "aardvark_poker_handler.h"
 #include <capnp/message.h>
+#include <tools/capnprototools.h>
 
 namespace aardvark
 {
+
 	class CSceneGraphContext
 	{
 	public:
 
-		EAvSceneGraphResult avStartSceneContext();
-		EAvSceneGraphResult avFinishSceneContext( AvApp::Client *pApp, aardvark::CAardvarkClient *pClient );
+		EAvSceneGraphResult avStartSceneContext( aardvark::CAardvarkClient *pClient );
+		EAvSceneGraphResult avFinishSceneContext( AvApp::Client *pApp );
 
 		// Starts a node as a child of the current node
 		EAvSceneGraphResult avStartNode( uint32_t id, const char *pchName, EAvSceneGraphNodeType type );
@@ -38,6 +42,7 @@ namespace aardvark
 
 		// valid for Panel nodes
 		EAvSceneGraphResult avSetPanelTextureSource( const char *pchSourceName );
+		EAvSceneGraphResult avSetPanelInteractive( bool interactive );
 
 		AvNode::Builder & CurrentNode();
 	private:
@@ -62,16 +67,17 @@ namespace aardvark
 		std::set<uint32_t> m_usedIds;
 		::capnp::MallocMessageBuilder m_message;
 		AvNode::Builder m_currentNodeBuilder = nullptr;
+		aardvark::CAardvarkClient *m_pClient = nullptr;
 	};
 
 	// -----------------------------------------------------------------------------------------------
 	// Creating new contexts
 	// -----------------------------------------------------------------------------------------------
-	EAvSceneGraphResult avStartSceneContext( AvSceneContext *pContext )
+	EAvSceneGraphResult avStartSceneContext( aardvark::CAardvarkClient *pClient, AvSceneContext *pContext )
 	{
 		CSceneGraphContext *pNewContext = new CSceneGraphContext;
 		*pContext = (AvSceneContextStruct *)pNewContext;
-		EAvSceneGraphResult res = pNewContext->avStartSceneContext();
+		EAvSceneGraphResult res = pNewContext->avStartSceneContext( pClient );
 		if ( res != EAvSceneGraphResult::Success )
 			delete pNewContext;
 		return res;
@@ -80,12 +86,12 @@ namespace aardvark
 	// -----------------------------------------------------------------------------------------------
 	// Finishing contexts
 	// -----------------------------------------------------------------------------------------------
-	EAvSceneGraphResult avFinishSceneContext( AvSceneContext context, AvApp::Client *pApp, aardvark::CAardvarkClient *pClient )
+	EAvSceneGraphResult avFinishSceneContext( AvSceneContext context, AvApp::Client *pApp )
 	{
 		CSceneGraphContext *pContext = (CSceneGraphContext *)context;
 		if ( !pContext )
 			return EAvSceneGraphResult::InvalidContext;
-		EAvSceneGraphResult res = pContext->avFinishSceneContext( pApp, pClient );
+		EAvSceneGraphResult res = pContext->avFinishSceneContext( pApp );
 		delete pContext;
 		return res;
 	}
@@ -172,17 +178,28 @@ namespace aardvark
 			return EAvSceneGraphResult::InvalidContext;
 	}
 
+	EAvSceneGraphResult avSetPanelInteractive( AvSceneContext context, bool interactive )
+	{
+		CSceneGraphContext *pContext = (CSceneGraphContext *)context;
+		if ( pContext )
+			return pContext->avSetPanelInteractive( interactive );
+		else
+			return EAvSceneGraphResult::InvalidContext;
+	}
+
 	// -------------------------- CSceneGraphContext implementation ------------------------------------
 
-	EAvSceneGraphResult CSceneGraphContext::avStartSceneContext()
+	EAvSceneGraphResult CSceneGraphContext::avStartSceneContext( aardvark::CAardvarkClient *pClient )
 	{
+		m_pClient = pClient;
+
 		// make a root node with the Id 0
 		EAvSceneGraphResult res = avStartNode( 0, "root", EAvSceneGraphNodeType::Container );
 
 		return res;
 	}
 
-	EAvSceneGraphResult CSceneGraphContext::avFinishSceneContext( AvApp::Client *pApp, aardvark::CAardvarkClient *pClient )
+	EAvSceneGraphResult CSceneGraphContext::avFinishSceneContext( AvApp::Client *pApp )
 	{
 		if ( m_vecBuilders.size() != 1 )
 		{
@@ -205,10 +222,13 @@ namespace aardvark
 			rootBuilder[unNodeIndex].adoptNode( std::move( m_vecFinishedNodes[unReversedNodeIndex] ) );
 		}
 
+		root.setHandlerPoker( m_pClient->getPokerHandler() );
+		root.setHandlerPanel( m_pClient->getPanelHandler() );
+
 		auto reqUpdateSceneGraph = pApp->updateSceneGraphRequest();
 		reqUpdateSceneGraph.setRoot( root );
 
-		auto resUpdateSceneGraph = reqUpdateSceneGraph.send().wait( pClient->WaitScope() );
+		auto resUpdateSceneGraph = reqUpdateSceneGraph.send().wait( m_pClient->WaitScope() );
 		if ( resUpdateSceneGraph.getSuccess() )
 		{
 			return EAvSceneGraphResult::RequestFailed;
@@ -362,13 +382,24 @@ namespace aardvark
 		return EAvSceneGraphResult::Success;
 	}
 
+	EAvSceneGraphResult CSceneGraphContext::avSetPanelInteractive( bool interactive )
+	{
+		if ( CurrentNode().getType() != AvNode::Type::PANEL )
+			return EAvSceneGraphResult::InvalidNodeType;
+		CurrentNode().setPropInteractive( interactive );
+		return EAvSceneGraphResult::Success;
+	}
+
 	AvNode::Builder & CSceneGraphContext::CurrentNode()
 	{
 		return m_currentNodeBuilder;
 	}
 
 	// tells the renderer what DXGI to use for a scene graph node
-	EAvSceneGraphResult avUpdateDxgiTextureForApps( aardvark::CAardvarkClient *pClient, const char **pchAppName, uint32_t unNameCount, uint32_t unWidth, uint32_t unHeight, void *pvSharedTextureHandle, bool bInvertY )
+	EAvSceneGraphResult avUpdateDxgiTextureForApps( aardvark::CAardvarkClient *pClient, 
+		const char **pchAppName, uint32_t unNameCount, 
+		uint32_t unWidth, uint32_t unHeight, 
+		void *pvSharedTextureHandle, bool bInvertY )
 	{
 		auto reqUpdate = pClient->Server().updateDxgiTextureForAppsRequest();
 		if ( unNameCount )
@@ -394,6 +425,75 @@ namespace aardvark
 			// nothing to do when the update happens
 		} );
 		pClient->addToTasks( std::move( promUpdate ) );
+		return EAvSceneGraphResult::Success;
+	}
+
+	EAvSceneGraphResult avGetNextPokerProximity( aardvark::CAardvarkClient *pClient,
+		uint32_t pokerNodeId, 
+		PokerProximity_t *pokerProximities, uint32_t pokerProximityCount, 
+		uint32_t *usedPokerProximityCount )
+	{
+		KJ_IF_MAYBE( pokerHandler, pClient->getPokerHandlerServer() )
+		{
+			return (*pokerHandler)->avGetNextPokerProximity( pokerNodeId, pokerProximities, pokerProximityCount, usedPokerProximityCount );
+		}
+		else
+		{
+				return EAvSceneGraphResult::NoEvents;
+		}
+	}
+
+	EAvSceneGraphResult avGetNextMouseEvent( aardvark::CAardvarkClient *pClient, uint32_t panelNodeId, PanelMouseEvent_t *mouseEvent )
+	{
+		KJ_IF_MAYBE( panelHandler, pClient->getPanelHandlerServer() )
+		{
+			return ( *panelHandler )->avGetNextMouseEvent( panelNodeId, mouseEvent );
+		}
+		else
+		{
+			return EAvSceneGraphResult::NoEvents;
+		}
+	}
+
+	EAvSceneGraphResult avPushMouseEventFromPoker( aardvark::CAardvarkClient *pClient, 
+		AvApp::Client *pApp, uint32_t pokerNodeId,
+		uint64_t panelId, EPanelMouseEventType type, float x, float y )
+	{
+		auto reqPushEvent = pApp->pushMouseEventRequest();
+		reqPushEvent.setPokerNodeId( pokerNodeId );
+		AvPanelMouseEvent::Builder bldEvent = reqPushEvent.initEvent();
+		bldEvent.setPanelId( panelId );
+		bldEvent.setX( x );
+		bldEvent.setY( y );
+		switch ( type )
+		{
+		case EPanelMouseEventType::Down:
+			bldEvent.setType( AvPanelMouseEvent::Type::DOWN );
+			break;
+		case EPanelMouseEventType::Up:
+			bldEvent.setType( AvPanelMouseEvent::Type::UP );
+			break;
+		case EPanelMouseEventType::Enter:
+			bldEvent.setType( AvPanelMouseEvent::Type::ENTER );
+			break;
+		case EPanelMouseEventType::Leave:
+			bldEvent.setType( AvPanelMouseEvent::Type::LEAVE );
+			break;
+		case EPanelMouseEventType::Move:
+			bldEvent.setType( AvPanelMouseEvent::Type::MOVE );
+			break;
+
+		default:
+			return EAvSceneGraphResult::InvalidParameter;
+		}
+
+		auto promPushEvent = reqPushEvent.send()
+			.then( []( AvApp::PushMouseEventResults::Reader && result )
+		{
+			// nothing to do when the update happens
+		} );
+		pClient->addToTasks( std::move( promPushEvent ) );
+
 		return EAvSceneGraphResult::Success;
 	}
 

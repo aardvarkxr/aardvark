@@ -19,6 +19,7 @@ namespace aardvark
 	{
 		auto server = kj::heap<CAardvarkApp>( context.getParams().getName(), this );
 		auto& serverRef = *server;
+
 		AvApp::Client capability = kj::mv( server );
 
 		context.getResults().setApp( capability );
@@ -121,12 +122,7 @@ namespace aardvark
 			}
 		}
 
-		auto promResult = reqNewFrame.send()
-		.then( [this]( AvFrameListener::NewFrameResults::Reader && result )
-		{
-		} );
-
-		m_eventTasks->add( std::move( promResult ) );
+		addRequestToTasks( std::move( reqNewFrame ) );
 	}
 
 	CAardvarkApp *AvServerImpl::findAppByName( const std::string & sAppName )
@@ -164,6 +160,24 @@ namespace aardvark
 
 		return kj::READY_NOW;
 	}
+
+	::kj::Promise<void> AvServerImpl::pushPokerProximity( PushPokerProximityContext context )
+	{
+		uint64_t pokerGlobalId = context.getParams().getPokerId();
+		KJ_IF_MAYBE( handler, findPokerHandler( pokerGlobalId ) )
+		{
+			auto req = handler->updatePanelProximityRequest();
+			req.setPokerId( (uint32_t)( 0xFFFFFFFF & pokerGlobalId ) );
+			req.setProximity( context.getParams().getProximity() );
+			addRequestToTasks( std::move( req ) );
+		}
+		else
+		{
+			// if the poker or the app has gone away, just drop the request on the floor.
+		}
+		return kj::READY_NOW;
+	}
+
 
 	CAardvarkModelSource *AvServerImpl::findOrCreateSource( const std::string & sUri )
 	{
@@ -236,6 +250,50 @@ namespace aardvark
 		}
 	}
 
+	kj::Maybe<CAardvarkApp&> AvServerImpl::findApp( uint32_t appId )
+	{
+		for ( auto app : m_vecApps )
+		{
+			if ( app->getId() == appId )
+			{
+				return app;
+			}
+		}
+		return nullptr;
+	}
+
+	kj::Maybe < AvPokerHandler::Client > AvServerImpl::findPokerHandler( uint64_t pokerGlobalId )
+	{
+		uint32_t appId = (uint32_t)( pokerGlobalId >> 32 );
+		uint32_t pokerLocalId = (uint32_t) ( 0xFFFFFFFF & pokerGlobalId );
+		KJ_IF_MAYBE( app, findApp( appId ) )
+		{
+			return app->findPokerHandler( pokerLocalId );
+		}
+		else
+		{
+			return nullptr;
+		}
+	}
+
+	kj::Maybe < AvPanelHandler::Client > AvServerImpl::findPanelHandler( uint64_t panelGlobalId )
+	{
+		uint32_t appId = (uint32_t)( panelGlobalId >> 32 );
+		uint32_t panelLocalId = (uint32_t)( 0xFFFFFFFF & panelGlobalId );
+		KJ_IF_MAYBE( app, findApp( appId ) )
+		{
+			return app->findPanelHandler( panelLocalId );
+		}
+		else
+		{
+		return nullptr;
+		}
+	}
+
+	void AvServerImpl::addToTasks( kj::Promise<void> && promRequest )
+	{
+		m_eventTasks->add( std::move( promRequest ) );
+	}
 
 	CServerThread::CServerThread()
 	{

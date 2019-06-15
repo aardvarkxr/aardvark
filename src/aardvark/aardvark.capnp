@@ -90,6 +90,42 @@ interface AvFrameListener
 	newFrame @0 (frame: AvVisualFrame) -> (  );
 }
 
+struct AvPanelProximity
+{
+	panelId @0: UInt64;
+	x @1: Float32;
+	y @2: Float32;
+	distance @3: Float32;
+}
+
+interface AvPokerHandler
+{
+	updatePanelProximity @0 ( pokerId: UInt32, proximity: List( AvPanelProximity ) ) -> ();
+}
+
+struct AvPanelMouseEvent
+{
+	enum Type
+	{
+		down @0;
+		up @1;
+		enter @2;
+		leave @3;
+		move @4;
+	}
+
+	type @0: Type;
+	panelId @1: UInt64;
+	pokerId @2: UInt64;
+	x @3: Float32;
+	y @4: Float32;
+}
+
+interface AvPanelHandler
+{
+	mouseEvent @0 ( panelId: UInt32, event: AvPanelMouseEvent ) -> ();
+}
+
 struct AvNode
 {
 	enum Type
@@ -100,7 +136,8 @@ struct AvNode
 		origin @2;			# Sets the origin path
 		transform @3;		# Contains a transform
 		model @4;			# Contains a model URI
-		panel @5;			# Contains a shared texture handle
+		panel @5;			# Contains: propInteractive, propTextureSource
+		poker @6;			# has no properties
 	}
 
 	id @0: UInt32;
@@ -114,6 +151,7 @@ struct AvNode
 	propTransform @6: AvTransform;	# transform
 	propModelUri @7: Text;			# model
 	propTextureSource @8: Text;		# panel
+	propInteractive @9: Bool;		# panel
 }
 
 struct AvNodeWrapper
@@ -125,6 +163,8 @@ struct AvNodeRoot
 {
 	nodes @0 : List( AvNodeWrapper );
 	sourceId @1 : UInt32;
+	handlerPoker @2: AvPokerHandler;
+	handlerPanel @3: AvPanelHandler;
 }
 
 interface AvServer
@@ -132,7 +172,16 @@ interface AvServer
 	createApp @0 ( name: Text ) -> ( app: AvApp );
 	listenForFrames @1 ( listener: AvFrameListener ) -> ();
 	getModelSource @2 ( uri: Text ) -> ( success: Bool, source: AvModelSource );
-	updateDxgiTextureForApps @3 ( appNames: List( Text ), sharedTextureInfo: AvSharedTextureInfo ) -> ( success: Bool );
+	updateDxgiTextureForApps @3 
+	( 
+		appNames: List( Text ), 
+		sharedTextureInfo: AvSharedTextureInfo 
+	) -> ( success: Bool );
+	pushPokerProximity @4 
+	(
+		pokerId : UInt64,
+		proximity: List( AvPanelProximity )
+	) -> ();
 }
 
 interface AvApp
@@ -142,6 +191,7 @@ interface AvApp
 	destroy @1 () -> ( success: Bool );
 
 	updateSceneGraph @2 (root: AvNodeRoot ) -> ( success: Bool );
+	pushMouseEvent @3 ( pokerNodeId: UInt32, event: AvPanelMouseEvent ) -> ();
 }
 
 

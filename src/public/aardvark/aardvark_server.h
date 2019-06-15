@@ -19,11 +19,30 @@ namespace aardvark
 		virtual ::kj::Promise<void> listenForFrames( ListenForFramesContext context ) override;
 		virtual ::kj::Promise<void> getModelSource( GetModelSourceContext context ) override;
 		virtual ::kj::Promise<void> updateDxgiTextureForApps( UpdateDxgiTextureForAppsContext context ) override;
+		virtual ::kj::Promise<void> pushPokerProximity( PushPokerProximityContext context ) override;
 		virtual void taskFailed( kj::Exception&& exception ) override;
 
 		void removeApp( CAardvarkApp *pApp );
 		void markFrameDirty() { m_frameDirty = true;  }
 		void runFrame();
+
+		void addToTasks( kj::Promise<void> && promRequest );
+		
+		template <typename TRequest, typename TResult>
+		void addRequestToTasks( capnp::Request<TRequest, TResult> && req )
+		{
+			auto prom = req.send().then( 
+				[]( TResult::Reader && results ) 
+			{
+			} 
+			);
+			addToTasks( std::move( prom ) );
+		}
+
+		kj::Maybe<CAardvarkApp&> findApp( uint32_t appId );
+		kj::Maybe<AvPokerHandler::Client> findPokerHandler( uint64_t pokerGlobalId );
+		kj::Maybe<AvPanelHandler::Client> findPanelHandler( uint64_t panelGlobalId );
+
 	protected:
 		void sendFrameToAllListeners();
 		void sendFrameToListener( AvFrameListener::Client listener );

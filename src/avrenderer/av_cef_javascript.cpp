@@ -423,7 +423,7 @@ bool CAardvarkAppObject::init()
 		}
 
 		AvSceneContext context;
-		if ( aardvark::EAvSceneGraphResult::Success != aardvark::avStartSceneContext( &context ) )
+		if ( aardvark::EAvSceneGraphResult::Success != aardvark::avStartSceneContext( m_handler->getClient(), &context ) )
 		{
 			exception = "Failed to start context";
 			return;
@@ -458,7 +458,7 @@ void CAardvarkAppObject::cleanup()
 
 void CAardvarkAppObject::finishSceneContext( CSceneContextObject *contextObject )
 {
-	avFinishSceneContext( contextObject->getContext(), &m_appClient, m_handler->getClient() );
+	avFinishSceneContext( contextObject->getContext(), &m_appClient );
 
 	for ( auto iEntry = m_sceneContexts.begin(); iEntry != m_sceneContexts.end(); iEntry++ )
 	{
