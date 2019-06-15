@@ -2066,16 +2066,16 @@ void VulkanExample::TraversePanel( const AvNode::Reader & node )
 
 	if ( node.getPropInteractive() )
 	{
-//	glm::mat4 matUniverseFromPoker = glm::inverse( GetCurrentNodeFromUniverse() );
+		glm::mat4 matUniverseFromPoker = glm::inverse( GetCurrentNodeFromUniverse() );
 
-		m_intersections.addActivePanel( GetGlobalId( node ), GetCurrentNodeFromUniverse() );
+		m_intersections.addActivePanel( GetGlobalId( node ), matUniverseFromPoker );
 	}
 }
 
 void VulkanExample::TraversePoker( const AvNode::Reader & node )
 {
-	glm::mat4 matUniverseFromPoker = glm::inverse( GetCurrentNodeFromUniverse() );
-	glm::vec4 vPokerInUniverse = matUniverseFromPoker * glm::vec4( 0, 0, 0, 1.f );
+//	glm::mat4 matUniverseFromPoker = glm::inverse( GetCurrentNodeFromUniverse() );
+	glm::vec4 vPokerInUniverse = GetCurrentNodeFromUniverse() * glm::vec4( 0, 0, 0, 1.f );
 	m_intersections.addActivePoker( GetGlobalId( node ), vPokerInUniverse );
 }
 
