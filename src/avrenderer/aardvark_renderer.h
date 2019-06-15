@@ -53,6 +53,116 @@ private:
 class VulkanExample : public VulkanExampleBase, public IApplication
 {
 public:
+	enum class EEye
+	{
+		Left,
+		Right,
+		Mirror
+	};
+
+	VulkanExample();
+	~VulkanExample() noexcept;
+
+	void renderNode( std::shared_ptr<vkglTF::Model> pModel, std::shared_ptr<vkglTF::Node> node, uint32_t cbIndex, vkglTF::Material::AlphaMode alphaMode, EEye eEye );
+
+	void recordCommandBuffers( uint32_t cbIndex );
+	void renderSceneToTarget( uint32_t cbIndex, vks::RenderTarget target, uint32_t targetWidth, uint32_t targetHeight, EEye eEye );
+
+	void renderScene( uint32_t cbIndex, VkRenderPass targetRenderPass, VkFramebuffer targetFrameBuffer, uint32_t targetWidth, uint32_t targetHeight, EEye eEye );
+
+	void recordCommandsForModels( VkCommandBuffer currentCB, uint32_t i, vkglTF::Material::AlphaMode eAlphaMode, EEye eEye );
+	void loadEnvironment( std::string filename );
+
+	vkglTF::Model m_skybox;
+
+	void loadAssets();
+	void UpdateDescriptorForScene( VkDescriptorSet descriptorSet, VkBuffer buffer, uint32_t bufferSize );
+	void setupDescriptors();
+	void setupDescriptorSetsForModel( std::shared_ptr<vkglTF::Model> pModel );
+	void preparePipelines();
+	void generateBRDFLUT();
+	void generateCubemaps();
+	void prepareUniformBuffers();
+	void updateUniformBuffers();
+	void updateParams();
+	void windowResized();
+
+	kj::Own< AvFrameListenerImpl > m_frameListener;
+
+	void prepare();
+
+	virtual void onWindowClose() override;
+	virtual void allBrowsersClosed() override;
+
+	void TraverseSceneGraphs( float fFrameTime );
+
+	uint64_t GetGlobalId( const AvNode::Reader & node );
+
+
+
+	void ConcatTransform( const glm::mat4 & matParentFromNode );
+
+	void PushTransform( const glm::mat4 & matUniverseFromNode );
+	const glm::mat4 & GetCurrentNodeFromUniverse();
+
+	void TraverseNode( const AvNode::Reader & node );
+	void TraverseOrigin( const AvNode::Reader & node );
+	void TraverseTransform( const AvNode::Reader & node );
+	void TraverseModel( const AvNode::Reader & node );
+	void TraversePanel( const AvNode::Reader & node );
+	void TraversePoker( const AvNode::Reader & node );
+
+	void applyFrame( AvVisualFrame::Reader & newFrame );
+	std::shared_ptr<vkglTF::Model> findOrLoadModel( AvModelSource::Client & source );
+
+	void updateOverlay();
+
+	glm::mat4 GetHMDMatrixProjectionEye( vr::Hmd_Eye nEye );
+
+	glm::mat4 glmMatFromVrMat( const vr::HmdMatrix34_t & mat );
+	glm::mat4 GetHMDMatrixPoseEye( vr::Hmd_Eye nEye );
+
+	virtual void render();
+
+	void submitEyeBuffers();
+
+	struct SgRoot_t
+	{
+		std::unordered_map<uint32_t, size_t> mapIdToIndex;
+		tools::OwnCapnp<AvNodeRoot> root = nullptr;
+		std::vector<AvNode::Reader> nodes;
+		uint32_t appId;
+	};
+
+	struct SgNodeData_t
+	{
+		std::shared_ptr<vkglTF::Model> model;
+		vkglTF::Transformable modelParent;
+
+		void *lastDxgiHandle = nullptr;
+		std::shared_ptr< vks::Texture2D > overrideTexture;
+	};
+
+	SgNodeData_t *GetNodeData( const AvNode::Reader & node );
+
+	void TraverseSceneGraph( const SgRoot_t *root );
+
+	std::unique_ptr< std::vector<std::unique_ptr< SgRoot_t > > > m_roots, m_nextRoots;
+	bool inFrameTraversal = false;
+	bool m_updateDescriptors = false;
+
+	std::unique_ptr< std::map< uint32_t, tools::OwnCapnp< AvSharedTextureInfo > > > m_sharedTextureInfo, m_nextSharedTextureInfo;
+
+
+	const SgRoot_t *m_pCurrentRoot = nullptr;
+	std::vector<glm::mat4> m_vecTransforms;
+	bool m_bThisNodePushedTransform = false;
+	std::unordered_map<std::string, glm::mat4> m_mapOriginFromUniverseTransforms;
+	std::unordered_map<uint64_t, std::unique_ptr<SgNodeData_t>> m_mapNodeData;
+	float m_fThisFrameTime = 0;
+	std::vector<std::shared_ptr<vkglTF::Model>> m_vecModelsToRender;
+	std::set<uint64_t> setVisitedNodes;
+
 	struct Textures {
 		vks::TextureCubeMap environmentCube;
 		vks::Texture2D empty;
@@ -101,12 +211,6 @@ public:
 	};
 	std::vector<DescriptorSets> descriptorSets;
 
-	enum class EEye
-	{
-		Left,
-		Right,
-		Mirror
-	};
 
 	std::vector<VkCommandBuffer> commandBuffers;
 	std::vector<UniformBufferSet> uniformBuffers;
@@ -158,7 +262,7 @@ public:
 		PBR_WORKFLOW_UNLIT = 2,
 	};
 
-	struct PushConstBlockMaterial 
+	struct PushConstBlockMaterial
 	{
 		glm::vec4 baseColorFactor;
 		glm::vec4 emissiveFactor;
@@ -188,105 +292,5 @@ public:
 	int32_t debugViewInputs = 0;
 	int32_t debugViewEquation = 0;
 
-	VulkanExample();
-	~VulkanExample() noexcept;
-
-	void renderNode( std::shared_ptr<vkglTF::Model> pModel, std::shared_ptr<vkglTF::Node> node, uint32_t cbIndex, vkglTF::Material::AlphaMode alphaMode, EEye eEye );
-
-	void recordCommandBuffers( uint32_t cbIndex );
-	void renderSceneToTarget( uint32_t cbIndex, vks::RenderTarget target, uint32_t targetWidth, uint32_t targetHeight, EEye eEye );
-
-	void renderScene( uint32_t cbIndex, VkRenderPass targetRenderPass, VkFramebuffer targetFrameBuffer, uint32_t targetWidth, uint32_t targetHeight, EEye eEye );
-
-	void recordCommandsForModels( VkCommandBuffer currentCB, uint32_t i, vkglTF::Material::AlphaMode eAlphaMode, EEye eEye );
-	void loadEnvironment( std::string filename );
-
-	vkglTF::Model m_skybox;
-
-	void loadAssets();
-	void UpdateDescriptorForScene( VkDescriptorSet descriptorSet, VkBuffer buffer, uint32_t bufferSize );
-	void setupDescriptors();
-	void setupDescriptorSetsForModel( std::shared_ptr<vkglTF::Model> pModel );
-	void preparePipelines();
-	void generateBRDFLUT();
-	void generateCubemaps();
-	void prepareUniformBuffers();
-	void updateUniformBuffers();
-	void updateParams();
-	void windowResized();
-
-	kj::Own< AvFrameListenerImpl > m_frameListener;
-
-	void prepare();
-
-	virtual void onWindowClose() override;
-	virtual void allBrowsersClosed() override;
-
-	struct SgRoot_t
-	{
-		std::unordered_map<uint32_t, size_t> mapIdToIndex;
-		tools::OwnCapnp<AvNodeRoot> root = nullptr;
-		std::vector<AvNode::Reader> nodes;
-		uint32_t appId;
-	};
-	std::unique_ptr< std::vector<std::unique_ptr< SgRoot_t > > > m_roots, m_nextRoots;
-	bool inFrameTraversal = false;
-	bool m_updateDescriptors = false;
-
-	std::unique_ptr< std::map< uint32_t, tools::OwnCapnp< AvSharedTextureInfo > > > m_sharedTextureInfo, m_nextSharedTextureInfo;
-
-
-	struct SgNodeData_t
-	{
-		std::shared_ptr<vkglTF::Model> model;
-		vkglTF::Transformable modelParent;
-
-		void *lastDxgiHandle = nullptr;
-		std::shared_ptr< vks::Texture2D > overrideTexture;
-	};
-
-	void TraverseSceneGraphs( float fFrameTime );
-
-	const SgRoot_t *m_pCurrentRoot = nullptr;
-	std::vector<glm::mat4> m_vecTransforms;
-	bool m_bThisNodePushedTransform = false;
-	std::unordered_map<std::string, glm::mat4> m_mapOriginFromUniverseTransforms;
-	std::unordered_map<uint64_t, std::unique_ptr<SgNodeData_t>> m_mapNodeData;
-	float m_fThisFrameTime = 0;
-	std::vector<std::shared_ptr<vkglTF::Model>> m_vecModelsToRender;
-	std::set<uint64_t> setVisitedNodes;
-
-	uint64_t GetGlobalId( const AvNode::Reader & node );
-
-	SgNodeData_t *GetNodeData( const AvNode::Reader & node );
-
-
-	void TraverseSceneGraph( const SgRoot_t *root );
-
-	void ConcatTransform( const glm::mat4 & matParentFromNode );
-
-	void PushTransform( const glm::mat4 & matUniverseFromNode );
-	const glm::mat4 & GetCurrentNodeFromUniverse();
-
-	void TraverseNode( const AvNode::Reader & node );
-	void TraverseOrigin( const AvNode::Reader & node );
-	void TraverseTransform( const AvNode::Reader & node );
-	void TraverseModel( const AvNode::Reader & node );
-	void TraversePanel( const AvNode::Reader & node );
-	void TraversePoker( const AvNode::Reader & node );
-
-	void applyFrame( AvVisualFrame::Reader & newFrame );
-	std::shared_ptr<vkglTF::Model> findOrLoadModel( AvModelSource::Client & source );
-
-	void updateOverlay();
-
-	glm::mat4 GetHMDMatrixProjectionEye( vr::Hmd_Eye nEye );
-
-	glm::mat4 glmMatFromVrMat( const vr::HmdMatrix34_t & mat );
-	glm::mat4 GetHMDMatrixPoseEye( vr::Hmd_Eye nEye );
-
-	virtual void render();
-
-	void submitEyeBuffers();
 
 };
