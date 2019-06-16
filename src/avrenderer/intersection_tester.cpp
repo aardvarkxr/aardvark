@@ -41,12 +41,20 @@ void CIntersectionTester::updatePokerProximity( aardvark::CAardvarkClient *clien
 
 			// TODO: Add some kind of filtering for proximity
 
+			float u = positionOnPanel.x + 0.5f;
+			float v = -positionOnPanel.z + 0.5f;
+			float dist = positionOnPanel.y;
+
 			prox[n].setPanelId( panel.globalPanelId );
 			prox[n].setX( positionOnPanel.x );
 			prox[n].setY( positionOnPanel.y );
 			prox[n].setDistance( positionOnPanel.z );
 
-			//printf( "%llu vs %llu: %g, %g, %g\n", poker.globalPokerId, panel.globalPanelId, positionOnPanel.x, positionOnPanel.y, positionOnPanel.z );
+			//printf( "%llu vs %llu: %2.5f, %2.5f, %2.5f --> %2.5f, %2.5f, %2.5f\n", 
+			//	poker.globalPokerId, panel.globalPanelId, 
+			//	positionOnPanel.x, positionOnPanel.y, positionOnPanel.z,
+			//	u, v, dist
+			//);
 			n++;
 		}
 
