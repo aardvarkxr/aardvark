@@ -75,13 +75,6 @@ CAardvarkApp::CAardvarkApp( const std::string & sName, AvServerImpl *pParentServ
 	return kj::READY_NOW;
 }
 
-::kj::Promise<void> CAardvarkApp::listenForPokerProximity( ListenForPokerProximityContext context )
-{
-	m_pokerHandler.clear();
-	m_pokerHandler.push_back( context.getParams().getListener() );
-	return kj::READY_NOW;
-}
-
 void CAardvarkApp::gatherVisuals( AvVisuals_t & visuals )
 {
 	if ( m_sceneGraph.hasNodes() )
@@ -107,22 +100,15 @@ AvSharedTextureInfo::Reader CAardvarkApp::getSharedTextureInfo()
 
 kj::Maybe < AvPokerHandler::Client > CAardvarkApp::findPokerHandler( uint32_t pokerLocalId )
 {
-	if( !m_pokerHandler.empty() )
+	auto i = m_pokerHandlers.find( pokerLocalId );
+	if ( i == m_pokerHandlers.end() )
 	{
-		return m_pokerHandler.front();
+		return nullptr;
 	}
 	else
 	{
-		auto i = m_pokerHandlers.find( pokerLocalId );
-		if ( i == m_pokerHandlers.end() )
-		{
-			return nullptr;
-		}
-		else
-		{
-			return i->second;
-		}
-	 }
+		return i->second;
+	}
 }
 
 kj::Maybe < AvPanelHandler::Client > CAardvarkApp::findPanelHandler( uint32_t panelLocalId )

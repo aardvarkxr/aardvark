@@ -192,7 +192,6 @@ interface AvApp
 
 	updateSceneGraph @2 (root: AvNodeRoot ) -> ( success: Bool );
 	pushMouseEvent @3 ( pokerNodeId: UInt32, event: AvPanelMouseEvent ) -> ();
-	listenForPokerProximity @4 ( listener: AvPokerHandler ) -> ();
 }
 
 

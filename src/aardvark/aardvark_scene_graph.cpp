@@ -235,9 +235,6 @@ namespace aardvark
 		}
 		else
 		{
-			//auto reqSetHandler = pApp->listenForPokerProximityRequest();
-			//reqSetHandler.setListener( m_pClient->getPokerHandler() );
-			//reqSetHandler.send().wait( m_pClient->WaitScope() );
 			return EAvSceneGraphResult::Success;
 		}
 	}

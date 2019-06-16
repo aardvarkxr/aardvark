@@ -520,6 +520,8 @@ void CAardvarkAppObject::runFrame()
 		assert( result != EAvSceneGraphResult::InsufficientBufferSize );
 		if ( result == EAvSceneGraphResult::Success )
 		{
+			m_handler->getContext()->Enter();
+
 			CefRefPtr< CefV8Value > list = CefV8Value::CreateArray( (int)usedCount );
 			for ( uint32_t n = 0; n < usedCount; n++ )
 			{
@@ -540,8 +542,9 @@ void CAardvarkAppObject::runFrame()
 				list->SetValue( n, prox );
 			}
 
-			iHandler.second->ExecuteFunctionWithContext( m_handler->getContext(),
-				nullptr, CefV8ValueList{ list } );
+			iHandler.second->ExecuteFunction( nullptr, CefV8ValueList{ list } );
+
+			m_handler->getContext()->Exit();
 		}
 	}
 }
@@ -784,6 +787,8 @@ void CAardvarkRenderProcessHandler::runFrame()
 	{
 		m_aardvarkObject->runFrame();
 	}
+
+	m_client->WaitScope().poll();
 
 	CefPostDelayedTask( TID_RENDERER, base::Bind( &CAardvarkRenderProcessHandler::runFrame, this ), 10 );
 }

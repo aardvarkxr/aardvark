@@ -12,7 +12,6 @@ var counter = 1;
 
 function proximityUpdate( proxArray )
 {
-	var oElem = docu
 	var oElem = document.getElementById( 'stuff' );
 	oElem.innerHTML = "Coords "
 		+ proxArray[0].x + ", "
