@@ -37,6 +37,7 @@ namespace aardvark
 		virtual ::kj::Promise<void> name( NameContext context ) override;
 		virtual ::kj::Promise<void> updateSceneGraph( UpdateSceneGraphContext context ) override;
 		virtual ::kj::Promise<void> pushMouseEvent( PushMouseEventContext context )override;
+		virtual ::kj::Promise<void> listenForPokerProximity( ListenForPokerProximityContext context ) override;
 	private:
 		std::string m_sName;
 		std::vector< AvApp::Client > m_vecClients;
@@ -44,6 +45,7 @@ namespace aardvark
 		tools::OwnCapnp<AvSharedTextureInfo> m_sharedTexture = nullptr;
 		std::unordered_map<uint32_t, AvPokerHandler::Client> m_pokerHandlers;
 		std::unordered_map<uint32_t, AvPanelHandler::Client> m_panelHandlers;
+		std::list<AvPokerHandler::Client> m_pokerHandler;
 		AvServerImpl *m_pParentServer = nullptr;
 		uint32_t m_id = 0;
 	};

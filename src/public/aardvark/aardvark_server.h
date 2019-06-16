@@ -31,12 +31,16 @@ namespace aardvark
 		template <typename TRequest, typename TResult>
 		void addRequestToTasks( capnp::Request<TRequest, TResult> && req )
 		{
-			auto prom = req.send().then( 
-				[]( TResult::Reader && results ) 
+			auto prom = req.send().then(
+				[]( TResult::Reader && results )
 			{
-			} 
+			},
+				[]( kj::Exception&& exception )
+			{
+
+			}
 			);
-			addToTasks( std::move( prom ) );
+			addToTasks( std::move( prom.eagerlyEvaluate( nullptr ) ) );
 		}
 
 		kj::Maybe<CAardvarkApp&> findApp( uint32_t appId );

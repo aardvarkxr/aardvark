@@ -229,11 +229,15 @@ namespace aardvark
 		reqUpdateSceneGraph.setRoot( root );
 
 		auto resUpdateSceneGraph = reqUpdateSceneGraph.send().wait( m_pClient->WaitScope() );
-		if ( resUpdateSceneGraph.getSuccess() )
+		if ( !resUpdateSceneGraph.getSuccess() )
 		{
 			return EAvSceneGraphResult::RequestFailed;
 		}
+		else
 		{
+			//auto reqSetHandler = pApp->listenForPokerProximityRequest();
+			//reqSetHandler.setListener( m_pClient->getPokerHandler() );
+			//reqSetHandler.send().wait( m_pClient->WaitScope() );
 			return EAvSceneGraphResult::Success;
 		}
 	}
@@ -440,7 +444,7 @@ namespace aardvark
 		}
 		else
 		{
-				return EAvSceneGraphResult::NoEvents;
+			return EAvSceneGraphResult::NoEvents;
 		}
 	}
 

@@ -15,6 +15,8 @@ namespace aardvark
 	{
 		typedef std::vector< tools::OwnCapnp<AvPanelProximity> > ProximityList;
 	public:
+		virtual ~AvPokerHandlerImpl() {}
+
 		virtual ::kj::Promise<void> updatePanelProximity( UpdatePanelProximityContext context ) override;
 
 		EAvSceneGraphResult avGetNextPokerProximity( uint32_t pokerNodeId,

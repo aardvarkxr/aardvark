@@ -35,9 +35,12 @@ public:
 
 	aardvark::CAardvarkClient *getClient() { return &*m_client; }
 	CefRefPtr<CefBrowser> getBrowser() { return m_browser;  }
+	CefRefPtr<CefV8Context> getContext() { return m_context; }
 
 	void updateAppNamesForBrowser();
 	bool hasPermission( const std::string & permission );
+
+	void runFrame();
 private:
 
 	std::unique_ptr<aardvark::CAardvarkClient> m_client;

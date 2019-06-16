@@ -7,6 +7,10 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <set>
+#include <unordered_map>
+#include <include/base/cef_bind.h>
+#include <include/wrapper/cef_closure_task.h>
+#include <include/wrapper/cef_helpers.h>
 
 using aardvark::AvSceneContext;
 using aardvark::EAvSceneGraphResult;
@@ -88,15 +92,17 @@ public:
 	virtual bool init() override;
 	virtual void cleanup() override;
 
-	void finishSceneContext( CSceneContextObject *contextObject );
-	void updateNodeIdsForThisTexture( const std::vector<uint32_t> vecNewNodeIds );
+	aardvark::EAvSceneGraphResult  finishSceneContext( CSceneContextObject *contextObject );
 	const std::string & getName() const { return m_name; }
+	void runFrame();
+
 private:
 	AvApp::Client m_appClient;
 	CAardvarkRenderProcessHandler *m_handler = nullptr;
 	std::string m_name;
 	std::list<std::unique_ptr<CSceneContextObject>> m_sceneContexts;
 	std::set<uint32_t> m_nodeIdsThatNeedThisTexture;
+	std::unordered_map< uint32_t, CefRefPtr< CefV8Value > > m_pokerHandlers;
 };
 
 
@@ -150,7 +156,11 @@ bool CSceneContextObject::init()
 			return;
 		}
 
-		parentApp->finishSceneContext( this );
+		aardvark::EAvSceneGraphResult result = parentApp->finishSceneContext( this );
+		if ( result != aardvark::EAvSceneGraphResult::Success )
+		{
+			exception = "avFinishSceneContext failed " + std::to_string( (int)result );
+		}
 	} );
 
 	RegisterFunction( "startNode", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
@@ -462,6 +472,29 @@ bool CAardvarkAppObject::init()
 
 	} );
 
+	RegisterFunction( "registerPokerHandler", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 2 )
+		{
+			exception = "Invalid arguments";
+			return;
+		}
+
+		if ( !arguments[0]->IsUInt() )
+		{
+			exception = "first argument must be a poker node ID";
+			return;
+		}
+
+		if ( !arguments[1]->IsFunction() )
+		{
+			exception = "first argument must be a function";
+			return;
+		}
+
+		m_pokerHandlers.insert_or_assign( arguments[0]->GetUIntValue(), arguments[1] );
+	} );
+
 	return true;
 }
 
@@ -476,10 +509,51 @@ void CAardvarkAppObject::cleanup()
 	m_appClient = nullptr;
 }
 
-
-void CAardvarkAppObject::finishSceneContext( CSceneContextObject *contextObject )
+void CAardvarkAppObject::runFrame()
 {
-	avFinishSceneContext( contextObject->getContext(), &m_appClient );
+	for( auto iHandler : m_pokerHandlers )
+	{
+		aardvark::PokerProximity_t pokerProximity[100];
+		uint32_t usedCount;
+		aardvark::EAvSceneGraphResult result = aardvark::avGetNextPokerProximity( 
+			m_handler->getClient(), iHandler.first, pokerProximity, 100, &usedCount );
+		assert( result != EAvSceneGraphResult::InsufficientBufferSize );
+		if ( result == EAvSceneGraphResult::Success )
+		{
+			CefRefPtr< CefV8Value > list = CefV8Value::CreateArray( (int)usedCount );
+			for ( uint32_t n = 0; n < usedCount; n++ )
+			{
+				CefRefPtr< CefV8Value > prox = CefV8Value::CreateObject( nullptr, nullptr );
+				prox->SetValue( CefString( "panelId" ),
+					CefV8Value::CreateString( std::to_string( pokerProximity[n].panelId ) ), 
+					V8_PROPERTY_ATTRIBUTE_NONE );
+				prox->SetValue( CefString( "x" ),
+					CefV8Value::CreateDouble( pokerProximity[n].x ),
+					V8_PROPERTY_ATTRIBUTE_NONE );
+				prox->SetValue( CefString( "y" ),
+					CefV8Value::CreateDouble( pokerProximity[n].y ),
+					V8_PROPERTY_ATTRIBUTE_NONE );
+				prox->SetValue( CefString( "distance" ),
+					CefV8Value::CreateDouble( pokerProximity[n].distance ),
+					V8_PROPERTY_ATTRIBUTE_NONE );
+
+				list->SetValue( n, prox );
+			}
+
+			iHandler.second->ExecuteFunctionWithContext( m_handler->getContext(),
+				nullptr, CefV8ValueList{ list } );
+		}
+	}
+}
+
+
+aardvark::EAvSceneGraphResult CAardvarkAppObject::finishSceneContext( CSceneContextObject *contextObject )
+{
+	aardvark::EAvSceneGraphResult res = avFinishSceneContext( contextObject->getContext(), &m_appClient );
+	if ( res != EAvSceneGraphResult::Success )
+	{
+		return res;
+	}
 
 	for ( auto iEntry = m_sceneContexts.begin(); iEntry != m_sceneContexts.end(); iEntry++ )
 	{
@@ -489,6 +563,8 @@ void CAardvarkAppObject::finishSceneContext( CSceneContextObject *contextObject 
 			break;
 		}
 	}
+
+	return res;
 }
 
 
@@ -503,6 +579,7 @@ public:
 	std::list<std::unique_ptr<CAardvarkAppObject>> & getApps() { return m_apps;  }
 
 	bool hasPermission( const std::string & permission );
+	void runFrame();
 
 private:
 	CAardvarkRenderProcessHandler *m_handler = nullptr;
@@ -517,6 +594,14 @@ CAardvarkObject::CAardvarkObject( CAardvarkRenderProcessHandler *renderProcessHa
 bool CAardvarkObject::hasPermission( const std::string & permission )
 {
 	return m_handler->hasPermission( permission );
+}
+
+void CAardvarkObject::runFrame()
+{
+	for ( auto & app : m_apps )
+	{
+		app->runFrame();
+	}
 }
 
 
@@ -638,6 +723,8 @@ void CAardvarkRenderProcessHandler::OnContextCreated(
 	assert( m_aardvarkObject->init() );
 	windowObj->SetValue( "aardvark", m_aardvarkObject->getContainer(), V8_PROPERTY_ATTRIBUTE_READONLY );
 
+	CefPostDelayedTask( TID_RENDERER, base::Bind( &CAardvarkRenderProcessHandler::runFrame, this ), 0 );
+
 }
 
 void CAardvarkRenderProcessHandler::OnContextReleased( CefRefPtr<CefBrowser> browser,
@@ -689,4 +776,14 @@ void CAardvarkRenderProcessHandler::updateAppNamesForBrowser()
 bool CAardvarkRenderProcessHandler::hasPermission( const std::string & permission )
 {
 	return m_permissions.find( permission ) != m_permissions.end();
+}
+
+void CAardvarkRenderProcessHandler::runFrame()
+{
+	if ( m_aardvarkObject )
+	{
+		m_aardvarkObject->runFrame();
+	}
+
+	CefPostDelayedTask( TID_RENDERER, base::Bind( &CAardvarkRenderProcessHandler::runFrame, this ), 10 );
 }

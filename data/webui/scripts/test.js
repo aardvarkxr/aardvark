@@ -1,14 +1,25 @@
 var counter = 1;
 
-function updateStuff()
-{
-	var oElem = document.getElementById( 'stuff' );
-	oElem.innerHTML = "blah " + counter;
-	counter++;
+//function updateStuff()
+//{
+//	var oElem = document.getElementById( 'stuff' );
+//	oElem.innerHTML = "blah " + counter;
+//	counter++;
+//
+//}
+//
+//var t = setInterval( updateStuff, 1000 );
 
+function proximityUpdate( proxArray )
+{
+	var oElem = docu
+	var oElem = document.getElementById( 'stuff' );
+	oElem.innerHTML = "Coords "
+		+ proxArray[0].x + ", "
+		+ proxArray[0].y + ", "
+		+ proxArray[0].distance;
 }
 
-var t = setInterval( updateStuff, 1000 );
 
 var myApp = window.aardvark.createApp( "Fnord the App" );
 var myAppName = myApp.getName();
@@ -51,4 +62,6 @@ sceneContext.finishNode();
 
 
 sceneContext.finish();
+
+myApp.registerPokerHandler( 14, proximityUpdate );
 
