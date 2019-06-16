@@ -1625,13 +1625,13 @@ void VulkanExample::updateUniformBuffers()
 	// left eye
 	shaderValuesLeftEye.matProjectionFromView = GetHMDMatrixProjectionEye( vr::Eye_Left );
 	shaderValuesLeftEye.matViewFromHmd = GetHMDMatrixPoseEye( vr::Eye_Left );
-	shaderValuesLeftEye.matHmdFromStage = m_matHmdFromStage;
+	shaderValuesLeftEye.matHmdFromStage = m_hmdFromUniverse;
 	shaderValuesLeftEye.camPos = glm::vec3( 1, 0, 0 );
 
 	// right eye
 	shaderValuesRightEye.matProjectionFromView = GetHMDMatrixProjectionEye( vr::Eye_Right );
 	shaderValuesRightEye.matViewFromHmd = GetHMDMatrixPoseEye( vr::Eye_Right );
-	shaderValuesRightEye.matHmdFromStage = m_matHmdFromStage;
+	shaderValuesRightEye.matHmdFromStage = m_hmdFromUniverse;
 	shaderValuesRightEye.camPos = glm::vec3( 1, 0, 0 );
 }
 
@@ -1799,37 +1799,37 @@ void VulkanExample::TraverseSceneGraph( const SgRoot_t *root )
 	if ( !root->nodes.empty() )
 	{
 		m_pCurrentRoot = root;
-		m_vecTransforms.clear();
-		m_vecTransforms.push_back( glm::mat4( 1.f ) );
+		m_universeFromStackNodeTransforms.clear();
+		m_universeFromStackNodeTransforms.push_back( glm::mat4( 1.f ) );
 
 		// the 0th node is always the root
 		TraverseNode( root->nodes[0] );
 	}
 }
 
-void VulkanExample::ConcatTransform( const glm::mat4 & matParentFromNode )
+void VulkanExample::pushParentFromCurrentNode( const glm::mat4 & matParentFromNode )
 {
-	if ( m_vecTransforms.empty() )
+	if ( m_universeFromStackNodeTransforms.empty() )
 	{
-		m_vecTransforms.push_back( matParentFromNode );
+		m_universeFromStackNodeTransforms.push_back( matParentFromNode );
 	}
 	else
 	{
-		glm::mat4 & matOriginFromParent = m_vecTransforms.back();
-		glm::mat4 newMat = matOriginFromParent * matParentFromNode;
-		m_vecTransforms.push_back( newMat );
+		glm::mat4 & universeFromParent = m_universeFromStackNodeTransforms.back();
+		glm::mat4 universeFromStackNode = universeFromParent * matParentFromNode;
+		m_universeFromStackNodeTransforms.push_back( universeFromStackNode );
 	}
 }
 
-void VulkanExample::PushTransform( const glm::mat4 & matUniverseFromNode )
+void VulkanExample::pushUniverseFromCurrentNode( const glm::mat4 & matUniverseFromNode )
 {
-	m_vecTransforms.push_back( matUniverseFromNode );
+	m_universeFromStackNodeTransforms.push_back( matUniverseFromNode );
 }
 
-const glm::mat4 & VulkanExample::GetCurrentNodeFromUniverse()
+const glm::mat4 & VulkanExample::getUniverseFromCurrentNode()
 {
-	assert( !m_vecTransforms.empty() );
-	return m_vecTransforms.back();
+	assert( !m_universeFromStackNodeTransforms.empty() );
+	return m_universeFromStackNodeTransforms.back();
 }
 
 
@@ -1842,7 +1842,7 @@ void VulkanExample::TraverseNode( const AvNode::Reader & node )
 	}
 	setVisitedNodes.insert( globalId );
 
-	size_t transformCountBefore = m_vecTransforms.size();
+	size_t transformCountBefore = m_universeFromStackNodeTransforms.size();
 
 	switch ( node.getType() )
 	{
@@ -1884,19 +1884,19 @@ void VulkanExample::TraverseNode( const AvNode::Reader & node )
 		}
 	}
 
-	if ( m_vecTransforms.size() > transformCountBefore )
+	if ( m_universeFromStackNodeTransforms.size() > transformCountBefore )
 	{
-		assert( m_vecTransforms.size() == transformCountBefore + 1 );
-		m_vecTransforms.pop_back();
+		assert( m_universeFromStackNodeTransforms.size() == transformCountBefore + 1 );
+		m_universeFromStackNodeTransforms.pop_back();
 	}
 }
 
 void VulkanExample::TraverseOrigin( const AvNode::Reader & node )
 {
-	auto iOrigin = m_mapOriginFromUniverseTransforms.find( node.getPropOrigin() );
-	if ( iOrigin != m_mapOriginFromUniverseTransforms.end() )
+	auto iOrigin = m_universeFromOriginTransforms.find( node.getPropOrigin() );
+	if ( iOrigin != m_universeFromOriginTransforms.end() )
 	{
-		PushTransform( iOrigin->second );
+		pushUniverseFromCurrentNode( iOrigin->second );
 	}
 }
 
@@ -1942,7 +1942,7 @@ void VulkanExample::TraverseTransform( const AvNode::Reader & node )
 		}
 
 		glm::mat4 matNodeFromParent = glm::translate( glm::mat4( 1.0f ), vTrans ) * glm::mat4( qRot ) * glm::scale( glm::mat4( 1.0f ), vScale );
-		ConcatTransform( matNodeFromParent );
+		pushParentFromCurrentNode( matNodeFromParent );
 	}
 }
 
@@ -1967,7 +1967,7 @@ void VulkanExample::TraverseModel( const AvNode::Reader & node )
 
 	if ( pData->model )
 	{
-		pData->modelParent.matParentFromNode = GetCurrentNodeFromUniverse();
+		pData->modelParent.matParentFromNode = getUniverseFromCurrentNode();
 		pData->model->animate( m_fThisFrameTime );
 
 		// TODO(Joe): Figure out how to only do this when a parent is changing
@@ -2053,7 +2053,7 @@ void VulkanExample::TraversePanel( const AvNode::Reader & node )
 			pData->lastDxgiHandle = pvNewDxgiHandle;
 		}
 
-		pData->modelParent.matParentFromNode = GetCurrentNodeFromUniverse();
+		pData->modelParent.matParentFromNode = getUniverseFromCurrentNode();
 		pData->model->animate( m_fThisFrameTime );
 
 		// TODO(Joe): Figure out how to only do this when a parent is changing
@@ -2066,20 +2066,13 @@ void VulkanExample::TraversePanel( const AvNode::Reader & node )
 
 	if ( node.getPropInteractive() )
 	{
-		glm::mat4 matUniverseFromPoker = glm::inverse( GetCurrentNodeFromUniverse() );
-
-		m_intersections.addActivePanel( GetGlobalId( node ), matUniverseFromPoker );
-
-		//m_intersections.addActivePanel( GetGlobalId( node ), GetCurrentNodeFromUniverse() );
+		m_intersections.addActivePanel( GetGlobalId( node ), glm::inverse( getUniverseFromCurrentNode() ) );
 	}
 }
 
 void VulkanExample::TraversePoker( const AvNode::Reader & node )
 {
-//	glm::mat4 matUniverseFromPoker = glm::inverse( GetCurrentNodeFromUniverse() );
-	glm::vec4 vPokerInUniverse = GetCurrentNodeFromUniverse() * glm::vec4( 0, 0, 0, 1.f );
-	//glm::mat4 matUniverseFromPoker = glm::inverse( GetCurrentNodeFromUniverse() );
-	//glm::vec4 vPokerInUniverse = matUniverseFromPoker * glm::vec4( 0, 0, 0, 1.f );
+	glm::vec4 vPokerInUniverse = getUniverseFromCurrentNode() * glm::vec4( 0, 0, 0, 1.f );
 	m_intersections.addActivePoker( GetGlobalId( node ), vPokerInUniverse );
 }
 
@@ -2413,18 +2406,17 @@ void VulkanExample::render()
 	vr::TrackedDeviceIndex_t unLeftHand = vr::VRSystem()->GetTrackedDeviceIndexForControllerRole( vr::TrackedControllerRole_LeftHand );
 	if ( unLeftHand != vr::k_unTrackedDeviceIndexInvalid )
 	{
-		glm::mat4 matLeftHandFromUniverse = /*glm::inverse*/( glmMatFromVrMat( rRenderPoses[unLeftHand].mDeviceToAbsoluteTracking ) );
-		m_mapOriginFromUniverseTransforms["/user/hand/left"] = matLeftHandFromUniverse;
+		m_universeFromOriginTransforms["/user/hand/left"] = glmMatFromVrMat( rRenderPoses[unLeftHand].mDeviceToAbsoluteTracking );
 	}
 	vr::TrackedDeviceIndex_t unRightHand = vr::VRSystem()->GetTrackedDeviceIndexForControllerRole( vr::TrackedControllerRole_RightHand );
 	if ( unRightHand != vr::k_unTrackedDeviceIndexInvalid )
 	{
-		glm::mat4 matRightHandFromUniverse = /*glm::inverse*/( glmMatFromVrMat( rRenderPoses[unRightHand].mDeviceToAbsoluteTracking ) );
-		m_mapOriginFromUniverseTransforms["/user/hand/right"] = matRightHandFromUniverse;
+		m_universeFromOriginTransforms["/user/hand/right"] = glmMatFromVrMat( rRenderPoses[unRightHand].mDeviceToAbsoluteTracking );
 	}
-	m_matHmdFromStage = glm::inverse( glmMatFromVrMat( rRenderPoses[vr::k_unTrackedDeviceIndex_Hmd].mDeviceToAbsoluteTracking ) );
-	m_mapOriginFromUniverseTransforms["/user/head"] = m_matHmdFromStage;
-	m_mapOriginFromUniverseTransforms["/space/stage"] = glm::mat4( 1.f );
+	glm::mat4 universeFromHmd = glmMatFromVrMat( rRenderPoses[vr::k_unTrackedDeviceIndex_Hmd].mDeviceToAbsoluteTracking );
+	m_hmdFromUniverse = glm::inverse( universeFromHmd );
+	m_universeFromOriginTransforms["/user/head"] = universeFromHmd;
+	m_universeFromOriginTransforms["/space/stage"] = glm::mat4( 1.f );
 
 	TraverseSceneGraphs( frameTimer );
 

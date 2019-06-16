@@ -101,10 +101,10 @@ public:
 
 
 
-	void ConcatTransform( const glm::mat4 & matParentFromNode );
+	void pushParentFromCurrentNode( const glm::mat4 & matParentFromNode );
 
-	void PushTransform( const glm::mat4 & matUniverseFromNode );
-	const glm::mat4 & GetCurrentNodeFromUniverse();
+	void pushUniverseFromCurrentNode( const glm::mat4 & matUniverseFromNode );
+	const glm::mat4 & getUniverseFromCurrentNode();
 
 	void TraverseNode( const AvNode::Reader & node );
 	void TraverseOrigin( const AvNode::Reader & node );
@@ -156,8 +156,8 @@ public:
 
 
 	const SgRoot_t *m_pCurrentRoot = nullptr;
-	std::vector<glm::mat4> m_vecTransforms;
-	std::unordered_map<std::string, glm::mat4> m_mapOriginFromUniverseTransforms;
+	std::vector<glm::mat4> m_universeFromStackNodeTransforms;
+	std::unordered_map<std::string, glm::mat4> m_universeFromOriginTransforms;
 	std::unordered_map<uint64_t, std::unique_ptr<SgNodeData_t>> m_mapNodeData;
 	float m_fThisFrameTime = 0;
 	std::vector<std::shared_ptr<vkglTF::Model>> m_vecModelsToRender;
@@ -230,7 +230,7 @@ public:
 	uint32_t eyeHeight = 0;
 	glm::mat4 m_matProjection[2];
 	glm::mat4 m_matEye[2];
-	glm::mat4 m_matHmdFromStage;
+	glm::mat4 m_hmdFromUniverse;
 
 	const uint32_t renderAhead = 2;
 	uint32_t frameIndex = 0;
