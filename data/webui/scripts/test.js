@@ -13,10 +13,17 @@ var counter = 1;
 function proximityUpdate( proxArray )
 {
 	var oElem = document.getElementById( 'stuff' );
-	oElem.innerHTML = ""
-		+ proxArray[0].x.toFixed(2) + ", "
-		+ proxArray[0].y.toFixed(2) + ", "
-		+ proxArray[0].distance.toFixed(2);
+	if( proxArray.length == 0 )
+	{
+		oElem.innerHTML = "No prox";
+	}
+	else
+	{
+		oElem.innerHTML = ""
+			+ proxArray[0].x.toFixed(2) + ", "
+			+ proxArray[0].y.toFixed(2) + ", "
+			+ proxArray[0].distance.toFixed(2);
+	}
 }
 
 
@@ -31,7 +38,7 @@ sceneContext.startNode( 1, "panelorigin", EAvSceneGraphNodeType.Origin );
 sceneContext.setOriginPath( "/user/hand/left" );
 
 	sceneContext.startNode( 2, "xform", EAvSceneGraphNodeType.Transform );
-	//sceneContext.setScale( 0.1, 0.1, 0.1 );
+	sceneContext.setScale( 0.4, 0.4, 0.4 );
 
 		sceneContext.startNode( 3, "panel", EAvSceneGraphNodeType.Panel );
 		sceneContext.setTextureSource( "Fnord the App" ); 
@@ -46,7 +53,7 @@ sceneContext.startNode( 11, "pokerorigin", EAvSceneGraphNodeType.Origin );
 sceneContext.setOriginPath( "/user/hand/right" );
 
 	sceneContext.startNode( 12, "pokerxform", EAvSceneGraphNodeType.Transform );
-	sceneContext.setScale( 0.03, 0.03, 0.03 );
+	sceneContext.setScale( 0.01, 0.01, 0.01 );
 
 		sceneContext.startNode( 13, "pokermodel", EAvSceneGraphNodeType.Model );
 		sceneContext.setModelUri( "file:///e:/homedev/aardvark/data/models/sphere/sphere.glb" );

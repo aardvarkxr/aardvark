@@ -2066,7 +2066,12 @@ void VulkanExample::TraversePanel( const AvNode::Reader & node )
 
 	if ( node.getPropInteractive() )
 	{
-		m_intersections.addActivePanel( GetGlobalId( node ), glm::inverse( getUniverseFromCurrentNode() ) );
+		glm::vec4 panelTangent = getUniverseFromCurrentNode() * glm::vec4( 0, 1.f, 0, 0 );
+		float zScale = glm::length( panelTangent );
+		m_intersections.addActivePanel( 
+			GetGlobalId( node ), 
+			glm::inverse( getUniverseFromCurrentNode() ), 
+			zScale );
 	}
 }
 

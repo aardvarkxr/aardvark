@@ -7,9 +7,10 @@ CIntersectionTester::CIntersectionTester()
 {
 }
 
-void CIntersectionTester::addActivePanel( uint64_t globalPanelId, const glm::mat4 & matPanelFromUniverse )
+void CIntersectionTester::addActivePanel( uint64_t globalPanelId, const glm::mat4 & matPanelFromUniverse, float zScale )
 {
-	m_activePanels.push_back( { globalPanelId, matPanelFromUniverse } );
+	assert( zScale > 0.f );
+	m_activePanels.push_back( { globalPanelId, matPanelFromUniverse, zScale } );
 }
 
 void CIntersectionTester::addActivePoker( uint64_t globalPokerId, const glm::vec3 & posPokerInUniverse )
@@ -24,38 +25,45 @@ void CIntersectionTester::reset()
 	m_activePokers.clear();
 }
 
+struct ProximityToSend_t
+{
+	uint64_t panelId;
+	float u, v, distance;
+};
 
 void CIntersectionTester::updatePokerProximity( aardvark::CAardvarkClient *client )
 {
+	std::vector<ProximityToSend_t> proxToSend;
 	for ( auto & poker : m_activePokers )
 	{
 		auto req = client->Server().pushPokerProximityRequest();
 		req.setPokerId( poker.globalPokerId );
 
-		auto prox = req.initProximity( (int) m_activePanels.size() );
-		int n = 0;
+		proxToSend.clear();
 		for ( auto & panel : m_activePanels )
 		{
 			glm::vec4 vecPointInUniverse( poker.pokerPosInUniverse, 1.f );
 			glm::vec4 positionOnPanel = panel.matPanelFromUniverse * vecPointInUniverse;
 
-			// TODO: Add some kind of filtering for proximity
-
 			float u = positionOnPanel.x + 0.5f;
 			float v = positionOnPanel.z + 0.5f;
-			float dist = positionOnPanel.y;
+			float dist = positionOnPanel.y * panel.zScale;
 
-			prox[n].setPanelId( panel.globalPanelId );
-			prox[n].setX( u );
-			prox[n].setY( v );
-			prox[n].setDistance( dist );
+			if ( u < 0.1f || u > 1.1f || v < 0.1f || v > 1.1f
+				|| dist < -0.1f || dist > 0.2f )
+				continue;
 
-			//printf( "%llu vs %llu: %2.5f, %2.5f, %2.5f --> %2.5f, %2.5f, %2.5f\n", 
-			//	poker.globalPokerId, panel.globalPanelId, 
-			//	positionOnPanel.x, positionOnPanel.y, positionOnPanel.z,
-			//	u, v, dist
-			//);
-			n++;
+			proxToSend.push_back( { panel.globalPanelId, u, v, dist } );
+		}
+
+		auto prox = req.initProximity( (int)proxToSend.size() );
+		for( int n = 0; n < proxToSend.size(); n++ )
+		{
+			ProximityToSend_t & toSend = proxToSend[n];
+			prox[n].setPanelId( toSend.panelId );
+			prox[n].setX( toSend.u );
+			prox[n].setY( toSend.v );
+			prox[n].setDistance( toSend.distance );
 		}
 
 		client->addRequestToTasks( std::move( req ) );

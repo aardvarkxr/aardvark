@@ -17,7 +17,7 @@ class CIntersectionTester
 public:
 	CIntersectionTester( );
 
-	void addActivePanel( uint64_t globalPanelId, const glm::mat4 & matPanelFromUniverse );
+	void addActivePanel( uint64_t globalPanelId, const glm::mat4 & matPanelFromUniverse, float zScale );
 	void addActivePoker( uint64_t globalPokerId, const glm::vec3 & posPokerInUniverse );
 
 	void reset();
@@ -28,6 +28,7 @@ private:
 	{
 		uint64_t globalPanelId;
 		glm::mat4 matPanelFromUniverse;
+		float zScale;
 	};
 	std::vector<ActivePanel_t> m_activePanels;
 
