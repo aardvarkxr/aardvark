@@ -157,7 +157,6 @@ public:
 
 	const SgRoot_t *m_pCurrentRoot = nullptr;
 	std::vector<glm::mat4> m_vecTransforms;
-	bool m_bThisNodePushedTransform = false;
 	std::unordered_map<std::string, glm::mat4> m_mapOriginFromUniverseTransforms;
 	std::unordered_map<uint64_t, std::unique_ptr<SgNodeData_t>> m_mapNodeData;
 	float m_fThisFrameTime = 0;

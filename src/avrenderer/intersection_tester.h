@@ -17,7 +17,7 @@ class CIntersectionTester
 public:
 	CIntersectionTester( );
 
-	void addActivePanel( uint64_t globalPanelId, const glm::mat3x4 & matPanelFromUniverse );
+	void addActivePanel( uint64_t globalPanelId, const glm::mat4 & matPanelFromUniverse );
 	void addActivePoker( uint64_t globalPokerId, const glm::vec3 & posPokerInUniverse );
 
 	void reset();

@@ -13,10 +13,10 @@ var counter = 1;
 function proximityUpdate( proxArray )
 {
 	var oElem = document.getElementById( 'stuff' );
-	oElem.innerHTML = "Coords "
-		+ proxArray[0].x + ", "
-		+ proxArray[0].y + ", "
-		+ proxArray[0].distance;
+	oElem.innerHTML = ""
+		+ proxArray[0].x.toFixed(2) + ", "
+		+ proxArray[0].y.toFixed(2) + ", "
+		+ proxArray[0].distance.toFixed(2);
 }
 
 

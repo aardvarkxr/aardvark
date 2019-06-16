@@ -7,7 +7,7 @@ CIntersectionTester::CIntersectionTester()
 {
 }
 
-void CIntersectionTester::addActivePanel( uint64_t globalPanelId, const glm::mat3x4 & matPanelFromUniverse )
+void CIntersectionTester::addActivePanel( uint64_t globalPanelId, const glm::mat4 & matPanelFromUniverse )
 {
 	m_activePanels.push_back( { globalPanelId, matPanelFromUniverse } );
 }
@@ -42,13 +42,13 @@ void CIntersectionTester::updatePokerProximity( aardvark::CAardvarkClient *clien
 			// TODO: Add some kind of filtering for proximity
 
 			float u = positionOnPanel.x + 0.5f;
-			float v = -positionOnPanel.z + 0.5f;
+			float v = positionOnPanel.z + 0.5f;
 			float dist = positionOnPanel.y;
 
 			prox[n].setPanelId( panel.globalPanelId );
-			prox[n].setX( positionOnPanel.x );
-			prox[n].setY( positionOnPanel.y );
-			prox[n].setDistance( positionOnPanel.z );
+			prox[n].setX( u );
+			prox[n].setY( v );
+			prox[n].setDistance( dist );
 
 			//printf( "%llu vs %llu: %2.5f, %2.5f, %2.5f --> %2.5f, %2.5f, %2.5f\n", 
 			//	poker.globalPokerId, panel.globalPanelId, 

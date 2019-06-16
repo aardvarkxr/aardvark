@@ -1819,13 +1819,11 @@ void VulkanExample::ConcatTransform( const glm::mat4 & matParentFromNode )
 		glm::mat4 newMat = matOriginFromParent * matParentFromNode;
 		m_vecTransforms.push_back( newMat );
 	}
-	m_bThisNodePushedTransform = true;
 }
 
 void VulkanExample::PushTransform( const glm::mat4 & matUniverseFromNode )
 {
 	m_vecTransforms.push_back( matUniverseFromNode );
-	m_bThisNodePushedTransform = true;
 }
 
 const glm::mat4 & VulkanExample::GetCurrentNodeFromUniverse()
@@ -1844,7 +1842,8 @@ void VulkanExample::TraverseNode( const AvNode::Reader & node )
 	}
 	setVisitedNodes.insert( globalId );
 
-	m_bThisNodePushedTransform = false;
+	size_t transformCountBefore = m_vecTransforms.size();
+
 	switch ( node.getType() )
 	{
 	case AvNode::Type::CONTAINER:
@@ -1885,8 +1884,9 @@ void VulkanExample::TraverseNode( const AvNode::Reader & node )
 		}
 	}
 
-	if ( m_bThisNodePushedTransform )
+	if ( m_vecTransforms.size() > transformCountBefore )
 	{
+		assert( m_vecTransforms.size() == transformCountBefore + 1 );
 		m_vecTransforms.pop_back();
 	}
 }
@@ -2069,6 +2069,8 @@ void VulkanExample::TraversePanel( const AvNode::Reader & node )
 		glm::mat4 matUniverseFromPoker = glm::inverse( GetCurrentNodeFromUniverse() );
 
 		m_intersections.addActivePanel( GetGlobalId( node ), matUniverseFromPoker );
+
+		//m_intersections.addActivePanel( GetGlobalId( node ), GetCurrentNodeFromUniverse() );
 	}
 }
 
@@ -2076,6 +2078,8 @@ void VulkanExample::TraversePoker( const AvNode::Reader & node )
 {
 //	glm::mat4 matUniverseFromPoker = glm::inverse( GetCurrentNodeFromUniverse() );
 	glm::vec4 vPokerInUniverse = GetCurrentNodeFromUniverse() * glm::vec4( 0, 0, 0, 1.f );
+	//glm::mat4 matUniverseFromPoker = glm::inverse( GetCurrentNodeFromUniverse() );
+	//glm::vec4 vPokerInUniverse = matUniverseFromPoker * glm::vec4( 0, 0, 0, 1.f );
 	m_intersections.addActivePoker( GetGlobalId( node ), vPokerInUniverse );
 }
 
