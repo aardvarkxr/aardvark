@@ -4,6 +4,7 @@ Release
 .vs
 *.user
 *.swp
+*.blend1
 ~*
 packages
 
