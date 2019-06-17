@@ -137,6 +137,7 @@ public:
 
 	struct SgNodeData_t
 	{
+		std::string lastModelUri;
 		std::shared_ptr<vkglTF::Model> model;
 		vkglTF::Transformable modelParent;
 

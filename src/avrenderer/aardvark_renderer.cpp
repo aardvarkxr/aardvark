@@ -1951,17 +1951,24 @@ void VulkanExample::TraverseModel( const AvNode::Reader & node )
 	SgNodeData_t *pData = GetNodeData( node );
 	assert( pData );
 
+	std::string modelUri = node.getPropModelUri();
+	if ( pData->lastModelUri != modelUri )
+	{
+		pData->model = nullptr;
+	}
+
 	if ( !pData->model )
 	{
 		// TODO(Joe): Definitely don't block here waiting to get a model source
 		auto reqModelSource = m_pClient->Server().getModelSourceRequest();
-		reqModelSource.setUri( node.getPropModelUri() );
+		reqModelSource.setUri( modelUri );
 		auto resModelSource = reqModelSource.send().wait( m_pClient->WaitScope() );
 		if ( resModelSource.hasSource() )
 		{
 			auto pModel = findOrLoadModel( resModelSource.getSource() );
 			pData->model = std::make_shared<vkglTF::Model>( *pModel );
 			pData->model->parent = &pData->modelParent;
+			pData->lastModelUri = modelUri;
 		}
 	}
 
