@@ -42,15 +42,15 @@ function proximityUpdate( proxArray: PokerProximity[] )
 	var oldHighlight = shouldHighlight;
 	if( proxArray.length == 0 )
 	{
-		oElem.innerHTML = "No prox";
+//		oElem.innerHTML = "No prox";
 		shouldHighlight = false;
 	}
 	else
 	{
-		oElem.innerHTML = ""
-			+ proxArray[0].x.toFixed(2) + ", "
-			+ proxArray[0].y.toFixed(2) + ", "
-			+ proxArray[0].distance.toFixed(2);
+		// oElem.innerHTML = ""
+		// 	+ proxArray[0].x.toFixed(2) + ", "
+		// 	+ proxArray[0].y.toFixed(2) + ", "
+		// 	+ proxArray[0].distance.toFixed(2);
 		shouldHighlight = true;
 	}
 

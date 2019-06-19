@@ -58,6 +58,6 @@ module.exports =
 	output: 
 	{
 		filename: 'bundle.js',
-		path: path.resolve(__dirname, 'dist/default_poker')
+		path: path.resolve(__dirname, '../build/apps/default_poker')
 	}
 };
