@@ -8,6 +8,7 @@
 			"type": "chrome",
 			"request": "attach",
 			"name": "Attach to aardvark_renderer",
+			"sourceMaps": true,
 			"port": 8042,
 			"webRoot": "${workspaceFolder}"
 		}

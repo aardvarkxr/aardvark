@@ -4,6 +4,7 @@ var HtmlWebpackPlugin = require( 'html-webpack-plugin' );
 module.exports = 
 {
 	mode: "development",
+	devtool: "inline-source-map",
 	entry: './default_poker/src/default_poker_main.ts',
 
 	module: 
