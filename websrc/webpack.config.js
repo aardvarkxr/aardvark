@@ -51,7 +51,7 @@ module.exports =
 		extensions: [ '.ts', '.tsx', '.js' ],
 		alias: 
 		{
-			"common" : "./common"
+			"common" : path.resolve( __dirname, "./common" )
 		}
 	},
 

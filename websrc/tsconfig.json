@@ -9,10 +9,13 @@
 		"target": "es5",
 		"jsx": "react",
 		"allowJs": true,
+		"experimentalDecorators": true,
+		"importHelpers": true,
 		"paths" :
 		{
-			"@common/*" : [ "./common/*" ],
-			"*" : [ "*" ]
-		}
+			"common/*" : [ "common/*" ],
+			"*" : [ "node_modules/@types/*", "node_modules/*", "*" ]
+		},
+		"moduleResolution" : "node"
 	}
 }
