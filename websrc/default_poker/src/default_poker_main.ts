@@ -1,4 +1,4 @@
-import {Av, PokerProximity, AvNodeType, AvApp, AvPanelMouseEventType} from 'common/aardvark';
+import {Av, PokerProximity, AvNodeType, AvAppObj, AvPanelMouseEventType} from 'common/aardvark';
 import bind from 'bind-decorator';
 
 class CDefaultPoker
@@ -6,13 +6,13 @@ class CDefaultPoker
 	m_shouldHighlight = false;
 	m_baseId:number;
 	m_pokerId:number;
-	m_app:AvApp;
+	m_app:AvAppObj;
 	m_lastActivePanel:string = null;
 	m_mouseDown: boolean = false;
 	m_lastX = 0;
 	m_lastY = 0;
 
-	constructor( baseId: number, app:AvApp )
+	constructor( baseId: number, app:AvAppObj )
 	{
 		this.m_baseId = baseId;
 		this.m_pokerId = baseId + 4;

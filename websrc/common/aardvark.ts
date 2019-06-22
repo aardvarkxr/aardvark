@@ -142,7 +142,7 @@ interface AvApp_RegisterPanelHandler
 }
 
 
-export interface AvApp
+export interface AvAppObj
 {
 	getName: AvApp_GetName;
 	startSceneContext: AvApp_StartSceneContext;
@@ -153,7 +153,7 @@ export interface AvApp
 
 interface Av_CreateApp
 {
-	(appName:string):AvApp;
+	(appName:string):AvAppObj;
 }
 
 interface Av_StartApp

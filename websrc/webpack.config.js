@@ -46,11 +46,11 @@ let defaults =
 };
 
 
-function createConfig( appName, appTitle )
+function createConfig( appName, appTitle, ext )
 {
 	let config = Object.assign( 
 		{
-			entry: './' + appName + '/src/' + appName + '_main.ts',
+			entry: './' + appName + '/src/' + appName + '_main.' + ext,
 		},
 		defaults
 	);
@@ -79,7 +79,7 @@ function createConfig( appName, appTitle )
 
 module.exports = 
 [
-	createConfig( 'aardvark_master', 'Master App' ),
-	createConfig( 'default_poker', 'Default Poker' ),
-	createConfig( 'test_panel', 'Test Panel' ),
+	createConfig( 'aardvark_master', 'Master App', 'ts' ),
+	createConfig( 'default_poker', 'Default Poker', 'ts' ),
+	createConfig( 'test_panel', 'Test Panel', 'tsx' ),
 ];
