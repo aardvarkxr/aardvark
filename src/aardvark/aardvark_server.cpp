@@ -5,7 +5,13 @@
 #include "tools/filetools.h"
 #include "tools/pathtools.h"
 #include <map>
-#include <capnp/ez-rpc.h>
+#include <capnp/rpc-twoparty.h>
+#include <capnp/rpc.capnp.h>
+#include <kj/async-io.h>
+#include <kj/threadlocal.h>
+#include <kj/debug.h>
+
+using namespace capnp;
 
 namespace aardvark
 {
@@ -295,6 +301,191 @@ namespace aardvark
 		m_eventTasks->add( std::move( promRequest ) );
 	}
 
+	namespace {
+
+		class DummyFilter : public kj::LowLevelAsyncIoProvider::NetworkFilter {
+		public:
+			bool shouldAllow( const struct sockaddr* addr, uint addrlen ) override {
+				return true;
+			}
+		};
+
+		static DummyFilter DUMMY_FILTER;
+
+	}  // namespace
+
+	class CAardvarkRpcContext;
+
+	KJ_THREADLOCAL_PTR( CAardvarkRpcContext ) threadEzContext = nullptr;
+
+	class CAardvarkRpcContext : public kj::Refcounted {
+	public:
+		CAardvarkRpcContext() : ioContext( kj::setupAsyncIo() ) {
+			threadEzContext = this;
+		}
+
+		~CAardvarkRpcContext() noexcept( false ) {
+			KJ_REQUIRE( threadEzContext == this,
+				"CAardvarkClientContext destroyed from different thread than it was created." ) {
+				return;
+			}
+			threadEzContext = nullptr;
+		}
+
+		kj::WaitScope& getWaitScope() {
+			return ioContext.waitScope;
+		}
+
+		kj::AsyncIoProvider& getIoProvider() {
+			return *ioContext.provider;
+		}
+
+		kj::LowLevelAsyncIoProvider& getLowLevelIoProvider() {
+			return *ioContext.lowLevelProvider;
+		}
+
+		static kj::Own<CAardvarkRpcContext> getThreadLocal() {
+			CAardvarkRpcContext* existing = threadEzContext;
+			if ( existing != nullptr ) {
+				return kj::addRef( *existing );
+			}
+			else {
+				return kj::refcounted<CAardvarkRpcContext>();
+			}
+		}
+
+	private:
+		kj::AsyncIoContext ioContext;
+	};
+
+	struct CServerRpcImpl final: public SturdyRefRestorer<AnyPointer>,
+		public kj::TaskSet::ErrorHandler
+	{
+		Capability::Client mainInterface;
+		kj::Own<CAardvarkRpcContext> context;
+
+		struct ExportedCap 
+		{
+			kj::String name;
+			Capability::Client cap = nullptr;
+
+			ExportedCap( kj::StringPtr name, Capability::Client cap )
+				: name( kj::heapString( name ) ), cap( cap ) {}
+
+			ExportedCap() = default;
+			ExportedCap( const ExportedCap& ) = delete;
+			ExportedCap( ExportedCap&& ) = default;
+			ExportedCap& operator=( const ExportedCap& ) = delete;
+			ExportedCap& operator=( ExportedCap&& ) = default;
+		  // Make std::map happy...
+		};
+
+		std::map<kj::StringPtr, ExportedCap> exportMap;
+
+		kj::ForkedPromise<uint> portPromise;
+
+		kj::TaskSet tasks;
+
+		struct ServerContext 
+		{
+			kj::Own<kj::AsyncIoStream> stream;
+			TwoPartyVatNetwork network;
+			RpcSystem<rpc::twoparty::VatId> rpcSystem;
+
+			//#pragma GCC diagnostic push
+			//#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+			ServerContext( kj::Own<kj::AsyncIoStream>&& stream, SturdyRefRestorer<AnyPointer>& restorer,
+							ReaderOptions readerOpts )
+				: stream( kj::mv( stream ) ),
+					network( *this->stream, rpc::twoparty::Side::SERVER, readerOpts ),
+					rpcSystem( makeRpcServer( network, restorer ) ) {}
+			//#pragma GCC diagnostic pop
+		};
+
+		CServerRpcImpl( Capability::Client mainInterface, kj::StringPtr bindAddress, uint defaultPort,
+		   ReaderOptions readerOpts )
+		  : mainInterface( kj::mv( mainInterface ) ),
+			context( CAardvarkRpcContext::getThreadLocal() ), portPromise( nullptr ), tasks( *this )
+		{
+			auto paf = kj::newPromiseAndFulfiller<uint>();
+			portPromise = paf.promise.fork();
+
+			tasks.add( context->getIoProvider().getNetwork().parseAddress( bindAddress, defaultPort )
+				.then( kj::mvCapture( paf.fulfiller,
+					[this, readerOpts]( kj::Own<kj::PromiseFulfiller<uint>>&& portFulfiller,
+										kj::Own<kj::NetworkAddress>&& addr ) 
+			{
+				auto listener = addr->listen();
+				portFulfiller->fulfill( listener->getPort() );
+				acceptLoop( kj::mv( listener ), readerOpts );
+			} ) ) );
+		}
+
+		CServerRpcImpl( Capability::Client mainInterface, struct sockaddr* bindAddress, uint addrSize,
+			ReaderOptions readerOpts )
+		: mainInterface( kj::mv( mainInterface ) ),
+			context( CAardvarkRpcContext::getThreadLocal() ), portPromise( nullptr ), tasks( *this )
+		{
+			auto listener = context->getIoProvider().getNetwork()
+				.getSockaddr( bindAddress, addrSize )->listen();
+			portPromise = kj::Promise<uint>( listener->getPort() ).fork();
+			acceptLoop( kj::mv( listener ), readerOpts );
+		}
+
+		CServerRpcImpl( Capability::Client mainInterface, int socketFd, uint port, ReaderOptions readerOpts )
+		: mainInterface( kj::mv( mainInterface ) ),
+			context( CAardvarkRpcContext::getThreadLocal() ),
+			portPromise( kj::Promise<uint>( port ).fork() ),
+			tasks( *this ) 
+		{
+			acceptLoop( context->getLowLevelIoProvider().wrapListenSocketFd( socketFd, DUMMY_FILTER ),
+					readerOpts );
+		}
+
+		void acceptLoop( kj::Own<kj::ConnectionReceiver>&& listener, ReaderOptions readerOpts ) 
+		{
+			auto ptr = listener.get();
+			tasks.add( ptr->accept().then( kj::mvCapture( kj::mv( listener ),
+				[this, readerOpts]( kj::Own<kj::ConnectionReceiver>&& listener,
+									kj::Own<kj::AsyncIoStream>&& connection ) {
+				acceptLoop( kj::mv( listener ), readerOpts );
+
+				auto server = kj::heap<ServerContext>( kj::mv( connection ), *this, readerOpts );
+
+				// Arrange to destroy the server context when all references are gone, or when the
+				// EzRpcServer is destroyed (which will destroy the TaskSet).
+				tasks.add( server->network.onDisconnect().attach( kj::mv( server ) ) );
+			} ) ) );
+		}
+
+		Capability::Client restore( AnyPointer::Reader objectId ) override 
+		{
+			if ( objectId.isNull() ) 
+			{
+				return mainInterface;
+			}
+			else 
+			{
+				auto name = objectId.getAs<Text>();
+				auto iter = exportMap.find( name );
+				if ( iter == exportMap.end() ) {
+				  KJ_FAIL_REQUIRE( "Server exports no such capability.", name ) { break; }
+				  return nullptr;
+				}
+				else 
+				{
+					return iter->second.cap;
+				}
+			}
+		}
+
+		void taskFailed( kj::Exception&& exception ) override 
+		{
+			kj::throwFatalException( kj::mv( exception ) );
+		}
+	};
+
+
 	CServerThread::CServerThread()
 	{
 	}
@@ -329,8 +520,8 @@ namespace aardvark
 		kj::Own<AvServerImpl> serverObj = kj::heap<AvServerImpl>();
 		AvServerImpl *pServer = serverObj;
 		AvServer::Client capability = kj::mv( serverObj );
-		capnp::EzRpcServer server( capability, "*", 5923 );
-		auto& waitScope = server.getWaitScope();
+		CServerRpcImpl server( kj::mv( capability ), "*", 5923, ReaderOptions() );
+		auto& waitScope = server.context->getWaitScope();
 
 		// Run forever, accepting connections and handling requests.
 		while ( !m_bStop )

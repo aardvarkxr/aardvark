@@ -8,6 +8,9 @@ namespace aardvark
 	class AvPokerHandlerImpl;
 	class AvPanelHandlerImpl;
 
+	class CAardvarkClientContext;
+	struct ClientContext;
+
 	class CAardvarkClient: public kj::TaskSet::ErrorHandler
 	{
 	public:
@@ -18,7 +21,7 @@ namespace aardvark
 		void Stop();
 
 		AvServer::Client & Server() { return *m_pMainInterface; }
-		kj::WaitScope & WaitScope() { return m_pClient->getWaitScope(); }
+		kj::WaitScope & WaitScope();
 		void addToTasks( kj::Promise<void> && promRequest );
 
 		template <typename TRequest, typename TResult>
@@ -40,7 +43,13 @@ namespace aardvark
 	private:
 		virtual void taskFailed( kj::Exception&& exception ) override;
 
-		capnp::EzRpcClient *m_pClient = nullptr;
+		AvServer::Client getMain();
+		capnp::Capability::Client getMainInternal();
+
+		kj::Own<CAardvarkClientContext> m_context;
+		kj::Maybe< kj::ForkedPromise<void> > m_setupPromise;
+		kj::Maybe<kj::Own<ClientContext>> m_clientContext;
+
 		kj::Own< AvServer::Client > m_pMainInterface;
 		kj::Own< kj::TaskSet > m_tasks;
 
