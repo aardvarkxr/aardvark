@@ -38,5 +38,29 @@ function updateSceneGraph()
 	sceneContext.finish();
 }
 
+function handleMouseEvent( evt )
+{
+	switch( evt.type )
+	{
+		case 1: 
+			console.log( "mouse down: ", evt.panelId, evt.pokerId, evt.x, evt.y );
+			break;
+		case 2: 
+			console.log( "mouse up: ", evt.panelId, evt.pokerId, evt.x, evt.y );
+			break;
+		case 3: 
+			console.log( "mouse enter: ", evt.panelId, evt.pokerId, evt.x, evt.y );
+			break;
+		case 4: 
+			console.log( "mouse leave: ", evt.panelId, evt.pokerId, evt.x, evt.y );
+			break;
+		case 5: 
+//			console.log( "mouse move: ", evt.panelId, evt.pokerId, evt.x, evt.y );
+			break;
+	}
+
+}
+
 updateSceneGraph();
+myApp.registerPanelHandler( 3, handleMouseEvent );
 

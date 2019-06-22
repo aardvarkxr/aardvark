@@ -107,11 +107,48 @@ interface AvApp_RegisterPokerHandler
 	( nodeId:number, handlerFunction: AvPokerHandler ): void;
 }
 
+export enum AvPanelMouseEventType
+{
+	Unknown = 0,
+	Down = 1,
+	Up = 2,
+	Enter = 3,
+	Leave = 4,
+	Move = 5,
+};
+
+export interface AvPanelMouseEvent
+{
+	type: AvPanelMouseEventType;
+	panelId: string;
+	pokerId: string;
+	x: number;
+	y: number;
+}
+
+interface AvApp_SendMouseEvent
+{
+	(pokerId: number, panelId:string, type: AvPanelMouseEventType, x:number, y:number ): void;
+}
+
+export interface AvPanelHandler
+{
+	( event: AvPanelMouseEvent ): void;
+}
+
+interface AvApp_RegisterPanelHandler
+{
+	( nodeId:number, handlerFunction: AvPanelHandler ): void;
+}
+
+
 export interface AvApp
 {
 	getName: AvApp_GetName;
 	startSceneContext: AvApp_StartSceneContext;
 	registerPokerHandler: AvApp_RegisterPokerHandler;
+	registerPanelHandler: AvApp_RegisterPanelHandler;
+	sendMouseEvent: AvApp_SendMouseEvent;
 }
 
 interface Av_CreateApp

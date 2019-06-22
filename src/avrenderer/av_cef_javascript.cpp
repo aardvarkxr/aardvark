@@ -103,6 +103,7 @@ private:
 	std::list<std::unique_ptr<CSceneContextObject>> m_sceneContexts;
 	std::set<uint32_t> m_nodeIdsThatNeedThisTexture;
 	std::unordered_map< uint32_t, CefRefPtr< CefV8Value > > m_pokerHandlers;
+	std::unordered_map< uint32_t, CefRefPtr< CefV8Value > > m_panelHandlers;
 };
 
 
@@ -488,11 +489,73 @@ bool CAardvarkAppObject::init()
 
 		if ( !arguments[1]->IsFunction() )
 		{
-			exception = "first argument must be a function";
+			exception = "second argument must be a function";
 			return;
 		}
 
 		m_pokerHandlers.insert_or_assign( arguments[0]->GetUIntValue(), arguments[1] );
+	} );
+
+	RegisterFunction( "registerPanelHandler", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 2 )
+		{
+			exception = "Invalid arguments";
+			return;
+		}
+
+		if ( !arguments[0]->IsUInt() )
+		{
+			exception = "first argument must be a panel node ID";
+			return;
+		}
+
+		if ( !arguments[1]->IsFunction() )
+		{
+			exception = "second argument must be a function";
+			return;
+		}
+
+		m_panelHandlers.insert_or_assign( arguments[0]->GetUIntValue(), arguments[1] );
+	} );
+
+	RegisterFunction( "sendMouseEvent", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 5 )
+		{
+			exception = "Invalid arguments";
+			return;
+		}
+
+		if ( !arguments[0]->IsUInt() )
+		{
+			exception = "first argument must be a poker node ID";
+			return;
+		}
+
+		if ( !arguments[1]->IsString() )
+		{
+			exception = "second argument must be a panelID as a string";
+			return;
+		}
+
+		if ( !arguments[2]->IsInt() )
+		{
+			exception = "third argument must be an event type";
+			return;
+		}
+
+		if ( !arguments[3]->IsDouble() || !arguments[4]->IsDouble() )
+		{
+			exception = "Fourth and fifth arguments must be coords";
+			return;
+		}
+
+		aardvark::avPushMouseEventFromPoker( m_handler->getClient(), &m_appClient,
+			arguments[0]->GetUIntValue(),
+			std::stoull( std::string( arguments[1]->GetStringValue() ).c_str() ),
+			( aardvark::EPanelMouseEventType )arguments[2]->GetIntValue(),
+			(float)arguments[3]->GetDoubleValue(), (float)arguments[4]->GetDoubleValue() );
 	} );
 
 	return true;
@@ -547,7 +610,40 @@ void CAardvarkAppObject::runFrame()
 			m_handler->getContext()->Exit();
 		}
 	}
+
+	for ( auto iHandler : m_panelHandlers )
+	{
+		aardvark::PanelMouseEvent_t panelMouseEvent;
+		uint32_t unLimit = 0;
+		while ( ++unLimit < 100 && EAvSceneGraphResult::Success == aardvark::avGetNextMouseEvent(
+			m_handler->getClient(), iHandler.first, &panelMouseEvent ) )
+		{
+			m_handler->getContext()->Enter();
+
+			CefRefPtr< CefV8Value > evt = CefV8Value::CreateObject( nullptr, nullptr );
+			evt->SetValue( CefString( "panelId" ),
+				CefV8Value::CreateString( std::to_string( panelMouseEvent.panelId ) ),
+				V8_PROPERTY_ATTRIBUTE_NONE );
+			evt->SetValue( CefString( "pokerId" ),
+				CefV8Value::CreateString( std::to_string( panelMouseEvent.pokerId ) ),
+				V8_PROPERTY_ATTRIBUTE_NONE );
+			evt->SetValue( CefString( "x" ),
+				CefV8Value::CreateDouble( panelMouseEvent.x ),
+				V8_PROPERTY_ATTRIBUTE_NONE );
+			evt->SetValue( CefString( "y" ),
+				CefV8Value::CreateDouble( panelMouseEvent.y ),
+				V8_PROPERTY_ATTRIBUTE_NONE );
+			evt->SetValue( CefString( "type" ),
+				CefV8Value::CreateInt( (int)panelMouseEvent.type ),
+				V8_PROPERTY_ATTRIBUTE_NONE );
+
+			iHandler.second->ExecuteFunction( nullptr, CefV8ValueList{ evt } );
+
+			m_handler->getContext()->Exit();
+		}
+	}
 }
+
 
 
 aardvark::EAvSceneGraphResult CAardvarkAppObject::finishSceneContext( CSceneContextObject *contextObject )
