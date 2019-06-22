@@ -1,11 +1,10 @@
 const path = require('path');
 var HtmlWebpackPlugin = require( 'html-webpack-plugin' );
 
-module.exports = 
+let defaults = 
 {
 	mode: "development",
 	devtool: "inline-source-map",
-	entry: './default_poker/src/default_poker_main.ts',
 
 	module: 
 	{
@@ -35,18 +34,6 @@ module.exports =
 		]
 	},
 
-	plugins:
-	[
-		new HtmlWebpackPlugin(
-			{
-				hash: true,
-				filename: "./index.html",
-				template: "./templates/aardvark_app.html",
-				title: "Default Poker"
-			}
-		)
-	],
-
 	resolve:
 	{
 		extensions: [ '.ts', '.tsx', '.js' ],
@@ -56,9 +43,43 @@ module.exports =
 		}
 	},
 
-	output: 
-	{
-		filename: 'bundle.js',
-		path: path.resolve(__dirname, '../build/apps/default_poker')
-	}
 };
+
+
+function createConfig( appName, appTitle )
+{
+	let config = Object.assign( 
+		{
+			entry: './' + appName + '/src/' + appName + '_main.ts',
+		},
+		defaults
+	);
+
+	config.output =
+	{
+		filename: appName + '_bundle.js',
+		path: path.resolve( __dirname, '../build/apps/' + appName )
+	}
+
+	config.plugins =
+	[
+		new HtmlWebpackPlugin(
+			{
+				hash: true,
+				filename: "./index.html",
+				template: "./templates/aardvark_app.html",
+				title: appTitle,
+			}
+		)
+	];
+
+	return config;
+}
+
+
+module.exports = 
+[
+	createConfig( 'aardvark_master', 'Master App' ),
+	createConfig( 'default_poker', 'Default Poker' ),
+	createConfig( 'test_panel', 'Test Panel' ),
+];

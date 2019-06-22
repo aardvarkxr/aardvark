@@ -1,32 +1,19 @@
-var counter = 1;
+import { AvPanelMouseEvent, AvPanelMouseEventType, Av, AvNodeType } from 'common/aardvark';
 
-//function updateStuff()
-//{
-//	var oElem = document.getElementById( 'stuff' );
-//	oElem.innerHTML = "blah " + counter;
-//	counter++;
-//
-//}
-//
-//var t = setInterval( updateStuff, 1000 );
 
-var myApp = window.aardvark.createApp( "Fnord the App" );
-var myAppName = myApp.getName();
-console.log( "My app is named", myAppName );
-var shouldHighlight = false;
+let myApp = Av().createApp( "Fnord the App" );
 
 function updateSceneGraph()
 {
-	var sceneContext = myApp.startSceneContext();
-	var EAvSceneGraphNodeType = sceneContext.type;
+	let sceneContext = myApp.startSceneContext();
 
-	sceneContext.startNode( 1, "panelorigin", EAvSceneGraphNodeType.Origin );
+	sceneContext.startNode( 1, "panelorigin", AvNodeType.Origin );
 	sceneContext.setOriginPath( "/user/hand/left" );
 
-		sceneContext.startNode( 2, "xform", EAvSceneGraphNodeType.Transform );
+		sceneContext.startNode( 2, "xform", AvNodeType.Transform );
 		sceneContext.setScale( 0.4, 0.4, 0.4 );
 
-			sceneContext.startNode( 3, "panel", EAvSceneGraphNodeType.Panel );
+			sceneContext.startNode( 3, "panel", AvNodeType.Panel );
 			sceneContext.setTextureSource( "Fnord the App" ); 
 			sceneContext.setInteractive( true );
 
@@ -38,23 +25,23 @@ function updateSceneGraph()
 	sceneContext.finish();
 }
 
-function handleMouseEvent( evt )
+function handleMouseEvent( evt: AvPanelMouseEvent )
 {
 	switch( evt.type )
 	{
-		case 1: 
+		case AvPanelMouseEventType.Down: 
 			console.log( "mouse down: ", evt.panelId, evt.pokerId, evt.x, evt.y );
 			break;
-		case 2: 
+		case AvPanelMouseEventType.Up: 
 			console.log( "mouse up: ", evt.panelId, evt.pokerId, evt.x, evt.y );
 			break;
-		case 3: 
+		case AvPanelMouseEventType.Enter: 
 			console.log( "mouse enter: ", evt.panelId, evt.pokerId, evt.x, evt.y );
 			break;
-		case 4: 
+		case AvPanelMouseEventType.Leave: 
 			console.log( "mouse leave: ", evt.panelId, evt.pokerId, evt.x, evt.y );
 			break;
-		case 5: 
+		case AvPanelMouseEventType.Move: 
 //			console.log( "mouse move: ", evt.panelId, evt.pokerId, evt.x, evt.y );
 			break;
 	}
@@ -63,4 +50,3 @@ function handleMouseEvent( evt )
 
 updateSceneGraph();
 myApp.registerPanelHandler( 3, handleMouseEvent );
-

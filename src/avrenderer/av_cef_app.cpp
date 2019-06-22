@@ -102,7 +102,7 @@ void CAardvarkCefApp::OnContextInitialized()
 
 	// Check if a "--url=" value was provided via the command-line. If so, use
 	// that instead of the default URL.
-	std::string url = "file:///E:/homedev/aardvark/data/webui/aardvark_master.html";
+	std::string url = "file:///E:/homedev/aardvark/build/apps/aardvark_master/index.html";
 
 	if (use_views) 
 	{
