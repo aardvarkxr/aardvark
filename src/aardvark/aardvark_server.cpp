@@ -21,7 +21,7 @@ namespace aardvark
 		// we don't really care about failed requests on our task set
 	}
 
-	::kj::Promise<void> AvServerImpl::createApp( CreateAppContext context )
+	::kj::Promise<void> AvServerImpl::createApp( uint32_t clientId, CreateAppContext context )
 	{
 		auto server = kj::heap<CAardvarkApp>( context.getParams().getName(), this );
 		auto& serverRef = *server;
@@ -70,7 +70,7 @@ namespace aardvark
 		out.getScale().setZ( in.scale.z );
 	}
 
-	::kj::Promise<void> AvServerImpl::listenForFrames( ListenForFramesContext context )
+	::kj::Promise<void> AvServerImpl::listenForFrames( uint32_t clientId, ListenForFramesContext context )
 	{
 		AvServer::Server::ListenForFramesParams::Reader params = context.getParams();
 		m_frameListeners.push_back( context.getParams().getListener() );
@@ -144,7 +144,7 @@ namespace aardvark
 		return nullptr;
 	}
 
-	::kj::Promise<void> AvServerImpl::updateDxgiTextureForApps( UpdateDxgiTextureForAppsContext context )
+	::kj::Promise<void> AvServerImpl::updateDxgiTextureForApps( uint32_t clientId, UpdateDxgiTextureForAppsContext context )
 	{
 		if ( context.getParams().hasAppNames() )
 		{
@@ -167,7 +167,7 @@ namespace aardvark
 		return kj::READY_NOW;
 	}
 
-	::kj::Promise<void> AvServerImpl::pushPokerProximity( PushPokerProximityContext context )
+	::kj::Promise<void> AvServerImpl::pushPokerProximity( uint32_t clientId, PushPokerProximityContext context )
 	{
 		uint64_t pokerGlobalId = context.getParams().getPokerId();
 		KJ_IF_MAYBE( handler, findPokerHandler( pokerGlobalId ) )
@@ -224,7 +224,7 @@ namespace aardvark
 		return &modelSourceRef;
 	}
 
-	::kj::Promise<void> AvServerImpl::getModelSource( GetModelSourceContext context )
+	::kj::Promise<void> AvServerImpl::getModelSource( uint32_t clientId, GetModelSourceContext context )
 	{
 		std::string sUri = context.getParams().getUri();
 		if ( sUri.size() == 0 )
@@ -318,9 +318,11 @@ namespace aardvark
 
 	KJ_THREADLOCAL_PTR( CAardvarkRpcContext ) threadEzContext = nullptr;
 
-	class CAardvarkRpcContext : public kj::Refcounted {
+	class CAardvarkRpcContext : public kj::Refcounted 
+	{
 	public:
-		CAardvarkRpcContext() : ioContext( kj::setupAsyncIo() ) {
+		CAardvarkRpcContext() : ioContext( kj::setupAsyncIo() ) 
+		{
 			threadEzContext = this;
 		}
 
@@ -358,10 +360,10 @@ namespace aardvark
 		kj::AsyncIoContext ioContext;
 	};
 
-	struct CServerRpcImpl final: public SturdyRefRestorer<AnyPointer>,
-		public kj::TaskSet::ErrorHandler
+
+	struct CServerRpcImpl final: public kj::TaskSet::ErrorHandler
 	{
-		Capability::Client mainInterface;
+		AvServerImpl *m_realServer = nullptr;
 		kj::Own<CAardvarkRpcContext> context;
 
 		struct ExportedCap 
@@ -382,9 +384,69 @@ namespace aardvark
 
 		std::map<kj::StringPtr, ExportedCap> exportMap;
 
+		class ServerBootstrapFactory : public BootstrapFactory<rpc::twoparty::VatId>
+		{
+		public:
+			ServerBootstrapFactory( AvServerImpl *realServer )
+			{
+				m_realServer = realServer;
+			}
+
+			virtual Capability::Client createFor( rpc::twoparty::VatId::Reader clientId ) override
+			{
+				return kj::heap<AvServerPerConnection>( m_realServer, m_nextId++ );
+			}
+
+		private:
+			AvServerImpl *m_realServer;
+			uint32_t m_nextId = 1;
+		};
+		ServerBootstrapFactory bootstrapFactory;
+
 		kj::ForkedPromise<uint> portPromise;
 
 		kj::TaskSet tasks;
+
+		class AvServerPerConnection final : public AvServer::Server
+		{
+			friend class CServerThread;
+		public:
+			AvServerPerConnection( AvServerImpl *realServer, uint32_t clientId )
+			{
+				m_realServer = realServer;
+				m_clientId = clientId;
+			}
+
+			virtual ::kj::Promise<void> createApp( CreateAppContext context ) override
+			{
+				return m_realServer->createApp( m_clientId, context );
+			}
+
+			virtual ::kj::Promise<void> listenForFrames( ListenForFramesContext context ) override
+			{
+				return m_realServer->listenForFrames( m_clientId, context );
+			}
+
+			virtual ::kj::Promise<void> getModelSource( GetModelSourceContext context ) override
+			{
+				return m_realServer->getModelSource( m_clientId, context );
+			}
+
+			virtual ::kj::Promise<void> updateDxgiTextureForApps( UpdateDxgiTextureForAppsContext context ) override
+			{
+				return m_realServer->updateDxgiTextureForApps( m_clientId, context );
+			}
+
+			virtual ::kj::Promise<void> pushPokerProximity( PushPokerProximityContext context ) override
+			{
+				return m_realServer->pushPokerProximity( m_clientId, context );
+			}
+
+		private:
+			AvServerImpl *m_realServer;
+			uint32_t m_clientId;
+		};
+
 
 		struct ServerContext 
 		{
@@ -394,19 +456,21 @@ namespace aardvark
 
 			//#pragma GCC diagnostic push
 			//#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-			ServerContext( kj::Own<kj::AsyncIoStream>&& stream, SturdyRefRestorer<AnyPointer>& restorer,
+			ServerContext( kj::Own<kj::AsyncIoStream>&& stream, ServerBootstrapFactory & bootstrapFactory,
 							ReaderOptions readerOpts )
 				: stream( kj::mv( stream ) ),
 					network( *this->stream, rpc::twoparty::Side::SERVER, readerOpts ),
-					rpcSystem( makeRpcServer( network, restorer ) ) {}
+					rpcSystem( makeRpcServer( network, bootstrapFactory ) ) {}
 			//#pragma GCC diagnostic pop
 		};
 
-		CServerRpcImpl( Capability::Client mainInterface, kj::StringPtr bindAddress, uint defaultPort,
+		CServerRpcImpl( AvServerImpl *realServer, kj::StringPtr bindAddress, uint defaultPort,
 		   ReaderOptions readerOpts )
-		  : mainInterface( kj::mv( mainInterface ) ),
-			context( CAardvarkRpcContext::getThreadLocal() ), portPromise( nullptr ), tasks( *this )
+		  : context( CAardvarkRpcContext::getThreadLocal() ), portPromise( nullptr ), tasks( *this ),
+			bootstrapFactory( realServer )
 		{
+			m_realServer = realServer;
+
 			auto paf = kj::newPromiseAndFulfiller<uint>();
 			portPromise = paf.promise.fork();
 
@@ -417,66 +481,25 @@ namespace aardvark
 			{
 				auto listener = addr->listen();
 				portFulfiller->fulfill( listener->getPort() );
-				acceptLoop( kj::mv( listener ), readerOpts );
+				acceptLoop( kj::mv( listener ), readerOpts, m_realServer );
 			} ) ) );
 		}
 
-		CServerRpcImpl( Capability::Client mainInterface, struct sockaddr* bindAddress, uint addrSize,
-			ReaderOptions readerOpts )
-		: mainInterface( kj::mv( mainInterface ) ),
-			context( CAardvarkRpcContext::getThreadLocal() ), portPromise( nullptr ), tasks( *this )
-		{
-			auto listener = context->getIoProvider().getNetwork()
-				.getSockaddr( bindAddress, addrSize )->listen();
-			portPromise = kj::Promise<uint>( listener->getPort() ).fork();
-			acceptLoop( kj::mv( listener ), readerOpts );
-		}
-
-		CServerRpcImpl( Capability::Client mainInterface, int socketFd, uint port, ReaderOptions readerOpts )
-		: mainInterface( kj::mv( mainInterface ) ),
-			context( CAardvarkRpcContext::getThreadLocal() ),
-			portPromise( kj::Promise<uint>( port ).fork() ),
-			tasks( *this ) 
-		{
-			acceptLoop( context->getLowLevelIoProvider().wrapListenSocketFd( socketFd, DUMMY_FILTER ),
-					readerOpts );
-		}
-
-		void acceptLoop( kj::Own<kj::ConnectionReceiver>&& listener, ReaderOptions readerOpts ) 
+		void acceptLoop( kj::Own<kj::ConnectionReceiver>&& listener, ReaderOptions readerOpts, AvServerImpl *realServer )
 		{
 			auto ptr = listener.get();
 			tasks.add( ptr->accept().then( kj::mvCapture( kj::mv( listener ),
-				[this, readerOpts]( kj::Own<kj::ConnectionReceiver>&& listener,
-									kj::Own<kj::AsyncIoStream>&& connection ) {
-				acceptLoop( kj::mv( listener ), readerOpts );
+				[this, readerOpts, realServer]( kj::Own<kj::ConnectionReceiver>&& listener,
+									kj::Own<kj::AsyncIoStream>&& connection ) 
+			{
+				acceptLoop( kj::mv( listener ), readerOpts, realServer );
 
-				auto server = kj::heap<ServerContext>( kj::mv( connection ), *this, readerOpts );
+				auto server = kj::heap<ServerContext>( kj::mv( connection ), bootstrapFactory, readerOpts );
 
 				// Arrange to destroy the server context when all references are gone, or when the
 				// EzRpcServer is destroyed (which will destroy the TaskSet).
 				tasks.add( server->network.onDisconnect().attach( kj::mv( server ) ) );
 			} ) ) );
-		}
-
-		Capability::Client restore( AnyPointer::Reader objectId ) override 
-		{
-			if ( objectId.isNull() ) 
-			{
-				return mainInterface;
-			}
-			else 
-			{
-				auto name = objectId.getAs<Text>();
-				auto iter = exportMap.find( name );
-				if ( iter == exportMap.end() ) {
-				  KJ_FAIL_REQUIRE( "Server exports no such capability.", name ) { break; }
-				  return nullptr;
-				}
-				else 
-				{
-					return iter->second.cap;
-				}
-			}
 		}
 
 		void taskFailed( kj::Exception&& exception ) override 
@@ -517,10 +540,8 @@ namespace aardvark
 
 	void CServerThread::Run()
 	{
-		kj::Own<AvServerImpl> serverObj = kj::heap<AvServerImpl>();
-		AvServerImpl *pServer = serverObj;
-		AvServer::Client capability = kj::mv( serverObj );
-		CServerRpcImpl server( kj::mv( capability ), "*", 5923, ReaderOptions() );
+		AvServerImpl realServer;
+		CServerRpcImpl server( &realServer, "*", 5923, ReaderOptions() );
 		auto& waitScope = server.context->getWaitScope();
 
 		// Run forever, accepting connections and handling requests.
@@ -541,10 +562,10 @@ namespace aardvark
 			} );
 
 			waitScope.poll();
-			pServer->runFrame();
+			realServer.runFrame();
 		}
 
-		pServer->clearApps();
+		realServer.clearApps();
 	};
 
 }

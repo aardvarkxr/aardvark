@@ -15,11 +15,11 @@ namespace aardvark
 	{
 		friend class CServerThread;
 	public:
-		virtual ::kj::Promise<void> createApp( CreateAppContext context ) override;
-		virtual ::kj::Promise<void> listenForFrames( ListenForFramesContext context ) override;
-		virtual ::kj::Promise<void> getModelSource( GetModelSourceContext context ) override;
-		virtual ::kj::Promise<void> updateDxgiTextureForApps( UpdateDxgiTextureForAppsContext context ) override;
-		virtual ::kj::Promise<void> pushPokerProximity( PushPokerProximityContext context ) override;
+		::kj::Promise<void> createApp( uint32_t clientId, AvServer::Server::CreateAppContext context );
+		::kj::Promise<void> listenForFrames( uint32_t clientId, AvServer::Server::ListenForFramesContext context );
+		::kj::Promise<void> getModelSource( uint32_t clientId, AvServer::Server::GetModelSourceContext context );
+		::kj::Promise<void> updateDxgiTextureForApps( uint32_t clientId, AvServer::Server::UpdateDxgiTextureForAppsContext context );
+		::kj::Promise<void> pushPokerProximity( uint32_t clientId, AvServer::Server::PushPokerProximityContext context );
 		virtual void taskFailed( kj::Exception&& exception ) override;
 
 		void removeApp( CAardvarkApp *pApp );
