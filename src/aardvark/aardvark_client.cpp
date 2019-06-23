@@ -95,7 +95,6 @@ namespace aardvark
 
 	CAardvarkClient::CAardvarkClient() 
 	{
-		m_tasks = kj::heap<kj::TaskSet>( *this );
 	}
 
 	CAardvarkClient::~CAardvarkClient()
@@ -150,15 +149,19 @@ namespace aardvark
 
 		m_pMainInterface = kj::heap< AvServer::Client >( getMain() );
 
-		//m_pClient = new capnp::EzRpcClient( "localhost:5923" );
-		//m_pMainInterface = kj::heap< AvServer::Client>( m_pClient->getMain<AvServer>() );
+		m_tasks = kj::heap<kj::TaskSet>( *this );
 	}
 
 	void CAardvarkClient::Stop()
 	{
+		m_panelHandler = nullptr;
+		m_panelHandlerImpl = nullptr;
+		m_pokerHandler = nullptr;
+		m_pokerHandlerImpl = nullptr;
 		m_setupPromise = nullptr;
 		m_pMainInterface = nullptr;
 		m_clientContext = nullptr;
+		m_tasks = nullptr;
 		m_context = nullptr;
 	}
 
