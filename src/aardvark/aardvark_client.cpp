@@ -156,10 +156,10 @@ namespace aardvark
 
 	void CAardvarkClient::Stop()
 	{
-		m_pMainInterface = nullptr;
-		m_context = nullptr;
-		m_clientContext = nullptr;
 		m_setupPromise = nullptr;
+		m_pMainInterface = nullptr;
+		m_clientContext = nullptr;
+		m_context = nullptr;
 	}
 
 	void CAardvarkClient::addToTasks( kj::Promise<void> && promRequest )
