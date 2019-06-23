@@ -42,7 +42,7 @@ export abstract class AvBaseNode<TProps, TState> extends React.Component<TProps,
 	public baseNodeRender( node: IAvBaseNode, children: React.ReactNode )
 	{
 		return (
-			<av-node nodeId={ this.m_nodeId }>
+			<av-node key={this.m_nodeId} nodeId={ this.m_nodeId }>
 				{ children }
 			</av-node>
 		) ;
@@ -52,7 +52,7 @@ export abstract class AvBaseNode<TProps, TState> extends React.Component<TProps,
 	{
 		AvApp.instance().markDirty();
 	}
-	
+
 	public render()
 	{
 		return this.baseNodeRender( this, this.props.children );

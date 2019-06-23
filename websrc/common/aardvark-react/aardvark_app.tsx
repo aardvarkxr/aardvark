@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import { Av, AvPanelHandler, AvAppObj, AvSceneContext } from 'common/aardvark';
+import { Av, AvPanelHandler, AvAppObj, AvSceneContext, AvPokerHandler, AvPanelMouseEventType } from 'common/aardvark';
 import { IAvBaseNode } from './aardvark_base_node';
 import bind from 'bind-decorator';
 
@@ -47,6 +47,18 @@ export class AvApp extends React.Component< AvAppProps, {} >
 	{
 		this.m_app.registerPanelHandler( nodeId, handler );
 		this.markDirty();
+	}
+
+	public setPokerHandler( nodeId: number, handler: AvPokerHandler )
+	{
+		this.m_app.registerPokerHandler( nodeId, handler );
+		this.markDirty();
+	}
+
+	public sendMouseEvent( pokerId: number, panelId: string, 
+		eventType:AvPanelMouseEventType, x: number, y: number )
+	{
+		this.m_app.sendMouseEvent( pokerId, panelId, eventType, x, y );
 	}
 
 	private traverseNode( context: AvSceneContext, domNode: HTMLElement )

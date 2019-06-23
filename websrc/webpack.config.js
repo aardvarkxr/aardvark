@@ -80,6 +80,6 @@ function createConfig( appName, appTitle, ext )
 module.exports = 
 [
 	createConfig( 'aardvark_master', 'Master App', 'ts' ),
-	createConfig( 'default_poker', 'Default Poker', 'ts' ),
+	createConfig( 'default_poker', 'Default Poker', 'tsx' ),
 	createConfig( 'test_panel', 'Test Panel', 'tsx' ),
 ];

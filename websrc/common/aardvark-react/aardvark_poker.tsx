@@ -1,83 +1,52 @@
-import {Av, PokerProximity, AvNodeType, AvAppObj, AvPanelMouseEventType} from 'common/aardvark';
+import * as React from 'react';
+
+import { AvApp } from './aardvark_app';
+import { AvBaseNode } from './aardvark_base_node';
+import { AvSceneContext, AvNodeType, AvPanelMouseEvent, AvPanelMouseEventType, PokerProximity } from 'common/aardvark';
 import bind from 'bind-decorator';
 
-class CDefaultPoker
+interface AvPokerProps
 {
-	m_shouldHighlight = false;
-	m_baseId:number;
-	m_pokerId:number;
-	m_app:AvAppObj;
+	updateHighlight?: (shouldHighlight: boolean ) => void;
+}
+
+export class AvPoker extends AvBaseNode< AvPokerProps, {} >
+{
 	m_lastActivePanel:string = null;
 	m_mouseDown: boolean = false;
 	m_lastX = 0;
 	m_lastY = 0;
+	m_lastHighlight = false;
 
-	constructor( baseId: number, app:AvAppObj )
+	public startNode( context:AvSceneContext )
 	{
-		this.m_baseId = baseId;
-		this.m_pokerId = baseId + 4;
-		this.m_app = app;
+		context.startNode( this.m_nodeId, "poker" + this.m_nodeId, AvNodeType.Poker );
 
-		this.updateSceneGraph();
+		AvApp.instance().setPokerHandler( this.m_nodeId, this.proximityUpdate );
 	}
 
-	private updateSceneGraph()
-	{
-		// TODO: Move this to be global
-		var sceneContext = this.m_app.startSceneContext();
-	
-		sceneContext.startNode( this.m_baseId + 1, "pokerorigin", AvNodeType.Origin );
-		sceneContext.setOriginPath( "/user/hand/right" );
-	
-			sceneContext.startNode( this.m_baseId + 2, "pokerxform", AvNodeType.Transform );
-			sceneContext.setScale( 0.01, 0.01, 0.01 );
-	
-				sceneContext.startNode( this.m_baseId + 3, "pokermodel", AvNodeType.Model );
-				if( this.m_shouldHighlight )
-				{
-					sceneContext.setModelUri( "file:///e:/homedev/aardvark/data/models/sphere/sphere_highlight.glb" );
-				}
-				else
-				{
-					sceneContext.setModelUri( "file:///e:/homedev/aardvark/data/models/sphere/sphere.glb" );
-				}
-				sceneContext.finishNode();
-	
-			sceneContext.finishNode();
-	
-			sceneContext.startNode( this.m_pokerId, "poker", AvNodeType.Poker );
-			sceneContext.finishNode();
-	
-		sceneContext.finishNode();
-	
-	
-		sceneContext.finish();
-
-		this.m_app.registerPokerHandler( 14, this.proximityUpdate );
-	}
-	
 	private sendMouseLeave( panelId: string )
 	{
-		this.m_app.sendMouseEvent( this.m_pokerId, panelId, AvPanelMouseEventType.Leave, 0, 0 );
+		AvApp.instance().sendMouseEvent( this.m_nodeId, panelId, AvPanelMouseEventType.Leave, 0, 0 );
 	}
 	private sendMouseEnter( panelId: string, x: number, y: number )
 	{
-		this.m_app.sendMouseEvent( this.m_pokerId, panelId, AvPanelMouseEventType.Enter, x, y );
+		AvApp.instance().sendMouseEvent( this.m_nodeId, panelId, AvPanelMouseEventType.Enter, x, y );
 	}
 
 	private sendMouseMove( panelId: string, x: number, y: number )
 	{
-		this.m_app.sendMouseEvent( this.m_pokerId, panelId, AvPanelMouseEventType.Move, x, y );
+		AvApp.instance().sendMouseEvent( this.m_nodeId, panelId, AvPanelMouseEventType.Move, x, y );
 	}
 
 	private sendMouseDown( panelId: string, x: number, y: number )
 	{
-		this.m_app.sendMouseEvent( this.m_pokerId, panelId, AvPanelMouseEventType.Down, x, y );
+		AvApp.instance().sendMouseEvent( this.m_nodeId, panelId, AvPanelMouseEventType.Down, x, y );
 	}
 
 	private sendMouseUp( panelId: string, x: number, y: number )
 	{
-		this.m_app.sendMouseEvent( this.m_pokerId, panelId, AvPanelMouseEventType.Up, x, y );
+		AvApp.instance().sendMouseEvent( this.m_nodeId, panelId, AvPanelMouseEventType.Up, x, y );
 	}
 
 	@bind private proximityUpdate( proxArray: PokerProximity[] )
@@ -149,14 +118,14 @@ class CDefaultPoker
 		}
 
 	
-		if( shouldHighlight != this.m_shouldHighlight )
+		if( shouldHighlight != this.m_lastHighlight )
 		{
-			this.m_shouldHighlight = shouldHighlight;
-			this.updateSceneGraph();
+			this.m_lastHighlight = shouldHighlight;
+			if( this.props.updateHighlight )
+			{
+				this.props.updateHighlight( this.m_lastHighlight );
+			}
 		}
 	}
+
 }
-
-var myApp = Av().createApp( "default_poker" );
-
-var defaultPoker = new CDefaultPoker( 10, myApp );
