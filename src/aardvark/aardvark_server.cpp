@@ -23,7 +23,7 @@ namespace aardvark
 
 	::kj::Promise<void> AvServerImpl::createApp( uint32_t clientId, CreateAppContext context )
 	{
-		auto server = kj::heap<CAardvarkApp>( context.getParams().getName(), this );
+		auto server = kj::heap<CAardvarkApp>( clientId, context.getParams().getName(), this );
 		auto& serverRef = *server;
 
 		AvApp::Client capability = kj::mv( server );
@@ -73,7 +73,7 @@ namespace aardvark
 	::kj::Promise<void> AvServerImpl::listenForFrames( uint32_t clientId, ListenForFramesContext context )
 	{
 		AvServer::Server::ListenForFramesParams::Reader params = context.getParams();
-		m_frameListeners.push_back( context.getParams().getListener() );
+		m_frameListeners.push_back( { clientId, context.getParams().getListener() } );
 		markFrameDirty();
 		return kj::READY_NOW;
 	}
@@ -82,7 +82,7 @@ namespace aardvark
 	{
 		for ( auto & listener : m_frameListeners )
 		{
-			sendFrameToListener( listener );
+			sendFrameToListener( listener.client );
 		}
 	}
 
@@ -301,6 +301,36 @@ namespace aardvark
 		m_eventTasks->add( std::move( promRequest ) );
 	}
 
+	void AvServerImpl::clientDisconnected( uint32_t clientId )
+	{
+		for ( auto iApp = m_vecApps.begin(); iApp != m_vecApps.end(); )
+		{
+			if ( ( *iApp )->getClientId() == clientId )
+			{
+				( *iApp )->clearClients();
+				iApp = m_vecApps.erase( iApp );
+			}
+			else
+			{
+				iApp++;
+			}
+		}
+
+		for ( auto iFrameListener = m_frameListeners.begin(); iFrameListener != m_frameListeners.end(); )
+		{
+			if ( iFrameListener->clientId == clientId )
+			{
+				iFrameListener = m_frameListeners.erase( iFrameListener );
+			}
+			else
+			{
+				iFrameListener++;
+			}
+		}
+
+		markFrameDirty();
+	}
+
 	namespace {
 
 		class DummyFilter : public kj::LowLevelAsyncIoProvider::NetworkFilter {
@@ -415,6 +445,11 @@ namespace aardvark
 			{
 				m_realServer = realServer;
 				m_clientId = clientId;
+			}
+
+			virtual ~AvServerPerConnection()
+			{
+				m_realServer->clientDisconnected( m_clientId );
 			}
 
 			virtual ::kj::Promise<void> createApp( CreateAppContext context ) override

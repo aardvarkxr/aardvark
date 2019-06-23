@@ -47,6 +47,7 @@ namespace aardvark
 		kj::Maybe<AvPokerHandler::Client> findPokerHandler( uint64_t pokerGlobalId );
 		kj::Maybe<AvPanelHandler::Client> findPanelHandler( uint64_t panelGlobalId );
 
+		void clientDisconnected( uint32_t clientId );
 	protected:
 		void sendFrameToAllListeners();
 		void sendFrameToListener( AvFrameListener::Client listener );
@@ -57,7 +58,13 @@ namespace aardvark
 	private:
 		std::unordered_map< std::string, CAardvarkModelSource *> m_mapModelSources;
 		std::vector< CAardvarkApp * > m_vecApps;
-		std::vector< AvFrameListener::Client > m_frameListeners;
+
+		struct FrameListener_t
+		{
+			uint32_t clientId;
+			AvFrameListener::Client client;
+		};
+		std::vector< FrameListener_t > m_frameListeners;
 		uint64_t m_unNextFrame = 1;
 		bool m_frameDirty = false;
 		kj::Own< kj::TaskSet > m_eventTasks = kj::heap<kj::TaskSet>( *this );

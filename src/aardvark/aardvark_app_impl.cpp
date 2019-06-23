@@ -7,8 +7,10 @@
 
 using namespace aardvark;
 
-CAardvarkApp::CAardvarkApp( const std::string & sName, AvServerImpl *pParentServer )
+CAardvarkApp::CAardvarkApp( uint32_t clientId, const std::string & sName, AvServerImpl *pParentServer )
 {
+	m_clientId = clientId;
+
 	static uint32_t s_uniqueId = 1;
 	m_id = s_uniqueId++;
 

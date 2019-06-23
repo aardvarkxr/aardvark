@@ -18,13 +18,14 @@ namespace aardvark
 	class CAardvarkApp : public AvApp::Server
 	{
 	public:
-		CAardvarkApp( const std::string & sName, AvServerImpl *pParentServer );
+		CAardvarkApp( uint32_t clientId, const std::string & sName, AvServerImpl *pParentServer );
 		~CAardvarkApp() {}
 
 		void AddClient( AvApp::Client & client ) { m_vecClients.push_back( AvApp::Client( client ) ); }
 		void clearClients() { m_vecClients.clear(); }
 		const std::string & getName() const { return m_sName;  }
 		uint32_t getId() const { return m_id; }
+		uint32_t getClientId() const { return m_clientId; }
 		bool hasSharedTextureInfo() const { return m_sharedTexture.isSet();  }
 		void setSharedTextureInfo( AvSharedTextureInfo::Reader sharedTextureInfo );
 		AvSharedTextureInfo::Reader getSharedTextureInfo();
@@ -46,6 +47,7 @@ namespace aardvark
 		std::unordered_map<uint32_t, AvPanelHandler::Client> m_panelHandlers;
 		AvServerImpl *m_pParentServer = nullptr;
 		uint32_t m_id = 0;
+		uint32_t m_clientId;
 	};
 
 	typedef std::shared_ptr< CAardvarkApp > AardvarkAppPtr_t;
