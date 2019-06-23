@@ -1,5 +1,6 @@
 const path = require('path');
 var HtmlWebpackPlugin = require( 'html-webpack-plugin' );
+const CopyPlugin = require('copy-webpack-plugin');
 
 let defaults = 
 {
@@ -55,10 +56,11 @@ function createConfig( appName, appTitle, ext )
 		defaults
 	);
 
+	let dest = path.resolve( __dirname, '../build/apps/' + appName );
 	config.output =
 	{
 		filename: appName + '_bundle.js',
-		path: path.resolve( __dirname, '../build/apps/' + appName )
+		path: dest,
 	}
 
 	config.plugins =
@@ -69,9 +71,15 @@ function createConfig( appName, appTitle, ext )
 				filename: "./index.html",
 				template: "./templates/aardvark_app.html",
 				title: appTitle,
+				name: appName,
 			}
-		)
-	];
+		),
+		new CopyPlugin(
+			[
+				{ from: './' +appName + '/src/' + appName + '.css', to: appName + '.css' }
+			]
+			),
+  	];
 
 	return config;
 }
