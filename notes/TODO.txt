@@ -1,12 +1,7 @@
 Current:
 * Show frame info in the UI?
 * Maybe switch to named pipes?
-* Clients hanging up should clear apps/SGs (for now the renderer cleans up apps on the way out.)
 
-Send these events to panels:
-* mouse enter/leave - poker is within X meters of the front of panel
-* mouse move - poker is entered
-* mouse down/up - poker is within Y meters of the front of the panel
 
 Send these events to grabables:
 * enter grabbing range
@@ -18,20 +13,13 @@ Send these events to grabables:
 
 collision processor
 * inputs:
-  - list of interactive panels w/ transforms
   - list of grabbables w/ transforms
   - list of grabbers w/ transforms
-  - list of pokers w/ transforms
 * outputs:
   - per grabber:
     > grab on/off
     > list of grabbables within range
       * transform from grabber to each grabbable?
-  - per poker
-    > list of interactive panels within range
-      * 3D position on that panel
-        - x, y are 0..1 within the panel from upper left. Like mouse coords
-        - distance is distance from the panel in meters for click detection
 
 grabber processor (per grabber)
 * inputs:
@@ -41,15 +29,6 @@ grabber processor (per grabber)
   - possibly transform override nodes
   - events:
     > grab start/end/enter/leave to grabbable
-
-Poker processer (per poker)
-* inputs:
-  - list of interactive panels within range w/ position
-* outputs:
-  - event stream to those panels:
-    > mouse enter/leave
-    > mouse move
-    > mouse down/up
 
 
 
@@ -65,8 +44,11 @@ Step 1 - Make some pixels from C++ on screen (done)
 Step 2 - Make the pixels appear in a scene app (done)
 Step 3 - Make some pixels from Javascript (done)
 Step 4 - Make a quad from Javascript (done)
-
 Step 5 - Make input work back to Javascript/HTML/CSS
-Step 6 - Make the pixels/input layer on top of other apps
+
+Step 6 - Haptics from panels (and pokers?)
+Step 7 - Grabbables and grabbers
+
+Step 50 - Make the pixels/input layer on top of other apps
 
 
