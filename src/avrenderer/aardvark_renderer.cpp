@@ -1723,6 +1723,13 @@ void VulkanExample::prepare()
 	reqListen.setListener( listenerClient );
 	reqListen.send().wait( m_pClient->WaitScope() );
 
+	vr::VRInput()->SetActionManifestPath( "e:/homedev/aardvark/data/input/aardvark_actions.json" );
+	vr::VRInput()->GetActionSetHandle( "/actions/aardvark", &m_actionSet );
+	vr::VRInput()->GetActionHandle( "/actions/aardvark/out/haptics", &m_actionHaptic );
+	vr::VRInput()->GetActionHandle( "/actions/aardvark/in/grab", &m_actionGrab );
+	vr::VRInput()->GetInputSourceHandle( "/user/hand/left", &m_leftHand );
+	vr::VRInput()->GetInputSourceHandle( "/user/hand/right", &m_rightHand );
+
 	prepared = true;
 }
 
@@ -2507,12 +2514,52 @@ void VulkanExample::render()
 
 	m_intersections.updatePokerProximity( m_pClient );
 
+	doInputWork();
+
 	// pump messages from RPC
 	m_pClient->WaitScope().poll();
 
 	// pump messages for CEF
 	//CefDoMessageLoopWork();
 }
+
+bool GetAction( vr::VRActionHandle_t action, vr::VRInputValueHandle_t whichHand )
+{
+	vr::InputDigitalActionData_t actionData;
+	vr::EVRInputError err = vr::VRInput()->GetDigitalActionData( action, &actionData,
+		sizeof( actionData ), whichHand );
+	if( vr::VRInputError_None != err )
+		return false;
+
+	return actionData.bActive && actionData.bState;
+}
+
+
+void VulkanExample::doInputWork()
+{
+	vr::VRActiveActionSet_t actionSet[2] = {};
+	actionSet[0].ulActionSet = m_actionSet;
+	actionSet[0].ulRestrictedToDevice = m_leftHand;
+	actionSet[1].ulActionSet = m_actionSet;
+	actionSet[1].ulRestrictedToDevice = m_rightHand;
+
+	vr::EVRInputError err = vr::VRInput()->UpdateActionState( actionSet, sizeof( vr::VRActiveActionSet_t ), 2 );
+
+	bool bLeftGrab = GetAction( m_actionGrab, m_leftHand );
+	bool bRightGrab = GetAction( m_actionGrab, m_rightHand );
+
+	if ( bLeftGrab )
+	{
+		printf( " Left grab\n" );
+	}
+	if ( bRightGrab )
+	{
+		printf( " Right grab\n" );
+	}
+
+	// do something with grabbers with this information
+}
+
 
 void VulkanExample::submitEyeBuffers()
 {

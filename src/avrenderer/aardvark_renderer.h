@@ -127,6 +127,15 @@ public:
 
 	void submitEyeBuffers();
 
+	void doInputWork();
+
+private:
+	vr::VRActionSetHandle_t m_actionSet = vr::k_ulInvalidActionSetHandle;
+	vr::VRActionHandle_t m_actionGrab = vr::k_ulInvalidActionHandle;
+	vr::VRActionHandle_t m_actionHaptic = vr::k_ulInvalidActionHandle;
+	vr::VRInputValueHandle_t m_leftHand = vr::k_ulInvalidInputValueHandle;
+	vr::VRInputValueHandle_t m_rightHand = vr::k_ulInvalidInputValueHandle;
+
 	struct SgRoot_t
 	{
 		std::unordered_map<uint32_t, size_t> mapIdToIndex;
