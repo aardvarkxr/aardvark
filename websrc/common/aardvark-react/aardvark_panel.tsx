@@ -2,12 +2,13 @@ import * as React from 'react';
 
 import { AvApp } from './aardvark_app';
 import { AvBaseNode } from './aardvark_base_node';
-import { AvSceneContext, AvNodeType, AvPanelMouseEvent, AvPanelMouseEventType } from 'common/aardvark';
+import { AvSceneContext, AvNodeType, AvPanelMouseEvent, AvPanelMouseEventType, AvPanelHandler } from 'common/aardvark';
 import bind from 'bind-decorator';
 
 interface AvPanelProps
 {
 	interactive: boolean;
+	customMouseHandler?: AvPanelHandler;
 }
 
 export class AvPanel extends AvBaseNode< AvPanelProps, {} >
@@ -18,33 +19,14 @@ export class AvPanel extends AvBaseNode< AvPanelProps, {} >
 		context.setTextureSource( AvApp.instance().getName() );
 		context.setInteractive( this.props.interactive );
 
-		if( this.props.interactive )
+		if( this.props.customMouseHandler )
 		{
-			AvApp.instance().setPanelHandler( this.m_nodeId, this.handleMouseEvent );
+			AvApp.instance().setPanelHandler( this.m_nodeId, this.props.customMouseHandler );
 		}
-	}
-
-	@bind public handleMouseEvent( evt: AvPanelMouseEvent )
-	{
-		switch( evt.type )
+		else
 		{
-			case AvPanelMouseEventType.Down: 
-				console.log( "mouse down: ", evt.panelId, evt.pokerId, evt.x, evt.y );
-				break;
-			case AvPanelMouseEventType.Up: 
-				console.log( "mouse up: ", evt.panelId, evt.pokerId, evt.x, evt.y );
-				break;
-			case AvPanelMouseEventType.Enter: 
-				console.log( "mouse enter: ", evt.panelId, evt.pokerId, evt.x, evt.y );
-				break;
-			case AvPanelMouseEventType.Leave: 
-				console.log( "mouse leave: ", evt.panelId, evt.pokerId, evt.x, evt.y );
-				break;
-			case AvPanelMouseEventType.Move: 
-	//			console.log( "mouse move: ", evt.panelId, evt.pokerId, evt.x, evt.y );
-				break;
+			AvApp.instance().enableDefaultPanelHandling( this.m_nodeId );
 		}
-
 	}
 
 }

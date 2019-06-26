@@ -1,0 +1,20 @@
+body
+{
+	background-color: lightskyblue;
+}
+
+.Button 
+{
+	background-color: lightcoral;
+	font-size: 4rem;
+}
+
+.Label
+{
+	font-size: 4rem;
+}
+.Button:hover
+{
+	background-color: red;
+}
+

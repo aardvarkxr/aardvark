@@ -104,6 +104,7 @@ private:
 	std::set<uint32_t> m_nodeIdsThatNeedThisTexture;
 	std::unordered_map< uint32_t, CefRefPtr< CefV8Value > > m_pokerHandlers;
 	std::unordered_map< uint32_t, CefRefPtr< CefV8Value > > m_panelHandlers;
+	std::set< uint32_t > m_defaultPanels;
 };
 
 
@@ -519,6 +520,23 @@ bool CAardvarkAppObject::init()
 		m_panelHandlers.insert_or_assign( arguments[0]->GetUIntValue(), arguments[1] );
 	} );
 
+	RegisterFunction( "enableDefaultPanelHandling", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 1 )
+		{
+			exception = "Invalid arguments";
+			return;
+		}
+
+		if ( !arguments[0]->IsUInt() )
+		{
+			exception = "argument must be a panel node ID";
+			return;
+		}
+
+		m_defaultPanels.insert( arguments[0]->GetUIntValue() );
+	} );
+
 	RegisterFunction( "sendMouseEvent", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
 		if ( arguments.size() != 5 )
@@ -640,6 +658,22 @@ void CAardvarkAppObject::runFrame()
 			iHandler.second->ExecuteFunction( nullptr, CefV8ValueList{ evt } );
 
 			m_handler->getContext()->Exit();
+		}
+	}
+
+	for ( uint32_t panelId : m_defaultPanels )
+	{
+		aardvark::PanelMouseEvent_t panelMouseEvent;
+		uint32_t unLimit = 0;
+		while ( ++unLimit < 100 && EAvSceneGraphResult::Success == aardvark::avGetNextMouseEvent(
+			m_handler->getClient(), panelId, &panelMouseEvent ) )
+		{
+			CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "mouse_event" );
+			msg->GetArgumentList()->SetInt( 0, (int)panelMouseEvent.type );
+			msg->GetArgumentList()->SetDouble( 1, panelMouseEvent.x );
+			msg->GetArgumentList()->SetDouble( 2, panelMouseEvent.y );
+
+			m_handler->getBrowser()->SendProcessMessage( PID_BROWSER, msg );
 		}
 	}
 }

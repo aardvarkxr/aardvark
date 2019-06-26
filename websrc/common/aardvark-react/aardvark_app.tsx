@@ -49,6 +49,13 @@ export class AvApp extends React.Component< AvAppProps, {} >
 		this.markDirty();
 	}
 
+
+	public enableDefaultPanelHandling( nodeId: number )
+	{
+		this.m_app.enableDefaultPanelHandling( nodeId );
+		this.markDirty();
+	}
+
 	public setPokerHandler( nodeId: number, handler: AvPokerHandler )
 	{
 		this.m_app.registerPokerHandler( nodeId, handler );

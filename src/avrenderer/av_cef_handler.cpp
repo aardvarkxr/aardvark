@@ -182,6 +182,47 @@ bool CAardvarkCefHandler::OnProcessMessageReceived( CefRefPtr<CefBrowser> browse
 		CAardvarkCefApp::instance()->startApp( uri, permissions );
 
 	}
+	else if ( message->GetName() == "mouse_event" )
+	{
+		CefMouseEvent cefEvent;
+		cefEvent.x = (int)(message->GetArgumentList()->GetDouble( 1 ) * (double)m_width );
+		cefEvent.y = (int)( message->GetArgumentList()->GetDouble( 2 ) * (double)m_height );
+		cefEvent.modifiers = 0;
+
+		switch ( (aardvark::EPanelMouseEventType)message->GetArgumentList()->GetInt( 0 ) )
+		{
+		case aardvark::EPanelMouseEventType::Enter:
+		{
+			browser->GetHost()->SendMouseMoveEvent( cefEvent, false );
+		}
+		break;
+
+		case aardvark::EPanelMouseEventType::Leave:
+		{
+			browser->GetHost()->SendMouseMoveEvent( cefEvent, true );
+		}
+		break;
+
+		case aardvark::EPanelMouseEventType::Move:
+		{
+			browser->GetHost()->SendMouseMoveEvent( cefEvent, false );
+		}
+		break;
+
+		case aardvark::EPanelMouseEventType::Down:
+		{
+			browser->GetHost()->SendMouseClickEvent( cefEvent, MBT_LEFT, false, 1 );
+		}
+		break;
+
+		case aardvark::EPanelMouseEventType::Up:
+		{
+			browser->GetHost()->SendMouseClickEvent( cefEvent, MBT_LEFT, true, 1 );
+		}
+		break;
+
+		}
+	}
 
 	return false;
 }

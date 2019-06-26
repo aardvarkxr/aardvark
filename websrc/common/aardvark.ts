@@ -148,6 +148,7 @@ export interface AvAppObj
 	startSceneContext: AvApp_StartSceneContext;
 	registerPokerHandler: AvApp_RegisterPokerHandler;
 	registerPanelHandler: AvApp_RegisterPanelHandler;
+	enableDefaultPanelHandling( panelId: number ): void;
 	sendMouseEvent: AvApp_SendMouseEvent;
 }
 
