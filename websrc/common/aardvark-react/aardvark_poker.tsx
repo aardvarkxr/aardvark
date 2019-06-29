@@ -1,11 +1,11 @@
 import * as React from 'react';
 
 import { AvApp } from './aardvark_app';
-import { AvBaseNode } from './aardvark_base_node';
+import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 import { AvSceneContext, AvNodeType, AvPanelMouseEvent, AvPanelMouseEventType, PokerProximity } from 'common/aardvark';
 import bind from 'bind-decorator';
 
-interface AvPokerProps
+interface AvPokerProps extends AvBaseNodeProps
 {
 	updateHighlight?: (shouldHighlight: boolean ) => void;
 }

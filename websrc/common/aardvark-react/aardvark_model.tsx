@@ -1,9 +1,9 @@
 import * as React from 'react';
 
-import { AvBaseNode } from './aardvark_base_node';
+import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 import { AvSceneContext, AvNodeType } from 'common/aardvark';
 
-interface AvModelProps
+interface AvModelProps extends AvBaseNodeProps
 {
 	uri: string;
 }

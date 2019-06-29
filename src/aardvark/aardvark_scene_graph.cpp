@@ -499,4 +499,25 @@ namespace aardvark
 		return EAvSceneGraphResult::Success;
 	}
 
+	EAvSceneGraphResult avSendHapticEventFromPanel( aardvark::CAardvarkClient *pClient, 
+		AvApp::Client *pApp, uint32_t panelNodeId,
+		float amplitude, float frequency, float duration )
+	{
+		KJ_IF_MAYBE( panelHandler, pClient->getPanelHandlerServer() )
+		{
+			auto req = pApp->sendHapticEventRequest();
+			req.setNodeGlobalId( ( *panelHandler )->getLastPoker() );
+			req.setAmplitude( amplitude );
+			req.setFrequency( frequency );
+			req.setDuration( duration );
+			pClient->addRequestToTasks( std::move( req ) );
+			return EAvSceneGraphResult::Success;
+		}
+		else
+		{
+			return EAvSceneGraphResult::RequestFailed;
+		}
+	}
+
 }
+

@@ -15,6 +15,11 @@ declare global
 	}
 }
 
+export interface AvBaseNodeProps
+{
+	onIdAssigned?: ( id: number ) => void;
+}
+
 export interface IAvBaseNode
 {
 	m_nodeId: number;
@@ -30,6 +35,11 @@ export abstract class AvBaseNode<TProps, TState> extends React.Component<TProps,
 	{
 		super( props );
 		AvApp.instance().register( this );
+
+		if( props.onIdAssigned )
+		{
+			props.onIdAssigned( this.m_nodeId );
+		}
 	}
 
 	public pushNode( context: AvSceneContext ): void

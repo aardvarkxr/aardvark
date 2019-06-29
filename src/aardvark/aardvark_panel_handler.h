@@ -17,9 +17,12 @@ namespace aardvark
 
 		EAvSceneGraphResult avGetNextMouseEvent( uint32_t panelNodeId, PanelMouseEvent_t *mouseEvent );
 		
+		uint64_t getLastPoker() { return m_lastPoker; }
+
 	protected:
 
 	private:
 		std::unordered_map<uint32_t, EventList> m_events;
+		uint64_t m_lastPoker = 0;
 	};
 }

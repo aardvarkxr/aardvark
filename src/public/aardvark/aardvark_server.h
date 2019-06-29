@@ -43,6 +43,8 @@ namespace aardvark
 			addToTasks( std::move( prom.eagerlyEvaluate( nullptr ) ) );
 		}
 
+		void sendHapticEvent( uint64_t targetNodeId, float amplitude, float frequency, float duration );
+
 		kj::Maybe<CAardvarkApp&> findApp( uint32_t appId );
 		kj::Maybe<AvPokerHandler::Client> findPokerHandler( uint64_t pokerGlobalId );
 		kj::Maybe<AvPanelHandler::Client> findPanelHandler( uint64_t panelGlobalId );

@@ -331,6 +331,19 @@ namespace aardvark
 		markFrameDirty();
 	}
 
+	void AvServerImpl::sendHapticEvent( uint64_t targetNodeId, float amplitude, float frequency, float duration )
+	{
+		for ( auto iFrameListener : m_frameListeners )
+		{
+			auto req = iFrameListener.client.sendHapticEventRequest();
+			req.setTargetGlobalId( targetNodeId );
+			req.setAmplitude( amplitude );
+			req.setFrequency( frequency );
+			req.setDuration( duration );
+			addRequestToTasks( std::move( req ) );
+		}
+	}
+
 	namespace {
 
 		class DummyFilter : public kj::LowLevelAsyncIoProvider::NetworkFilter {

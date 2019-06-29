@@ -576,6 +576,49 @@ bool CAardvarkAppObject::init()
 			(float)arguments[3]->GetDoubleValue(), (float)arguments[4]->GetDoubleValue() );
 	} );
 
+	RegisterFunction( "sendHapticEventFromPanel", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 4 )
+		{
+			exception = "Invalid arguments";
+			return;
+		}
+
+		if ( !arguments[0]->IsUInt() )
+		{
+			exception = "first argument must be a panel node ID";
+			return;
+		}
+
+		if ( !arguments[1]->IsDouble() )
+		{
+			exception = "second argument must be a number between 0 and 1 representing amplitude";
+			return;
+		}
+
+		if ( !arguments[2]->IsDouble() )
+		{
+			exception = "third argument must be a frequency number in Hz";
+			return;
+		}
+
+		if ( !arguments[3]->IsDouble()  )
+		{
+			exception = "fourth number must be a duration in seconds";
+			return;
+		}
+
+		aardvark::EAvSceneGraphResult result = aardvark::avSendHapticEventFromPanel( m_handler->getClient(), &m_appClient,
+			arguments[0]->GetUIntValue(),
+			(float)arguments[1]->GetDoubleValue(),
+			(float)arguments[2]->GetDoubleValue(),
+			(float)arguments[3]->GetDoubleValue() );
+		if ( result != aardvark::EAvSceneGraphResult::Success )
+		{
+			exception = "Error returned by avSendHapticEventFromPanel: " + std::to_string( (int)result );
+		}
+	} );
+
 	return true;
 }
 

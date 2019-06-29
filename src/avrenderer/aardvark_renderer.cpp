@@ -1717,7 +1717,12 @@ void VulkanExample::prepare()
 	m_frameListener = kj::heap<AvFrameListenerImpl>( [this]( AvVisualFrame::Reader newFrame ) -> void
 	{
 		applyFrame( newFrame );
+	},
+		[this]( uint64_t targetGlobalNodeId, float amplitude, float frequency, float duration ) -> void
+	{
+		sendHapticEvent( targetGlobalNodeId, amplitude, frequency, duration );
 	} );
+
 	auto reqListen = m_pClient->Server().listenForFramesRequest();
 	AvFrameListener::Client listenerClient = std::move( m_frameListener );
 	reqListen.setListener( listenerClient );
@@ -1725,7 +1730,7 @@ void VulkanExample::prepare()
 
 	vr::VRInput()->SetActionManifestPath( "e:/homedev/aardvark/data/input/aardvark_actions.json" );
 	vr::VRInput()->GetActionSetHandle( "/actions/aardvark", &m_actionSet );
-	vr::VRInput()->GetActionHandle( "/actions/aardvark/out/haptics", &m_actionHaptic );
+	vr::VRInput()->GetActionHandle( "/actions/aardvark/out/haptic", &m_actionHaptic );
 	vr::VRInput()->GetActionHandle( "/actions/aardvark/in/grab", &m_actionGrab );
 	vr::VRInput()->GetInputSourceHandle( "/user/hand/left", &m_leftHand );
 	vr::VRInput()->GetInputSourceHandle( "/user/hand/right", &m_rightHand );
@@ -1756,9 +1761,11 @@ void VulkanExample::TraverseSceneGraphs( float fFrameTime )
 
 	inFrameTraversal = true;
 	setVisitedNodes.clear();
+	m_hapticDeviceForNode.clear();
 	m_fThisFrameTime = fFrameTime;
 	m_vecModelsToRender.clear();
 	m_intersections.reset();
+	m_currentHapticDevice = vr::k_ulInvalidInputValueHandle;
 	for ( auto & root : *m_roots )
 	{
 		TraverseSceneGraph( &*root );
@@ -1850,6 +1857,7 @@ void VulkanExample::TraverseNode( const AvNode::Reader & node )
 	setVisitedNodes.insert( globalId );
 
 	size_t transformCountBefore = m_universeFromStackNodeTransforms.size();
+	vr::VRInputValueHandle_t hapticDeviceBefore = m_currentHapticDevice;
 
 	switch ( node.getType() )
 	{
@@ -1882,6 +1890,8 @@ void VulkanExample::TraverseNode( const AvNode::Reader & node )
 		assert( false );
 	}
 
+	m_hapticDeviceForNode.insert_or_assign( GetGlobalId( node ), m_currentHapticDevice );
+
 	for ( const uint32_t unChildId : node.getChildren() )
 	{
 		auto iChild = m_pCurrentRoot->mapIdToIndex.find( unChildId );
@@ -1896,16 +1906,33 @@ void VulkanExample::TraverseNode( const AvNode::Reader & node )
 		assert( m_universeFromStackNodeTransforms.size() == transformCountBefore + 1 );
 		m_universeFromStackNodeTransforms.pop_back();
 	}
+
+	m_currentHapticDevice = hapticDeviceBefore;
 }
 
 void VulkanExample::TraverseOrigin( const AvNode::Reader & node )
 {
-	auto iOrigin = m_universeFromOriginTransforms.find( node.getPropOrigin() );
+	std::string origin = node.getPropOrigin();
+	auto iOrigin = m_universeFromOriginTransforms.find( origin );
 	if ( iOrigin != m_universeFromOriginTransforms.end() )
 	{
 		pushUniverseFromCurrentNode( iOrigin->second );
+
+		if ( origin == "/user/hand/left" )
+		{
+			m_currentHapticDevice = m_leftHand;
+		}
+		else if ( origin == "/user/hand/right" )
+		{
+			m_currentHapticDevice = m_rightHand;
+		}
+		else
+		{
+			m_currentHapticDevice = vr::k_ulInvalidInputValueHandle;
+		}
 	}
 }
+
 
 void VulkanExample::TraverseTransform( const AvNode::Reader & node )
 {
@@ -1966,14 +1993,10 @@ void VulkanExample::TraverseModel( const AvNode::Reader & node )
 
 	if ( !pData->model )
 	{
-		// TODO(Joe): Definitely don't block here waiting to get a model source
-		auto reqModelSource = m_pClient->Server().getModelSourceRequest();
-		reqModelSource.setUri( modelUri );
-		auto resModelSource = reqModelSource.send().wait( m_pClient->WaitScope() );
-		if ( resModelSource.hasSource() )
+		auto model = findOrLoadModel( modelUri);
+		if ( model )
 		{
-			auto pModel = findOrLoadModel( resModelSource.getSource() );
-			pData->model = std::make_shared<vkglTF::Model>( *pModel );
+			pData->model = std::make_shared<vkglTF::Model>( *model );
 			pData->model->parent = &pData->modelParent;
 			pData->lastModelUri = modelUri;
 		}
@@ -2008,14 +2031,10 @@ void VulkanExample::TraversePanel( const AvNode::Reader & node )
 			sPanelModelUri = "file:///e:/homedev/aardvark/data/models/panel/panel_inverted.glb";
 		}
 
-		// TODO(Joe): Definitely don't block here waiting to get a model source
-		auto reqModelSource = m_pClient->Server().getModelSourceRequest();
-		reqModelSource.setUri( sPanelModelUri );
-		auto resModelSource = reqModelSource.send().wait( m_pClient->WaitScope() );
-		if ( resModelSource.hasSource() )
+		auto model = findOrLoadModel( sPanelModelUri );
+		if ( model )
 		{
-			auto pModel = findOrLoadModel( resModelSource.getSource() );
-			pData->model = std::make_shared<vkglTF::Model>( *pModel );
+			pData->model = std::make_shared<vkglTF::Model>( *model );
 			pData->model->parent = &pData->modelParent;
 		}
 	}
@@ -2129,30 +2148,69 @@ void VulkanExample::applyFrame( AvVisualFrame::Reader & newFrame )
 	m_nextSharedTextureInfo = std::move( nextTextures );
 }
 
-std::shared_ptr<vkglTF::Model> VulkanExample::findOrLoadModel( AvModelSource::Client & source )
+std::shared_ptr<vkglTF::Model> VulkanExample::findOrLoadModel( std::string modelUri )
 {
-	auto resUri = source.uriRequest().send().wait( m_pClient->WaitScope() );
-	if ( !resUri.hasUri() || resUri.getUri().size() == 0 )
-	{
-		return nullptr;
-	}
-	std::string sUri = resUri.getUri();
-
-	auto iModel = m_mapModels.find( sUri );
+	auto iModel = m_mapModels.find( modelUri );
 	if ( iModel != m_mapModels.end() )
 	{
 		return iModel->second;
 	}
 
-	// TODO(Joe): Definitely make pulling the GLTF blob across the wire async
-	auto resData = source.dataRequest().send().wait( m_pClient->WaitScope() );
-	auto pModel = std::make_shared<vkglTF::Model>();
-	bool bLoaded = pModel->loadFromMemory( &resData.getData()[0], resData.getData().size(), vulkanDevice, m_descriptorManager, queue );
-	assert( bLoaded );
-	m_mapModels.insert( std::make_pair( sUri, pModel ) );
+	// below this point we're definitely going to return nullptr because we need to
+	// make an async request for the model
 
-	setupDescriptorSetsForModel( pModel );
-	return pModel;
+	// if we've already failed, just return nullptr and don't keep trying
+	if ( m_failedModelRequests.find( modelUri ) != m_failedModelRequests.end() )
+		return nullptr;
+
+	// if we already sent a request but are still waiting for the data, just return
+	// null. The caller will call again next frame.
+	if ( m_modelRequestsInProgress.find( modelUri ) != m_modelRequestsInProgress.end() )
+		return nullptr;
+
+	m_modelRequestsInProgress.insert( modelUri );
+
+	auto reqModelSource = m_pClient->Server().getModelSourceRequest();
+	reqModelSource.setUri( modelUri );
+	auto promModelSource = reqModelSource.send()
+		.then( [ this, modelUri ]( AvServer::GetModelSourceResults::Reader && res )
+	{
+		if ( res.getSuccess() )
+		{
+			// now get the actual data
+			auto promModelData = res.getSource().dataRequest().send()
+				.then( [this, modelUri]( AvModelSource::DataResults::Reader && res )
+			{
+				auto pModel = std::make_shared<vkglTF::Model>();
+				bool bLoaded = pModel->loadFromMemory( &res.getData()[0], res.getData().size(), vulkanDevice, m_descriptorManager, queue );
+
+				if ( bLoaded )
+				{
+					m_mapModels.insert( std::make_pair( modelUri, pModel ) );
+					setupDescriptorSetsForModel( pModel );
+					m_modelRequestsInProgress.erase( modelUri );
+				}
+				else
+				{
+					assert( bLoaded );
+					m_failedModelRequests.insert( modelUri );
+					m_modelRequestsInProgress.erase( modelUri );
+				}
+			} );
+
+			m_pClient->addToTasks( std::move( promModelData ) );
+
+		}
+		else
+		{
+			m_failedModelRequests.insert( modelUri );
+			m_modelRequestsInProgress.erase( modelUri );
+		}
+	} );
+		
+	m_pClient->addToTasks( std::move( promModelSource ) );
+
+	return nullptr;
 }
 
 /*
@@ -2558,6 +2616,21 @@ void VulkanExample::doInputWork()
 	}
 
 	// do something with grabbers with this information
+}
+
+
+void VulkanExample::sendHapticEvent( uint64_t targetGlobalNodeId, float amplitude, float frequency, float duration )
+{
+	auto iHapticDevice = m_hapticDeviceForNode.find( targetGlobalNodeId );
+	if ( iHapticDevice == m_hapticDeviceForNode.end() )
+	{
+		return;
+	}
+
+	vr::VRInput()->TriggerHapticVibrationAction( 
+		m_actionHaptic, 
+		0, duration, frequency, amplitude, 
+		iHapticDevice->second );
 }
 
 

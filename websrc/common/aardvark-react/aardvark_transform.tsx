@@ -1,9 +1,9 @@
 import * as React from 'react';
 
 import { AvSceneContext, AvNodeType } from 'common/aardvark';
-import { AvBaseNode } from './aardvark_base_node';
+import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 
-interface AvTransformProps
+interface AvTransformProps extends AvBaseNodeProps
 {
 	uniformScale?:number;
 	scaleX?:number;

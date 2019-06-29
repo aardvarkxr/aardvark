@@ -125,6 +125,11 @@ export class AvApp extends React.Component< AvAppProps, {} >
 		}
 	}
 
+	public sendHapticEventFromPanel( panelId: number, amplitude: number, frequency: number, duration: number ): void
+	{
+		this.m_app.sendHapticEventFromPanel( panelId, amplitude, frequency, duration );
+	}
+
 	public render()
 	{
 		return <div>{ this.props.children }</div>;

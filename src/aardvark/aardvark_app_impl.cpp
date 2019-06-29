@@ -63,15 +63,21 @@ CAardvarkApp::CAardvarkApp( uint32_t clientId, const std::string & sName, AvServ
 
 ::kj::Promise<void> CAardvarkApp::pushMouseEvent( PushMouseEventContext context )
 {
-	auto & mouseEvent = context.getParams().getEvent();
-	uint64_t globalPanelId = mouseEvent.getPanelId();
+	auto & inMouseEvent = context.getParams().getEvent();
+	uint64_t globalPanelId = inMouseEvent.getPanelId();
 	uint32_t appId = (uint32_t)( globalPanelId >> 32 );
 	uint32_t localPanelId = (uint32_t)( 0xFFFFFFFF & globalPanelId );
+
 	KJ_IF_MAYBE( panelHandler, m_pParentServer->findPanelHandler( globalPanelId ) )
 	{
 		auto req = panelHandler->mouseEventRequest();
 		req.setPanelId( localPanelId );
-		req.setEvent( mouseEvent );
+		auto outMouseEvent = req.initEvent( );
+		outMouseEvent.setPanelId( globalPanelId );
+		outMouseEvent.setPokerId( (uint64_t)m_id << 32 | (uint64_t)context.getParams().getPokerNodeId() );
+		outMouseEvent.setType( inMouseEvent.getType() );
+		outMouseEvent.setX( inMouseEvent.getX() );
+		outMouseEvent.setY( inMouseEvent.getY() );
 		m_pParentServer->addRequestToTasks( std::move( req ) );
 	}
 	return kj::READY_NOW;
@@ -124,4 +130,12 @@ kj::Maybe < AvPanelHandler::Client > CAardvarkApp::findPanelHandler( uint32_t pa
 	{
 		return i->second;
 	}
+}
+
+::kj::Promise<void> CAardvarkApp::sendHapticEvent( SendHapticEventContext context )
+{
+	uint64_t targetNodeGlobalId = context.getParams().getNodeGlobalId();
+	m_pParentServer->sendHapticEvent( context.getParams().getNodeGlobalId(),
+		context.getParams().getAmplitude(), context.getParams().getFrequency(), context.getParams().getDuration() );
+	return kj::READY_NOW;
 }

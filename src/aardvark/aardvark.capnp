@@ -88,6 +88,7 @@ struct AvVisualFrame
 interface AvFrameListener
 {
 	newFrame @0 (frame: AvVisualFrame) -> (  );
+	sendHapticEvent @1 ( targetGlobalId: UInt64, amplitude: Float32, frequency: Float32, duration: Float32 ) -> ();
 }
 
 struct AvPanelProximity
@@ -192,6 +193,7 @@ interface AvApp
 
 	updateSceneGraph @2 (root: AvNodeRoot ) -> ( success: Bool );
 	pushMouseEvent @3 ( pokerNodeId: UInt32, event: AvPanelMouseEvent ) -> ();
+	sendHapticEvent @4 ( nodeGlobalId: UInt64, amplitude: Float32, frequency: Float32, duration: Float32 ) -> ();
 }
 
 

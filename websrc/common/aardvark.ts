@@ -149,6 +149,7 @@ export interface AvAppObj
 	registerPokerHandler: AvApp_RegisterPokerHandler;
 	registerPanelHandler: AvApp_RegisterPanelHandler;
 	enableDefaultPanelHandling( panelId: number ): void;
+	sendHapticEventFromPanel( panelId: number, amplitude: number, frequency: number, duration: number ): void;
 	sendMouseEvent: AvApp_SendMouseEvent;
 }
 

@@ -34,21 +34,33 @@
 class AvFrameListenerImpl final : public AvFrameListener::Server
 {
 public:
-	AvFrameListenerImpl( std::function<void( AvVisualFrame::Reader )> fn )
+	AvFrameListenerImpl( std::function<void( AvVisualFrame::Reader )> fnNewFrame,
+		std::function< void( uint64_t targetGlobalNodeId, float amplitude, float frequency, float duration )> fnHapticEvent )
 	{
-		m_fn = fn;
+		m_fnNewFrame = fnNewFrame;
+		m_fnHapticEvent = fnHapticEvent;
 	}
 
 	virtual ::kj::Promise<void> newFrame( NewFrameContext context ) override
 	{
-		m_fn( context.getParams().getFrame() );
+		m_fnNewFrame( context.getParams().getFrame() );
+		return kj::READY_NOW;
+	}
+
+	virtual ::kj::Promise<void> sendHapticEvent( SendHapticEventContext context ) override
+	{
+		m_fnHapticEvent( context.getParams().getTargetGlobalId(),
+			context.getParams().getAmplitude(),
+			context.getParams().getFrequency(),
+			context.getParams().getDuration() );
 		return kj::READY_NOW;
 	}
 
 protected:
 
 private:
-	std::function<void( AvVisualFrame::Reader )> m_fn;
+	std::function<void( AvVisualFrame::Reader )> m_fnNewFrame;
+	std::function< void( uint64_t targetGlobalNodeId, float amplitude, float frequency, float duration )> m_fnHapticEvent;
 };
 
 class VulkanExample : public VulkanExampleBase, public IApplication
@@ -114,7 +126,8 @@ public:
 	void TraversePoker( const AvNode::Reader & node );
 
 	void applyFrame( AvVisualFrame::Reader & newFrame );
-	std::shared_ptr<vkglTF::Model> findOrLoadModel( AvModelSource::Client & source );
+	void sendHapticEvent( uint64_t targetGlobalNodeId, float amplitude, float frequency, float duration );
+	std::shared_ptr<vkglTF::Model> VulkanExample::findOrLoadModel( std::string modelUri );
 
 	void updateOverlay();
 
@@ -163,7 +176,7 @@ private:
 	bool m_updateDescriptors = false;
 
 	std::unique_ptr< std::map< uint32_t, tools::OwnCapnp< AvSharedTextureInfo > > > m_sharedTextureInfo, m_nextSharedTextureInfo;
-
+	std::map<uint64_t, vr::VRInputValueHandle_t> m_hapticDeviceForNode;
 
 	const SgRoot_t *m_pCurrentRoot = nullptr;
 	std::vector<glm::mat4> m_universeFromStackNodeTransforms;
@@ -172,6 +185,8 @@ private:
 	float m_fThisFrameTime = 0;
 	std::vector<std::shared_ptr<vkglTF::Model>> m_vecModelsToRender;
 	std::set<uint64_t> setVisitedNodes;
+	vr::VRInputValueHandle_t m_currentHapticDevice = vr::k_ulInvalidInputValueHandle;
+
 	CIntersectionTester m_intersections;
 
 	struct Textures {
@@ -233,6 +248,8 @@ private:
 	aardvark::CServerThread m_serverThread;
 	kj::Own<aardvark::CAardvarkClient> m_pClient;
 	std::unordered_map < std::string, std::shared_ptr< vkglTF::Model > > m_mapModels;
+	std::set< std::string > m_modelRequestsInProgress;
+	std::set< std::string > m_failedModelRequests;
 	vks::RenderTarget leftEyeRT;
 	vks::RenderTarget rightEyeRT;
 

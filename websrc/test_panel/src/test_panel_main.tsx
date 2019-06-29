@@ -14,6 +14,8 @@ interface TestPanelState
 }
 class TestPanel extends React.Component< {}, TestPanelState >
 {
+	private m_panelId:number = 0;
+
 	constructor( props: any )
 	{
 		super( props );
@@ -22,7 +24,15 @@ class TestPanel extends React.Component< {}, TestPanelState >
 
 	@bind public incrementCount()
 	{
+		AvApp.instance().sendHapticEventFromPanel( 1234, 1, 1, 0 );
+//		AvApp.instance().sendHapticEventFromPanel( 1234, 1, 30, 2 );
 		this.setState( { count: this.state.count + 1 } );
+	}
+
+	@bind onMouseEnterOrLeave()
+	{
+		AvApp.instance().sendHapticEventFromPanel( 1234, 0.05, 1, 0 );
+//		AvApp.instance().sendHapticEventFromPanel( 1234, 1, 30, 2 );
 	}
 
 	public render()
@@ -32,12 +42,17 @@ class TestPanel extends React.Component< {}, TestPanelState >
 				<AvApp name="Fnord the app">
 					<AvOrigin path="/user/hand/left">
 						<AvTransform uniformScale={0.4}>
-							<AvPanel interactive={true}/>
+							<AvPanel interactive={true}
+								onIdAssigned={ (id:number) => { this.m_panelId = id } }/>
 						</AvTransform>
 					</AvOrigin>
 				</AvApp>
 				<div className="Label">Count: { this.state.count }</div>
-				<div className="Button" onMouseDown={ this.incrementCount }>Click Me!</div> 
+				<div className="Button" onMouseDown={ this.incrementCount }
+					onMouseEnter={ this.onMouseEnterOrLeave } 
+					onMouseLeave={ this.onMouseEnterOrLeave }>
+					Click Me!
+					</div> 
 			</div>
 		)
 	}

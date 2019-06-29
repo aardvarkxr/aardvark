@@ -92,6 +92,9 @@ namespace aardvark
 	EAvSceneGraphResult avPushMouseEventFromPoker( aardvark::CAardvarkClient *pClient,
 		AvApp::Client *pApp, uint32_t pokerNodeId,
 		uint64_t panelId, EPanelMouseEventType type, float x, float y );
+	EAvSceneGraphResult avSendHapticEventFromPanel( aardvark::CAardvarkClient *pClient, 
+		AvApp::Client *pApp, uint32_t panelNodeId,
+		float amplitude, float frequency, float duration );
 
 	// tells the renderer what DXGI to use for a scene graph app
 	EAvSceneGraphResult avUpdateDxgiTextureForApps( aardvark::CAardvarkClient *pClient, const char **pchAppName, uint32_t unNameCount, uint32_t unWidth, uint32_t unHeight, void *pvSharedTextureHandle, bool bInvertY );

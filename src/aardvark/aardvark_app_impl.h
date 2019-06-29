@@ -37,7 +37,8 @@ namespace aardvark
 		virtual ::kj::Promise<void> destroy( DestroyContext context ) override;
 		virtual ::kj::Promise<void> name( NameContext context ) override;
 		virtual ::kj::Promise<void> updateSceneGraph( UpdateSceneGraphContext context ) override;
-		virtual ::kj::Promise<void> pushMouseEvent( PushMouseEventContext context )override;
+		virtual ::kj::Promise<void> pushMouseEvent( PushMouseEventContext context ) override;
+		virtual ::kj::Promise<void> sendHapticEvent( SendHapticEventContext context ) override;
 	private:
 		std::string m_sName;
 		std::vector< AvApp::Client > m_vecClients;

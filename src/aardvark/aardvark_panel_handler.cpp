@@ -48,6 +48,8 @@ namespace aardvark
 			i = m_events.find( panelId );
 		}
 
+		m_lastPoker = evt.pokerId;
+
 		i->second.push_back( evt );
 		return kj::READY_NOW;
 	}
