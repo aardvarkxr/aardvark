@@ -32,8 +32,26 @@ grabber processor (per grabber)
 
 
 
+app
+	grab root <-- new origin?
+		transform1
+			handle1
+		transform2
+			handle2
+		transforms, models, other stuff
 
 ========= DEAL WITH THIS NEXT ===========
+
+Add grab* node types to scene graph
+Add node handling to renderer
+add collision processing in renderer
+add volume function in "C" API and javascript
+Add react components for grab* nodes
+Update test app
+Hook up grab state checking to collision
+Hook start/end events up to notify renderer of new parentage (and add RPC for that)
+implement default grabber
+
 
 
 ========= DEAL WITH THIS NEXT ===========
@@ -45,8 +63,8 @@ Step 2 - Make the pixels appear in a scene app (done)
 Step 3 - Make some pixels from Javascript (done)
 Step 4 - Make a quad from Javascript (done)
 Step 5 - Make input work back to Javascript/HTML/CSS
-
 Step 6 - Haptics from panels (and pokers?)
+
 Step 7 - Grabbables and grabbers
 
 Step 50 - Make the pixels/input layer on top of other apps
