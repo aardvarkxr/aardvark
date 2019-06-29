@@ -9,7 +9,7 @@
 namespace aardvark
 {
 
-	class AvPanelHandlerImpl final : public AvPanelHandler::Server
+	class AvPanelProcessorImpl final : public AvPanelProcessor::Server
 	{
 		typedef std::list< PanelMouseEvent_t > EventList;
 	public:

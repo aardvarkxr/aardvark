@@ -34,7 +34,7 @@ namespace aardvark
 	}
 
 
-	::kj::Promise<void> AvPanelHandlerImpl::mouseEvent( MouseEventContext context )
+	::kj::Promise<void> AvPanelProcessorImpl::mouseEvent( MouseEventContext context )
 	{
 		uint32_t panelId = context.getParams().getPanelId();
 		PanelMouseEvent_t evt;
@@ -54,7 +54,7 @@ namespace aardvark
 		return kj::READY_NOW;
 	}
 
-	EAvSceneGraphResult AvPanelHandlerImpl::avGetNextMouseEvent( uint32_t panelId, PanelMouseEvent_t *mouseEvent )
+	EAvSceneGraphResult AvPanelProcessorImpl::avGetNextMouseEvent( uint32_t panelId, PanelMouseEvent_t *mouseEvent )
 	{
 		if ( !mouseEvent )
 		{

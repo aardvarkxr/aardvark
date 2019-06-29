@@ -46,8 +46,8 @@ namespace aardvark
 		void sendHapticEvent( uint64_t targetNodeId, float amplitude, float frequency, float duration );
 
 		kj::Maybe<CAardvarkApp&> findApp( uint32_t appId );
-		kj::Maybe<AvPokerHandler::Client> findPokerHandler( uint64_t pokerGlobalId );
-		kj::Maybe<AvPanelHandler::Client> findPanelHandler( uint64_t panelGlobalId );
+		kj::Maybe<AvPokerProcesser::Client> findPokerProcessor( uint64_t pokerGlobalId );
+		kj::Maybe<AvPanelProcessor::Client> findPanelProcessor( uint64_t panelGlobalId );
 
 		void clientDisconnected( uint32_t clientId );
 	protected:

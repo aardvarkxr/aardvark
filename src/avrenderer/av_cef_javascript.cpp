@@ -102,8 +102,8 @@ private:
 	std::string m_name;
 	std::list<std::unique_ptr<CSceneContextObject>> m_sceneContexts;
 	std::set<uint32_t> m_nodeIdsThatNeedThisTexture;
-	std::unordered_map< uint32_t, CefRefPtr< CefV8Value > > m_pokerHandlers;
-	std::unordered_map< uint32_t, CefRefPtr< CefV8Value > > m_panelHandlers;
+	std::unordered_map< uint32_t, CefRefPtr< CefV8Value > > m_pokerProcessors;
+	std::unordered_map< uint32_t, CefRefPtr< CefV8Value > > m_panelProcessors;
 	std::set< uint32_t > m_defaultPanels;
 };
 
@@ -494,7 +494,7 @@ bool CAardvarkAppObject::init()
 			return;
 		}
 
-		m_pokerHandlers.insert_or_assign( arguments[0]->GetUIntValue(), arguments[1] );
+		m_pokerProcessors.insert_or_assign( arguments[0]->GetUIntValue(), arguments[1] );
 	} );
 
 	RegisterFunction( "registerPanelHandler", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
@@ -517,7 +517,7 @@ bool CAardvarkAppObject::init()
 			return;
 		}
 
-		m_panelHandlers.insert_or_assign( arguments[0]->GetUIntValue(), arguments[1] );
+		m_panelProcessors.insert_or_assign( arguments[0]->GetUIntValue(), arguments[1] );
 	} );
 
 	RegisterFunction( "enableDefaultPanelHandling", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
@@ -635,7 +635,7 @@ void CAardvarkAppObject::cleanup()
 
 void CAardvarkAppObject::runFrame()
 {
-	for( auto iHandler : m_pokerHandlers )
+	for( auto iHandler : m_pokerProcessors )
 	{
 		aardvark::PokerProximity_t pokerProximity[100];
 		uint32_t usedCount;
@@ -672,7 +672,7 @@ void CAardvarkAppObject::runFrame()
 		}
 	}
 
-	for ( auto iHandler : m_panelHandlers )
+	for ( auto iHandler : m_panelProcessors )
 	{
 		aardvark::PanelMouseEvent_t panelMouseEvent;
 		uint32_t unLimit = 0;

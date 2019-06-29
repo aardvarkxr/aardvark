@@ -5,8 +5,8 @@
 
 namespace aardvark
 {
-	class AvPokerHandlerImpl;
-	class AvPanelHandlerImpl;
+	class AvPokerProcesserImpl;
+	class AvPanelProcessorImpl;
 
 	class CAardvarkClientContext;
 	struct ClientContext;
@@ -35,11 +35,11 @@ namespace aardvark
 			addToTasks( std::move( prom ) );
 		}
 
-		AvPokerHandler::Client getPokerHandler();
-		AvPanelHandler::Client getPanelHandler();
+		AvPokerProcesser::Client getPokerProcessor();
+		AvPanelProcessor::Client getPanelProcessor();
 
-		kj::Maybe< AvPokerHandlerImpl *> getPokerHandlerServer() { return m_pokerHandlerImpl; }
-		kj::Maybe< AvPanelHandlerImpl *> getPanelHandlerServer() { return m_panelHandlerImpl; }
+		kj::Maybe< AvPokerProcesserImpl *> getPokerProcessorServer() { return m_pokerProcessorImpl; }
+		kj::Maybe< AvPanelProcessorImpl *> getPanelProcessorServer() { return m_panelProcessorImpl; }
 	private:
 		virtual void taskFailed( kj::Exception&& exception ) override;
 
@@ -53,9 +53,9 @@ namespace aardvark
 		kj::Own< AvServer::Client > m_pMainInterface;
 		kj::Own< kj::TaskSet > m_tasks;
 
-		kj::Maybe< AvPanelHandler::Client > m_panelHandler = nullptr;
-		kj::Maybe< AvPanelHandlerImpl * > m_panelHandlerImpl = nullptr;
-		kj::Maybe< AvPokerHandler::Client > m_pokerHandler = nullptr;
-		kj::Maybe< AvPokerHandlerImpl * > m_pokerHandlerImpl = nullptr;
+		kj::Maybe< AvPanelProcessor::Client > m_panelProcessor = nullptr;
+		kj::Maybe< AvPanelProcessorImpl * > m_panelProcessorImpl = nullptr;
+		kj::Maybe< AvPokerProcesser::Client > m_pokerProcessor = nullptr;
+		kj::Maybe< AvPokerProcesserImpl * > m_pokerProcessorImpl = nullptr;
 	};
 }

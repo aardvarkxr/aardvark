@@ -19,7 +19,7 @@ struct AvSharedTextureInfo
 	format @1 : Format;
 	width @2 : UInt32;
 	height @3 : UInt32;
-	handle @4 : UInt64;
+	sharedTextureHandle @4 : UInt64;
 	invertY @5 : Bool;
 }
 
@@ -71,7 +71,7 @@ struct AvLight
 	diffuse @1: AvColor;
 }
 
-struct AvAppTextureHandle
+struct AvAppTextureInfo
 {
 	appName @0: Text;
 	appId @1: UInt32;
@@ -82,7 +82,7 @@ struct AvVisualFrame
 {
 	id @0: UInt64;
 	roots @1: List( AvNodeRoot );
-	appTextures @2: List( AvAppTextureHandle );
+	appTextures @2: List( AvAppTextureInfo );
 }
 
 interface AvFrameListener
@@ -99,7 +99,7 @@ struct AvPanelProximity
 	distance @3: Float32;
 }
 
-interface AvPokerHandler
+interface AvPokerProcesser
 {
 	updatePanelProximity @0 ( pokerId: UInt32, proximity: List( AvPanelProximity ) ) -> ();
 }
@@ -122,7 +122,7 @@ struct AvPanelMouseEvent
 	y @4: Float32;
 }
 
-interface AvPanelHandler
+interface AvPanelProcessor
 {
 	mouseEvent @0 ( panelId: UInt32, event: AvPanelMouseEvent ) -> ();
 }
@@ -164,8 +164,8 @@ struct AvNodeRoot
 {
 	nodes @0 : List( AvNodeWrapper );
 	sourceId @1 : UInt32;
-	handlerPoker @2: AvPokerHandler;
-	handlerPanel @3: AvPanelHandler;
+	pokerProcessor @2: AvPokerProcesser;
+	panelProcessor @3: AvPanelProcessor;
 }
 
 interface AvServer

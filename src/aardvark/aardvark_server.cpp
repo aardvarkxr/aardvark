@@ -88,7 +88,7 @@ namespace aardvark
 
 	void AvServerImpl::sendFrameToListener( AvFrameListener::Client listener )
 	{
-		std::map<std::string, AvSharedTextureInfo::Reader> textureHandles;
+		std::map<std::string, AvSharedTextureInfo::Reader> sharedTextureHandles;
 		AvVisuals_t visuals;
 		for ( auto app : m_vecApps )
 		{
@@ -96,7 +96,7 @@ namespace aardvark
 
 			if ( app->hasSharedTextureInfo() )
 			{
-				textureHandles.insert_or_assign( app->getName(), app->getSharedTextureInfo() );
+				sharedTextureHandles.insert_or_assign( app->getName(), app->getSharedTextureInfo() );
 			}
 		}
 
@@ -113,9 +113,9 @@ namespace aardvark
 				bldRoots[unIndex].setSourceId( visuals.vecSceneGraphs[unIndex].appId );
 			}
 
-			auto bldTextures = bldFrame.initAppTextures( (uint32_t)textureHandles.size() );
+			auto bldTextures = bldFrame.initAppTextures( (uint32_t)sharedTextureHandles.size() );
 			uint32_t unIndex = 0;
-			for ( auto handle : textureHandles )
+			for ( auto handle : sharedTextureHandles )
 			{
 				CAardvarkApp *pApp = findAppByName( handle.first );
 				if ( pApp )
@@ -170,7 +170,7 @@ namespace aardvark
 	::kj::Promise<void> AvServerImpl::pushPokerProximity( uint32_t clientId, PushPokerProximityContext context )
 	{
 		uint64_t pokerGlobalId = context.getParams().getPokerId();
-		KJ_IF_MAYBE( handler, findPokerHandler( pokerGlobalId ) )
+		KJ_IF_MAYBE( handler, findPokerProcessor( pokerGlobalId ) )
 		{
 			auto req = handler->updatePanelProximityRequest();
 			req.setPokerId( (uint32_t)( 0xFFFFFFFF & pokerGlobalId ) );
@@ -268,13 +268,13 @@ namespace aardvark
 		return nullptr;
 	}
 
-	kj::Maybe < AvPokerHandler::Client > AvServerImpl::findPokerHandler( uint64_t pokerGlobalId )
+	kj::Maybe < AvPokerProcesser::Client > AvServerImpl::findPokerProcessor( uint64_t pokerGlobalId )
 	{
 		uint32_t appId = (uint32_t)( pokerGlobalId >> 32 );
 		uint32_t pokerLocalId = (uint32_t) ( 0xFFFFFFFF & pokerGlobalId );
 		KJ_IF_MAYBE( app, findApp( appId ) )
 		{
-			return app->findPokerHandler( pokerLocalId );
+			return app->findPokerProcessor( pokerLocalId );
 		}
 		else
 		{
@@ -282,13 +282,13 @@ namespace aardvark
 		}
 	}
 
-	kj::Maybe < AvPanelHandler::Client > AvServerImpl::findPanelHandler( uint64_t panelGlobalId )
+	kj::Maybe < AvPanelProcessor::Client > AvServerImpl::findPanelProcessor( uint64_t panelGlobalId )
 	{
 		uint32_t appId = (uint32_t)( panelGlobalId >> 32 );
 		uint32_t panelLocalId = (uint32_t)( 0xFFFFFFFF & panelGlobalId );
 		KJ_IF_MAYBE( app, findApp( appId ) )
 		{
-			return app->findPanelHandler( panelLocalId );
+			return app->findPanelProcessor( panelLocalId );
 		}
 		else
 		{

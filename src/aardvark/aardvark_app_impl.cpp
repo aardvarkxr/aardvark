@@ -36,19 +36,19 @@ CAardvarkApp::CAardvarkApp( uint32_t clientId, const std::string & sName, AvServ
 ::kj::Promise<void> CAardvarkApp::updateSceneGraph( UpdateSceneGraphContext context )
 {
 	auto root = context.getParams().getRoot();
-	m_panelHandlers.clear();
-	m_pokerHandlers.clear();
+	m_panelProcessors.clear();
+	m_pokerProcessors.clear();
 	for ( auto node : root.getNodes() )
 	{
 		auto realNode = node.getNode();
 		switch ( realNode.getType() )
 		{
 		case AvNode::Type::PANEL:
-			m_panelHandlers.insert_or_assign( realNode.getId(), root.getHandlerPanel() );
+			m_panelProcessors.insert_or_assign( realNode.getId(), root.getPanelProcessor() );
 			break;
 
 		case AvNode::Type::POKER:
-			m_pokerHandlers.insert_or_assign( realNode.getId(), root.getHandlerPoker() );
+			m_pokerProcessors.insert_or_assign( realNode.getId(), root.getPokerProcessor() );
 			break;
 		}
 	}
@@ -68,9 +68,9 @@ CAardvarkApp::CAardvarkApp( uint32_t clientId, const std::string & sName, AvServ
 	uint32_t appId = (uint32_t)( globalPanelId >> 32 );
 	uint32_t localPanelId = (uint32_t)( 0xFFFFFFFF & globalPanelId );
 
-	KJ_IF_MAYBE( panelHandler, m_pParentServer->findPanelHandler( globalPanelId ) )
+	KJ_IF_MAYBE( panelProcessor, m_pParentServer->findPanelProcessor( globalPanelId ) )
 	{
-		auto req = panelHandler->mouseEventRequest();
+		auto req = panelProcessor->mouseEventRequest();
 		req.setPanelId( localPanelId );
 		auto outMouseEvent = req.initEvent( );
 		outMouseEvent.setPanelId( globalPanelId );
@@ -106,10 +106,10 @@ AvSharedTextureInfo::Reader CAardvarkApp::getSharedTextureInfo()
 }
 
 
-kj::Maybe < AvPokerHandler::Client > CAardvarkApp::findPokerHandler( uint32_t pokerLocalId )
+kj::Maybe < AvPokerProcesser::Client > CAardvarkApp::findPokerProcessor( uint32_t pokerLocalId )
 {
-	auto i = m_pokerHandlers.find( pokerLocalId );
-	if ( i == m_pokerHandlers.end() )
+	auto i = m_pokerProcessors.find( pokerLocalId );
+	if ( i == m_pokerProcessors.end() )
 	{
 		return nullptr;
 	}
@@ -119,10 +119,10 @@ kj::Maybe < AvPokerHandler::Client > CAardvarkApp::findPokerHandler( uint32_t po
 	}
 }
 
-kj::Maybe < AvPanelHandler::Client > CAardvarkApp::findPanelHandler( uint32_t panelLocalId )
+kj::Maybe < AvPanelProcessor::Client > CAardvarkApp::findPanelProcessor( uint32_t panelLocalId )
 {
-	auto i = m_panelHandlers.find( panelLocalId );
-	if ( i == m_panelHandlers.end() )
+	auto i = m_panelProcessors.find( panelLocalId );
+	if ( i == m_panelProcessors.end() )
 	{
 		return nullptr;
 	}

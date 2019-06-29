@@ -222,8 +222,8 @@ namespace aardvark
 			rootBuilder[unNodeIndex].adoptNode( std::move( m_vecFinishedNodes[unReversedNodeIndex] ) );
 		}
 
-		root.setHandlerPoker( m_pClient->getPokerHandler() );
-		root.setHandlerPanel( m_pClient->getPanelHandler() );
+		root.setPokerProcessor( m_pClient->getPokerProcessor() );
+		root.setPanelProcessor( m_pClient->getPanelProcessor() );
 
 		auto reqUpdateSceneGraph = pApp->updateSceneGraphRequest();
 		reqUpdateSceneGraph.setRoot( root );
@@ -418,7 +418,7 @@ namespace aardvark
 		paramInfo.setFormat( AvSharedTextureInfo::Format::B8G8R8A8 );
 		paramInfo.setWidth( unWidth );
 		paramInfo.setHeight( unHeight );
-		paramInfo.setHandle( reinterpret_cast<uint64_t>( pvSharedTextureHandle ) );
+		paramInfo.setSharedTextureHandle( reinterpret_cast<uint64_t>( pvSharedTextureHandle ) );
 		paramInfo.setInvertY( bInvertY );
 
 		auto promUpdate = reqUpdate.send()
@@ -435,9 +435,9 @@ namespace aardvark
 		PokerProximity_t *pokerProximities, uint32_t pokerProximityCount, 
 		uint32_t *usedPokerProximityCount )
 	{
-		KJ_IF_MAYBE( pokerHandler, pClient->getPokerHandlerServer() )
+		KJ_IF_MAYBE( pokerProcessor, pClient->getPokerProcessorServer() )
 		{
-			return (*pokerHandler)->avGetNextPokerProximity( pokerNodeId, pokerProximities, pokerProximityCount, usedPokerProximityCount );
+			return (*pokerProcessor )->avGetNextPokerProximity( pokerNodeId, pokerProximities, pokerProximityCount, usedPokerProximityCount );
 		}
 		else
 		{
@@ -447,9 +447,9 @@ namespace aardvark
 
 	EAvSceneGraphResult avGetNextMouseEvent( aardvark::CAardvarkClient *pClient, uint32_t panelNodeId, PanelMouseEvent_t *mouseEvent )
 	{
-		KJ_IF_MAYBE( panelHandler, pClient->getPanelHandlerServer() )
+		KJ_IF_MAYBE( pokerProcessor, pClient->getPanelProcessorServer() )
 		{
-			return ( *panelHandler )->avGetNextMouseEvent( panelNodeId, mouseEvent );
+			return ( *pokerProcessor )->avGetNextMouseEvent( panelNodeId, mouseEvent );
 		}
 		else
 		{
@@ -503,7 +503,7 @@ namespace aardvark
 		AvApp::Client *pApp, uint32_t panelNodeId,
 		float amplitude, float frequency, float duration )
 	{
-		KJ_IF_MAYBE( panelHandler, pClient->getPanelHandlerServer() )
+		KJ_IF_MAYBE( panelHandler, pClient->getPanelProcessorServer() )
 		{
 			auto req = pApp->sendHapticEventRequest();
 			req.setNodeGlobalId( ( *panelHandler )->getLastPoker() );

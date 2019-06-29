@@ -2047,7 +2047,7 @@ void VulkanExample::TraversePanel( const AvNode::Reader & node )
 		VkFormat viewTextureFormat = VK_FORMAT_R8G8B8A8_UNORM;
 		if ( iSharedTexture != m_sharedTextureInfo->end() )
 		{
-			pvNewDxgiHandle = reinterpret_cast<void*>( iSharedTexture->second.getHandle() );
+			pvNewDxgiHandle = reinterpret_cast<void*>( iSharedTexture->second.getSharedTextureHandle() );
 			width = iSharedTexture->second.getWidth();
 			height = iSharedTexture->second.getHeight();
 			switch ( iSharedTexture->second.getFormat() )

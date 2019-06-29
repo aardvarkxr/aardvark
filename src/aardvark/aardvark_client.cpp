@@ -154,10 +154,10 @@ namespace aardvark
 
 	void CAardvarkClient::Stop()
 	{
-		m_panelHandler = nullptr;
-		m_panelHandlerImpl = nullptr;
-		m_pokerHandler = nullptr;
-		m_pokerHandlerImpl = nullptr;
+		m_panelProcessor = nullptr;
+		m_panelProcessorImpl = nullptr;
+		m_pokerProcessor = nullptr;
+		m_pokerProcessorImpl = nullptr;
 		m_setupPromise = nullptr;
 		m_pMainInterface = nullptr;
 		m_clientContext = nullptr;
@@ -180,32 +180,32 @@ namespace aardvark
 		return m_context->getWaitScope(); 
 	}
 
-	AvPokerHandler::Client CAardvarkClient::getPokerHandler()
+	AvPokerProcesser::Client CAardvarkClient::getPokerProcessor()
 	{
-		if ( m_pokerHandler == nullptr )
+		if ( m_pokerProcessor == nullptr )
 		{
-			auto server = kj::heap<AvPokerHandlerImpl>();
-			AvPokerHandlerImpl & serverRef = *server;
-			m_pokerHandlerImpl = &serverRef;
-			AvPokerHandler::Client client = kj::mv( server );
-			m_pokerHandler = client;
+			auto server = kj::heap<AvPokerProcesserImpl>();
+			AvPokerProcesserImpl & serverRef = *server;
+			m_pokerProcessorImpl = &serverRef;
+			AvPokerProcesser::Client client = kj::mv( server );
+			m_pokerProcessor = client;
 		}
 
-		return *::kj::_::readMaybe( m_pokerHandler );
+		return *::kj::_::readMaybe( m_pokerProcessor );
 	}
 
-	AvPanelHandler::Client CAardvarkClient::getPanelHandler()
+	AvPanelProcessor::Client CAardvarkClient::getPanelProcessor()
 	{
-		if ( m_panelHandler == nullptr )
+		if ( m_panelProcessor == nullptr )
 		{
-			auto server = kj::heap<AvPanelHandlerImpl>();
-			AvPanelHandlerImpl & serverRef = *server;
-			m_panelHandlerImpl = &serverRef;
-			AvPanelHandler::Client client = kj::mv( server );
-			m_panelHandler = client;
+			auto server = kj::heap<AvPanelProcessorImpl>();
+			AvPanelProcessorImpl & serverRef = *server;
+			m_panelProcessorImpl = &serverRef;
+			AvPanelProcessor::Client client = kj::mv( server );
+			m_panelProcessor = client;
 		}
 
-		return *::kj::_::readMaybe( m_panelHandler );
+		return *::kj::_::readMaybe( m_panelProcessor );
 	}
 
 }
