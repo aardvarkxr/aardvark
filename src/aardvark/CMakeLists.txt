@@ -10,10 +10,10 @@ add_library(aardvark STATIC
 	aardvark_apps.cpp
 	aardvark_model_source_impl.cpp
 	aardvark_model_source_impl.h
-	aardvark_panel_handler.cpp
-	aardvark_panel_handler.h
-	aardvark_poker_handler.cpp
-	aardvark_poker_handler.h
+	aardvark_panel_processor.cpp
+	aardvark_panel_processor.h
+	aardvark_poker_processor.cpp
+	aardvark_poker_processor.h
 	aardvark_scene_graph.cpp
 	aardvark_client.cpp
 	framestructs.cpp

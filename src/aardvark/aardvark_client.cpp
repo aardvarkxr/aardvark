@@ -1,7 +1,7 @@
 #include "aardvark/aardvark_client.h"
 
-#include "aardvark_poker_handler.h"
-#include "aardvark_panel_handler.h"
+#include "aardvark_poker_processor.h"
+#include "aardvark_panel_processor.h"
 
 #include <capnp/rpc-twoparty.h>
 #include <capnp/rpc.capnp.h>

@@ -1,4 +1,4 @@
-#include "aardvark_panel_handler.h"
+#include "aardvark_panel_processor.h"
 
 #include <cassert>
 
