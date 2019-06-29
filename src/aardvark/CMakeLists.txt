@@ -8,9 +8,6 @@ add_library(aardvark STATIC
 	aardvark_app_impl.cpp
 	aardvark_app_impl.h
 	aardvark_apps.cpp
-	aardvark_frame_impl.cpp
-	aardvark_frame_impl.h
-	aardvark_frames.cpp
 	aardvark_model_source_impl.cpp
 	aardvark_model_source_impl.h
 	aardvark_panel_handler.cpp
@@ -18,8 +15,6 @@ add_library(aardvark STATIC
 	aardvark_poker_handler.cpp
 	aardvark_poker_handler.h
 	aardvark_scene_graph.cpp
-	aardvark_handle.cpp
-	aardvark_handle.h
 	aardvark_client.cpp
 	framestructs.cpp
 	framestructs.h

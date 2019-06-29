@@ -1,7 +1,6 @@
 #pragma once
 
 #include "aardvark/aardvark_apps.h"
-#include "aardvark_handle.h"
 #include "aardvark.capnp.h"
 
 #include <tools/capnprototools.h>
