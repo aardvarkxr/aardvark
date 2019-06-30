@@ -1756,6 +1756,7 @@ void VulkanExample::TraverseSceneGraphs( float fFrameTime )
 	m_fThisFrameTime = fFrameTime;
 	m_vecModelsToRender.clear();
 	m_intersections.reset();
+	m_collisions.reset();
 	m_currentHandDevice = vr::k_ulInvalidInputValueHandle;
 	m_currentGrabbableGlobalId = 0;
 	m_lastFrameUniverseFromNode.clear();
