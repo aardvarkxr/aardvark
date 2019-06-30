@@ -50,7 +50,8 @@ class DefaultGrabber extends React.Component< {}, DefaultGrabberState >
 						<AvModel uri={ modelUri }/>
 					</AvTransform>
 
-					<AvGrabber updateHighlight = { this.updateHighlight } />
+					<AvGrabber updateHighlight = { this.updateHighlight }
+						radius={0.1} />
 				</AvOrigin>
 			</AvApp>
 		);

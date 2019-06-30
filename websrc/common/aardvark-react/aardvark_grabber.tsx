@@ -15,6 +15,7 @@ export enum GrabberHighlight
 interface AvGrabberProps extends AvBaseNodeProps
 {
 	updateHighlight?: ( highlightType: GrabberHighlight ) => void;
+	radius: number;
 }
 
 export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
@@ -25,7 +26,8 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 	public startNode( context:AvSceneContext )
 	{
 		context.startNode( this.m_nodeId, "grabber" + this.m_nodeId, AvNodeType.Grabber );
-
+		context.setSphereVolume( this.props.radius );
+		
 		AvApp.instance().setGrabberProcessor( this.m_nodeId, this.onGrabberIntersections );
 	}
 
