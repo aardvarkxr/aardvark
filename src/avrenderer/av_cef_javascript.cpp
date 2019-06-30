@@ -568,7 +568,7 @@ bool CAardvarkAppObject::init()
 		m_grabberProcessors.insert_or_assign( arguments[0]->GetUIntValue(), arguments[1] );
 	} );
 
-	RegisterFunction( "registerGrabbableHandler", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	RegisterFunction( "registerGrabbableProcessor", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
 		if ( arguments.size() != 2 )
 		{

@@ -49,7 +49,7 @@ bool SpheresIntersect( const glm::mat4 & grabberFromUniverse, float grabberRadiu
 	glm::mat grabberFromHandle = grabberFromUniverse * universeFromHandle;
 	glm::vec4 zero( 0, 0, 0, 1.f );
 	glm::vec4 offset = grabberFromHandle * zero;
-	float dist = glm::length( offset );
+	float dist = glm::length( glm::vec3( offset ) );
 	return dist < ( grabberRadius + handleRadius );
 }
 
@@ -66,18 +66,15 @@ void CCollisionTester::updateGrabberIntersections( aardvark::CAardvarkClient *cl
 		grabbablesToSend.clear();
 		for ( auto & grabbable : m_activeGrabbables )
 		{
-			bool volumesIntersect = false;
 			for ( auto & handle : grabbable.handles )
 			{
 				if ( SpheresIntersect( grabber.matGrabberFromUniverse, grabber.radius,
 					handle.universeFromHandle, handle.radius ) )
 				{
-					volumesIntersect = true;
+					grabbablesToSend.push_back( grabbable.globalGrabbableId );
 					break;
 				}
 			}
-
-			grabbablesToSend.push_back( grabbable.globalGrabbableId );
 		}
 
 		auto intersections = req.initIntersections( (int)grabbablesToSend.size() );

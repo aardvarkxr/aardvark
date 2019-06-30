@@ -402,6 +402,7 @@ namespace aardvark
 		{
 			auto req = processor->updateGrabberIntersectionsRequest();
 			req.setGrabberId( (uint32_t)( 0xFFFFFFFF & grabberGlobalId ) );
+			req.setGrabPressed( context.getParams().getIsGrabPressed() );
 
 			req.setIntersections( context.getParams().getIntersections() );
 			addRequestToTasks( std::move( req ) );
@@ -555,6 +556,11 @@ namespace aardvark
 			virtual ::kj::Promise<void> pushPokerProximity( PushPokerProximityContext context ) override
 			{
 				return m_realServer->pushPokerProximity( m_clientId, context );
+			}
+
+			virtual ::kj::Promise<void> pushGrabIntersections( AvServer::Server::PushGrabIntersectionsContext context )
+			{
+				return m_realServer->pushGrabIntersections( m_clientId, context );
 			}
 
 		private:

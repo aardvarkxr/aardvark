@@ -27,7 +27,7 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 	{
 		context.startNode( this.m_nodeId, "grabber" + this.m_nodeId, AvNodeType.Grabber );
 		context.setSphereVolume( this.props.radius );
-		
+
 		AvApp.instance().setGrabberProcessor( this.m_nodeId, this.onGrabberIntersections );
 	}
 
@@ -66,6 +66,11 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 					newGrabbableId = grabbableIds[0];
 				}
 			}
+		}
+
+		if( !newGrabbableId && grabbableIds.length > 0 )
+		{
+			newGrabbableId = grabbableIds[ 0 ];
 		}
 
 		if( newGrabbableId )

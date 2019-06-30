@@ -18,3 +18,23 @@ body
 	background-color: red;
 }
 
+.FullPage
+{
+	width: 100%;
+	height: 100%;
+}
+
+.NoGrabHighlight
+{
+	background-color: white;
+}
+
+.InRangeHighlight
+{
+	background-color: lightblue;
+}
+
+.GrabbedHighlight
+{
+	background-color: blue;
+}

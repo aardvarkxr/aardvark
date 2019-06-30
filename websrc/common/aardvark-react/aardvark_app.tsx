@@ -77,7 +77,7 @@ export class AvApp extends React.Component< AvAppProps, {} >
 	public sendGrabEvent( grabberId: number, grabbableId: string, 
 		eventType:AvGrabEventType )
 	{
-		this.m_app.sendGrabEveent( grabberId, grabbableId, eventType );
+		this.m_app.sendGrabEvent( grabberId, grabbableId, eventType );
 	}
 
 

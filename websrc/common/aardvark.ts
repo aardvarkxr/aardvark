@@ -182,7 +182,7 @@ export interface AvAppObj
 	sendMouseEvent: AvApp_SendMouseEvent;
 	registerGrabbableProcessor( nodeId: number, processor: AvGrabbableProcessor ): void;
 	registerGrabberProcessor( nodeId: number, processor: AvGrabberProcessor ): void;
-	sendGrabEveent( grabberId: number, grabbableId: string, eventType: AvGrabEventType ): void;
+	sendGrabEvent( grabberId: number, grabbableId: string, eventType: AvGrabEventType ): void;
 }
 
 interface Av_CreateApp

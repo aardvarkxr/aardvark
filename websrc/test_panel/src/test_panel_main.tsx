@@ -6,12 +6,16 @@ import { AvOrigin } from 'common/aardvark-react/aardvark_origin';
 import { AvTransform } from 'common/aardvark-react/aardvark_transform';
 import { AvPanel } from 'common/aardvark-react/aardvark_panel';
 import bind from 'bind-decorator';
+import { AvGrabbable, HighlightType } from 'common/aardvark-react/aardvark_grabbable';
+import { AvSphereHandle } from 'common/aardvark-react/aardvark_handles';
 
 
 interface TestPanelState
 {
 	count: number;
+	grabbableHighlight: HighlightType;
 }
+
 class TestPanel extends React.Component< {}, TestPanelState >
 {
 	private m_panelId:number = 0;
@@ -19,7 +23,11 @@ class TestPanel extends React.Component< {}, TestPanelState >
 	constructor( props: any )
 	{
 		super( props );
-		this.state = { count: 0 };
+		this.state = 
+		{ 
+			count: 0,
+			grabbableHighlight: HighlightType.None,
+		};
 	}
 
 	@bind public incrementCount()
@@ -35,15 +43,39 @@ class TestPanel extends React.Component< {}, TestPanelState >
 //		AvApp.instance().sendHapticEventFromPanel( 1234, 1, 30, 2 );
 	}
 
+	@bind public onHighlightGrabbable( highlight: HighlightType )
+	{
+		this.setState( { grabbableHighlight: highlight } );
+	}
 	public render()
 	{
+		let sDivClasses:string;
+		switch( this.state.grabbableHighlight )
+		{
+			case HighlightType.None:
+				sDivClasses = "FullPage NoGrabHighlight";
+				break;
+
+			case HighlightType.InRange:
+				sDivClasses = "FullPage InRangeHighlight";
+				break;
+
+			case HighlightType.Grabbed:
+				sDivClasses = "FullPage GrabbedHighlight";
+				break;
+
+		}
+
 		return (
-			<div>
+			<div className={ sDivClasses } >
 				<AvApp name="Fnord the app">
 					<AvOrigin path="/user/hand/left">
 						<AvTransform uniformScale={0.4}>
 							<AvPanel interactive={true}
 								onIdAssigned={ (id:number) => { this.m_panelId = id } }/>
+							<AvGrabbable updateHighlight={ this.onHighlightGrabbable }>
+								<AvSphereHandle radius={0.1} />
+							</AvGrabbable>
 						</AvTransform>
 					</AvOrigin>
 				</AvApp>
