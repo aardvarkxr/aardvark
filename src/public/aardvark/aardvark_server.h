@@ -20,6 +20,7 @@ namespace aardvark
 		::kj::Promise<void> getModelSource( uint32_t clientId, AvServer::Server::GetModelSourceContext context );
 		::kj::Promise<void> updateDxgiTextureForApps( uint32_t clientId, AvServer::Server::UpdateDxgiTextureForAppsContext context );
 		::kj::Promise<void> pushPokerProximity( uint32_t clientId, AvServer::Server::PushPokerProximityContext context );
+		::kj::Promise<void> pushGrabIntersections( uint32_t clientId, AvServer::Server::PushGrabIntersectionsContext context );
 		virtual void taskFailed( kj::Exception&& exception ) override;
 
 		void removeApp( CAardvarkApp *pApp );
@@ -44,10 +45,14 @@ namespace aardvark
 		}
 
 		void sendHapticEvent( uint64_t targetNodeId, float amplitude, float frequency, float duration );
+		void startGrab( uint64_t globalGrabberId, uint64_t globalGrabbableId );
+		void endGrab( uint64_t globalGrabberId, uint64_t globalGrabbableId );
 
 		kj::Maybe<CAardvarkApp&> findApp( uint32_t appId );
-		kj::Maybe<AvPokerProcesser::Client> findPokerProcessor( uint64_t pokerGlobalId );
+		kj::Maybe<AvPokerProcessor::Client> findPokerProcessor( uint64_t pokerGlobalId );
 		kj::Maybe<AvPanelProcessor::Client> findPanelProcessor( uint64_t panelGlobalId );
+		kj::Maybe<AvGrabberProcessor::Client> findGrabberProcessor( uint64_t grabberGlobalId );
+		kj::Maybe<AvGrabbableProcessor::Client> findGrabbableProcessor( uint64_t grabbableGlobalId );
 
 		void clientDisconnected( uint32_t clientId );
 	protected:

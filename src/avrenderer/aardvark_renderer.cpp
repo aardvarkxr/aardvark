@@ -1714,15 +1714,9 @@ void VulkanExample::prepare()
 	m_pClient = kj::heap<aardvark::CAardvarkClient>();
 	m_pClient->Start();
 
-	m_frameListener = kj::heap<AvFrameListenerImpl>( [this]( AvVisualFrame::Reader newFrame ) -> void
-	{
-		applyFrame( newFrame );
-	},
-		[this]( uint64_t targetGlobalNodeId, float amplitude, float frequency, float duration ) -> void
-	{
-		sendHapticEvent( targetGlobalNodeId, amplitude, frequency, duration );
-	} );
-
+	m_frameListener = kj::heap<AvFrameListenerImpl>();
+	m_frameListener->m_renderer = this;
+	
 	auto reqListen = m_pClient->Server().listenForFramesRequest();
 	AvFrameListener::Client listenerClient = std::move( m_frameListener );
 	reqListen.setListener( listenerClient );
@@ -1761,11 +1755,13 @@ void VulkanExample::TraverseSceneGraphs( float fFrameTime )
 
 	inFrameTraversal = true;
 	setVisitedNodes.clear();
-	m_hapticDeviceForNode.clear();
+	m_handDeviceForNode.clear();
 	m_fThisFrameTime = fFrameTime;
 	m_vecModelsToRender.clear();
 	m_intersections.reset();
-	m_currentHapticDevice = vr::k_ulInvalidInputValueHandle;
+	m_currentHandDevice = vr::k_ulInvalidInputValueHandle;
+	m_currentGrabbableGlobalId = 0;
+	m_lastFrameUniverseFromNode.clear();
 	for ( auto & root : *m_roots )
 	{
 		TraverseSceneGraph( &*root );
@@ -1857,7 +1853,7 @@ void VulkanExample::TraverseNode( const AvNode::Reader & node )
 	setVisitedNodes.insert( globalId );
 
 	size_t transformCountBefore = m_universeFromStackNodeTransforms.size();
-	vr::VRInputValueHandle_t hapticDeviceBefore = m_currentHapticDevice;
+	vr::VRInputValueHandle_t handDeviceBefore = m_currentHandDevice;
 
 	switch ( node.getType() )
 	{
@@ -1885,12 +1881,25 @@ void VulkanExample::TraverseNode( const AvNode::Reader & node )
 		TraversePoker( node );
 		break;
 
+	case AvNode::Type::GRABBABLE:
+		TraverseGrabbable( node );
+		break;
+
+	case AvNode::Type::HANDLE:
+		TraverseHandle( node );
+		break;
+
+	case AvNode::Type::GRABBER:
+		TraverseGrabber( node );
+		break;
+
 	case AvNode::Type::INVALID:
 	default:
 		assert( false );
 	}
 
-	m_hapticDeviceForNode.insert_or_assign( GetGlobalId( node ), m_currentHapticDevice );
+	m_handDeviceForNode.insert_or_assign( GetGlobalId( node ), m_currentHandDevice );
+	m_lastFrameUniverseFromNode.insert_or_assign( GetGlobalId( node ), m_universeFromStackNodeTransforms.back() );
 
 	for ( const uint32_t unChildId : node.getChildren() )
 	{
@@ -1901,13 +1910,18 @@ void VulkanExample::TraverseNode( const AvNode::Reader & node )
 		}
 	}
 
+	if ( AvNode::Type::GRABBABLE == node.getType() )
+	{
+		m_currentGrabbableGlobalId = 0;
+	}
+
 	if ( m_universeFromStackNodeTransforms.size() > transformCountBefore )
 	{
 		assert( m_universeFromStackNodeTransforms.size() == transformCountBefore + 1 );
 		m_universeFromStackNodeTransforms.pop_back();
 	}
 
-	m_currentHapticDevice = hapticDeviceBefore;
+	m_currentHandDevice = handDeviceBefore;
 }
 
 void VulkanExample::TraverseOrigin( const AvNode::Reader & node )
@@ -1920,15 +1934,15 @@ void VulkanExample::TraverseOrigin( const AvNode::Reader & node )
 
 		if ( origin == "/user/hand/left" )
 		{
-			m_currentHapticDevice = m_leftHand;
+			m_currentHandDevice = m_leftHand;
 		}
 		else if ( origin == "/user/hand/right" )
 		{
-			m_currentHapticDevice = m_rightHand;
+			m_currentHandDevice = m_rightHand;
 		}
 		else
 		{
-			m_currentHapticDevice = vr::k_ulInvalidInputValueHandle;
+			m_currentHandDevice = vr::k_ulInvalidInputValueHandle;
 		}
 	}
 }
@@ -2112,6 +2126,32 @@ void VulkanExample::TraversePoker( const AvNode::Reader & node )
 {
 	glm::vec4 vPokerInUniverse = getUniverseFromCurrentNode() * glm::vec4( 0, 0, 0, 1.f );
 	m_intersections.addActivePoker( GetGlobalId( node ), vPokerInUniverse );
+}
+
+void VulkanExample::TraverseGrabbable( const AvNode::Reader & node )
+{
+	m_currentGrabbableGlobalId = GetGlobalId( node );
+}
+
+void VulkanExample::TraverseHandle( const AvNode::Reader & node )
+{
+	if ( !node.hasPropVolume() )
+	{
+		return;
+	}
+
+	m_collisions.addGrabbableHandle( m_currentGrabbableGlobalId, getUniverseFromCurrentNode(), node.getPropVolume() );
+}
+
+void VulkanExample::TraverseGrabber( const AvNode::Reader & node )
+{
+	if ( !node.hasPropVolume() )
+	{
+		return;
+	}
+
+	m_collisions.addGrabber( GetGlobalId( node ), glm::inverse( getUniverseFromCurrentNode() ), 
+		node.getPropVolume(), isGrabPressed( m_currentHandDevice ) );
 }
 
 
@@ -2571,6 +2611,7 @@ void VulkanExample::render()
 	}
 
 	m_intersections.updatePokerProximity( m_pClient );
+	m_collisions.updateGrabberIntersections( m_pClient );
 
 	doInputWork();
 
@@ -2603,26 +2644,31 @@ void VulkanExample::doInputWork()
 
 	vr::EVRInputError err = vr::VRInput()->UpdateActionState( actionSet, sizeof( vr::VRActiveActionSet_t ), 2 );
 
-	bool bLeftGrab = GetAction( m_actionGrab, m_leftHand );
-	bool bRightGrab = GetAction( m_actionGrab, m_rightHand );
+	m_rightPressed = GetAction( m_actionGrab, m_leftHand );
+	m_rightPressed = GetAction( m_actionGrab, m_rightHand );
+}
 
-	if ( bLeftGrab )
+bool VulkanExample::isGrabPressed( vr::VRInputValueHandle_t whichHand )
+{
+	if ( whichHand == m_leftHand )
 	{
-		printf( " Left grab\n" );
+		return m_leftPressed;
 	}
-	if ( bRightGrab )
+	else if ( whichHand == m_rightHand )
 	{
-		printf( " Right grab\n" );
+		return m_rightPressed;
 	}
-
-	// do something with grabbers with this information
+	else
+	{
+		return false;
+	}
 }
 
 
 void VulkanExample::sendHapticEvent( uint64_t targetGlobalNodeId, float amplitude, float frequency, float duration )
 {
-	auto iHapticDevice = m_hapticDeviceForNode.find( targetGlobalNodeId );
-	if ( iHapticDevice == m_hapticDeviceForNode.end() )
+	auto iHapticDevice = m_handDeviceForNode.find( targetGlobalNodeId );
+	if ( iHapticDevice == m_handDeviceForNode.end() )
 	{
 		return;
 	}
@@ -2662,4 +2708,64 @@ void VulkanExample::submitEyeBuffers()
 	vulkanData.m_nImage = (uint64_t)rightEyeRT.color.image;
 	vr::VRCompositor()->Submit( vr::Eye_Right, &texture, &bounds );
 
+}
+
+void VulkanExample::startGrabImpl( uint64_t grabberGlobalId, uint64_t grabbableGlobalId )
+{
+	auto iGrabbable = m_lastFrameUniverseFromNode.find( grabbableGlobalId );
+	if ( iGrabbable == m_lastFrameUniverseFromNode.end() )
+	{
+		assert( false );
+		return;
+	}
+	glm::mat4 universeFromGrabbable = iGrabbable->second;
+
+	auto iGrabber = m_lastFrameUniverseFromNode.find( grabberGlobalId );
+	if ( iGrabber == m_lastFrameUniverseFromNode.end() )
+	{
+		assert( false );
+		return;
+	}
+	glm::mat4 grabberFromUniverse = glm::inverse( iGrabber->second );
+
+	glm::mat4 grabberFromGrabbable = grabberFromUniverse * universeFromGrabbable;
+	m_nodeToNodeAnchors.insert_or_assign( grabbableGlobalId, NodeToNodeAnchor_t{ grabberGlobalId, grabberFromGrabbable } );
+}
+
+void VulkanExample::endGrabImpl( uint64_t grabberGlobalId, uint64_t grabbableGlobalId )
+{
+	m_nodeToNodeAnchors.erase( grabbableGlobalId );
+}
+
+::kj::Promise<void> AvFrameListenerImpl::newFrame( NewFrameContext context )
+{
+	m_renderer->applyFrame( context.getParams().getFrame() );
+	return kj::READY_NOW;
+}
+
+::kj::Promise<void> AvFrameListenerImpl::sendHapticEvent( SendHapticEventContext context )
+{
+	m_renderer->sendHapticEvent( context.getParams().getTargetGlobalId(),
+		context.getParams().getAmplitude(),
+		context.getParams().getFrequency(),
+		context.getParams().getDuration() );
+	return kj::READY_NOW;
+}
+
+::kj::Promise<void> AvFrameListenerImpl::startGrab( StartGrabContext context )
+{
+	uint64_t grabberGlobalId = context.getParams().getGrabberGlobalId();
+	uint64_t grabbableGlobalId = context.getParams().getGrabbableGlobalId();
+
+	m_renderer->startGrabImpl( grabberGlobalId, grabbableGlobalId );
+	return kj::READY_NOW;
+}
+
+
+::kj::Promise<void> AvFrameListenerImpl::endGrab( EndGrabContext context )
+{
+	uint64_t grabberGlobalId = context.getParams().getGrabberGlobalId();
+	uint64_t grabbableGlobalId = context.getParams().getGrabbableGlobalId();
+	m_renderer->endGrabImpl( grabberGlobalId, grabbableGlobalId );
+	return kj::READY_NOW;
 }

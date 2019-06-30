@@ -20,6 +20,9 @@ export enum AvNodeType
 	Model = 3,
 	Panel = 4,
 	Poker = 5,
+	Grabbable = 6,
+	Handle = 7,
+	Grabber = 8,
 }
 
 interface AvSceneContext_StartNode
@@ -85,6 +88,7 @@ export interface AvSceneContext
 	setModelUri: AvSceneContext_SetModelUri;
 	setTextureSource: AvSceneContext_SetTextureSource;
 	setInteractive: AvSceneContext_SetInteractive;
+	setSphereVolume( radius: number ): void;
 }
 
 interface AvApp_GetName
@@ -141,6 +145,31 @@ interface AvApp_RegisterPanelHandler
 	( nodeId:number, handlerFunction: AvPanelHandler ): void;
 }
 
+export enum AvGrabEventType
+{
+	Unknown = 0,
+	EnterRange = 1,
+	LeaveRange = 2,
+	StartGrab = 3,
+	EndGrab = 4,
+};
+
+export interface AvGrabEvent
+{
+	type: AvGrabEventType;
+	grabbableId: string;
+	grabberId: string;
+}
+
+export interface AvGrabbableProcessor
+{
+	( event: AvGrabEvent ): void;
+}
+
+export interface AvGrabberProcessor
+{
+	( isPressed: boolean, grabbableIds: string[] ): void;
+}
 
 export interface AvAppObj
 {
@@ -151,6 +180,9 @@ export interface AvAppObj
 	enableDefaultPanelHandling( panelId: number ): void;
 	sendHapticEventFromPanel( panelId: number, amplitude: number, frequency: number, duration: number ): void;
 	sendMouseEvent: AvApp_SendMouseEvent;
+	registerGrabbableProcessor( nodeId: number, processor: AvGrabbableProcessor ): void;
+	registerGrabberProcessor( nodeId: number, processor: AvGrabberProcessor ): void;
+	sendGrabEveent( grabberId: number, grabbableId: string, eventType: AvGrabEventType ): void;
 }
 
 interface Av_CreateApp

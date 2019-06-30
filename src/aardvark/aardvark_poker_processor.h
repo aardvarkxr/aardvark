@@ -11,11 +11,11 @@
 namespace aardvark
 {
 
-	class AvPokerProcesserImpl final : public AvPokerProcesser::Server
+	class AvPokerProcessorImpl final : public AvPokerProcessor::Server
 	{
 		typedef std::vector< tools::OwnCapnp<AvPanelProximity> > ProximityList;
 	public:
-		virtual ~AvPokerProcesserImpl() {}
+		virtual ~AvPokerProcessorImpl() {}
 
 		virtual ::kj::Promise<void> updatePanelProximity( UpdatePanelProximityContext context ) override;
 

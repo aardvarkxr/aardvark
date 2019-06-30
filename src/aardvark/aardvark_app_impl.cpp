@@ -38,6 +38,8 @@ CAardvarkApp::CAardvarkApp( uint32_t clientId, const std::string & sName, AvServ
 	auto root = context.getParams().getRoot();
 	m_panelProcessors.clear();
 	m_pokerProcessors.clear();
+	m_grabberProcessors.clear();
+	m_grabbableProcessors.clear();
 	for ( auto node : root.getNodes() )
 	{
 		auto realNode = node.getNode();
@@ -49,6 +51,14 @@ CAardvarkApp::CAardvarkApp( uint32_t clientId, const std::string & sName, AvServ
 
 		case AvNode::Type::POKER:
 			m_pokerProcessors.insert_or_assign( realNode.getId(), root.getPokerProcessor() );
+			break;
+
+		case AvNode::Type::GRABBER:
+			m_grabberProcessors.insert_or_assign( realNode.getId(), root.getGrabberProcessor() );
+			break;
+
+		case AvNode::Type::GRABBABLE:
+			m_grabbableProcessors.insert_or_assign( realNode.getId(), root.getGrabbableProcessor() );
 			break;
 		}
 	}
@@ -83,6 +93,41 @@ CAardvarkApp::CAardvarkApp( uint32_t clientId, const std::string & sName, AvServ
 	return kj::READY_NOW;
 }
 
+
+::kj::Promise<void> CAardvarkApp::pushGrabEvent( PushGrabEventContext context )
+{
+	auto & inGrabEvent = context.getParams().getEvent();
+	uint64_t globalGrabberId = (uint64_t)m_id << 32 | (uint64_t)context.getParams().getGrabberNodeId();
+	uint64_t globalGrabbableId = inGrabEvent.getGrabbableId();
+
+	KJ_IF_MAYBE( grabbableProcessor, m_pParentServer->findGrabbableProcessor( globalGrabbableId ) )
+	{
+		auto req = grabbableProcessor->grabEventRequest();
+
+		uint32_t localGrabbableId = (uint32_t)( 0xFFFFFFFF & globalGrabbableId );
+		req.setGrabbableId( localGrabbableId );
+		auto outGrabEvent = req.initEvent();
+		outGrabEvent.setGrabbableId( globalGrabbableId );
+		outGrabEvent.setGrabberId( globalGrabberId );
+		outGrabEvent.setType( inGrabEvent.getType() );
+		m_pParentServer->addRequestToTasks( std::move( req ) );
+
+		// we need to tell the renderer about some event types
+		switch ( inGrabEvent.getType() )
+		{
+		case AvGrabEvent::Type::START_GRAB:
+			m_pParentServer->startGrab( globalGrabberId, globalGrabbableId );
+			break;
+
+		case AvGrabEvent::Type::END_GRAB:
+			m_pParentServer->endGrab( globalGrabberId, globalGrabbableId );
+			break;
+		}
+	}
+	return kj::READY_NOW;
+}
+
+
 void CAardvarkApp::gatherVisuals( AvVisuals_t & visuals )
 {
 	if ( m_sceneGraph.hasNodes() )
@@ -106,7 +151,7 @@ AvSharedTextureInfo::Reader CAardvarkApp::getSharedTextureInfo()
 }
 
 
-kj::Maybe < AvPokerProcesser::Client > CAardvarkApp::findPokerProcessor( uint32_t pokerLocalId )
+kj::Maybe < AvPokerProcessor::Client > CAardvarkApp::findPokerProcessor( uint32_t pokerLocalId )
 {
 	auto i = m_pokerProcessors.find( pokerLocalId );
 	if ( i == m_pokerProcessors.end() )
@@ -123,6 +168,33 @@ kj::Maybe < AvPanelProcessor::Client > CAardvarkApp::findPanelProcessor( uint32_
 {
 	auto i = m_panelProcessors.find( panelLocalId );
 	if ( i == m_panelProcessors.end() )
+	{
+		return nullptr;
+	}
+	else
+	{
+		return i->second;
+	}
+}
+
+kj::Maybe<AvGrabberProcessor::Client> CAardvarkApp::findGrabberProcessor( uint32_t grabberLocalId )
+{
+	auto i = m_grabberProcessors.find( grabberLocalId );
+	if ( i == m_grabberProcessors.end() )
+	{
+		return nullptr;
+	}
+	else
+	{
+		return i->second;
+	}
+}
+
+
+kj::Maybe<AvGrabbableProcessor::Client> CAardvarkApp::findGrabbableProcessor( uint32_t grabbableLocalId )
+{
+	auto i = m_grabbableProcessors.find( grabbableLocalId );
+	if ( i == m_grabbableProcessors.end() )
 	{
 		return nullptr;
 	}

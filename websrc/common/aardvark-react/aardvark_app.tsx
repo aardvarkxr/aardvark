@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import { Av, AvPanelHandler, AvAppObj, AvSceneContext, AvPokerHandler, AvPanelMouseEventType } from 'common/aardvark';
+import { Av, AvPanelHandler, AvAppObj, AvSceneContext, AvPokerHandler, AvPanelMouseEventType, AvGrabbableProcessor, AvGrabberProcessor, AvGrabEventType } from 'common/aardvark';
 import { IAvBaseNode } from './aardvark_base_node';
 import bind from 'bind-decorator';
 
@@ -61,6 +61,25 @@ export class AvApp extends React.Component< AvAppProps, {} >
 		this.m_app.registerPokerHandler( nodeId, handler );
 		this.markDirty();
 	}
+
+	public setGrabbableProcessor( nodeId: number, processor: AvGrabbableProcessor )
+	{
+		this.m_app.registerGrabbableProcessor( nodeId, processor );
+		this.markDirty();
+	}
+
+	public setGrabberProcessor( nodeId: number, processor: AvGrabberProcessor )
+	{
+		this.m_app.registerGrabberProcessor( nodeId, processor );
+		this.markDirty();
+	}
+
+	public sendGrabEvent( grabberId: number, grabbableId: string, 
+		eventType:AvGrabEventType )
+	{
+		this.m_app.sendGrabEveent( grabberId, grabbableId, eventType );
+	}
+
 
 	public sendMouseEvent( pokerId: number, panelId: string, 
 		eventType:AvPanelMouseEventType, x: number, y: number )

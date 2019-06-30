@@ -28,8 +28,10 @@ namespace aardvark
 		bool hasSharedTextureInfo() const { return m_sharedTexture.isSet();  }
 		void setSharedTextureInfo( AvSharedTextureInfo::Reader sharedTextureInfo );
 		AvSharedTextureInfo::Reader getSharedTextureInfo();
-		kj::Maybe < AvPokerProcesser::Client > findPokerProcessor( uint32_t pokerLocalId );
+		kj::Maybe < AvPokerProcessor::Client > findPokerProcessor( uint32_t pokerLocalId );
 		kj::Maybe < AvPanelProcessor::Client > findPanelProcessor( uint32_t panelLocalId );
+		kj::Maybe<AvGrabberProcessor::Client> findGrabberProcessor( uint32_t grabberLocalId );
+		kj::Maybe<AvGrabbableProcessor::Client> findGrabbableProcessor( uint32_t grabbableLocalId );
 
 		void gatherVisuals( AvVisuals_t & visuals );
 
@@ -38,13 +40,16 @@ namespace aardvark
 		virtual ::kj::Promise<void> updateSceneGraph( UpdateSceneGraphContext context ) override;
 		virtual ::kj::Promise<void> pushMouseEvent( PushMouseEventContext context ) override;
 		virtual ::kj::Promise<void> sendHapticEvent( SendHapticEventContext context ) override;
+		virtual ::kj::Promise<void> pushGrabEvent( PushGrabEventContext context ) override;
 	private:
 		std::string m_sName;
 		std::vector< AvApp::Client > m_vecClients;
 		tools::OwnCapnp<AvNodeRoot> m_sceneGraph = nullptr;
 		tools::OwnCapnp<AvSharedTextureInfo> m_sharedTexture = nullptr;
-		std::unordered_map<uint32_t, AvPokerProcesser::Client> m_pokerProcessors;
+		std::unordered_map<uint32_t, AvPokerProcessor::Client> m_pokerProcessors;
 		std::unordered_map<uint32_t, AvPanelProcessor::Client> m_panelProcessors;
+		std::unordered_map<uint32_t, AvGrabberProcessor::Client> m_grabberProcessors;
+		std::unordered_map<uint32_t, AvGrabbableProcessor::Client> m_grabbableProcessors;
 		AvServerImpl *m_pParentServer = nullptr;
 		uint32_t m_id = 0;
 		uint32_t m_clientId;

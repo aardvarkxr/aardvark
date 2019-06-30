@@ -104,6 +104,8 @@ private:
 	std::set<uint32_t> m_nodeIdsThatNeedThisTexture;
 	std::unordered_map< uint32_t, CefRefPtr< CefV8Value > > m_pokerProcessors;
 	std::unordered_map< uint32_t, CefRefPtr< CefV8Value > > m_panelProcessors;
+	std::unordered_map< uint32_t, CefRefPtr< CefV8Value > > m_grabberProcessors;
+	std::unordered_map< uint32_t, CefRefPtr< CefV8Value > > m_grabbableProcessors;
 	std::set< uint32_t > m_defaultPanels;
 };
 
@@ -205,6 +207,9 @@ bool CSceneContextObject::init()
 	typeEnum->SetValue( "Model",		CefV8Value::CreateInt( (int32_t)EAvSceneGraphNodeType::Model ),		V8_PROPERTY_ATTRIBUTE_READONLY );
 	typeEnum->SetValue( "Panel",		CefV8Value::CreateInt( (int32_t)EAvSceneGraphNodeType::Panel ), V8_PROPERTY_ATTRIBUTE_READONLY );
 	typeEnum->SetValue( "Poker",		CefV8Value::CreateInt( (int32_t)EAvSceneGraphNodeType::Poker ), V8_PROPERTY_ATTRIBUTE_READONLY );
+	typeEnum->SetValue( "Grabbable", CefV8Value::CreateInt( (int32_t)EAvSceneGraphNodeType::Grabbable), V8_PROPERTY_ATTRIBUTE_READONLY );
+	typeEnum->SetValue( "Handle", CefV8Value::CreateInt( (int32_t)EAvSceneGraphNodeType::Handle ), V8_PROPERTY_ATTRIBUTE_READONLY );
+	typeEnum->SetValue( "Grabber", CefV8Value::CreateInt( (int32_t)EAvSceneGraphNodeType::Grabber ), V8_PROPERTY_ATTRIBUTE_READONLY );
 	m_container->SetValue( "type", typeEnum, V8_PROPERTY_ATTRIBUTE_READONLY );
 
 	RegisterFunction( "finishNode", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
@@ -408,6 +413,26 @@ bool CSceneContextObject::init()
 		}
 	} );
 
+	RegisterFunction( "setSphereVolume", [this, handler = m_handler]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 1 )
+		{
+			exception = "Invalid argument count";
+			return;
+		}
+		if ( !arguments[0]->IsDouble() )
+		{
+			exception = "Invalid arguments";
+			return;
+		}
+
+		EAvSceneGraphResult res = aardvark::avSetSphereVolume( m_context, (float)arguments[0]->GetDoubleValue() );
+		if ( res != EAvSceneGraphResult::Success )
+		{
+			exception = "avSetSphereVolume failed " + std::to_string( (int)res );
+		}
+	} );
+
 	return true;
 }
 
@@ -520,6 +545,52 @@ bool CAardvarkAppObject::init()
 		m_panelProcessors.insert_or_assign( arguments[0]->GetUIntValue(), arguments[1] );
 	} );
 
+	RegisterFunction( "registerGrabberProcessor", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 2 )
+		{
+			exception = "Invalid arguments";
+			return;
+		}
+
+		if ( !arguments[0]->IsUInt() )
+		{
+			exception = "first argument must be a grabber node ID";
+			return;
+		}
+
+		if ( !arguments[1]->IsFunction() )
+		{
+			exception = "second argument must be a function";
+			return;
+		}
+
+		m_grabberProcessors.insert_or_assign( arguments[0]->GetUIntValue(), arguments[1] );
+	} );
+
+	RegisterFunction( "registerGrabbableHandler", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 2 )
+		{
+			exception = "Invalid arguments";
+			return;
+		}
+
+		if ( !arguments[0]->IsUInt() )
+		{
+			exception = "first argument must be a grabbable node ID";
+			return;
+		}
+
+		if ( !arguments[1]->IsFunction() )
+		{
+			exception = "second argument must be a function";
+			return;
+		}
+
+		m_grabbableProcessors.insert_or_assign( arguments[0]->GetUIntValue(), arguments[1] );
+	} );
+
 	RegisterFunction( "enableDefaultPanelHandling", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
 		if ( arguments.size() != 1 )
@@ -616,6 +687,43 @@ bool CAardvarkAppObject::init()
 		if ( result != aardvark::EAvSceneGraphResult::Success )
 		{
 			exception = "Error returned by avSendHapticEventFromPanel: " + std::to_string( (int)result );
+		}
+	} );
+
+	RegisterFunction( "sendGrabEvent", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 3 )
+		{
+			exception = "Invalid arguments";
+			return;
+		}
+
+		if ( !arguments[0]->IsUInt() )
+		{
+			exception = "first argument must be a grabber node ID";
+			return;
+		}
+
+		if ( !arguments[1]->IsString() )
+		{
+			exception = "second argument must be the grabbable ID string";
+			return;
+		}
+
+		if ( !arguments[2]->IsInt() )
+		{
+			exception = "third argument must be a grab event type";
+			return;
+		}
+
+		aardvark::EAvSceneGraphResult result = aardvark::avPushGrabEventFromGrabber(
+			m_handler->getClient(), &m_appClient,
+			arguments[0]->GetUIntValue(),
+			std::stoull( std::string( arguments[1]->GetStringValue() ).c_str() ),
+			( aardvark::EGrabEventType)arguments[2]->GetIntValue() );
+		if ( result != aardvark::EAvSceneGraphResult::Success )
+		{
+			exception = "Error returned by avPushGrabEventFromGrabber: " + std::to_string( (int)result );
 		}
 	} );
 
@@ -717,6 +825,57 @@ void CAardvarkAppObject::runFrame()
 			msg->GetArgumentList()->SetDouble( 2, panelMouseEvent.y );
 
 			m_handler->getBrowser()->SendProcessMessage( PID_BROWSER, msg );
+		}
+	}
+
+	for ( auto iHandler : m_grabberProcessors )
+	{
+		uint64_t grabbableIntersections[100];
+		bool isGrabberPressed = false;
+		uint32_t usedCount;
+		aardvark::EAvSceneGraphResult result = aardvark::avGetNextGrabberIntersection(
+			m_handler->getClient(), iHandler.first, &isGrabberPressed, grabbableIntersections, 100, &usedCount );
+		assert( result != EAvSceneGraphResult::InsufficientBufferSize );
+		if ( result == EAvSceneGraphResult::Success )
+		{
+			m_handler->getContext()->Enter();
+
+			CefRefPtr< CefV8Value > list = CefV8Value::CreateArray( (int)usedCount );
+			for ( uint32_t n = 0; n < usedCount; n++ )
+			{
+				list->SetValue( n, CefV8Value::CreateString( std::to_string( grabbableIntersections[ n ] ) ) );
+			}
+
+			iHandler.second->ExecuteFunction( nullptr, 
+				CefV8ValueList{ CefV8Value::CreateBool( isGrabberPressed ), list } );
+
+			m_handler->getContext()->Exit();
+		}
+	}
+
+	for ( auto iHandler : m_grabbableProcessors )
+	{
+		aardvark::GrabEvent_t grabEvent;
+		uint32_t unLimit = 0;
+		while ( ++unLimit < 100 && EAvSceneGraphResult::Success == aardvark::avGetNextGrabEvent(
+			m_handler->getClient(), iHandler.first, &grabEvent) )
+		{
+			m_handler->getContext()->Enter();
+
+			CefRefPtr< CefV8Value > evt = CefV8Value::CreateObject( nullptr, nullptr );
+			evt->SetValue( CefString( "grabberId" ),
+				CefV8Value::CreateString( std::to_string( grabEvent.grabberId) ),
+				V8_PROPERTY_ATTRIBUTE_NONE );
+			evt->SetValue( CefString( "grabbableId" ),
+				CefV8Value::CreateString( std::to_string( grabEvent.grabbableId ) ),
+				V8_PROPERTY_ATTRIBUTE_NONE );
+			evt->SetValue( CefString( "type" ),
+				CefV8Value::CreateInt( (int)grabEvent.type ),
+				V8_PROPERTY_ATTRIBUTE_NONE );
+
+			iHandler.second->ExecuteFunction( nullptr, CefV8ValueList{ evt } );
+
+			m_handler->getContext()->Exit();
 		}
 	}
 }

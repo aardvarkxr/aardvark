@@ -89,5 +89,6 @@ module.exports =
 [
 	createConfig( 'aardvark_master', 'Master App', 'ts' ),
 	createConfig( 'default_poker', 'Default Poker', 'tsx' ),
+	createConfig( 'default_grabber', 'Default Grabber', 'tsx' ),
 	createConfig( 'test_panel', 'Test Panel', 'tsx' ),
 ];

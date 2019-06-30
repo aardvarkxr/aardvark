@@ -89,6 +89,8 @@ interface AvFrameListener
 {
 	newFrame @0 (frame: AvVisualFrame) -> (  );
 	sendHapticEvent @1 ( targetGlobalId: UInt64, amplitude: Float32, frequency: Float32, duration: Float32 ) -> ();
+	startGrab @2 ( grabberGlobalId: UInt64, grabbableGlobalId: UInt64 ) -> ();
+	endGrab @3 ( grabberGlobalId: UInt64, grabbableGlobalId: UInt64 ) -> ();
 }
 
 struct AvPanelProximity
@@ -99,7 +101,7 @@ struct AvPanelProximity
 	distance @3: Float32;
 }
 
-interface AvPokerProcesser
+interface AvPokerProcessor
 {
 	updatePanelProximity @0 ( pokerId: UInt32, proximity: List( AvPanelProximity ) ) -> ();
 }
@@ -127,6 +129,47 @@ interface AvPanelProcessor
 	mouseEvent @0 ( panelId: UInt32, event: AvPanelMouseEvent ) -> ();
 }
 
+
+interface AvGrabberProcessor
+{
+	updateGrabberIntersections @0 ( grabberId: UInt32, grabPressed: Bool, intersections: List( UInt64) ) -> ();
+}
+
+struct AvGrabEvent
+{
+	enum Type
+	{
+		enterRange @0;
+		leaveRange @1;
+		startGrab @2;
+		endGrab @3;
+	}
+
+	type @0: Type;
+	grabbableId @1: UInt64;
+	grabberId @2: UInt64;
+	transform @3: AvTransform;
+}
+
+interface AvGrabbableProcessor
+{
+	grabEvent @0 ( grabbableId: UInt32, event: AvGrabEvent ) -> ();
+}
+
+struct AvVolume
+{
+	enum Type
+	{
+		invalid @0;			# something is broken about this volume
+
+		sphere @1;			# has a radius from 0,0,0 
+	}
+
+	type @0: Type;
+	radius @1: Float32;
+}
+
+
 struct AvNode
 {
 	enum Type
@@ -139,6 +182,9 @@ struct AvNode
 		model @4;			# Contains a model URI
 		panel @5;			# Contains: propInteractive, propTextureSource
 		poker @6;			# has no properties
+		grabbable @7;		# has no properties; contains handles
+		handle @8;			# contains a volume
+		grabber @9;			# contains a volume
 	}
 
 	id @0: UInt32;
@@ -153,6 +199,7 @@ struct AvNode
 	propModelUri @7: Text;			# model
 	propTextureSource @8: Text;		# panel
 	propInteractive @9: Bool;		# panel
+	propVolume @10: AvVolume;		# grabber and handle
 }
 
 struct AvNodeWrapper
@@ -164,8 +211,10 @@ struct AvNodeRoot
 {
 	nodes @0 : List( AvNodeWrapper );
 	sourceId @1 : UInt32;
-	pokerProcessor @2: AvPokerProcesser;
+	pokerProcessor @2: AvPokerProcessor;
 	panelProcessor @3: AvPanelProcessor;
+	grabberProcessor @4: AvGrabberProcessor;
+	grabbableProcessor @5: AvGrabbableProcessor;
 }
 
 interface AvServer
@@ -183,6 +232,12 @@ interface AvServer
 		pokerId : UInt64,
 		proximity: List( AvPanelProximity )
 	) -> ();
+	pushGrabIntersections @5 
+	(
+		grabberId : UInt64,
+		isGrabPressed: Bool,
+		intersections: List( UInt64 )
+	) -> ();
 }
 
 interface AvApp
@@ -194,6 +249,7 @@ interface AvApp
 	updateSceneGraph @2 (root: AvNodeRoot ) -> ( success: Bool );
 	pushMouseEvent @3 ( pokerNodeId: UInt32, event: AvPanelMouseEvent ) -> ();
 	sendHapticEvent @4 ( nodeGlobalId: UInt64, amplitude: Float32, frequency: Float32, duration: Float32 ) -> ();
+	pushGrabEvent @5 ( grabberNodeId: UInt32, event: AvGrabEvent ) -> ();
 }
 
 

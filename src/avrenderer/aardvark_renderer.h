@@ -23,6 +23,7 @@
 #include "av_cef_app.h"
 #include "av_cef_handler.h"
 #include "intersection_tester.h"
+#include "collision_tester.h"
 
 #include <tools/capnprototools.h>
 
@@ -31,39 +32,21 @@
 #include <aardvark/aardvark_client.h>
 #include <aardvark/aardvark_scene_graph.h>
 
-class AvFrameListenerImpl final : public AvFrameListener::Server
+
+class VulkanExample;
+
+class AvFrameListenerImpl : public AvFrameListener::Server
 {
 public:
-	AvFrameListenerImpl( std::function<void( AvVisualFrame::Reader )> fnNewFrame,
-		std::function< void( uint64_t targetGlobalNodeId, float amplitude, float frequency, float duration )> fnHapticEvent )
-	{
-		m_fnNewFrame = fnNewFrame;
-		m_fnHapticEvent = fnHapticEvent;
-	}
+	virtual ::kj::Promise<void> newFrame( NewFrameContext context ) override;
+	virtual ::kj::Promise<void> sendHapticEvent( SendHapticEventContext context ) override;
+	virtual ::kj::Promise<void> startGrab( StartGrabContext context ) override;
+	virtual ::kj::Promise<void> endGrab( EndGrabContext context ) override;
 
-	virtual ::kj::Promise<void> newFrame( NewFrameContext context ) override
-	{
-		m_fnNewFrame( context.getParams().getFrame() );
-		return kj::READY_NOW;
-	}
-
-	virtual ::kj::Promise<void> sendHapticEvent( SendHapticEventContext context ) override
-	{
-		m_fnHapticEvent( context.getParams().getTargetGlobalId(),
-			context.getParams().getAmplitude(),
-			context.getParams().getFrequency(),
-			context.getParams().getDuration() );
-		return kj::READY_NOW;
-	}
-
-protected:
-
-private:
-	std::function<void( AvVisualFrame::Reader )> m_fnNewFrame;
-	std::function< void( uint64_t targetGlobalNodeId, float amplitude, float frequency, float duration )> m_fnHapticEvent;
+	VulkanExample *m_renderer = nullptr;
 };
 
-class VulkanExample : public VulkanExampleBase, public IApplication
+class VulkanExample : public VulkanExampleBase, public IApplication, public AvFrameListener::Server
 {
 public:
 	enum class EEye
@@ -100,8 +83,6 @@ public:
 	void updateParams();
 	void windowResized();
 
-	kj::Own< AvFrameListenerImpl > m_frameListener;
-
 	void prepare();
 
 	virtual void onWindowClose() override;
@@ -110,8 +91,6 @@ public:
 	void TraverseSceneGraphs( float fFrameTime );
 
 	uint64_t GetGlobalId( const AvNode::Reader & node );
-
-
 
 	void pushParentFromCurrentNode( const glm::mat4 & matParentFromNode );
 
@@ -124,6 +103,9 @@ public:
 	void TraverseModel( const AvNode::Reader & node );
 	void TraversePanel( const AvNode::Reader & node );
 	void TraversePoker( const AvNode::Reader & node );
+	void TraverseGrabbable( const AvNode::Reader & node );
+	void TraverseHandle( const AvNode::Reader & node );
+	void TraverseGrabber( const AvNode::Reader & node );
 
 	void applyFrame( AvVisualFrame::Reader & newFrame );
 	void sendHapticEvent( uint64_t targetGlobalNodeId, float amplitude, float frequency, float duration );
@@ -141,13 +123,21 @@ public:
 	void submitEyeBuffers();
 
 	void doInputWork();
+	bool isGrabPressed( vr::VRInputValueHandle_t whichHand );
+
+	void startGrabImpl( uint64_t grabberGlobalId, uint64_t grabbableGlobalId );
+	void endGrabImpl( uint64_t grabberGlobalId, uint64_t grabbableGlobalId );
 
 private:
+	kj::Own< AvFrameListenerImpl > m_frameListener;
+
 	vr::VRActionSetHandle_t m_actionSet = vr::k_ulInvalidActionSetHandle;
 	vr::VRActionHandle_t m_actionGrab = vr::k_ulInvalidActionHandle;
 	vr::VRActionHandle_t m_actionHaptic = vr::k_ulInvalidActionHandle;
 	vr::VRInputValueHandle_t m_leftHand = vr::k_ulInvalidInputValueHandle;
 	vr::VRInputValueHandle_t m_rightHand = vr::k_ulInvalidInputValueHandle;
+	bool m_leftPressed = false;
+	bool m_rightPressed = false;
 
 	struct SgRoot_t
 	{
@@ -176,7 +166,7 @@ private:
 	bool m_updateDescriptors = false;
 
 	std::unique_ptr< std::map< uint32_t, tools::OwnCapnp< AvSharedTextureInfo > > > m_sharedTextureInfo, m_nextSharedTextureInfo;
-	std::map<uint64_t, vr::VRInputValueHandle_t> m_hapticDeviceForNode;
+	std::map<uint64_t, vr::VRInputValueHandle_t> m_handDeviceForNode;
 
 	const SgRoot_t *m_pCurrentRoot = nullptr;
 	std::vector<glm::mat4> m_universeFromStackNodeTransforms;
@@ -185,9 +175,12 @@ private:
 	float m_fThisFrameTime = 0;
 	std::vector<std::shared_ptr<vkglTF::Model>> m_vecModelsToRender;
 	std::set<uint64_t> setVisitedNodes;
-	vr::VRInputValueHandle_t m_currentHapticDevice = vr::k_ulInvalidInputValueHandle;
+	vr::VRInputValueHandle_t m_currentHandDevice = vr::k_ulInvalidInputValueHandle;
+	std::unordered_map<uint64_t, glm::mat4> m_lastFrameUniverseFromNode;
+	uint64_t m_currentGrabbableGlobalId = 0;
 
 	CIntersectionTester m_intersections;
+	CCollisionTester m_collisions;
 
 	struct Textures {
 		vks::TextureCubeMap environmentCube;
@@ -320,5 +313,11 @@ private:
 	int32_t debugViewInputs = 0;
 	int32_t debugViewEquation = 0;
 
+	struct NodeToNodeAnchor_t
+	{
+		uint64_t parentNodeId;
+		glm::mat4 parentNodeFromThisNode;
+	};
+	std::unordered_map<uint64_t, NodeToNodeAnchor_t> m_nodeToNodeAnchors;
 
 };

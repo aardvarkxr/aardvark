@@ -5,8 +5,10 @@
 #include <cassert>
 
 #include "aardvark.capnp.h"
-#include "aardvark_panel_handler.h"
-#include "aardvark_poker_handler.h"
+#include "aardvark_grabbable_processor.h"
+#include "aardvark_grabber_processor.h"
+#include "aardvark_panel_processor.h"
+#include "aardvark_poker_processor.h"
 #include <capnp/message.h>
 #include <tools/capnprototools.h>
 
@@ -43,6 +45,9 @@ namespace aardvark
 		// valid for Panel nodes
 		EAvSceneGraphResult avSetPanelTextureSource( const char *pchSourceName );
 		EAvSceneGraphResult avSetPanelInteractive( bool interactive );
+
+		// valid for volume nodes
+		EAvSceneGraphResult avSetSphereVolume( float radius );
 
 		AvNode::Builder & CurrentNode();
 	private:
@@ -187,6 +192,16 @@ namespace aardvark
 			return EAvSceneGraphResult::InvalidContext;
 	}
 
+	EAvSceneGraphResult avSetSphereVolume( AvSceneContext context, float radius )
+	{
+		CSceneGraphContext *pContext = (CSceneGraphContext *)context;
+		if ( pContext )
+			return pContext->avSetSphereVolume( radius );
+		else
+			return EAvSceneGraphResult::InvalidContext;
+	}
+
+
 	// -------------------------- CSceneGraphContext implementation ------------------------------------
 
 	EAvSceneGraphResult CSceneGraphContext::avStartSceneContext( aardvark::CAardvarkClient *pClient )
@@ -224,6 +239,8 @@ namespace aardvark
 
 		root.setPokerProcessor( m_pClient->getPokerProcessor() );
 		root.setPanelProcessor( m_pClient->getPanelProcessor() );
+		root.setGrabberProcessor( m_pClient->getGrabberProcessor() );
+		root.setGrabbableProcessor( m_pClient->getGrabbableProcessor() );
 
 		auto reqUpdateSceneGraph = pApp->updateSceneGraphRequest();
 		reqUpdateSceneGraph.setRoot( root );
@@ -250,6 +267,9 @@ namespace aardvark
 		case EAvSceneGraphNodeType::Model: return AvNode::Type::MODEL;
 		case EAvSceneGraphNodeType::Panel: return AvNode::Type::PANEL;
 		case EAvSceneGraphNodeType::Poker: return AvNode::Type::POKER;
+		case EAvSceneGraphNodeType::Grabbable: return AvNode::Type::GRABBABLE;
+		case EAvSceneGraphNodeType::Handle: return AvNode::Type::HANDLE;
+		case EAvSceneGraphNodeType::Grabber: return AvNode::Type::GRABBER;
 
 		default: return AvNode::Type::INVALID;
 		}
@@ -392,6 +412,18 @@ namespace aardvark
 		return EAvSceneGraphResult::Success;
 	}
 
+	EAvSceneGraphResult CSceneGraphContext::avSetSphereVolume( float radius )
+	{
+		if ( radius < 0 )
+			return EAvSceneGraphResult::InvalidParameter;
+		if ( CurrentNode().getType() != AvNode::Type::HANDLE && CurrentNode().getType() != AvNode::Type::GRABBER )
+			return EAvSceneGraphResult::InvalidNodeType;
+		auto volume = CurrentNode().initPropVolume();
+		volume.setType( AvVolume::Type::SPHERE );
+		volume.setRadius( radius );
+		return EAvSceneGraphResult::Success;
+	}
+
 	AvNode::Builder & CSceneGraphContext::CurrentNode()
 	{
 		return m_currentNodeBuilder;
@@ -498,6 +530,68 @@ namespace aardvark
 
 		return EAvSceneGraphResult::Success;
 	}
+
+	EAvSceneGraphResult avGetNextGrabberIntersection( aardvark::CAardvarkClient *pClient,
+		uint32_t grabberNodeId,
+		bool *isGrabberPressed,
+		uint64_t *grabberIntersections, uint32_t intersectionArraySize,
+		uint32_t *usedIntersectionCount )
+	{
+		KJ_IF_MAYBE( grabberProcessor, pClient->getGrabberProcessorServer() )
+		{
+			return ( *grabberProcessor )->avGetNextGrabberIntersection( grabberNodeId, isGrabberPressed, 
+				grabberIntersections, intersectionArraySize, usedIntersectionCount );
+		}
+		else
+		{
+		return EAvSceneGraphResult::NoEvents;
+		}
+	}
+
+	EAvSceneGraphResult avGetNextGrabEvent( aardvark::CAardvarkClient *pClient, 
+		uint32_t grabbableNodeId, GrabEvent_t *grabEvent )
+	{
+		KJ_IF_MAYBE( grabbableProcessor, pClient->getGrabbableProcessorServer() )
+		{
+			return ( *grabbableProcessor )->avGetNextGrabEvent( grabbableNodeId, grabEvent );
+		}
+		else
+		{
+		return EAvSceneGraphResult::NoEvents;
+		}
+	}
+
+	EAvSceneGraphResult avPushGrabEventFromGrabber( aardvark::CAardvarkClient *pClient,
+		AvApp::Client *pApp, uint32_t grabberNodeId,
+		uint64_t grabbableId, EGrabEventType type )
+	{
+		auto reqPushEvent = pApp->pushGrabEventRequest();
+		reqPushEvent.setGrabberNodeId( grabberNodeId );
+		AvGrabEvent::Builder bldEvent = reqPushEvent.initEvent();
+		bldEvent.setGrabbableId( grabbableId );
+		switch ( type )
+		{
+		case EGrabEventType::EnterRange:
+			bldEvent.setType( AvGrabEvent::Type::ENTER_RANGE );
+			break;
+		case EGrabEventType::LeaveRange:
+			bldEvent.setType( AvGrabEvent::Type::LEAVE_RANGE );
+			break;
+		case EGrabEventType::StartGrab:
+			bldEvent.setType( AvGrabEvent::Type::START_GRAB );
+			break;
+		case EGrabEventType::EndGrab:
+			bldEvent.setType( AvGrabEvent::Type::END_GRAB );
+			break;
+
+		default:
+			return EAvSceneGraphResult::InvalidParameter;
+		}
+
+		pClient->addRequestToTasks( std::move( reqPushEvent ) );
+		return EAvSceneGraphResult::Success;
+	}
+
 
 	EAvSceneGraphResult avSendHapticEventFromPanel( aardvark::CAardvarkClient *pClient, 
 		AvApp::Client *pApp, uint32_t panelNodeId,

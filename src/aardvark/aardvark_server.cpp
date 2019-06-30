@@ -268,7 +268,7 @@ namespace aardvark
 		return nullptr;
 	}
 
-	kj::Maybe < AvPokerProcesser::Client > AvServerImpl::findPokerProcessor( uint64_t pokerGlobalId )
+	kj::Maybe < AvPokerProcessor::Client > AvServerImpl::findPokerProcessor( uint64_t pokerGlobalId )
 	{
 		uint32_t appId = (uint32_t)( pokerGlobalId >> 32 );
 		uint32_t pokerLocalId = (uint32_t) ( 0xFFFFFFFF & pokerGlobalId );
@@ -289,6 +289,34 @@ namespace aardvark
 		KJ_IF_MAYBE( app, findApp( appId ) )
 		{
 			return app->findPanelProcessor( panelLocalId );
+		}
+		else
+		{
+		return nullptr;
+		}
+	}
+
+	kj::Maybe < AvGrabberProcessor::Client > AvServerImpl::findGrabberProcessor( uint64_t grabberGlobalId )
+	{
+		uint32_t appId = (uint32_t)( grabberGlobalId >> 32 );
+		uint32_t grabberLocalId = (uint32_t) ( 0xFFFFFFFF & grabberGlobalId );
+		KJ_IF_MAYBE( app, findApp( appId ) )
+		{
+			return app->findGrabberProcessor( grabberLocalId );
+		}
+		else
+		{
+			return nullptr;
+		}
+	}
+
+	kj::Maybe < AvGrabbableProcessor::Client > AvServerImpl::findGrabbableProcessor( uint64_t grabbableGlobalId )
+	{
+		uint32_t appId = (uint32_t)( grabbableGlobalId >> 32 );
+		uint32_t grabbableLocalId = (uint32_t)( 0xFFFFFFFF & grabbableGlobalId );
+		KJ_IF_MAYBE( app, findApp( appId ) )
+		{
+			return app->findGrabbableProcessor( grabbableLocalId );
 		}
 		else
 		{
@@ -343,6 +371,45 @@ namespace aardvark
 			addRequestToTasks( std::move( req ) );
 		}
 	}
+
+	void AvServerImpl::startGrab( uint64_t globalGrabberId, uint64_t globalGrabbableId )
+	{
+		for ( auto iFrameListener : m_frameListeners )
+		{
+			auto req = iFrameListener.client.startGrabRequest();
+			req.setGrabberGlobalId( globalGrabberId );
+			req.setGrabbableGlobalId( globalGrabbableId );
+			addRequestToTasks( std::move( req ) );
+		}
+	}
+
+	void AvServerImpl::endGrab( uint64_t globalGrabberId, uint64_t globalGrabbableId )
+	{
+		for ( auto iFrameListener : m_frameListeners )
+		{
+			auto req = iFrameListener.client.endGrabRequest();
+			req.setGrabberGlobalId( globalGrabberId );
+			req.setGrabbableGlobalId( globalGrabbableId );
+			addRequestToTasks( std::move( req ) );
+		}
+	}
+
+	::kj::Promise<void> AvServerImpl::pushGrabIntersections( uint32_t clientId,
+		AvServer::Server::PushGrabIntersectionsContext context )
+	{
+		uint64_t grabberGlobalId = context.getParams().getGrabberId();
+		KJ_IF_MAYBE( processor, findGrabberProcessor( grabberGlobalId ) )
+		{
+			auto req = processor->updateGrabberIntersectionsRequest();
+			req.setGrabberId( (uint32_t)( 0xFFFFFFFF & grabberGlobalId ) );
+
+			req.setIntersections( context.getParams().getIntersections() );
+			addRequestToTasks( std::move( req ) );
+		}
+
+		return kj::READY_NOW;
+	}
+
 
 	namespace {
 

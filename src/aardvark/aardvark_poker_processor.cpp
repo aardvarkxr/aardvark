@@ -3,7 +3,7 @@
 
 namespace aardvark
 {
-	::kj::Promise<void> AvPokerProcesserImpl::updatePanelProximity( UpdatePanelProximityContext context ) 
+	::kj::Promise<void> AvPokerProcessorImpl::updatePanelProximity( UpdatePanelProximityContext context ) 
 	{
 		uint32_t pokerId = context.getParams().getPokerId();
 		ProximityList prox;
@@ -17,7 +17,7 @@ namespace aardvark
 		return kj::READY_NOW;
 	}
 
-	EAvSceneGraphResult AvPokerProcesserImpl::avGetNextPokerProximity( uint32_t pokerNodeId,
+	EAvSceneGraphResult AvPokerProcessorImpl::avGetNextPokerProximity( uint32_t pokerNodeId,
 		PokerProximity_t *pokerProximities, uint32_t pokerProximityCount,
 		uint32_t *usedPokerProximityCount )
 	{

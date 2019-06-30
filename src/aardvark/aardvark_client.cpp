@@ -2,6 +2,8 @@
 
 #include "aardvark_poker_processor.h"
 #include "aardvark_panel_processor.h"
+#include "aardvark_grabber_processor.h"
+#include "aardvark_grabbable_processor.h"
 
 #include <capnp/rpc-twoparty.h>
 #include <capnp/rpc.capnp.h>
@@ -180,14 +182,14 @@ namespace aardvark
 		return m_context->getWaitScope(); 
 	}
 
-	AvPokerProcesser::Client CAardvarkClient::getPokerProcessor()
+	AvPokerProcessor::Client CAardvarkClient::getPokerProcessor()
 	{
 		if ( m_pokerProcessor == nullptr )
 		{
-			auto server = kj::heap<AvPokerProcesserImpl>();
-			AvPokerProcesserImpl & serverRef = *server;
+			auto server = kj::heap<AvPokerProcessorImpl>();
+			AvPokerProcessorImpl & serverRef = *server;
 			m_pokerProcessorImpl = &serverRef;
-			AvPokerProcesser::Client client = kj::mv( server );
+			AvPokerProcessor::Client client = kj::mv( server );
 			m_pokerProcessor = client;
 		}
 
@@ -206,6 +208,34 @@ namespace aardvark
 		}
 
 		return *::kj::_::readMaybe( m_panelProcessor );
+	}
+
+	AvGrabberProcessor::Client CAardvarkClient::getGrabberProcessor()
+	{
+		if ( m_grabberProcessor == nullptr )
+		{
+			auto server = kj::heap<AvGrabberProcessorImpl>();
+			AvGrabberProcessorImpl & serverRef = *server;
+			m_grabberProcessorImpl = &serverRef;
+			AvGrabberProcessor::Client client = kj::mv( server );
+			m_grabberProcessor = client;
+		}
+
+		return *::kj::_::readMaybe( m_grabberProcessor );
+	}
+
+	AvGrabbableProcessor::Client CAardvarkClient::getGrabbableProcessor()
+	{
+		if ( m_grabbableProcessor == nullptr )
+		{
+			auto server = kj::heap<AvGrabbableProcessorImpl>();
+			AvGrabbableProcessorImpl & serverRef = *server;
+			m_grabbableProcessorImpl = &serverRef;
+			AvGrabbableProcessor::Client client = kj::mv( server );
+			m_grabbableProcessor = client;
+		}
+
+		return *::kj::_::readMaybe( m_grabbableProcessor );
 	}
 
 }

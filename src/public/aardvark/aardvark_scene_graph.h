@@ -29,6 +29,9 @@ namespace aardvark
 		Model = 3,		// Draws a model
 		Panel = 4,		// Draws a quad in the world with some texture
 		Poker = 5,		// Interacts with panels on touch
+		Grabbable = 6,	// Thing that can be grabbed by its handles
+		Handle = 7,		// Volume that a grabbable can be grabbed by
+		Grabber = 8,	// Tool that can grab the handles of grabbables
 	};
 
 	struct AvSceneContextStruct;
@@ -60,6 +63,9 @@ namespace aardvark
 	// valid for Panel nodes
 	EAvSceneGraphResult avSetPanelTextureSource( AvSceneContext context, const char *pchSourceName );
 	EAvSceneGraphResult avSetPanelInteractive( AvSceneContext context, bool interactive );
+
+	// valid for Volume nodes
+	EAvSceneGraphResult avSetSphereVolume( AvSceneContext context, float radius );
 
 	// valid for poker nodes
 	struct PokerProximity_t
@@ -95,6 +101,33 @@ namespace aardvark
 	EAvSceneGraphResult avSendHapticEventFromPanel( aardvark::CAardvarkClient *pClient, 
 		AvApp::Client *pApp, uint32_t panelNodeId,
 		float amplitude, float frequency, float duration );
+
+	enum class EGrabEventType
+	{
+		Unknown = 0,
+		EnterRange = 1,
+		LeaveRange = 2,
+		StartGrab = 3,
+		EndGrab = 4,
+	};
+
+	struct GrabEvent_t
+	{
+		EGrabEventType type;
+		uint64_t grabbableId;
+		uint64_t grabberId;
+	};
+
+	EAvSceneGraphResult avGetNextGrabberIntersection( aardvark::CAardvarkClient *pClient,
+		uint32_t grabberNodeId,
+		bool *isGrabberPressed,
+		uint64_t *grabberIntersections, uint32_t intersectionArraySize,
+		uint32_t *usedIntersectionCount );
+	EAvSceneGraphResult avGetNextGrabEvent( aardvark::CAardvarkClient *pClient,
+		uint32_t grabbableNodeId, GrabEvent_t *grabEvent );
+	EAvSceneGraphResult avPushGrabEventFromGrabber( aardvark::CAardvarkClient *pClient,
+		AvApp::Client *pApp, uint32_t grabberNodeId,
+		uint64_t grabbableId, EGrabEventType type );
 
 	// tells the renderer what DXGI to use for a scene graph app
 	EAvSceneGraphResult avUpdateDxgiTextureForApps( aardvark::CAardvarkClient *pClient, const char **pchAppName, uint32_t unNameCount, uint32_t unWidth, uint32_t unHeight, void *pvSharedTextureHandle, bool bInvertY );

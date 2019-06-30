@@ -5,8 +5,10 @@
 
 namespace aardvark
 {
-	class AvPokerProcesserImpl;
+	class AvPokerProcessorImpl;
 	class AvPanelProcessorImpl;
+	class AvGrabberProcessorImpl;
+	class AvGrabbableProcessorImpl;
 
 	class CAardvarkClientContext;
 	struct ClientContext;
@@ -35,11 +37,15 @@ namespace aardvark
 			addToTasks( std::move( prom ) );
 		}
 
-		AvPokerProcesser::Client getPokerProcessor();
+		AvPokerProcessor::Client getPokerProcessor();
 		AvPanelProcessor::Client getPanelProcessor();
+		AvGrabberProcessor::Client getGrabberProcessor();
+		AvGrabbableProcessor::Client getGrabbableProcessor();
 
-		kj::Maybe< AvPokerProcesserImpl *> getPokerProcessorServer() { return m_pokerProcessorImpl; }
+		kj::Maybe< AvPokerProcessorImpl *> getPokerProcessorServer() { return m_pokerProcessorImpl; }
 		kj::Maybe< AvPanelProcessorImpl *> getPanelProcessorServer() { return m_panelProcessorImpl; }
+		kj::Maybe< AvGrabberProcessorImpl *> getGrabberProcessorServer() { return m_grabberProcessorImpl; }
+		kj::Maybe< AvGrabbableProcessorImpl *> getGrabbableProcessorServer() { return m_grabbableProcessorImpl; }
 	private:
 		virtual void taskFailed( kj::Exception&& exception ) override;
 
@@ -55,7 +61,11 @@ namespace aardvark
 
 		kj::Maybe< AvPanelProcessor::Client > m_panelProcessor = nullptr;
 		kj::Maybe< AvPanelProcessorImpl * > m_panelProcessorImpl = nullptr;
-		kj::Maybe< AvPokerProcesser::Client > m_pokerProcessor = nullptr;
-		kj::Maybe< AvPokerProcesserImpl * > m_pokerProcessorImpl = nullptr;
+		kj::Maybe< AvPokerProcessor::Client > m_pokerProcessor = nullptr;
+		kj::Maybe< AvPokerProcessorImpl * > m_pokerProcessorImpl = nullptr;
+		kj::Maybe< AvGrabbableProcessor::Client > m_grabbableProcessor = nullptr;
+		kj::Maybe< AvGrabbableProcessorImpl * > m_grabbableProcessorImpl = nullptr;
+		kj::Maybe< AvGrabberProcessor::Client > m_grabberProcessor = nullptr;
+		kj::Maybe< AvGrabberProcessorImpl * > m_grabberProcessorImpl = nullptr;
 	};
 }
