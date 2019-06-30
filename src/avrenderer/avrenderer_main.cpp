@@ -60,6 +60,11 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 		// The sub-process has completed so return here.
 		return exit_code;
 	}
+
+	// if we're the main process we need to start the Aardvark server
+	aardvark::CServerThread serverThread;
+	serverThread.Start();
+
 	// Specify CEF global settings here.
 	CefSettings settings;
 
@@ -91,6 +96,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 	// Shut down CEF.
 	CefShutdown();
 
+	serverThread.Join();
 
 	return 0;
 }

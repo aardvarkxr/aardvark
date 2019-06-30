@@ -238,7 +238,6 @@ private:
 	std::vector<VkSemaphore> renderCompleteSemaphores;
 	std::vector<VkSemaphore> presentCompleteSemaphores;
 
-	aardvark::CServerThread m_serverThread;
 	kj::Own<aardvark::CAardvarkClient> m_pClient;
 	std::unordered_map < std::string, std::shared_ptr< vkglTF::Model > > m_mapModels;
 	std::set< std::string > m_modelRequestsInProgress;

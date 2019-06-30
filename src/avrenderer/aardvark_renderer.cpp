@@ -101,7 +101,6 @@ VulkanExample::~VulkanExample() noexcept
 {
 	m_pClient->Stop();
 	m_pClient = nullptr;
-	m_serverThread.Join();
 
 	vkDestroyPipeline( device, pipelines.skybox, nullptr );
 	vkDestroyPipeline( device, pipelines.pbr, nullptr );
@@ -1709,8 +1708,6 @@ void VulkanExample::prepare()
 	ui = new UI( vulkanDevice, renderPass, queue, pipelineCache, settings.sampleCount );
 	updateOverlay();
 
-	m_serverThread.Start();
-
 	m_pClient = kj::heap<aardvark::CAardvarkClient>();
 	m_pClient->Start();
 
@@ -2644,7 +2641,7 @@ void VulkanExample::doInputWork()
 
 	vr::EVRInputError err = vr::VRInput()->UpdateActionState( actionSet, sizeof( vr::VRActiveActionSet_t ), 2 );
 
-	m_rightPressed = GetAction( m_actionGrab, m_leftHand );
+	m_leftPressed = GetAction( m_actionGrab, m_leftHand );
 	m_rightPressed = GetAction( m_actionGrab, m_rightHand );
 }
 
