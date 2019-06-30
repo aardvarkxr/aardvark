@@ -1,5 +1,4 @@
 #include "aardvark/aardvark_apps.h"
-#include "aardvark_handle.h"
 #include "aardvark_app_impl.h"
 
 namespace aardvark
