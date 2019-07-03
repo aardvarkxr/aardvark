@@ -195,6 +195,7 @@ void CAardvarkCefApp::CloseAllBrowsers( bool forceClose )
 	{
 		browser->triggerClose( forceClose );
 	}
+	m_browsers.clear();
 }
 
 CAardvarkCefApp* CAardvarkCefApp::instance()

@@ -98,7 +98,7 @@ bool CAardvarkCefHandler::DoClose(CefRefPtr<CefBrowser> browser)
 void CAardvarkCefHandler::OnBeforeClose(CefRefPtr<CefBrowser> browser) 
 {
 	CEF_REQUIRE_UI_THREAD();
-
+	m_browser = nullptr;
 }
 
 void CAardvarkCefHandler::OnLoadError(CefRefPtr<CefBrowser> browser,
