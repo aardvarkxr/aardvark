@@ -42,17 +42,15 @@ app
 
 ========= DEAL WITH THIS NEXT ===========
 
--- Add grab* node types to scene graph
--- Add node handling to renderer
--- add collision processing in renderer
--- add volume function in "C" API and javascript
--- Add react components for grab* nodes
-Update test app to show grabbiness
+
+Replace transform computation at traversal with something that makes a 
+CPendingTransform per node and resolves them after the traversal is finished.
+
+Replace the node to node thing for grabbing with something that lives on the
+grabbable's node data?
+
+-- Update test app to show grabbiness
 Hook up node to node parentage
--- Hook up grab state checking to collision
--- Hook start/end events up to notify renderer of new parentage
--- (and add RPC for that)
--- implement default grabber
 
 
 

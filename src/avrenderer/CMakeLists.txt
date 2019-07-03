@@ -19,6 +19,8 @@ add_executable(avrenderer
 	collision_tester.h
 	intersection_tester.cpp
 	intersection_tester.h
+	pending_transform.cpp
+	pending_transform.h
 
 	${SHADERS}
 	)

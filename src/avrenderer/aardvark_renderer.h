@@ -24,6 +24,7 @@
 #include "av_cef_handler.h"
 #include "intersection_tester.h"
 #include "collision_tester.h"
+#include "pending_transform.h"
 
 #include <tools/capnprototools.h>
 
@@ -92,20 +93,15 @@ public:
 
 	uint64_t GetGlobalId( const AvNode::Reader & node );
 
-	void pushParentFromCurrentNode( const glm::mat4 & matParentFromNode );
-
-	void pushUniverseFromCurrentNode( const glm::mat4 & matUniverseFromNode );
-	const glm::mat4 & getUniverseFromCurrentNode();
-
-	void TraverseNode( const AvNode::Reader & node );
-	void TraverseOrigin( const AvNode::Reader & node );
-	void TraverseTransform( const AvNode::Reader & node );
-	void TraverseModel( const AvNode::Reader & node );
-	void TraversePanel( const AvNode::Reader & node );
-	void TraversePoker( const AvNode::Reader & node );
-	void TraverseGrabbable( const AvNode::Reader & node );
-	void TraverseHandle( const AvNode::Reader & node );
-	void TraverseGrabber( const AvNode::Reader & node );
+	void TraverseNode( const AvNode::Reader & node, CPendingTransform *defaultParent );
+	void TraverseOrigin( const AvNode::Reader & node, CPendingTransform *defaultParent );
+	void TraverseTransform( const AvNode::Reader & node, CPendingTransform *defaultParent );
+	void TraverseModel( const AvNode::Reader & node, CPendingTransform *defaultParent );
+	void TraversePanel( const AvNode::Reader & node, CPendingTransform *defaultParent );
+	void TraversePoker( const AvNode::Reader & node, CPendingTransform *defaultParent );
+	void TraverseGrabbable( const AvNode::Reader & node, CPendingTransform *defaultParent );
+	void TraverseHandle( const AvNode::Reader & node, CPendingTransform *defaultParent );
+	void TraverseGrabber( const AvNode::Reader & node, CPendingTransform *defaultParent );
 
 	void applyFrame( AvVisualFrame::Reader & newFrame );
 	void sendHapticEvent( uint64_t targetGlobalNodeId, float amplitude, float frequency, float duration );
@@ -129,6 +125,10 @@ public:
 	void endGrabImpl( uint64_t grabberGlobalId, uint64_t grabbableGlobalId );
 
 private:
+	CPendingTransform *getTransform( uint64_t globalNodeId );
+	CPendingTransform *updateTransform( uint64_t globalNodeId, CPendingTransform *parent, 
+		glm::mat4 parentFromNode, std::function<void( const glm::mat4 & universeFromNode )> applyFunction );
+
 	kj::Own< AvFrameListenerImpl > m_frameListener;
 
 	vr::VRActionSetHandle_t m_actionSet = vr::k_ulInvalidActionSetHandle;
@@ -169,7 +169,6 @@ private:
 	std::map<uint64_t, vr::VRInputValueHandle_t> m_handDeviceForNode;
 
 	const SgRoot_t *m_pCurrentRoot = nullptr;
-	std::vector<glm::mat4> m_universeFromStackNodeTransforms;
 	std::unordered_map<std::string, glm::mat4> m_universeFromOriginTransforms;
 	std::unordered_map<uint64_t, std::unique_ptr<SgNodeData_t>> m_mapNodeData;
 	float m_fThisFrameTime = 0;
@@ -244,6 +243,7 @@ private:
 	std::set< std::string > m_failedModelRequests;
 	vks::RenderTarget leftEyeRT;
 	vks::RenderTarget rightEyeRT;
+	std::unordered_map< uint64_t, std::unique_ptr< CPendingTransform > > m_nodeTransforms;
 
 	uint32_t eyeWidth = 0;
 	uint32_t eyeHeight = 0;

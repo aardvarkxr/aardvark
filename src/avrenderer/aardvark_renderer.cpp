@@ -1759,17 +1759,27 @@ void VulkanExample::TraverseSceneGraphs( float fFrameTime )
 	m_collisions.reset();
 	m_currentHandDevice = vr::k_ulInvalidInputValueHandle;
 	m_currentGrabbableGlobalId = 0;
-	m_lastFrameUniverseFromNode.clear();
+	m_nodeTransforms.clear();
 	for ( auto & root : *m_roots )
 	{
 		TraverseSceneGraph( &*root );
 	}
 	m_pCurrentRoot = nullptr;
+
+	m_lastFrameUniverseFromNode.clear();
+
+	for ( auto & transform : m_nodeTransforms )
+	{
+		transform.second->resolve();
+		m_lastFrameUniverseFromNode.insert_or_assign( transform.first, transform.second->getUniverseFromNode() );
+	}
+
 	inFrameTraversal = false;
 }
 
 uint64_t VulkanExample::GetGlobalId( const AvNode::Reader & node )
 {
+	assert( m_pCurrentRoot );
 	if ( m_pCurrentRoot )
 	{
 		return ( (uint64_t)m_pCurrentRoot->appId ) << 32 | node.getId();
@@ -1807,41 +1817,13 @@ void VulkanExample::TraverseSceneGraph( const SgRoot_t *root )
 	if ( !root->nodes.empty() )
 	{
 		m_pCurrentRoot = root;
-		m_universeFromStackNodeTransforms.clear();
-		m_universeFromStackNodeTransforms.push_back( glm::mat4( 1.f ) );
 
 		// the 0th node is always the root
-		TraverseNode( root->nodes[0] );
+		TraverseNode( root->nodes[0], nullptr );
 	}
 }
 
-void VulkanExample::pushParentFromCurrentNode( const glm::mat4 & matParentFromNode )
-{
-	if ( m_universeFromStackNodeTransforms.empty() )
-	{
-		m_universeFromStackNodeTransforms.push_back( matParentFromNode );
-	}
-	else
-	{
-		glm::mat4 & universeFromParent = m_universeFromStackNodeTransforms.back();
-		glm::mat4 universeFromStackNode = universeFromParent * matParentFromNode;
-		m_universeFromStackNodeTransforms.push_back( universeFromStackNode );
-	}
-}
-
-void VulkanExample::pushUniverseFromCurrentNode( const glm::mat4 & matUniverseFromNode )
-{
-	m_universeFromStackNodeTransforms.push_back( matUniverseFromNode );
-}
-
-const glm::mat4 & VulkanExample::getUniverseFromCurrentNode()
-{
-	assert( !m_universeFromStackNodeTransforms.empty() );
-	return m_universeFromStackNodeTransforms.back();
-}
-
-
-void VulkanExample::TraverseNode( const AvNode::Reader & node )
+void VulkanExample::TraverseNode( const AvNode::Reader & node, CPendingTransform *defaultParent )
 {
 	uint64_t globalId = GetGlobalId( node );
 	if ( setVisitedNodes.find( globalId ) != setVisitedNodes.end() )
@@ -1850,7 +1832,6 @@ void VulkanExample::TraverseNode( const AvNode::Reader & node )
 	}
 	setVisitedNodes.insert( globalId );
 
-	size_t transformCountBefore = m_universeFromStackNodeTransforms.size();
 	vr::VRInputValueHandle_t handDeviceBefore = m_currentHandDevice;
 
 	switch ( node.getType() )
@@ -1860,35 +1841,35 @@ void VulkanExample::TraverseNode( const AvNode::Reader & node )
 		break;
 
 	case AvNode::Type::ORIGIN:
-		TraverseOrigin( node );
+		TraverseOrigin( node, defaultParent );
 		break;
 
 	case AvNode::Type::TRANSFORM:
-		TraverseTransform( node );
+		TraverseTransform( node, defaultParent );
 		break;
 
 	case AvNode::Type::MODEL:
-		TraverseModel( node );
+		TraverseModel( node, defaultParent );
 		break;
 
 	case AvNode::Type::PANEL:
-		TraversePanel( node );
+		TraversePanel( node, defaultParent );
 		break;
 
 	case AvNode::Type::POKER:
-		TraversePoker( node );
+		TraversePoker( node, defaultParent );
 		break;
 
 	case AvNode::Type::GRABBABLE:
-		TraverseGrabbable( node );
+		TraverseGrabbable( node, defaultParent );
 		break;
 
 	case AvNode::Type::HANDLE:
-		TraverseHandle( node );
+		TraverseHandle( node, defaultParent );
 		break;
 
 	case AvNode::Type::GRABBER:
-		TraverseGrabber( node );
+		TraverseGrabber( node, defaultParent );
 		break;
 
 	case AvNode::Type::INVALID:
@@ -1896,15 +1877,21 @@ void VulkanExample::TraverseNode( const AvNode::Reader & node )
 		assert( false );
 	}
 
-	m_handDeviceForNode.insert_or_assign( GetGlobalId( node ), m_currentHandDevice );
-	m_lastFrameUniverseFromNode.insert_or_assign( GetGlobalId( node ), m_universeFromStackNodeTransforms.back() );
+	uint64_t globalNodeId = GetGlobalId( node );
+	CPendingTransform *thisNodeTransform = getTransform( globalNodeId );
+	if ( thisNodeTransform->needsUpdate() )
+	{
+		thisNodeTransform->update( defaultParent, glm::mat4( 1.f ), nullptr );
+	}
+
+	m_handDeviceForNode.insert_or_assign( globalNodeId, m_currentHandDevice );
 
 	for ( const uint32_t unChildId : node.getChildren() )
 	{
 		auto iChild = m_pCurrentRoot->mapIdToIndex.find( unChildId );
 		if ( iChild != m_pCurrentRoot->mapIdToIndex.end() && iChild->second < m_pCurrentRoot->nodes.size() )
 		{
-			TraverseNode( m_pCurrentRoot->nodes[iChild->second] );
+			TraverseNode( m_pCurrentRoot->nodes[iChild->second], thisNodeTransform );
 		}
 	}
 
@@ -1913,22 +1900,16 @@ void VulkanExample::TraverseNode( const AvNode::Reader & node )
 		m_currentGrabbableGlobalId = 0;
 	}
 
-	if ( m_universeFromStackNodeTransforms.size() > transformCountBefore )
-	{
-		assert( m_universeFromStackNodeTransforms.size() == transformCountBefore + 1 );
-		m_universeFromStackNodeTransforms.pop_back();
-	}
-
 	m_currentHandDevice = handDeviceBefore;
 }
 
-void VulkanExample::TraverseOrigin( const AvNode::Reader & node )
+void VulkanExample::TraverseOrigin( const AvNode::Reader & node, CPendingTransform *defaultParent )
 {
 	std::string origin = node.getPropOrigin();
 	auto iOrigin = m_universeFromOriginTransforms.find( origin );
 	if ( iOrigin != m_universeFromOriginTransforms.end() )
 	{
-		pushUniverseFromCurrentNode( iOrigin->second );
+		updateTransform( GetGlobalId( node ), nullptr, iOrigin->second, nullptr );
 
 		if ( origin == "/user/hand/left" )
 		{
@@ -1946,7 +1927,7 @@ void VulkanExample::TraverseOrigin( const AvNode::Reader & node )
 }
 
 
-void VulkanExample::TraverseTransform( const AvNode::Reader & node )
+void VulkanExample::TraverseTransform( const AvNode::Reader & node, CPendingTransform *defaultParent )
 {
 	if ( node.hasPropTransform() )
 	{
@@ -1987,12 +1968,12 @@ void VulkanExample::TraverseTransform( const AvNode::Reader & node )
 			qRot.w = 1.f;
 		}
 
-		glm::mat4 matNodeFromParent = glm::translate( glm::mat4( 1.0f ), vTrans ) * glm::mat4( qRot ) * glm::scale( glm::mat4( 1.0f ), vScale );
-		pushParentFromCurrentNode( matNodeFromParent );
+		glm::mat4 matParentFromNode = glm::translate( glm::mat4( 1.0f ), vTrans ) * glm::mat4( qRot ) * glm::scale( glm::mat4( 1.0f ), vScale );
+		updateTransform( GetGlobalId( node ), defaultParent, matParentFromNode, nullptr );
 	}
 }
 
-void VulkanExample::TraverseModel( const AvNode::Reader & node )
+void VulkanExample::TraverseModel( const AvNode::Reader & node, CPendingTransform *defaultParent )
 {
 	SgNodeData_t *pData = GetNodeData( node );
 	assert( pData );
@@ -2016,19 +1997,23 @@ void VulkanExample::TraverseModel( const AvNode::Reader & node )
 
 	if ( pData->model )
 	{
-		pData->modelParent.matParentFromNode = getUniverseFromCurrentNode();
-		pData->model->animate( m_fThisFrameTime );
-
-		// TODO(Joe): Figure out how to only do this when a parent is changing
-		for ( auto &node : pData->model->nodes ) {
-			node->update();
-		}
-
 		m_vecModelsToRender.push_back( pData->model );
+
+		updateTransform( GetGlobalId( node ), defaultParent, glm::mat4( 1.f ),
+			[this, pData]( const glm::mat4 & universeFromNode )
+		{
+			pData->modelParent.matParentFromNode = universeFromNode;
+			pData->model->animate( m_fThisFrameTime );
+
+			// TODO(Joe): Figure out how to only do this when a parent is changing
+			for ( auto &node : pData->model->nodes ) {
+				node->update();
+			}
+		} );
 	}
 }
 
-void VulkanExample::TraversePanel( const AvNode::Reader & node )
+void VulkanExample::TraversePanel( const AvNode::Reader & node, CPendingTransform *defaultParent )
 {
 	SgNodeData_t *pData = GetNodeData( node );
 	assert( pData );
@@ -2098,58 +2083,88 @@ void VulkanExample::TraversePanel( const AvNode::Reader & node )
 			pData->lastDxgiHandle = pvNewDxgiHandle;
 		}
 
-		pData->modelParent.matParentFromNode = getUniverseFromCurrentNode();
-		pData->model->animate( m_fThisFrameTime );
-
-		// TODO(Joe): Figure out how to only do this when a parent is changing
-		for ( auto &node : pData->model->nodes ) {
-			node->update();
-		}
-
 		m_vecModelsToRender.push_back( pData->model );
+
+		uint64_t globalId = GetGlobalId( node );
+		updateTransform( globalId, defaultParent, glm::mat4( 1.f ),
+			[this, pData, node, globalId ]( const glm::mat4 & universeFromNode )
+		{
+			pData->modelParent.matParentFromNode = universeFromNode;
+			pData->model->animate( m_fThisFrameTime );
+
+			// TODO(Joe): Figure out how to only do this when a parent is changing
+			for ( auto &modelNode : pData->model->nodes ) {
+				modelNode->update();
+			}
+
+			if ( node.getPropInteractive() )
+			{
+				glm::vec4 panelTangent = universeFromNode * glm::vec4( 0, 1.f, 0, 0 );
+				float zScale = glm::length( panelTangent );
+				m_intersections.addActivePanel(
+					globalId,
+					glm::inverse( universeFromNode ),
+					zScale );
+			}
+		} );
 	}
 
-	if ( node.getPropInteractive() )
+}
+
+void VulkanExample::TraversePoker( const AvNode::Reader & node, CPendingTransform *defaultParent )
+{
+	uint64_t globalId = GetGlobalId( node );
+	updateTransform( globalId, defaultParent, glm::mat4( 1.f ),
+		[this, globalId ]( const glm::mat4 & universeFromNode )
 	{
-		glm::vec4 panelTangent = getUniverseFromCurrentNode() * glm::vec4( 0, 1.f, 0, 0 );
-		float zScale = glm::length( panelTangent );
-		m_intersections.addActivePanel( 
-			GetGlobalId( node ), 
-			glm::inverse( getUniverseFromCurrentNode() ), 
-			zScale );
+		glm::vec4 vPokerInUniverse = universeFromNode * glm::vec4( 0, 0, 0, 1.f );
+		m_intersections.addActivePoker( globalId, vPokerInUniverse );
+	} );
+}
+
+void VulkanExample::TraverseGrabbable( const AvNode::Reader & node, CPendingTransform *defaultParent )
+{
+	uint64_t globalId = GetGlobalId( node );
+	m_currentGrabbableGlobalId = globalId;
+	auto iParentTransform = m_nodeToNodeAnchors.find( globalId );
+	if ( iParentTransform != m_nodeToNodeAnchors.end() )
+	{
+		// we have a parent from grabbing. Need to update to that.
+		CPendingTransform *parent = getTransform( iParentTransform->second.parentNodeId );
+		updateTransform( globalId, parent, iParentTransform->second.parentNodeFromThisNode, nullptr );
 	}
 }
 
-void VulkanExample::TraversePoker( const AvNode::Reader & node )
-{
-	glm::vec4 vPokerInUniverse = getUniverseFromCurrentNode() * glm::vec4( 0, 0, 0, 1.f );
-	m_intersections.addActivePoker( GetGlobalId( node ), vPokerInUniverse );
-}
 
-void VulkanExample::TraverseGrabbable( const AvNode::Reader & node )
-{
-	m_currentGrabbableGlobalId = GetGlobalId( node );
-}
-
-void VulkanExample::TraverseHandle( const AvNode::Reader & node )
+void VulkanExample::TraverseHandle( const AvNode::Reader & node, CPendingTransform *defaultParent )
 {
 	if ( !node.hasPropVolume() )
 	{
 		return;
 	}
 
-	m_collisions.addGrabbableHandle( m_currentGrabbableGlobalId, getUniverseFromCurrentNode(), node.getPropVolume() );
+
+	updateTransform( GetGlobalId( node ), defaultParent, glm::mat4( 1.f ),
+		[this, node, grabbableId = m_currentGrabbableGlobalId ]( const glm::mat4 & universeFromNode )
+	{
+		m_collisions.addGrabbableHandle( grabbableId, universeFromNode, node.getPropVolume() );
+	} );
 }
 
-void VulkanExample::TraverseGrabber( const AvNode::Reader & node )
+void VulkanExample::TraverseGrabber( const AvNode::Reader & node, CPendingTransform *defaultParent )
 {
 	if ( !node.hasPropVolume() )
 	{
 		return;
 	}
 
-	m_collisions.addGrabber( GetGlobalId( node ), glm::inverse( getUniverseFromCurrentNode() ), 
-		node.getPropVolume(), isGrabPressed( m_currentHandDevice ) );
+	uint64_t globalId = GetGlobalId( node );
+	updateTransform( globalId, defaultParent, glm::mat4( 1.f ),
+		[this, node, globalId, currentHandDevice = m_currentHandDevice ]( const glm::mat4 & universeFromNode )
+	{
+		m_collisions.addGrabber( globalId, glm::inverse( universeFromNode ),
+			node.getPropVolume(), isGrabPressed( currentHandDevice ) );
+	} );
 }
 
 
@@ -2735,6 +2750,31 @@ void VulkanExample::endGrabImpl( uint64_t grabberGlobalId, uint64_t grabbableGlo
 	m_nodeToNodeAnchors.erase( grabbableGlobalId );
 }
 
+CPendingTransform *VulkanExample::getTransform( uint64_t globalNodeId )
+{
+	auto i = m_nodeTransforms.find( globalNodeId );
+	if ( i == m_nodeTransforms.end() )
+	{
+		auto newTransform = m_nodeTransforms.insert_or_assign( globalNodeId, 
+			std::make_unique<CPendingTransform>() );
+		return newTransform.first->second.get();
+	}
+	else
+	{
+		return i->second.get();
+	}
+}
+
+CPendingTransform *VulkanExample::updateTransform( uint64_t globalNodeId,
+	CPendingTransform *parent, glm::mat4 parentFromNode, 
+	std::function<void( const glm::mat4 & universeFromNode )> applyFunction )
+{
+	CPendingTransform *transform = getTransform( globalNodeId );
+	transform->update( parent, parentFromNode, applyFunction );
+	return transform;
+}
+
+
 ::kj::Promise<void> AvFrameListenerImpl::newFrame( NewFrameContext context )
 {
 	m_renderer->applyFrame( context.getParams().getFrame() );
@@ -2767,3 +2807,4 @@ void VulkanExample::endGrabImpl( uint64_t grabberGlobalId, uint64_t grabbableGlo
 	m_renderer->endGrabImpl( grabberGlobalId, grabbableGlobalId );
 	return kj::READY_NOW;
 }
+
