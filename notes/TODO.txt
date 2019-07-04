@@ -1,57 +1,16 @@
-Current:
-* Show frame info in the UI?
-* Maybe switch to named pipes?
+anchors
+animation
+app potential -> instance
+inventories/catalogs
+persistence
+clean up data directory/hard coded paths
+npm module for aardvark classes
+npm tool for creating aardvark apps
+make it work in release
+make model loading work for non-file URLs
 
-
-Send these events to grabables:
-* enter grabbing range
-* leave grabbing range
-* start grab
-* grabbable moved
-* release grab
-
-
-collision processor
-* inputs:
-  - list of grabbables w/ transforms
-  - list of grabbers w/ transforms
-* outputs:
-  - per grabber:
-    > grab on/off
-    > list of grabbables within range
-      * transform from grabber to each grabbable?
-
-grabber processor (per grabber)
-* inputs:
-  - grab on/off
-  - list of grabables within range
-* outputs:
-  - possibly transform override nodes
-  - events:
-    > grab start/end/enter/leave to grabbable
-
-
-
-app
-	grab root <-- new origin?
-		transform1
-			handle1
-		transform2
-			handle2
-		transforms, models, other stuff
 
 ========= DEAL WITH THIS NEXT ===========
-
-
-Replace transform computation at traversal with something that makes a 
-CPendingTransform per node and resolves them after the traversal is finished.
-
-Replace the node to node thing for grabbing with something that lives on the
-grabbable's node data?
-
--- Update test app to show grabbiness
-Hook up node to node parentage
-
 
 
 ========= DEAL WITH THIS NEXT ===========
@@ -62,11 +21,14 @@ Step 1 - Make some pixels from C++ on screen (done)
 Step 2 - Make the pixels appear in a scene app (done)
 Step 3 - Make some pixels from Javascript (done)
 Step 4 - Make a quad from Javascript (done)
-Step 5 - Make input work back to Javascript/HTML/CSS
-Step 6 - Haptics from panels (and pokers?)
-
-Step 7 - Grabbables and grabbers
+Step 5 - Make input work back to Javascript/HTML/CSS (done)
+Step 6 - Haptics from panels (and pokers?) (done)
+Step 7 - Grabbables and grabbers (done)
 
 Step 50 - Make the pixels/input layer on top of other apps
 
+
+future:
+* Show frame info in the UI?
+* Maybe switch to named pipes?
 
