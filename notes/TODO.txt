@@ -1,6 +1,21 @@
+Gadget library
+* List of gadget URIs
+
+hook could be:
+* left hand/right hand
+* a grabber on a gadget
+* an anchor point on another gadget
+* transform relative to the stage?
+
+/user/hand/left
+/user/hand/right
+/gadget/charm_bracelet_left/slota
+/gadget/hand/right/grabbera
+
+
+
 anchors
 animation
-app potential -> instance
 inventories/catalogs
 persistence
 clean up data directory/hard coded paths
@@ -24,8 +39,12 @@ Step 4 - Make a quad from Javascript (done)
 Step 5 - Make input work back to Javascript/HTML/CSS (done)
 Step 6 - Haptics from panels (and pokers?) (done)
 Step 7 - Grabbables and grabbers (done)
+Step 8 - Building a gadget from a URI (done)
 
-Step 50 - Make the pixels/input layer on top of other apps
+Step 9 - Hooks on gadgets
+Step 10 - Spawning gadgets from a gadget - Launcher permission?
+
+Step 50 - Make the pixels/input layer on top of other scene apps
 
 
 future:
