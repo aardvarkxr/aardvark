@@ -71,10 +71,10 @@ struct AvLight
 	diffuse @1: AvColor;
 }
 
-struct AvAppTextureInfo
+struct AvGadgetTextureInfo
 {
-	appName @0: Text;
-	appId @1: UInt32;
+	gadgetName @0: Text;
+	gadgetId @1: UInt32;
 	sharedTextureInfo @2: AvSharedTextureInfo;
 }
 
@@ -82,7 +82,7 @@ struct AvVisualFrame
 {
 	id @0: UInt64;
 	roots @1: List( AvNodeRoot );
-	appTextures @2: List( AvAppTextureInfo );
+	gadgetTextures @2: List( AvGadgetTextureInfo );
 }
 
 interface AvFrameListener
@@ -219,12 +219,12 @@ struct AvNodeRoot
 
 interface AvServer
 {
-	createApp @0 ( name: Text ) -> ( app: AvApp );
+	createGadget @0 ( name: Text ) -> ( gadget: AvGadget );
 	listenForFrames @1 ( listener: AvFrameListener ) -> ();
 	getModelSource @2 ( uri: Text ) -> ( success: Bool, source: AvModelSource );
-	updateDxgiTextureForApps @3 
+	updateDxgiTextureForGadgets @3 
 	( 
-		appNames: List( Text ), 
+		gadgetNames: List( Text ), 
 		sharedTextureInfo: AvSharedTextureInfo 
 	) -> ( success: Bool );
 	pushPokerProximity @4 
@@ -240,7 +240,7 @@ interface AvServer
 	) -> ();
 }
 
-interface AvApp
+interface AvGadget
 {
 	name @0 () -> ( name: Text );
 

@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import { AvApp } from './aardvark_app';
+import { AvGadget } from './aardvark_app';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 import { AvSceneContext, AvNodeType, AvGrabEventType } from 'common/aardvark';
 import bind from 'bind-decorator';
@@ -28,7 +28,7 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 		context.startNode( this.m_nodeId, "grabber" + this.m_nodeId, AvNodeType.Grabber );
 		context.setSphereVolume( this.props.radius );
 
-		AvApp.instance().setGrabberProcessor( this.m_nodeId, this.onGrabberIntersections );
+		AvGadget.instance().setGrabberProcessor( this.m_nodeId, this.onGrabberIntersections );
 	}
 
 	@bind private onGrabberIntersections( isPressed: boolean, grabbableIds: string[] )
@@ -48,14 +48,14 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 				// we lost our grabbable, so let it know that
 				if( newHighlight == GrabberHighlight.Grabbed )
 				{
-					AvApp.instance().sendGrabEvent( this.m_nodeId, 
+					AvGadget.instance().sendGrabEvent( this.m_nodeId, 
 						this.m_lastGrabbable, AvGrabEventType.EndGrab );
 					newHighlight = GrabberHighlight.InRange;
 				}
 
 				if( newHighlight == GrabberHighlight.InRange )
 				{
-					AvApp.instance().sendGrabEvent( this.m_nodeId, 
+					AvGadget.instance().sendGrabEvent( this.m_nodeId, 
 						this.m_lastGrabbable, AvGrabEventType.LeaveRange );
 					newHighlight = GrabberHighlight.InRange;
 					this.m_lastGrabbable = null;
@@ -80,13 +80,13 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 				// same grabbable as last time. Just update the grab state
 				if( isPressed && newHighlight == GrabberHighlight.InRange )
 				{
-					AvApp.instance().sendGrabEvent( this.m_nodeId,
+					AvGadget.instance().sendGrabEvent( this.m_nodeId,
 						newGrabbableId, AvGrabEventType.StartGrab );
 					newHighlight = GrabberHighlight.Grabbed;
 				}
 				else if( !isPressed && newHighlight == GrabberHighlight.Grabbed )
 				{
-					AvApp.instance().sendGrabEvent( this.m_nodeId,
+					AvGadget.instance().sendGrabEvent( this.m_nodeId,
 						newGrabbableId, AvGrabEventType.EndGrab );
 					newHighlight = GrabberHighlight.InRange;
 				}
@@ -94,13 +94,13 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 			else
 			{
 				// new grabbable. Update in range and maybe grab
-				AvApp.instance().sendGrabEvent( this.m_nodeId,
+				AvGadget.instance().sendGrabEvent( this.m_nodeId,
 					newGrabbableId, AvGrabEventType.EnterRange );
 				newHighlight = GrabberHighlight.InRange;
 
 				if( isPressed )
 				{
-					AvApp.instance().sendGrabEvent( this.m_nodeId,
+					AvGadget.instance().sendGrabEvent( this.m_nodeId,
 						newGrabbableId, AvGrabEventType.StartGrab );
 					newHighlight = GrabberHighlight.Grabbed;
 				}

@@ -21,38 +21,38 @@ namespace aardvark
 		// we don't really care about failed requests on our task set
 	}
 
-	::kj::Promise<void> AvServerImpl::createApp( uint32_t clientId, CreateAppContext context )
+	::kj::Promise<void> AvServerImpl::createGadget( uint32_t clientId, CreateGadgetContext context )
 	{
-		auto server = kj::heap<CAardvarkApp>( clientId, context.getParams().getName(), this );
+		auto server = kj::heap<CAardvarkGadget>( clientId, context.getParams().getName(), this );
 		auto& serverRef = *server;
 
-		AvApp::Client capability = kj::mv( server );
+		AvGadget::Client capability = kj::mv( server );
 
-		context.getResults().setApp( capability );
+		context.getResults().setGadget( capability );
 
 		serverRef.AddClient( capability );
 		
-		m_vecApps.push_back( &serverRef );
+		m_vecGadgets.push_back( &serverRef );
 
 		return kj::READY_NOW;
 	}
 
-	void AvServerImpl::clearApps()
+	void AvServerImpl::clearGadgets()
 	{
-		for ( auto iApp : m_vecApps )
+		for ( auto gadget : m_vecGadgets )
 		{
-			iApp->clearClients();
+			gadget->clearClients();
 		}
-		m_vecApps.clear();
+		m_vecGadgets.clear();
 	}
 
-	void AvServerImpl::removeApp( CAardvarkApp *pApp )
+	void AvServerImpl::removeGadget( CAardvarkGadget *gadget )
 	{
-		auto iApp = std::find( m_vecApps.begin(), m_vecApps.end(), pApp );
-		if ( iApp != m_vecApps.end() )
+		auto iGadget = std::find( m_vecGadgets.begin(), m_vecGadgets.end(), gadget );
+		if ( iGadget != m_vecGadgets.end() )
 		{
-			pApp->clearClients();
-			m_vecApps.erase( iApp );
+			gadget->clearClients();
+			m_vecGadgets.erase( iGadget );
 		}
 	}
 
@@ -90,13 +90,13 @@ namespace aardvark
 	{
 		std::map<std::string, AvSharedTextureInfo::Reader> sharedTextureHandles;
 		AvVisuals_t visuals;
-		for ( auto app : m_vecApps )
+		for ( auto gadget : m_vecGadgets )
 		{
-			app->gatherVisuals( visuals );
+			gadget->gatherVisuals( visuals );
 
-			if ( app->hasSharedTextureInfo() )
+			if ( gadget->hasSharedTextureInfo() )
 			{
-				sharedTextureHandles.insert_or_assign( app->getName(), app->getSharedTextureInfo() );
+				sharedTextureHandles.insert_or_assign( gadget->getName(), gadget->getSharedTextureInfo() );
 			}
 		}
 
@@ -110,18 +110,18 @@ namespace aardvark
 			for ( uint32_t unIndex = 0; unIndex < visuals.vecSceneGraphs.size(); unIndex++ )
 			{
 				bldRoots[unIndex].setNodes( visuals.vecSceneGraphs[unIndex].root.getNodes() );
-				bldRoots[unIndex].setSourceId( visuals.vecSceneGraphs[unIndex].appId );
+				bldRoots[unIndex].setSourceId( visuals.vecSceneGraphs[unIndex].gadgetId );
 			}
 
-			auto bldTextures = bldFrame.initAppTextures( (uint32_t)sharedTextureHandles.size() );
+			auto bldTextures = bldFrame.initGadgetTextures( (uint32_t)sharedTextureHandles.size() );
 			uint32_t unIndex = 0;
 			for ( auto handle : sharedTextureHandles )
 			{
-				CAardvarkApp *pApp = findAppByName( handle.first );
-				if ( pApp )
+				CAardvarkGadget *gadget = findGadgetByName( handle.first );
+				if ( gadget )
 				{
-					bldTextures[unIndex].setAppName( handle.first );
-					bldTextures[unIndex].setAppId( pApp->getId() );
+					bldTextures[unIndex].setGadgetName( handle.first );
+					bldTextures[unIndex].setGadgetId( gadget->getId() );
 					bldTextures[unIndex].setSharedTextureInfo( handle.second );
 					unIndex++;
 				}
@@ -131,31 +131,31 @@ namespace aardvark
 		addRequestToTasks( std::move( reqNewFrame ) );
 	}
 
-	CAardvarkApp *AvServerImpl::findAppByName( const std::string & sAppName )
+	CAardvarkGadget *AvServerImpl::findGadgetByName( const std::string & sGadgetName )
 	{
-		for ( auto pApp : m_vecApps )
+		for ( auto gadget : m_vecGadgets )
 		{
-			if ( pApp->getName() == sAppName )
+			if ( gadget->getName() == sGadgetName )
 			{
-				return pApp;
+				return gadget;
 			}
 		}
 
 		return nullptr;
 	}
 
-	::kj::Promise<void> AvServerImpl::updateDxgiTextureForApps( uint32_t clientId, UpdateDxgiTextureForAppsContext context )
+	::kj::Promise<void> AvServerImpl::updateDxgiTextureForGadgets( uint32_t clientId, UpdateDxgiTextureForGadgetsContext context )
 	{
-		if ( context.getParams().hasAppNames() )
+		if ( context.getParams().hasGadgetNames() )
 		{
-			for ( auto app : m_vecApps )
+			for ( auto gadget : m_vecGadgets )
 			{
 				bool bSetThisOne = false;
-				for ( auto appName : context.getParams().getAppNames() )
+				for ( auto gadgetName : context.getParams().getGadgetNames() )
 				{
-					if ( appName == app->getName() )
+					if ( gadgetName == gadget->getName() )
 					{
-						app->setSharedTextureInfo( context.getParams().getSharedTextureInfo() );
+						gadget->setSharedTextureInfo( context.getParams().getSharedTextureInfo() );
 						break;
 					}
 				}
@@ -179,7 +179,7 @@ namespace aardvark
 		}
 		else
 		{
-			// if the poker or the app has gone away, just drop the request on the floor.
+			// if the poker or the gadget has gone away, just drop the request on the floor.
 		}
 		return kj::READY_NOW;
 	}
@@ -256,13 +256,13 @@ namespace aardvark
 		}
 	}
 
-	kj::Maybe<CAardvarkApp&> AvServerImpl::findApp( uint32_t appId )
+	kj::Maybe<CAardvarkGadget&> AvServerImpl::findGadget( uint32_t gadgetId )
 	{
-		for ( auto app : m_vecApps )
+		for ( auto gadget : m_vecGadgets )
 		{
-			if ( app->getId() == appId )
+			if ( gadget->getId() == gadgetId )
 			{
-				return app;
+				return gadget;
 			}
 		}
 		return nullptr;
@@ -270,11 +270,11 @@ namespace aardvark
 
 	kj::Maybe < AvPokerProcessor::Client > AvServerImpl::findPokerProcessor( uint64_t pokerGlobalId )
 	{
-		uint32_t appId = (uint32_t)( pokerGlobalId >> 32 );
+		uint32_t gadgetId = (uint32_t)( pokerGlobalId >> 32 );
 		uint32_t pokerLocalId = (uint32_t) ( 0xFFFFFFFF & pokerGlobalId );
-		KJ_IF_MAYBE( app, findApp( appId ) )
+		KJ_IF_MAYBE( gadget, findGadget( gadgetId ) )
 		{
-			return app->findPokerProcessor( pokerLocalId );
+			return gadget->findPokerProcessor( pokerLocalId );
 		}
 		else
 		{
@@ -284,11 +284,11 @@ namespace aardvark
 
 	kj::Maybe < AvPanelProcessor::Client > AvServerImpl::findPanelProcessor( uint64_t panelGlobalId )
 	{
-		uint32_t appId = (uint32_t)( panelGlobalId >> 32 );
+		uint32_t gadgetId = (uint32_t)( panelGlobalId >> 32 );
 		uint32_t panelLocalId = (uint32_t)( 0xFFFFFFFF & panelGlobalId );
-		KJ_IF_MAYBE( app, findApp( appId ) )
+		KJ_IF_MAYBE( gadget, findGadget( gadgetId ) )
 		{
-			return app->findPanelProcessor( panelLocalId );
+			return gadget->findPanelProcessor( panelLocalId );
 		}
 		else
 		{
@@ -298,11 +298,11 @@ namespace aardvark
 
 	kj::Maybe < AvGrabberProcessor::Client > AvServerImpl::findGrabberProcessor( uint64_t grabberGlobalId )
 	{
-		uint32_t appId = (uint32_t)( grabberGlobalId >> 32 );
+		uint32_t gadgetId = (uint32_t)( grabberGlobalId >> 32 );
 		uint32_t grabberLocalId = (uint32_t) ( 0xFFFFFFFF & grabberGlobalId );
-		KJ_IF_MAYBE( app, findApp( appId ) )
+		KJ_IF_MAYBE( gadget, findGadget( gadgetId ) )
 		{
-			return app->findGrabberProcessor( grabberLocalId );
+			return gadget->findGrabberProcessor( grabberLocalId );
 		}
 		else
 		{
@@ -312,11 +312,11 @@ namespace aardvark
 
 	kj::Maybe < AvGrabbableProcessor::Client > AvServerImpl::findGrabbableProcessor( uint64_t grabbableGlobalId )
 	{
-		uint32_t appId = (uint32_t)( grabbableGlobalId >> 32 );
+		uint32_t gadgetId = (uint32_t)( grabbableGlobalId >> 32 );
 		uint32_t grabbableLocalId = (uint32_t)( 0xFFFFFFFF & grabbableGlobalId );
-		KJ_IF_MAYBE( app, findApp( appId ) )
+		KJ_IF_MAYBE( gadget, findGadget( gadgetId ) )
 		{
-			return app->findGrabbableProcessor( grabbableLocalId );
+			return gadget->findGrabbableProcessor( grabbableLocalId );
 		}
 		else
 		{
@@ -331,16 +331,16 @@ namespace aardvark
 
 	void AvServerImpl::clientDisconnected( uint32_t clientId )
 	{
-		for ( auto iApp = m_vecApps.begin(); iApp != m_vecApps.end(); )
+		for ( auto iGadget = m_vecGadgets.begin(); iGadget != m_vecGadgets.end(); )
 		{
-			if ( ( *iApp )->getClientId() == clientId )
+			if ( ( *iGadget )->getClientId() == clientId )
 			{
-				( *iApp )->clearClients();
-				iApp = m_vecApps.erase( iApp );
+				( *iGadget )->clearClients();
+				iGadget = m_vecGadgets.erase( iGadget );
 			}
 			else
 			{
-				iApp++;
+				iGadget++;
 			}
 		}
 
@@ -533,9 +533,9 @@ namespace aardvark
 				m_realServer->clientDisconnected( m_clientId );
 			}
 
-			virtual ::kj::Promise<void> createApp( CreateAppContext context ) override
+			virtual ::kj::Promise<void> createGadget( CreateGadgetContext context ) override
 			{
-				return m_realServer->createApp( m_clientId, context );
+				return m_realServer->createGadget( m_clientId, context );
 			}
 
 			virtual ::kj::Promise<void> listenForFrames( ListenForFramesContext context ) override
@@ -548,9 +548,9 @@ namespace aardvark
 				return m_realServer->getModelSource( m_clientId, context );
 			}
 
-			virtual ::kj::Promise<void> updateDxgiTextureForApps( UpdateDxgiTextureForAppsContext context ) override
+			virtual ::kj::Promise<void> updateDxgiTextureForGadgets( UpdateDxgiTextureForGadgetsContext context ) override
 			{
-				return m_realServer->updateDxgiTextureForApps( m_clientId, context );
+				return m_realServer->updateDxgiTextureForGadgets( m_clientId, context );
 			}
 
 			virtual ::kj::Promise<void> pushPokerProximity( PushPokerProximityContext context ) override
@@ -686,7 +686,7 @@ namespace aardvark
 			realServer.runFrame();
 		}
 
-		realServer.clearApps();
+		realServer.clearGadgets();
 	};
 
 }

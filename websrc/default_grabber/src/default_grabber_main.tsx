@@ -1,6 +1,6 @@
 import * as React from 'react';
 import  * as ReactDOM from 'react-dom';
-import { AvApp } from 'common/aardvark-react/aardvark_app';
+import { AvGadget } from 'common/aardvark-react/aardvark_app';
 import { AvOrigin } from 'common/aardvark-react/aardvark_origin';
 import { AvTransform } from 'common/aardvark-react/aardvark_transform';
 import { AvGrabber, GrabberHighlight } from 'common/aardvark-react/aardvark_grabber';
@@ -44,7 +44,7 @@ class DefaultGrabber extends React.Component< {}, DefaultGrabberState >
 		}
 
 		return (
-			<AvApp name="Grabber">
+			<AvGadget name="Grabber">
 				<AvOrigin path="/user/hand/right">
 					<AvTransform uniformScale= { 0.01 } >
 						<AvModel uri={ modelUri }/>
@@ -53,7 +53,7 @@ class DefaultGrabber extends React.Component< {}, DefaultGrabberState >
 					<AvGrabber updateHighlight = { this.updateHighlight }
 						radius={0.1} />
 				</AvOrigin>
-			</AvApp>
+			</AvGadget>
 		);
 	}
 }

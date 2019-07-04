@@ -1,6 +1,6 @@
 import * as React from 'react';
 import  * as ReactDOM from 'react-dom';
-import { AvApp } from 'common/aardvark-react/aardvark_app';
+import { AvGadget } from 'common/aardvark-react/aardvark_app';
 import { AvOrigin } from 'common/aardvark-react/aardvark_origin';
 import { AvTransform } from 'common/aardvark-react/aardvark_transform';
 import { AvPoker } from 'common/aardvark-react/aardvark_poker';
@@ -30,7 +30,7 @@ class DefaultPoker extends React.Component< {}, DefaultPokerState >
 	public render()
 	{
 		return (
-			<AvApp name="poker">
+			<AvGadget name="poker">
 				<AvOrigin path="/user/hand/right">
 					<AvTransform uniformScale= { 0.01 } >
 						<AvModel uri={ this.state.highlight 
@@ -41,7 +41,7 @@ class DefaultPoker extends React.Component< {}, DefaultPokerState >
 
 					<AvPoker updateHighlight = { this.updateHighlight } />
 				</AvOrigin>
-			</AvApp>
+			</AvGadget>
 		);
 	}
 }

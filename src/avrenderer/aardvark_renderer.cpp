@@ -1782,7 +1782,7 @@ uint64_t VulkanExample::GetGlobalId( const AvNode::Reader & node )
 	assert( m_pCurrentRoot );
 	if ( m_pCurrentRoot )
 	{
-		return ( (uint64_t)m_pCurrentRoot->appId ) << 32 | node.getId();
+		return ( (uint64_t)m_pCurrentRoot->gadgetId ) << 32 | node.getId();
 	}
 	else
 	{
@@ -2018,7 +2018,7 @@ void VulkanExample::TraversePanel( const AvNode::Reader & node, CPendingTransfor
 	SgNodeData_t *pData = GetNodeData( node );
 	assert( pData );
 
-	auto iSharedTexture = m_sharedTextureInfo->find( m_pCurrentRoot->appId );
+	auto iSharedTexture = m_sharedTextureInfo->find( m_pCurrentRoot->gadgetId );
 
 	if ( !pData->model && iSharedTexture != m_sharedTextureInfo->end() )
 	{
@@ -2179,7 +2179,7 @@ void VulkanExample::applyFrame( AvVisualFrame::Reader & newFrame )
 		std::unique_ptr<SgRoot_t> rootStruct = std::make_unique<SgRoot_t>();
 		rootStruct->root = tools::newOwnCapnp( root );
 		rootStruct->nodes.reserve( root.getNodes().size() );
-		rootStruct->appId = root.getSourceId();
+		rootStruct->gadgetId = root.getSourceId();
 
 		for ( auto & nodeWrapper : rootStruct->root.getNodes() )
 		{
@@ -2192,9 +2192,9 @@ void VulkanExample::applyFrame( AvVisualFrame::Reader & newFrame )
 	}
 
 	auto nextTextures = std::make_unique < std::map<uint32_t, tools::OwnCapnp< AvSharedTextureInfo > > >();
-	for ( auto & texture : newFrame.getAppTextures() )
+	for ( auto & texture : newFrame.getGadgetTextures() )
 	{
-		nextTextures->insert_or_assign( texture.getAppId(), tools::newOwnCapnp( texture.getSharedTextureInfo() ) );
+		nextTextures->insert_or_assign( texture.getGadgetId(), tools::newOwnCapnp( texture.getSharedTextureInfo() ) );
 	}
 
 	m_nextRoots = std::move( nextRoots );

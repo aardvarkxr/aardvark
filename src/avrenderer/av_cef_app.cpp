@@ -140,7 +140,7 @@ void CAardvarkCefApp::OnContextInitialized()
 }
 
 
-void CAardvarkCefApp::startApp( std::string & uri, const std::vector<std::string> & permissions )
+void CAardvarkCefApp::startGadget( std::string & uri, const std::vector<std::string> & permissions )
 {
 	CEF_REQUIRE_UI_THREAD();
 

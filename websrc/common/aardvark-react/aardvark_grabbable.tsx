@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import { AvApp } from './aardvark_app';
+import { AvGadget } from './aardvark_app';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 import { AvSceneContext, AvNodeType, AvGrabEvent, AvGrabEventType } from 'common/aardvark';
 import bind from 'bind-decorator';
@@ -25,7 +25,7 @@ export class AvGrabbable extends AvBaseNode< AvGrabbableProps, {} >
 	{
 		context.startNode( this.m_nodeId, "grabbable" + this.m_nodeId, AvNodeType.Grabbable );
 
-		AvApp.instance().setGrabbableProcessor( this.m_nodeId, this.onGrabEvent );
+		AvGadget.instance().setGrabbableProcessor( this.m_nodeId, this.onGrabEvent );
 	}
 
 	@bind private onGrabEvent( evt: AvGrabEvent )

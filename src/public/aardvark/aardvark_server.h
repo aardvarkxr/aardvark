@@ -8,22 +8,22 @@
 
 namespace aardvark
 {
-	class CAardvarkApp;
+	class CAardvarkGadget;
 	class CAardvarkModelSource;
 
 	class AvServerImpl final : public AvServer::Server, public kj::TaskSet::ErrorHandler
 	{
 		friend class CServerThread;
 	public:
-		::kj::Promise<void> createApp( uint32_t clientId, AvServer::Server::CreateAppContext context );
+		::kj::Promise<void> createGadget( uint32_t clientId, AvServer::Server::CreateGadgetContext context );
 		::kj::Promise<void> listenForFrames( uint32_t clientId, AvServer::Server::ListenForFramesContext context );
 		::kj::Promise<void> getModelSource( uint32_t clientId, AvServer::Server::GetModelSourceContext context );
-		::kj::Promise<void> updateDxgiTextureForApps( uint32_t clientId, AvServer::Server::UpdateDxgiTextureForAppsContext context );
+		::kj::Promise<void> updateDxgiTextureForGadgets( uint32_t clientId, AvServer::Server::UpdateDxgiTextureForGadgetsContext context );
 		::kj::Promise<void> pushPokerProximity( uint32_t clientId, AvServer::Server::PushPokerProximityContext context );
 		::kj::Promise<void> pushGrabIntersections( uint32_t clientId, AvServer::Server::PushGrabIntersectionsContext context );
 		virtual void taskFailed( kj::Exception&& exception ) override;
 
-		void removeApp( CAardvarkApp *pApp );
+		void removeGadget( CAardvarkGadget *gadget );
 		void markFrameDirty() { m_frameDirty = true;  }
 		void runFrame();
 
@@ -48,7 +48,7 @@ namespace aardvark
 		void startGrab( uint64_t globalGrabberId, uint64_t globalGrabbableId );
 		void endGrab( uint64_t globalGrabberId, uint64_t globalGrabbableId );
 
-		kj::Maybe<CAardvarkApp&> findApp( uint32_t appId );
+		kj::Maybe<CAardvarkGadget&> findGadget( uint32_t gadgetId );
 		kj::Maybe<AvPokerProcessor::Client> findPokerProcessor( uint64_t pokerGlobalId );
 		kj::Maybe<AvPanelProcessor::Client> findPanelProcessor( uint64_t panelGlobalId );
 		kj::Maybe<AvGrabberProcessor::Client> findGrabberProcessor( uint64_t grabberGlobalId );
@@ -58,13 +58,13 @@ namespace aardvark
 	protected:
 		void sendFrameToAllListeners();
 		void sendFrameToListener( AvFrameListener::Client listener );
-		void clearApps();
+		void clearGadgets();
 		CAardvarkModelSource *findOrCreateSource( const std::string & sUri );
-		CAardvarkApp *findAppByName( const std::string & sAppName );
+		CAardvarkGadget *findGadgetByName( const std::string & sGadgetName );
 
 	private:
 		std::unordered_map< std::string, CAardvarkModelSource *> m_mapModelSources;
-		std::vector< CAardvarkApp * > m_vecApps;
+		std::vector< CAardvarkGadget * > m_vecGadgets;
 
 		struct FrameListener_t
 		{

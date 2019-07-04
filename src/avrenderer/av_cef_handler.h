@@ -92,7 +92,7 @@ public:
 
 	int m_width = 1024, m_height = 1024;
 
-	std::vector<std::string> m_apps;
+	std::vector<std::string> m_gadgets;
 	void *m_sharedTexture = nullptr;
 
 	void updateSceneGraphTextures();

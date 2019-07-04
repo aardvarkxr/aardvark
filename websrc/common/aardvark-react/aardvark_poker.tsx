@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import { AvApp } from './aardvark_app';
+import { AvGadget } from './aardvark_app';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 import { AvSceneContext, AvNodeType, AvPanelMouseEvent, AvPanelMouseEventType, PokerProximity } from 'common/aardvark';
 import bind from 'bind-decorator';
@@ -22,31 +22,31 @@ export class AvPoker extends AvBaseNode< AvPokerProps, {} >
 	{
 		context.startNode( this.m_nodeId, "poker" + this.m_nodeId, AvNodeType.Poker );
 
-		AvApp.instance().setPokerHandler( this.m_nodeId, this.proximityUpdate );
+		AvGadget.instance().setPokerHandler( this.m_nodeId, this.proximityUpdate );
 	}
 
 	private sendMouseLeave( panelId: string )
 	{
-		AvApp.instance().sendMouseEvent( this.m_nodeId, panelId, AvPanelMouseEventType.Leave, 0, 0 );
+		AvGadget.instance().sendMouseEvent( this.m_nodeId, panelId, AvPanelMouseEventType.Leave, 0, 0 );
 	}
 	private sendMouseEnter( panelId: string, x: number, y: number )
 	{
-		AvApp.instance().sendMouseEvent( this.m_nodeId, panelId, AvPanelMouseEventType.Enter, x, y );
+		AvGadget.instance().sendMouseEvent( this.m_nodeId, panelId, AvPanelMouseEventType.Enter, x, y );
 	}
 
 	private sendMouseMove( panelId: string, x: number, y: number )
 	{
-		AvApp.instance().sendMouseEvent( this.m_nodeId, panelId, AvPanelMouseEventType.Move, x, y );
+		AvGadget.instance().sendMouseEvent( this.m_nodeId, panelId, AvPanelMouseEventType.Move, x, y );
 	}
 
 	private sendMouseDown( panelId: string, x: number, y: number )
 	{
-		AvApp.instance().sendMouseEvent( this.m_nodeId, panelId, AvPanelMouseEventType.Down, x, y );
+		AvGadget.instance().sendMouseEvent( this.m_nodeId, panelId, AvPanelMouseEventType.Down, x, y );
 	}
 
 	private sendMouseUp( panelId: string, x: number, y: number )
 	{
-		AvApp.instance().sendMouseEvent( this.m_nodeId, panelId, AvPanelMouseEventType.Up, x, y );
+		AvGadget.instance().sendMouseEvent( this.m_nodeId, panelId, AvPanelMouseEventType.Up, x, y );
 	}
 
 	@bind private proximityUpdate( proxArray: PokerProximity[] )

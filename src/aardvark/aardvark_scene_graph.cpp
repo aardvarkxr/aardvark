@@ -20,7 +20,7 @@ namespace aardvark
 	public:
 
 		EAvSceneGraphResult avStartSceneContext( aardvark::CAardvarkClient *pClient );
-		EAvSceneGraphResult avFinishSceneContext( AvApp::Client *pApp );
+		EAvSceneGraphResult avFinishSceneContext( AvGadget::Client *gadget );
 
 		// Starts a node as a child of the current node
 		EAvSceneGraphResult avStartNode( uint32_t id, const char *pchName, EAvSceneGraphNodeType type );
@@ -91,12 +91,12 @@ namespace aardvark
 	// -----------------------------------------------------------------------------------------------
 	// Finishing contexts
 	// -----------------------------------------------------------------------------------------------
-	EAvSceneGraphResult avFinishSceneContext( AvSceneContext context, AvApp::Client *pApp )
+	EAvSceneGraphResult avFinishSceneContext( AvSceneContext context, AvGadget::Client *gadget )
 	{
 		CSceneGraphContext *pContext = (CSceneGraphContext *)context;
 		if ( !pContext )
 			return EAvSceneGraphResult::InvalidContext;
-		EAvSceneGraphResult res = pContext->avFinishSceneContext( pApp );
+		EAvSceneGraphResult res = pContext->avFinishSceneContext( gadget );
 		delete pContext;
 		return res;
 	}
@@ -214,7 +214,7 @@ namespace aardvark
 		return res;
 	}
 
-	EAvSceneGraphResult CSceneGraphContext::avFinishSceneContext( AvApp::Client *pApp )
+	EAvSceneGraphResult CSceneGraphContext::avFinishSceneContext( AvGadget::Client *gadget )
 	{
 		if ( m_vecBuilders.size() != 1 )
 		{
@@ -242,7 +242,7 @@ namespace aardvark
 		root.setGrabberProcessor( m_pClient->getGrabberProcessor() );
 		root.setGrabbableProcessor( m_pClient->getGrabbableProcessor() );
 
-		auto reqUpdateSceneGraph = pApp->updateSceneGraphRequest();
+		auto reqUpdateSceneGraph = gadget->updateSceneGraphRequest();
 		reqUpdateSceneGraph.setRoot( root );
 
 		auto resUpdateSceneGraph = reqUpdateSceneGraph.send().wait( m_pClient->WaitScope() );
@@ -430,18 +430,18 @@ namespace aardvark
 	}
 
 	// tells the renderer what DXGI to use for a scene graph node
-	EAvSceneGraphResult avUpdateDxgiTextureForApps( aardvark::CAardvarkClient *pClient, 
-		const char **pchAppName, uint32_t unNameCount, 
+	EAvSceneGraphResult avUpdateDxgiTextureForGadgets( aardvark::CAardvarkClient *pClient, 
+		const char **pchGadgetName, uint32_t unNameCount, 
 		uint32_t unWidth, uint32_t unHeight, 
 		void *pvSharedTextureHandle, bool bInvertY )
 	{
-		auto reqUpdate = pClient->Server().updateDxgiTextureForAppsRequest();
+		auto reqUpdate = pClient->Server().updateDxgiTextureForGadgetsRequest();
 		if ( unNameCount )
 		{
-			auto names = reqUpdate.initAppNames( unNameCount );
+			auto names = reqUpdate.initGadgetNames( unNameCount );
 			for ( uint32_t n = 0; n < unNameCount; n++ )
 			{
-				names.set( n, pchAppName[n] );
+				names.set( n, pchGadgetName[n] );
 			}
 		}
 
@@ -453,12 +453,7 @@ namespace aardvark
 		paramInfo.setSharedTextureHandle( reinterpret_cast<uint64_t>( pvSharedTextureHandle ) );
 		paramInfo.setInvertY( bInvertY );
 
-		auto promUpdate = reqUpdate.send()
-		.then( []( AvServer::UpdateDxgiTextureForAppsResults::Reader && result )
-		{
-			// nothing to do when the update happens
-		} );
-		pClient->addToTasks( std::move( promUpdate ) );
+		pClient->addRequestToTasks( std::move( reqUpdate ) );
 		return EAvSceneGraphResult::Success;
 	}
 
@@ -490,10 +485,10 @@ namespace aardvark
 	}
 
 	EAvSceneGraphResult avPushMouseEventFromPoker( aardvark::CAardvarkClient *pClient, 
-		AvApp::Client *pApp, uint32_t pokerNodeId,
+		AvGadget::Client *gadget, uint32_t pokerNodeId,
 		uint64_t panelId, EPanelMouseEventType type, float x, float y )
 	{
-		auto reqPushEvent = pApp->pushMouseEventRequest();
+		auto reqPushEvent = gadget->pushMouseEventRequest();
 		reqPushEvent.setPokerNodeId( pokerNodeId );
 		AvPanelMouseEvent::Builder bldEvent = reqPushEvent.initEvent();
 		bldEvent.setPanelId( panelId );
@@ -522,7 +517,7 @@ namespace aardvark
 		}
 
 		auto promPushEvent = reqPushEvent.send()
-			.then( []( AvApp::PushMouseEventResults::Reader && result )
+			.then( []( AvGadget::PushMouseEventResults::Reader && result )
 		{
 			// nothing to do when the update happens
 		} );
@@ -562,10 +557,10 @@ namespace aardvark
 	}
 
 	EAvSceneGraphResult avPushGrabEventFromGrabber( aardvark::CAardvarkClient *pClient,
-		AvApp::Client *pApp, uint32_t grabberNodeId,
+		AvGadget::Client *gadget, uint32_t grabberNodeId,
 		uint64_t grabbableId, EGrabEventType type )
 	{
-		auto reqPushEvent = pApp->pushGrabEventRequest();
+		auto reqPushEvent = gadget->pushGrabEventRequest();
 		reqPushEvent.setGrabberNodeId( grabberNodeId );
 		AvGrabEvent::Builder bldEvent = reqPushEvent.initEvent();
 		bldEvent.setGrabbableId( grabbableId );
@@ -594,12 +589,12 @@ namespace aardvark
 
 
 	EAvSceneGraphResult avSendHapticEventFromPanel( aardvark::CAardvarkClient *pClient, 
-		AvApp::Client *pApp, uint32_t panelNodeId,
+		AvGadget::Client *gadget, uint32_t panelNodeId,
 		float amplitude, float frequency, float duration )
 	{
 		KJ_IF_MAYBE( panelHandler, pClient->getPanelProcessorServer() )
 		{
-			auto req = pApp->sendHapticEventRequest();
+			auto req = gadget->sendHapticEventRequest();
 			req.setNodeGlobalId( ( *panelHandler )->getLastPoker() );
 			req.setAmplitude( amplitude );
 			req.setFrequency( frequency );

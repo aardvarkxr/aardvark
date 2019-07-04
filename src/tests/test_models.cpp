@@ -1,8 +1,7 @@
 // ---------------------------------------------------------------------------
-// Purpose: Test app API in Aardvark
+// Purpose: Test model API in Aardvark
 // ---------------------------------------------------------------------------
 #include <catch/catch.hpp>
-#include <aardvark/aardvark_apps.h>
 #include <aardvark/aardvark_server.h>
 #include <aardvark/aardvark_client.h>
 
@@ -15,7 +14,7 @@
 using namespace aardvark;
 
 
-TEST_CASE( "Aardvark models", "[apps]" )
+TEST_CASE( "Aardvark models", "[models]" )
 {
 	CServerThread serverThread;
 	serverThread.Start();

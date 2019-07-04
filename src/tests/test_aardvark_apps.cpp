@@ -1,8 +1,7 @@
 // ---------------------------------------------------------------------------
-// Purpose: Test app API in Aardvark
+// Purpose: Test gadget API in Aardvark
 // ---------------------------------------------------------------------------
 #include <catch/catch.hpp>
-#include <aardvark/aardvark_apps.h>
 #include <aardvark/aardvark_server.h>
 #include <aardvark/aardvark_client.h>
 
@@ -18,7 +17,7 @@ bool operator==( const kj::String & lhs, const char *pchRHS )
 }
 
 
-TEST_CASE( "Aardvark apps", "[apps]" ) 
+TEST_CASE( "Aardvark Gadgets", "[gadgets]" ) 
 {
 	CServerThread serverThread;
 	serverThread.Start();
@@ -28,19 +27,19 @@ TEST_CASE( "Aardvark apps", "[apps]" )
 	client.Start();
 
 	{
-		auto reqCreateApp = client.Server().createAppRequest();
-		reqCreateApp.setName( "fnord" );
-		auto promCreateApp = reqCreateApp.send();
+		auto reqCreateGadget = client.Server().createGadgetRequest();
+		reqCreateGadget.setName( "fnord" );
+		auto promCreateGadget = reqCreateGadget.send();
 
-		auto resCreateApp = promCreateApp.wait( client.WaitScope() );
-		REQUIRE( resCreateApp.hasApp() );
+		auto resCreateGadget = promCreateGadget.wait( client.WaitScope() );
+		REQUIRE( resCreateGadget.hasGadget() );
 
-		auto promName = resCreateApp.getApp().nameRequest().send();
+		auto promName = resCreateGadget.getGadget().nameRequest().send();
 		auto resName = promName.wait( client.WaitScope() );
 
 		REQUIRE( "fnord" == resName.getName() );
 
-		auto promDestroy = resCreateApp.getApp().destroyRequest().send();
+		auto promDestroy = resCreateGadget.getGadget().destroyRequest().send();
 		auto resDestroy = promDestroy.wait( client.WaitScope() );
 		REQUIRE( resDestroy.getSuccess() );
 	}

@@ -158,18 +158,18 @@ bool CAardvarkCefHandler::OnProcessMessageReceived( CefRefPtr<CefBrowser> browse
 	CefProcessId source_process,
 	CefRefPtr<CefProcessMessage> message )
 {
-	if ( message->GetName() == "update_browser_app_names" )
+	if ( message->GetName() == "update_browser_gadget_names" )
 	{
-		m_apps.clear();
+		m_gadgets.clear();
 		auto nameList = message->GetArgumentList()->GetList( 0 );
 		for ( size_t n = 0; n < nameList->GetSize(); n++ )
 		{
-			m_apps.push_back( nameList->GetString( n ).ToString() );
+			m_gadgets.push_back( nameList->GetString( n ).ToString() );
 		}
 		updateSceneGraphTextures();
 		return true;
 	}
-	else if ( message->GetName() == "start_app" )
+	else if ( message->GetName() == "start_gadget" )
 	{
 		std::string uri( message->GetArgumentList()->GetString( 0 ) );
 		std::vector<std::string> permissions;
@@ -179,7 +179,7 @@ bool CAardvarkCefHandler::OnProcessMessageReceived( CefRefPtr<CefBrowser> browse
 			permissions.push_back( permissionList->GetString( n ).ToString() );
 		}
 
-		CAardvarkCefApp::instance()->startApp( uri, permissions );
+		CAardvarkCefApp::instance()->startGadget( uri, permissions );
 
 	}
 	else if ( message->GetName() == "mouse_event" )
@@ -237,18 +237,18 @@ void CAardvarkCefHandler::updateSceneGraphTextures()
 	}
 
 	std::vector< const char *> namePointers;
-	for ( auto & appName : m_apps )
+	for ( auto & appName : m_gadgets )
 	{
 		namePointers.push_back( appName.c_str() );
 	}
 
 	if ( namePointers.empty() )
 	{
-		aardvark::avUpdateDxgiTextureForApps( &*m_client, nullptr, 0, m_width, m_height, m_sharedTexture, true );
+		aardvark::avUpdateDxgiTextureForGadgets( &*m_client, nullptr, 0, m_width, m_height, m_sharedTexture, true );
 	}
 	else
 	{
-		aardvark::avUpdateDxgiTextureForApps( &*m_client, &namePointers[0], (uint32_t)namePointers.size(), m_width, m_height, m_sharedTexture, true );
+		aardvark::avUpdateDxgiTextureForGadgets( &*m_client, &namePointers[0], (uint32_t)namePointers.size(), m_width, m_height, m_sharedTexture, true );
 	}
 }
 

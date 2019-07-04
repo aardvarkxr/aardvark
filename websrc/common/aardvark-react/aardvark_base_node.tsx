@@ -1,7 +1,7 @@
 import * as React from 'react';
 
 import { Av, AvSceneContext } from 'common/aardvark';
-import { AvApp } from './aardvark_app';
+import { AvGadget } from './aardvark_app';
 
 declare global 
 {
@@ -34,7 +34,7 @@ export abstract class AvBaseNode<TProps, TState> extends React.Component<TProps,
 	constructor( props: any )
 	{
 		super( props );
-		AvApp.instance().register( this );
+		AvGadget.instance().register( this );
 
 		if( props.onIdAssigned )
 		{
@@ -60,7 +60,7 @@ export abstract class AvBaseNode<TProps, TState> extends React.Component<TProps,
 
 	public componentDidUpdate()
 	{
-		AvApp.instance().markDirty();
+		AvGadget.instance().markDirty();
 	}
 
 	public render()

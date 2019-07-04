@@ -91,12 +91,12 @@ export interface AvSceneContext
 	setSphereVolume( radius: number ): void;
 }
 
-interface AvApp_GetName
+interface AvGadget_GetName
 {
 	():string;
 }
 
-interface AvApp_StartSceneContext
+interface AvGadget_StartSceneContext
 {
 	():AvSceneContext;
 }
@@ -106,7 +106,7 @@ export interface AvPokerHandler
 	( proximity: PokerProximity[] ): void;
 }
 
-interface AvApp_RegisterPokerHandler
+interface AvGadget_RegisterPokerHandler
 {
 	( nodeId:number, handlerFunction: AvPokerHandler ): void;
 }
@@ -130,7 +130,7 @@ export interface AvPanelMouseEvent
 	y: number;
 }
 
-interface AvApp_SendMouseEvent
+interface AvGadget_SendMouseEvent
 {
 	(pokerId: number, panelId:string, type: AvPanelMouseEventType, x:number, y:number ): void;
 }
@@ -140,7 +140,7 @@ export interface AvPanelHandler
 	( event: AvPanelMouseEvent ): void;
 }
 
-interface AvApp_RegisterPanelHandler
+interface AvGadget_RegisterPanelHandler
 {
 	( nodeId:number, handlerFunction: AvPanelHandler ): void;
 }
@@ -171,34 +171,34 @@ export interface AvGrabberProcessor
 	( isPressed: boolean, grabbableIds: string[] ): void;
 }
 
-export interface AvAppObj
+export interface AvGadgetObj
 {
-	getName: AvApp_GetName;
-	startSceneContext: AvApp_StartSceneContext;
-	registerPokerHandler: AvApp_RegisterPokerHandler;
-	registerPanelHandler: AvApp_RegisterPanelHandler;
+	getName: AvGadget_GetName;
+	startSceneContext: AvGadget_StartSceneContext;
+	registerPokerHandler: AvGadget_RegisterPokerHandler;
+	registerPanelHandler: AvGadget_RegisterPanelHandler;
 	enableDefaultPanelHandling( panelId: number ): void;
 	sendHapticEventFromPanel( panelId: number, amplitude: number, frequency: number, duration: number ): void;
-	sendMouseEvent: AvApp_SendMouseEvent;
+	sendMouseEvent: AvGadget_SendMouseEvent;
 	registerGrabbableProcessor( nodeId: number, processor: AvGrabbableProcessor ): void;
 	registerGrabberProcessor( nodeId: number, processor: AvGrabberProcessor ): void;
 	sendGrabEvent( grabberId: number, grabbableId: string, eventType: AvGrabEventType ): void;
 }
 
-interface Av_CreateApp
+interface Av_CreateGadget
 {
-	(appName:string):AvAppObj;
+	(gadgetName:string):AvGadgetObj;
 }
 
-interface Av_StartApp
+interface Av_StartGadget
 {
 	( uri:string, permissions: string[]):void;
 }
 
 export interface Aardvark
 {
-	createApp: Av_CreateApp;
-	startApp: Av_StartApp;
+	createGadget: Av_CreateGadget;
+	startGadget: Av_StartGadget;
 }
 
 declare global

@@ -7,7 +7,7 @@
 
 using namespace aardvark;
 
-CAardvarkApp::CAardvarkApp( uint32_t clientId, const std::string & sName, AvServerImpl *pParentServer )
+CAardvarkGadget::CAardvarkGadget( uint32_t clientId, const std::string & sName, AvServerImpl *pParentServer )
 {
 	m_clientId = clientId;
 
@@ -19,21 +19,21 @@ CAardvarkApp::CAardvarkApp( uint32_t clientId, const std::string & sName, AvServ
 }
 
 
-::kj::Promise<void> CAardvarkApp::destroy( DestroyContext context )
+::kj::Promise<void> CAardvarkGadget::destroy( DestroyContext context )
 {
-	m_pParentServer->removeApp( this );
+	m_pParentServer->removeGadget( this );
 	context.getResults().setSuccess( true );
 	return kj::READY_NOW;
 }
 
-::kj::Promise<void> CAardvarkApp::name( NameContext context )
+::kj::Promise<void> CAardvarkGadget::name( NameContext context )
 {
 	context.getResults().setName( m_sName );
 	return kj::READY_NOW;
 }
 
 
-::kj::Promise<void> CAardvarkApp::updateSceneGraph( UpdateSceneGraphContext context )
+::kj::Promise<void> CAardvarkGadget::updateSceneGraph( UpdateSceneGraphContext context )
 {
 	auto root = context.getParams().getRoot();
 	m_panelProcessors.clear();
@@ -71,11 +71,11 @@ CAardvarkApp::CAardvarkApp( uint32_t clientId, const std::string & sName, AvServ
 }
 
 
-::kj::Promise<void> CAardvarkApp::pushMouseEvent( PushMouseEventContext context )
+::kj::Promise<void> CAardvarkGadget::pushMouseEvent( PushMouseEventContext context )
 {
 	auto & inMouseEvent = context.getParams().getEvent();
 	uint64_t globalPanelId = inMouseEvent.getPanelId();
-	uint32_t appId = (uint32_t)( globalPanelId >> 32 );
+	uint32_t gadgetId = (uint32_t)( globalPanelId >> 32 );
 	uint32_t localPanelId = (uint32_t)( 0xFFFFFFFF & globalPanelId );
 
 	KJ_IF_MAYBE( panelProcessor, m_pParentServer->findPanelProcessor( globalPanelId ) )
@@ -94,7 +94,7 @@ CAardvarkApp::CAardvarkApp( uint32_t clientId, const std::string & sName, AvServ
 }
 
 
-::kj::Promise<void> CAardvarkApp::pushGrabEvent( PushGrabEventContext context )
+::kj::Promise<void> CAardvarkGadget::pushGrabEvent( PushGrabEventContext context )
 {
 	auto & inGrabEvent = context.getParams().getEvent();
 	uint64_t globalGrabberId = (uint64_t)m_id << 32 | (uint64_t)context.getParams().getGrabberNodeId();
@@ -128,30 +128,30 @@ CAardvarkApp::CAardvarkApp( uint32_t clientId, const std::string & sName, AvServ
 }
 
 
-void CAardvarkApp::gatherVisuals( AvVisuals_t & visuals )
+void CAardvarkGadget::gatherVisuals( AvVisuals_t & visuals )
 {
 	if ( m_sceneGraph.hasNodes() )
 	{
 		AvSceneGraphRoot_t root;
 		root.root = m_sceneGraph;
-		root.appId = m_id;
+		root.gadgetId = m_id;
 		visuals.vecSceneGraphs.push_back( root );
 	}
 }
 
 
-void CAardvarkApp::setSharedTextureInfo( AvSharedTextureInfo::Reader sharedTextureInfo )
+void CAardvarkGadget::setSharedTextureInfo( AvSharedTextureInfo::Reader sharedTextureInfo )
 {
 	m_sharedTexture = tools::newOwnCapnp( sharedTextureInfo );
 }
 
-AvSharedTextureInfo::Reader CAardvarkApp::getSharedTextureInfo()
+AvSharedTextureInfo::Reader CAardvarkGadget::getSharedTextureInfo()
 {
 	return m_sharedTexture;
 }
 
 
-kj::Maybe < AvPokerProcessor::Client > CAardvarkApp::findPokerProcessor( uint32_t pokerLocalId )
+kj::Maybe < AvPokerProcessor::Client > CAardvarkGadget::findPokerProcessor( uint32_t pokerLocalId )
 {
 	auto i = m_pokerProcessors.find( pokerLocalId );
 	if ( i == m_pokerProcessors.end() )
@@ -164,7 +164,7 @@ kj::Maybe < AvPokerProcessor::Client > CAardvarkApp::findPokerProcessor( uint32_
 	}
 }
 
-kj::Maybe < AvPanelProcessor::Client > CAardvarkApp::findPanelProcessor( uint32_t panelLocalId )
+kj::Maybe < AvPanelProcessor::Client > CAardvarkGadget::findPanelProcessor( uint32_t panelLocalId )
 {
 	auto i = m_panelProcessors.find( panelLocalId );
 	if ( i == m_panelProcessors.end() )
@@ -177,7 +177,7 @@ kj::Maybe < AvPanelProcessor::Client > CAardvarkApp::findPanelProcessor( uint32_
 	}
 }
 
-kj::Maybe<AvGrabberProcessor::Client> CAardvarkApp::findGrabberProcessor( uint32_t grabberLocalId )
+kj::Maybe<AvGrabberProcessor::Client> CAardvarkGadget::findGrabberProcessor( uint32_t grabberLocalId )
 {
 	auto i = m_grabberProcessors.find( grabberLocalId );
 	if ( i == m_grabberProcessors.end() )
@@ -191,7 +191,7 @@ kj::Maybe<AvGrabberProcessor::Client> CAardvarkApp::findGrabberProcessor( uint32
 }
 
 
-kj::Maybe<AvGrabbableProcessor::Client> CAardvarkApp::findGrabbableProcessor( uint32_t grabbableLocalId )
+kj::Maybe<AvGrabbableProcessor::Client> CAardvarkGadget::findGrabbableProcessor( uint32_t grabbableLocalId )
 {
 	auto i = m_grabbableProcessors.find( grabbableLocalId );
 	if ( i == m_grabbableProcessors.end() )
@@ -204,7 +204,7 @@ kj::Maybe<AvGrabbableProcessor::Client> CAardvarkApp::findGrabbableProcessor( ui
 	}
 }
 
-::kj::Promise<void> CAardvarkApp::sendHapticEvent( SendHapticEventContext context )
+::kj::Promise<void> CAardvarkGadget::sendHapticEvent( SendHapticEventContext context )
 {
 	uint64_t targetNodeGlobalId = context.getParams().getNodeGlobalId();
 	m_pParentServer->sendHapticEvent( context.getParams().getNodeGlobalId(),

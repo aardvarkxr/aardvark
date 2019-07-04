@@ -52,7 +52,7 @@ struct AvLight_t
 struct AvSceneGraphRoot_t
 {
 	AvNodeRoot::Reader root;
-	uint32_t appId;
+	uint32_t gadgetId;
 };
 
 struct AvVisuals_t

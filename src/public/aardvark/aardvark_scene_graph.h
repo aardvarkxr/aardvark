@@ -38,7 +38,7 @@ namespace aardvark
 	typedef AvSceneContextStruct *AvSceneContext;
 
 	EAvSceneGraphResult avStartSceneContext( aardvark::CAardvarkClient *pClient, AvSceneContext *pContext );
-	EAvSceneGraphResult avFinishSceneContext( AvSceneContext context, AvApp::Client *pApp );
+	EAvSceneGraphResult avFinishSceneContext( AvSceneContext context, AvGadget::Client *gadget );
 
 	// Starts a node as a child of the current node
 	EAvSceneGraphResult avStartNode( AvSceneContext context, uint32_t id, const char *pchName, EAvSceneGraphNodeType type );
@@ -96,10 +96,10 @@ namespace aardvark
 
 	EAvSceneGraphResult avGetNextMouseEvent( aardvark::CAardvarkClient *pClient, uint32_t panelNodeId, PanelMouseEvent_t *mouseEvent );
 	EAvSceneGraphResult avPushMouseEventFromPoker( aardvark::CAardvarkClient *pClient,
-		AvApp::Client *pApp, uint32_t pokerNodeId,
+		AvGadget::Client *gadget, uint32_t pokerNodeId,
 		uint64_t panelId, EPanelMouseEventType type, float x, float y );
 	EAvSceneGraphResult avSendHapticEventFromPanel( aardvark::CAardvarkClient *pClient, 
-		AvApp::Client *pApp, uint32_t panelNodeId,
+		AvGadget::Client *gadget, uint32_t panelNodeId,
 		float amplitude, float frequency, float duration );
 
 	enum class EGrabEventType
@@ -126,10 +126,10 @@ namespace aardvark
 	EAvSceneGraphResult avGetNextGrabEvent( aardvark::CAardvarkClient *pClient,
 		uint32_t grabbableNodeId, GrabEvent_t *grabEvent );
 	EAvSceneGraphResult avPushGrabEventFromGrabber( aardvark::CAardvarkClient *pClient,
-		AvApp::Client *pApp, uint32_t grabberNodeId,
+		AvGadget::Client *gadget, uint32_t grabberNodeId,
 		uint64_t grabbableId, EGrabEventType type );
 
-	// tells the renderer what DXGI to use for a scene graph app
-	EAvSceneGraphResult avUpdateDxgiTextureForApps( aardvark::CAardvarkClient *pClient, const char **pchAppName, uint32_t unNameCount, uint32_t unWidth, uint32_t unHeight, void *pvSharedTextureHandle, bool bInvertY );
+	// tells the renderer what DXGI to use for a scene graph gadget
+	EAvSceneGraphResult avUpdateDxgiTextureForGadgets( aardvark::CAardvarkClient *pClient, const char **pchGadgetName, uint32_t unNameCount, uint32_t unWidth, uint32_t unHeight, void *pvSharedTextureHandle, bool bInvertY );
 
 }

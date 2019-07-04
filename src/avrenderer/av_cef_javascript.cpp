@@ -83,11 +83,11 @@ void CJavascriptObjectWithFunctions::RegisterFunction( const std::string & sName
 	m_container->SetValue( sName, CefV8Value::CreateFunction( sName, pFunction ), V8_PROPERTY_ATTRIBUTE_READONLY );
 }
 
-class CAardvarkAppObject : public CJavascriptObjectWithFunctions
+class CAardvarkGadgetObject : public CJavascriptObjectWithFunctions
 {
 	friend class CSceneContextObject;
 public:
-	CAardvarkAppObject( CAardvarkRenderProcessHandler *pRenderProcessHandler, AvApp::Client client, const std::string & name );
+	CAardvarkGadgetObject( CAardvarkRenderProcessHandler *pRenderProcessHandler, AvGadget::Client client, const std::string & name );
 
 	virtual bool init() override;
 	virtual void cleanup() override;
@@ -97,7 +97,7 @@ public:
 	void runFrame();
 
 private:
-	AvApp::Client m_appClient;
+	AvGadget::Client m_gadgetClient;
 	CAardvarkRenderProcessHandler *m_handler = nullptr;
 	std::string m_name;
 	std::list<std::unique_ptr<CSceneContextObject>> m_sceneContexts;
@@ -113,7 +113,7 @@ private:
 class CSceneContextObject : public CJavascriptObjectWithFunctions
 {
 public:
-	CSceneContextObject( CAardvarkAppObject *parentApp, CAardvarkRenderProcessHandler *pRenderProcessHandler, aardvark::AvSceneContext context );
+	CSceneContextObject( CAardvarkGadgetObject *parentGadget, CAardvarkRenderProcessHandler *pRenderProcessHandler, aardvark::AvSceneContext context );
 
 	virtual bool init() override;
 	virtual void cleanup() override;
@@ -124,16 +124,16 @@ public:
 private:
 	aardvark::AvSceneContext m_context;
 	CAardvarkRenderProcessHandler *m_handler = nullptr;
-	CAardvarkAppObject *m_parentApp = nullptr;
+	CAardvarkGadgetObject *m_parentGadget = nullptr;
 	std::vector<uint32_t> m_nodeIdsThatWillNeedThisTexture;
 	std::vector<uint32_t> m_nodeIdStack;
 };
 
-CSceneContextObject::CSceneContextObject( CAardvarkAppObject *parentApp, CAardvarkRenderProcessHandler *renderProcessHandler, aardvark::AvSceneContext context )
+CSceneContextObject::CSceneContextObject( CAardvarkGadgetObject *parentGadget, CAardvarkRenderProcessHandler *renderProcessHandler, aardvark::AvSceneContext context )
 {
 	m_handler = renderProcessHandler;
 	m_context = context;
-	m_parentApp = parentApp;
+	m_parentGadget = parentGadget;
 }
 
 
@@ -152,7 +152,7 @@ uint32_t CSceneContextObject::getCurrentNodeId()
 
 bool CSceneContextObject::init()
 {
-	RegisterFunction( "finish", [this, parentApp = m_parentApp]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	RegisterFunction( "finish", [this, parentGadget = m_parentGadget]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
 		if ( arguments.size() != 0 )
 		{
@@ -160,7 +160,7 @@ bool CSceneContextObject::init()
 			return;
 		}
 
-		aardvark::EAvSceneGraphResult result = parentApp->finishSceneContext( this );
+		aardvark::EAvSceneGraphResult result = parentGadget->finishSceneContext( this );
 		if ( result != aardvark::EAvSceneGraphResult::Success )
 		{
 			exception = "avFinishSceneContext failed " + std::to_string( (int)result );
@@ -443,15 +443,15 @@ void CSceneContextObject::cleanup()
 }
 
 
-CAardvarkAppObject::CAardvarkAppObject( CAardvarkRenderProcessHandler *renderProcessHandler, AvApp::Client client, const std::string & name )
-	: m_appClient( client )
+CAardvarkGadgetObject::CAardvarkGadgetObject( CAardvarkRenderProcessHandler *renderProcessHandler, AvGadget::Client client, const std::string & name )
+	: m_gadgetClient( client )
 {
 	m_handler = renderProcessHandler;
 	m_name = name;
 }
 
 
-bool CAardvarkAppObject::init()
+bool CAardvarkGadgetObject::init()
 {
 	RegisterFunction( "getName", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
@@ -461,7 +461,7 @@ bool CAardvarkAppObject::init()
 			return;
 		}
 
-		auto resName= m_appClient.nameRequest().send().wait( m_handler->getClient()->WaitScope() );
+		auto resName= m_gadgetClient.nameRequest().send().wait( m_handler->getClient()->WaitScope() );
 		if( resName.hasName() )
 		{
 			retval = CefV8Value::CreateString( resName.getName().cStr() );
@@ -640,7 +640,7 @@ bool CAardvarkAppObject::init()
 			return;
 		}
 
-		aardvark::avPushMouseEventFromPoker( m_handler->getClient(), &m_appClient,
+		aardvark::avPushMouseEventFromPoker( m_handler->getClient(), &m_gadgetClient,
 			arguments[0]->GetUIntValue(),
 			std::stoull( std::string( arguments[1]->GetStringValue() ).c_str() ),
 			( aardvark::EPanelMouseEventType )arguments[2]->GetIntValue(),
@@ -679,7 +679,7 @@ bool CAardvarkAppObject::init()
 			return;
 		}
 
-		aardvark::EAvSceneGraphResult result = aardvark::avSendHapticEventFromPanel( m_handler->getClient(), &m_appClient,
+		aardvark::EAvSceneGraphResult result = aardvark::avSendHapticEventFromPanel( m_handler->getClient(), &m_gadgetClient,
 			arguments[0]->GetUIntValue(),
 			(float)arguments[1]->GetDoubleValue(),
 			(float)arguments[2]->GetDoubleValue(),
@@ -717,7 +717,7 @@ bool CAardvarkAppObject::init()
 		}
 
 		aardvark::EAvSceneGraphResult result = aardvark::avPushGrabEventFromGrabber(
-			m_handler->getClient(), &m_appClient,
+			m_handler->getClient(), &m_gadgetClient,
 			arguments[0]->GetUIntValue(),
 			std::stoull( std::string( arguments[1]->GetStringValue() ).c_str() ),
 			( aardvark::EGrabEventType)arguments[2]->GetIntValue() );
@@ -730,7 +730,7 @@ bool CAardvarkAppObject::init()
 	return true;
 }
 
-void CAardvarkAppObject::cleanup()
+void CAardvarkGadgetObject::cleanup()
 {
 	for ( auto &context : m_sceneContexts )
 	{
@@ -738,10 +738,10 @@ void CAardvarkAppObject::cleanup()
 	}
 	m_sceneContexts.clear();
 
-	m_appClient = nullptr;
+	m_gadgetClient = nullptr;
 }
 
-void CAardvarkAppObject::runFrame()
+void CAardvarkGadgetObject::runFrame()
 {
 	for( auto iHandler : m_pokerProcessors )
 	{
@@ -882,9 +882,9 @@ void CAardvarkAppObject::runFrame()
 
 
 
-aardvark::EAvSceneGraphResult CAardvarkAppObject::finishSceneContext( CSceneContextObject *contextObject )
+aardvark::EAvSceneGraphResult CAardvarkGadgetObject::finishSceneContext( CSceneContextObject *contextObject )
 {
-	aardvark::EAvSceneGraphResult res = avFinishSceneContext( contextObject->getContext(), &m_appClient );
+	aardvark::EAvSceneGraphResult res = avFinishSceneContext( contextObject->getContext(), &m_gadgetClient );
 	if ( res != EAvSceneGraphResult::Success )
 	{
 		return res;
@@ -911,14 +911,14 @@ public:
 
 	virtual bool init() override;
 	void cleanup() override;
-	std::list<std::unique_ptr<CAardvarkAppObject>> & getApps() { return m_apps;  }
+	std::list<std::unique_ptr<CAardvarkGadgetObject>> & getGadgets() { return m_gadgets;  }
 
 	bool hasPermission( const std::string & permission );
 	void runFrame();
 
 private:
 	CAardvarkRenderProcessHandler *m_handler = nullptr;
-	std::list<std::unique_ptr<CAardvarkAppObject>> m_apps;
+	std::list<std::unique_ptr<CAardvarkGadgetObject>> m_gadgets;
 };
 
 CAardvarkObject::CAardvarkObject( CAardvarkRenderProcessHandler *renderProcessHandler )
@@ -933,9 +933,9 @@ bool CAardvarkObject::hasPermission( const std::string & permission )
 
 void CAardvarkObject::runFrame()
 {
-	for ( auto & app : m_apps )
+	for ( auto & gadget : m_gadgets )
 	{
-		app->runFrame();
+		gadget->runFrame();
 	}
 }
 
@@ -944,7 +944,7 @@ bool CAardvarkObject::init()
 {
 	if ( hasPermission( "scenegraph" ) )
 	{
-		RegisterFunction( "createApp", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+		RegisterFunction( "createGadget", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 		{
 			if ( arguments.size() != 1 )
 			{
@@ -957,25 +957,25 @@ bool CAardvarkObject::init()
 				return;
 			}
 
-			auto reqCreateExampleApp = m_handler->getClient()->Server().createAppRequest();
-			reqCreateExampleApp.setName( std::string( arguments[0]->GetStringValue() ).c_str() );
-			auto resCreateApp = reqCreateExampleApp.send().wait( m_handler->getClient()->WaitScope() );
-			if ( !resCreateApp.hasApp() )
+			auto reqCreateGadget = m_handler->getClient()->Server().createGadgetRequest();
+			reqCreateGadget.setName( std::string( arguments[0]->GetStringValue() ).c_str() );
+			auto resCreateGadget = reqCreateGadget.send().wait( m_handler->getClient()->WaitScope() );
+			if ( !resCreateGadget.hasGadget() )
 			{
 				retval = CefV8Value::CreateNull();
 			}
 			else
 			{
-				auto app = std::make_unique<CAardvarkAppObject>( m_handler, resCreateApp.getApp(), std::string( arguments[0]->GetStringValue() ) );
-				if ( !app->init() )
+				auto gadget = std::make_unique<CAardvarkGadgetObject>( m_handler, resCreateGadget.getGadget(), std::string( arguments[0]->GetStringValue() ) );
+				if ( !gadget->init() )
 				{
 					retval = CefV8Value::CreateNull();
 				}
 				else
 				{
-					retval = app->getContainer();
-					m_apps.push_back( std::move( app ) );
-					m_handler->updateAppNamesForBrowser();
+					retval = gadget->getContainer();
+					m_gadgets.push_back( std::move( gadget ) );
+					m_handler->updateGadgetNamesForBrowser();
 				}
 			}
 		} );
@@ -983,7 +983,7 @@ bool CAardvarkObject::init()
 
 	if ( hasPermission( "master" ) )
 	{
-		RegisterFunction( "startApp", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+		RegisterFunction( "startGadget", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 		{
 			if ( arguments.size() != 2 )
 			{
@@ -1012,7 +1012,7 @@ bool CAardvarkObject::init()
 				}
 			}
 
-			CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "start_app" );
+			CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "start_gadget" );
 
 			msg->GetArgumentList()->SetString( 0, arguments[0]->GetStringValue() );
 			msg->GetArgumentList()->SetList( 1, permissionList );
@@ -1026,11 +1026,11 @@ bool CAardvarkObject::init()
 
 void CAardvarkObject::cleanup()
 {
-	for ( auto & app : m_apps )
+	for ( auto & gadget : m_gadgets )
 	{
-		app->cleanup();
+		gadget->cleanup();
 	}
-	m_apps.clear();
+	m_gadgets.clear();
 }
 
 
@@ -1093,16 +1093,16 @@ bool CAardvarkRenderProcessHandler::OnProcessMessageReceived( CefRefPtr<CefBrows
 }
 
 
-void CAardvarkRenderProcessHandler::updateAppNamesForBrowser()
+void CAardvarkRenderProcessHandler::updateGadgetNamesForBrowser()
 {
 	size_t listIndex = 0;
 	CefRefPtr< CefListValue> nameList = CefListValue::Create();
-	for ( auto & app : m_aardvarkObject->getApps() )
+	for ( auto & gadget : m_aardvarkObject->getGadgets() )
 	{
-		nameList->SetString( listIndex++, app->getName() );
+		nameList->SetString( listIndex++, gadget->getName() );
 	}
 
-	CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "update_browser_app_names" );
+	CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "update_browser_gadget_names" );
 
 	msg->GetArgumentList()->SetList( 0, nameList );
 	m_browser->SendProcessMessage( PID_BROWSER, msg );

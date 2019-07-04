@@ -1,7 +1,7 @@
 import * as React from 'react';
 import  * as ReactDOM from 'react-dom';
 
-import { AvApp } from 'common/aardvark-react/aardvark_app';
+import { AvGadget } from 'common/aardvark-react/aardvark_app';
 import { AvOrigin } from 'common/aardvark-react/aardvark_origin';
 import { AvTransform } from 'common/aardvark-react/aardvark_transform';
 import { AvPanel } from 'common/aardvark-react/aardvark_panel';
@@ -32,15 +32,13 @@ class TestPanel extends React.Component< {}, TestPanelState >
 
 	@bind public incrementCount()
 	{
-		AvApp.instance().sendHapticEventFromPanel( 1234, 1, 1, 0 );
-//		AvApp.instance().sendHapticEventFromPanel( 1234, 1, 30, 2 );
+		AvGadget.instance().sendHapticEventFromPanel( 1234, 1, 1, 0 );
 		this.setState( { count: this.state.count + 1 } );
 	}
 
 	@bind onMouseEnterOrLeave()
 	{
-		AvApp.instance().sendHapticEventFromPanel( 1234, 0.05, 1, 0 );
-//		AvApp.instance().sendHapticEventFromPanel( 1234, 1, 30, 2 );
+		AvGadget.instance().sendHapticEventFromPanel( 1234, 0.05, 1, 0 );
 	}
 
 	@bind public onHighlightGrabbable( highlight: HighlightType )
@@ -68,7 +66,7 @@ class TestPanel extends React.Component< {}, TestPanelState >
 
 		return (
 			<div className={ sDivClasses } >
-				<AvApp name="Fnord the app">
+				<AvGadget name="Fnord the gadget">
 					<AvOrigin path="/user/hand/left">
 						<AvGrabbable updateHighlight={ this.onHighlightGrabbable }>
 							<AvSphereHandle radius={0.1} />
@@ -79,7 +77,7 @@ class TestPanel extends React.Component< {}, TestPanelState >
 							</AvTransform>
 						</AvGrabbable>
 					</AvOrigin>
-				</AvApp>
+				</AvGadget>
 				<div className="Label">Count: { this.state.count }</div>
 				<div className="Button" onMouseDown={ this.incrementCount }
 					onMouseEnter={ this.onMouseEnterOrLeave } 

@@ -1,34 +1,34 @@
 import * as React from 'react';
 
-import { Av, AvPanelHandler, AvAppObj, AvSceneContext, AvPokerHandler, AvPanelMouseEventType, AvGrabbableProcessor, AvGrabberProcessor, AvGrabEventType } from 'common/aardvark';
+import { Av, AvPanelHandler, AvGadgetObj, AvSceneContext, AvPokerHandler, AvPanelMouseEventType, AvGrabbableProcessor, AvGrabberProcessor, AvGrabEventType } from 'common/aardvark';
 import { IAvBaseNode } from './aardvark_base_node';
 import bind from 'bind-decorator';
 
-interface AvAppProps
+interface AvGadgetProps
 {
 	name: string;
 }
 
-export class AvApp extends React.Component< AvAppProps, {} >
+export class AvGadget extends React.Component< AvGadgetProps, {} >
 {
-	private static s_instance:AvApp = null;
+	private static s_instance:AvGadget = null;
 
 	m_nextNodeId = 1;
 	m_registeredNodes: {[nodeId:number]:IAvBaseNode } = {};
-	m_app: AvAppObj = null;
+	m_gadget: AvGadgetObj = null;
 	m_nextFrameRequest: number = 0;
 	m_traversedNodes: {[nodeId:number]:IAvBaseNode } = {};
 
 	constructor( props: any )
 	{
 		super( props );
-		AvApp.s_instance = this;
-		this.m_app = Av().createApp( this.props.name );
+		AvGadget.s_instance = this;
+		this.m_gadget = Av().createGadget( this.props.name );
 	}
 
 	public static instance()
 	{
-		return AvApp.s_instance;
+		return AvGadget.s_instance;
 	}
 
 	public getName()
@@ -45,46 +45,46 @@ export class AvApp extends React.Component< AvAppProps, {} >
 
 	public setPanelHandler( nodeId: number, handler: AvPanelHandler )
 	{
-		this.m_app.registerPanelHandler( nodeId, handler );
+		this.m_gadget.registerPanelHandler( nodeId, handler );
 		this.markDirty();
 	}
 
 
 	public enableDefaultPanelHandling( nodeId: number )
 	{
-		this.m_app.enableDefaultPanelHandling( nodeId );
+		this.m_gadget.enableDefaultPanelHandling( nodeId );
 		this.markDirty();
 	}
 
 	public setPokerHandler( nodeId: number, handler: AvPokerHandler )
 	{
-		this.m_app.registerPokerHandler( nodeId, handler );
+		this.m_gadget.registerPokerHandler( nodeId, handler );
 		this.markDirty();
 	}
 
 	public setGrabbableProcessor( nodeId: number, processor: AvGrabbableProcessor )
 	{
-		this.m_app.registerGrabbableProcessor( nodeId, processor );
+		this.m_gadget.registerGrabbableProcessor( nodeId, processor );
 		this.markDirty();
 	}
 
 	public setGrabberProcessor( nodeId: number, processor: AvGrabberProcessor )
 	{
-		this.m_app.registerGrabberProcessor( nodeId, processor );
+		this.m_gadget.registerGrabberProcessor( nodeId, processor );
 		this.markDirty();
 	}
 
 	public sendGrabEvent( grabberId: number, grabbableId: string, 
 		eventType:AvGrabEventType )
 	{
-		this.m_app.sendGrabEvent( grabberId, grabbableId, eventType );
+		this.m_gadget.sendGrabEvent( grabberId, grabbableId, eventType );
 	}
 
 
 	public sendMouseEvent( pokerId: number, panelId: string, 
 		eventType:AvPanelMouseEventType, x: number, y: number )
 	{
-		this.m_app.sendMouseEvent( pokerId, panelId, eventType, x, y );
+		this.m_gadget.sendMouseEvent( pokerId, panelId, eventType, x, y );
 	}
 
 	private traverseNode( context: AvSceneContext, domNode: HTMLElement )
@@ -126,7 +126,7 @@ export class AvApp extends React.Component< AvAppProps, {} >
 
 	@bind public updateSceneGraph()
 	{
-		let context = this.m_app.startSceneContext();
+		let context = this.m_gadget.startSceneContext();
 
 		this.m_traversedNodes = {};
 		this.traverseNode( context, document.body );
@@ -146,7 +146,7 @@ export class AvApp extends React.Component< AvAppProps, {} >
 
 	public sendHapticEventFromPanel( panelId: number, amplitude: number, frequency: number, duration: number ): void
 	{
-		this.m_app.sendHapticEventFromPanel( panelId, amplitude, frequency, duration );
+		this.m_gadget.sendHapticEventFromPanel( panelId, amplitude, frequency, duration );
 	}
 
 	public render()

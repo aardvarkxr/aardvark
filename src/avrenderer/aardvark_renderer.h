@@ -28,7 +28,6 @@
 
 #include <tools/capnprototools.h>
 
-#include <aardvark/aardvark_apps.h>
 #include <aardvark/aardvark_server.h>
 #include <aardvark/aardvark_client.h>
 #include <aardvark/aardvark_scene_graph.h>
@@ -144,7 +143,7 @@ private:
 		std::unordered_map<uint32_t, size_t> mapIdToIndex;
 		tools::OwnCapnp<AvNodeRoot> root = nullptr;
 		std::vector<AvNode::Reader> nodes;
-		uint32_t appId;
+		uint32_t gadgetId;
 	};
 
 	struct SgNodeData_t
