@@ -5,8 +5,8 @@ find_package( CapnProto 0.7.0 REQUIRED )
 capnp_generate_cpp( CAPNP_SRCS CAPNP_HDRS aardvark.capnp )
 
 add_library(aardvark STATIC
-	aardvark_app_impl.cpp
-	aardvark_app_impl.h
+	aardvark_gadget_impl.cpp
+	aardvark_gadget_impl.h
 	aardvark_model_source_impl.cpp
 	aardvark_model_source_impl.h
 	aardvark_grabbable_processor.cpp

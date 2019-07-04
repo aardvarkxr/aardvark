@@ -1,7 +1,7 @@
 import * as React from 'react';
 import  * as ReactDOM from 'react-dom';
 
-import { AvGadget } from 'common/aardvark-react/aardvark_app';
+import { AvGadget } from 'common/aardvark-react/aardvark_gadget';
 import { AvOrigin } from 'common/aardvark-react/aardvark_origin';
 import { AvTransform } from 'common/aardvark-react/aardvark_transform';
 import { AvPanel } from 'common/aardvark-react/aardvark_panel';

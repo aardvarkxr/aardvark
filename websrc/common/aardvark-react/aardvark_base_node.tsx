@@ -1,7 +1,7 @@
 import * as React from 'react';
 
 import { Av, AvSceneContext } from 'common/aardvark';
-import { AvGadget } from './aardvark_app';
+import { AvGadget } from './aardvark_gadget';
 
 declare global 
 {

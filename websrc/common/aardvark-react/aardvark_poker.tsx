@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import { AvGadget } from './aardvark_app';
+import { AvGadget } from './aardvark_gadget';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 import { AvSceneContext, AvNodeType, AvPanelMouseEvent, AvPanelMouseEventType, PokerProximity } from 'common/aardvark';
 import bind from 'bind-decorator';
