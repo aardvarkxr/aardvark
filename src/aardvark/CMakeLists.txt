@@ -24,6 +24,7 @@ add_library(aardvark STATIC
 
 	${AV_SRC_PUBLIC}/aardvark/aardvark_client.h
 	aardvark_server.cpp
+	${AV_SRC_PUBLIC}/aardvark/aardvark_gadget_manifest.h
 	${AV_SRC_PUBLIC}/aardvark/aardvark_server.h
 	${AV_SRC_PUBLIC}/aardvark/aardvark_scene_graph.h
 	${CAPNP_SRCS}
