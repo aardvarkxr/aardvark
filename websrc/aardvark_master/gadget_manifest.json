@@ -1,0 +1,6 @@
+{
+	"name" : "Aardvark Master Gadget",
+	"resolution": [ 16, 16 ],
+	"permissions" : [ "master" ],
+	"model" : ""
+}

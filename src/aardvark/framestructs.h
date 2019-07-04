@@ -52,6 +52,7 @@ struct AvLight_t
 struct AvSceneGraphRoot_t
 {
 	AvNodeRoot::Reader root;
+	std::string hook;
 	uint32_t gadgetId;
 };
 

@@ -56,7 +56,7 @@ function createConfig( appName, appTitle, ext )
 		defaults
 	);
 
-	let dest = path.resolve( __dirname, '../build/apps/' + appName );
+	let dest = path.resolve( __dirname, '../build/gadgets/' + appName );
 	config.output =
 	{
 		filename: appName + '_bundle.js',
@@ -69,14 +69,15 @@ function createConfig( appName, appTitle, ext )
 			{
 				hash: true,
 				filename: "./index.html",
-				template: "./templates/aardvark_app.html",
+				template: "./templates/aardvark_gadget.html",
 				title: appTitle,
 				name: appName,
 			}
 		),
 		new CopyPlugin(
 			[
-				{ from: './' +appName + '/src/' + appName + '.css', to: appName + '.css' }
+				{ from: './' +appName + '/src/' + appName + '.css', to: appName + '.css' },
+				{ from: './' +appName + '/gadget_manifest.json', to: 'gadget_manifest.json' }
 			]
 			),
   	];
@@ -88,7 +89,6 @@ function createConfig( appName, appTitle, ext )
 module.exports = 
 [
 	createConfig( 'aardvark_master', 'Master App', 'ts' ),
-	createConfig( 'default_poker', 'Default Poker', 'tsx' ),
-	createConfig( 'default_grabber', 'Default Grabber', 'tsx' ),
+	createConfig( 'default_hand', 'Default Poker', 'tsx' ),
 	createConfig( 'test_panel', 'Test Panel', 'tsx' ),
 ];

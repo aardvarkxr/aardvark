@@ -135,6 +135,7 @@ void CAardvarkGadget::gatherVisuals( AvVisuals_t & visuals )
 		AvSceneGraphRoot_t root;
 		root.root = m_sceneGraph;
 		root.gadgetId = m_id;
+		root.hook = m_hook;
 		visuals.vecSceneGraphs.push_back( root );
 	}
 }

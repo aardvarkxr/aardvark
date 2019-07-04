@@ -6,13 +6,53 @@
 #define CEF_TESTS_CEFSIMPLE_SIMPLE_HANDLER_H_
 
 #include "include/cef_client.h"
+#include <include/cef_urlrequest.h>
 
 #include <aardvark/aardvark_client.h>
+#include <aardvark/aardvark_gadget_manifest.h>
 
 #include <list>
 #include <set>
 #include <map>
 #include <memory>
+
+class CAardvarkCefHandler;
+
+class CStartGadgetRequestClient : public CefURLRequestClient
+{
+public:
+	CStartGadgetRequestClient( CAardvarkCefHandler *cefHandler );
+
+	void OnRequestComplete( CefRefPtr<CefURLRequest> request ) override;
+
+	void OnUploadProgress( CefRefPtr<CefURLRequest> request,
+		int64 current,
+		int64 total ) override;
+
+	void OnDownloadProgress( CefRefPtr<CefURLRequest> request,
+		int64 current,
+		int64 total ) override;
+
+	void OnDownloadData( CefRefPtr<CefURLRequest> request,
+		const void* data,
+		size_t data_length ) override;
+
+	bool GetAuthCredentials( bool isProxy,
+		const CefString& host,
+		int port,
+		const CefString& realm,
+		const CefString& scheme,
+		CefRefPtr<CefAuthCallback> callback ) override;
+
+private:
+	CAardvarkCefHandler *m_cefHandler = nullptr;
+
+	std::string m_downloadData;
+
+private:
+	IMPLEMENT_REFCOUNTING( CStartGadgetRequestClient );
+};
+
 
 class IApplication;
 
@@ -23,7 +63,7 @@ class CAardvarkCefHandler : public CefClient,
 					  public CefRenderHandler
 {
 public:
-	explicit CAardvarkCefHandler(bool use_views, IApplication *application, const std::vector<std::string> & vecPermissions );
+	explicit CAardvarkCefHandler( IApplication *application, const std::string & gadgetUri, const std::string & initialHook );
 	~CAardvarkCefHandler();
 
 	// CefClient methods:
@@ -74,7 +114,13 @@ public:
 
 	void triggerClose( bool forceClose );
 
-	private:
+	// Called after creation to kick off the gadget
+	void start();
+
+	// Called when the manifest load is completed
+	void onGadgetManifestReceived( bool success, const std::string & manifestData );
+
+private:
 	// Platform-specific implementation.
 	void PlatformTitleChange(CefRefPtr<CefBrowser> browser,
 							const CefString& title);
@@ -90,15 +136,20 @@ public:
 	bool m_isClosing;
 	IApplication *m_application = nullptr;
 
-	int m_width = 1024, m_height = 1024;
+	CAardvarkGadgetManifest m_gadgetManifest;
+	std::string m_gadgetManifestString;
 
-	std::vector<std::string> m_gadgets;
+	std::vector<uint32_t> m_gadgets;
 	void *m_sharedTexture = nullptr;
 
 	void updateSceneGraphTextures();
 
 	std::unique_ptr< aardvark::CAardvarkClient > m_client;
-	std::vector<std::string> m_permissions;
+
+	CefRefPtr<CStartGadgetRequestClient> m_manifestRequestClient;
+	CefRefPtr<CefURLRequest> m_manifestRequest;
+	std::string m_gadgetUri;
+	std::string m_initialHook;
 
 	// Include the default reference counting implementation.
 	IMPLEMENT_REFCOUNTING(CAardvarkCefHandler);

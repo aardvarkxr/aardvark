@@ -6,6 +6,8 @@
 #include <memory>
 #include <set>
 
+#include <aardvark/aardvark_gadget_manifest.h>
+
 namespace aardvark
 {
 	class CAardvarkClient;
@@ -39,6 +41,7 @@ public:
 
 	void updateGadgetNamesForBrowser();
 	bool hasPermission( const std::string & permission );
+	const std::string getInitialHook() const { return m_initialHook; }
 
 	void runFrame();
 private:
@@ -47,7 +50,9 @@ private:
 	std::unique_ptr<CAardvarkObject> m_aardvarkObject;
 	CefRefPtr<CefBrowser> m_browser;
 	CefRefPtr<CefV8Context> m_context;
-	std::set<std::string> m_permissions;
+	std::string m_gadgetUri;
+	std::string m_initialHook;
+	CAardvarkGadgetManifest m_gadgetManifest;
 
 	// Include the default reference counting implementation.
 	IMPLEMENT_REFCOUNTING( CAardvarkRenderProcessHandler );

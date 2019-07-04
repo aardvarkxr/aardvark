@@ -68,7 +68,7 @@ TEST_CASE( "parse manifest", "[gadgets]" )
 	REQUIRE( "Default Hand" == gm.m_name );
 	REQUIRE( 1024 == gm.m_width );
 	REQUIRE( 512 == gm.m_height );
-	REQUIRE( std::vector<std::string>{ "scenegraph" } == gm.m_permissions);
+	REQUIRE( std::unordered_set<std::string>{ "scenegraph" } == gm.m_permissions);
 	REQUIRE( "http://aardvark.data/models/space_man_hand.glb" == gm.m_modelUri );
 }
 
@@ -86,7 +86,7 @@ TEST_CASE( "parse partial manifest", "[gadgets]" )
 	REQUIRE( "Default Hand" == gm.m_name );
 	REQUIRE( 16 == gm.m_width );
 	REQUIRE( 16 == gm.m_height );
-	REQUIRE( std::vector<std::string>{ "scenegraph", "master" } == gm.m_permissions );
+	REQUIRE( std::unordered_set<std::string>{ "scenegraph", "master" } == gm.m_permissions );
 	REQUIRE( "http://aardvark.data/models/space_man_hand.glb" == gm.m_modelUri );
 }
 

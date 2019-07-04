@@ -215,16 +215,17 @@ struct AvNodeRoot
 	panelProcessor @3: AvPanelProcessor;
 	grabberProcessor @4: AvGrabberProcessor;
 	grabbableProcessor @5: AvGrabbableProcessor;
+	hook @6: Text;
 }
 
 interface AvServer
 {
-	createGadget @0 ( name: Text ) -> ( gadget: AvGadget );
+	createGadget @0 ( name: Text, initialHook: Text ) -> ( gadget: AvGadget, gadgetId: UInt32 );
 	listenForFrames @1 ( listener: AvFrameListener ) -> ();
 	getModelSource @2 ( uri: Text ) -> ( success: Bool, source: AvModelSource );
 	updateDxgiTextureForGadgets @3 
 	( 
-		gadgetNames: List( Text ), 
+		gadgetIds: List( UInt32 ), 
 		sharedTextureInfo: AvSharedTextureInfo 
 	) -> ( success: Bool );
 	pushPokerProximity @4 

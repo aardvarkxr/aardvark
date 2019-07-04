@@ -24,11 +24,13 @@ namespace aardvark
 	::kj::Promise<void> AvServerImpl::createGadget( uint32_t clientId, CreateGadgetContext context )
 	{
 		auto server = kj::heap<CAardvarkGadget>( clientId, context.getParams().getName(), this );
+		server->setHook( context.getParams().getInitialHook() );
 		auto& serverRef = *server;
 
 		AvGadget::Client capability = kj::mv( server );
 
 		context.getResults().setGadget( capability );
+		context.getResults().setGadgetId( serverRef.getId() );
 
 		serverRef.AddClient( capability );
 		
@@ -110,6 +112,7 @@ namespace aardvark
 			for ( uint32_t unIndex = 0; unIndex < visuals.vecSceneGraphs.size(); unIndex++ )
 			{
 				bldRoots[unIndex].setNodes( visuals.vecSceneGraphs[unIndex].root.getNodes() );
+				bldRoots[unIndex].setHook( visuals.vecSceneGraphs[unIndex].hook );
 				bldRoots[unIndex].setSourceId( visuals.vecSceneGraphs[unIndex].gadgetId );
 			}
 
@@ -146,14 +149,14 @@ namespace aardvark
 
 	::kj::Promise<void> AvServerImpl::updateDxgiTextureForGadgets( uint32_t clientId, UpdateDxgiTextureForGadgetsContext context )
 	{
-		if ( context.getParams().hasGadgetNames() )
+		if ( context.getParams().hasGadgetIds() )
 		{
 			for ( auto gadget : m_vecGadgets )
 			{
 				bool bSetThisOne = false;
-				for ( auto gadgetName : context.getParams().getGadgetNames() )
+				for ( auto gadgetId : context.getParams().getGadgetIds() )
 				{
-					if ( gadgetName == gadget->getName() )
+					if ( gadgetId == gadget->getId() )
 					{
 						gadget->setSharedTextureInfo( context.getParams().getSharedTextureInfo() );
 						break;

@@ -17,22 +17,133 @@
 #include "include/wrapper/cef_closure_task.h"
 #include "include/wrapper/cef_helpers.h"
 
-CAardvarkCefHandler::CAardvarkCefHandler(bool use_views, IApplication *application, const std::vector<std::string> & permissions )
-    : m_useViews(use_views), m_isClosing(false) 
+#include <json/json.hpp>
+
+CStartGadgetRequestClient::CStartGadgetRequestClient( CAardvarkCefHandler *cefHandler )
+{
+	m_cefHandler = cefHandler;
+}
+
+void CStartGadgetRequestClient::OnRequestComplete( CefRefPtr<CefURLRequest> request ) 
+{
+	CefURLRequest::Status status = request->GetRequestStatus();
+	CefURLRequest::ErrorCode error_code = request->GetRequestError();
+	CefRefPtr<CefResponse> response = request->GetResponse();
+
+	m_cefHandler->onGadgetManifestReceived( error_code == ERR_NONE, m_downloadData );
+}
+
+void CStartGadgetRequestClient::OnUploadProgress( CefRefPtr<CefURLRequest> request,
+	int64 current,
+	int64 total ) 
+{
+}
+
+void CStartGadgetRequestClient::OnDownloadProgress( CefRefPtr<CefURLRequest> request,
+	int64 current,
+	int64 total ) 
+{
+}
+
+void CStartGadgetRequestClient::OnDownloadData( CefRefPtr<CefURLRequest> request,
+	const void* data,
+	size_t data_length ) 
+{
+	m_downloadData += std::string( static_cast<const char*>( data ), data_length );
+}
+
+bool CStartGadgetRequestClient::GetAuthCredentials( bool isProxy,
+	const CefString& host,
+	int port,
+	const CefString& realm,
+	const CefString& scheme,
+	CefRefPtr<CefAuthCallback> callback ) 
+{
+	return false;  // Not handled.
+}
+
+CAardvarkCefHandler::CAardvarkCefHandler( IApplication *application, const std::string & gadgetUri, const std::string & initialHook )
+    : m_useViews( false ), m_isClosing(false) 
 {
 	m_application = application;
 	m_client = std::make_unique<aardvark::CAardvarkClient>();
 	m_client->Start();
 
-	m_permissions = permissions;
-
-	CefPostDelayedTask( TID_UI, base::Bind( &CAardvarkCefHandler::RunFrame, this ), 0 );
+	m_gadgetUri = gadgetUri;
+	m_initialHook = initialHook;
 }
+
 
 CAardvarkCefHandler::~CAardvarkCefHandler() 
 {
 	m_client->Stop();
 }
+
+// Called after creation to kick off the gadget
+void CAardvarkCefHandler::start()
+{
+	m_manifestRequestClient = new CStartGadgetRequestClient( this );
+
+	CefRefPtr<CefRequest> request = CefRequest::Create();
+	std::string gadgetManifestUri = m_gadgetUri + "/gadget_manifest.json";
+	request->SetURL( gadgetManifestUri );
+	request->SetMethod( "GET" );
+
+	m_manifestRequest = CefURLRequest::Create( request, m_manifestRequestClient, nullptr );
+}
+
+
+// Called when the manifest load is completed
+void CAardvarkCefHandler::onGadgetManifestReceived( bool success, const std::string & manifestData )
+{
+	if ( !success )
+	{
+		assert( false );
+		return;
+	}
+
+	try
+	{
+		nlohmann::json j = nlohmann::json::parse( manifestData.begin(), manifestData.end() );
+		m_gadgetManifest = j.get<CAardvarkGadgetManifest>();
+	}
+	catch ( nlohmann::json::exception &  )
+	{
+		// manifest parse failed
+		assert( false );
+		return;
+	}
+
+	m_gadgetManifestString = manifestData;
+
+	// Specify CEF browser settings here.
+	CefBrowserSettings browser_settings;
+
+	CefWindowInfo window_info;
+
+	// On Windows we need to specify certain flags that will be passed to
+	// CreateWindowEx().
+	window_info.SetAsPopup( NULL, m_gadgetManifest.m_name );
+
+	window_info.windowless_rendering_enabled = true;
+	window_info.shared_texture_enabled = true;
+
+	window_info.width = m_gadgetManifest.m_width;
+	window_info.height = m_gadgetManifest.m_height;
+	window_info.x = window_info.y = 0;
+
+	browser_settings.windowless_frame_rate = 90;
+
+	std::string fullUri = m_gadgetUri + "/index.html?initialHook=" + m_initialHook;
+
+	// Create the first browser window.
+	CefBrowserHost::CreateBrowser( window_info, this, fullUri, browser_settings,
+		NULL );
+
+	CefPostDelayedTask( TID_UI, base::Bind( &CAardvarkCefHandler::RunFrame, this ), 0 );
+	m_manifestRequest = nullptr;
+}
+
 
 void CAardvarkCefHandler::OnTitleChange(CefRefPtr<CefBrowser> browser,
                                   const CefString& title) 
@@ -65,16 +176,11 @@ void CAardvarkCefHandler::OnAfterCreated(CefRefPtr<CefBrowser> browser)
 
 	m_browser = browser;
 
-	size_t listIndex = 0;
-	CefRefPtr< CefListValue> permissionList = CefListValue::Create();
-	for ( auto & permission : m_permissions )
-	{
-		permissionList->SetString( listIndex++, permission );
-	}
+	CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "gadget_info" );
+	msg->GetArgumentList()->SetString( 0, m_gadgetUri );
+	msg->GetArgumentList()->SetString( 1, m_initialHook );
+	msg->GetArgumentList()->SetString( 2, m_gadgetManifestString );
 
-	CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "set_browser_permissions" );
-
-	msg->GetArgumentList()->SetList( 0, permissionList );
 	m_browser->SendProcessMessage( PID_RENDERER, msg );
 }
 
@@ -127,8 +233,8 @@ void CAardvarkCefHandler::GetViewRect( CefRefPtr<CefBrowser> browser, CefRect& r
 {
 	rect.x = 0;
 	rect.y = 0;
-	rect.width = m_width;
-	rect.height = m_height;
+	rect.width = m_gadgetManifest.m_width;
+	rect.height = m_gadgetManifest.m_height;
 }
 
 void CAardvarkCefHandler::OnPaint( CefRefPtr<CefBrowser> browser,
@@ -139,8 +245,8 @@ void CAardvarkCefHandler::OnPaint( CefRefPtr<CefBrowser> browser,
 	int height )
 {
 	// we don't care about the slow paint, just the GPU paint in OnAcceleratedPaint
-	m_width = width;
-	m_height = height;
+	assert( m_gadgetManifest.m_width == width );
+	assert( m_gadgetManifest.m_height == height );
 }
 
 
@@ -158,13 +264,13 @@ bool CAardvarkCefHandler::OnProcessMessageReceived( CefRefPtr<CefBrowser> browse
 	CefProcessId source_process,
 	CefRefPtr<CefProcessMessage> message )
 {
-	if ( message->GetName() == "update_browser_gadget_names" )
+	if ( message->GetName() == "update_browser_gadget_ids" )
 	{
 		m_gadgets.clear();
-		auto nameList = message->GetArgumentList()->GetList( 0 );
-		for ( size_t n = 0; n < nameList->GetSize(); n++ )
+		auto idList = message->GetArgumentList()->GetList( 0 );
+		for ( size_t n = 0; n < idList->GetSize(); n++ )
 		{
-			m_gadgets.push_back( nameList->GetString( n ).ToString() );
+			m_gadgets.push_back( (uint32_t)idList->GetInt( n ) );
 		}
 		updateSceneGraphTextures();
 		return true;
@@ -172,21 +278,15 @@ bool CAardvarkCefHandler::OnProcessMessageReceived( CefRefPtr<CefBrowser> browse
 	else if ( message->GetName() == "start_gadget" )
 	{
 		std::string uri( message->GetArgumentList()->GetString( 0 ) );
-		std::vector<std::string> permissions;
-		auto permissionList = message->GetArgumentList()->GetList( 1 );
-		for ( size_t n = 0; n < permissionList->GetSize(); n++ )
-		{
-			permissions.push_back( permissionList->GetString( n ).ToString() );
-		}
+		std::string initialHook( message->GetArgumentList()->GetString( 1 ) );
 
-		CAardvarkCefApp::instance()->startGadget( uri, permissions );
-
+		CAardvarkCefApp::instance()->startGadget( uri, initialHook );
 	}
 	else if ( message->GetName() == "mouse_event" )
 	{
 		CefMouseEvent cefEvent;
-		cefEvent.x = (int)(message->GetArgumentList()->GetDouble( 1 ) * (double)m_width );
-		cefEvent.y = (int)( message->GetArgumentList()->GetDouble( 2 ) * (double)m_height );
+		cefEvent.x = (int)(message->GetArgumentList()->GetDouble( 1 ) * (double)m_gadgetManifest.m_width );
+		cefEvent.y = (int)( message->GetArgumentList()->GetDouble( 2 ) * (double)m_gadgetManifest.m_height );
 		cefEvent.modifiers = 0;
 
 		switch ( (aardvark::EPanelMouseEventType)message->GetArgumentList()->GetInt( 0 ) )
@@ -236,19 +336,13 @@ void CAardvarkCefHandler::updateSceneGraphTextures()
 		return;
 	}
 
-	std::vector< const char *> namePointers;
-	for ( auto & appName : m_gadgets )
+	if ( m_gadgets.empty() )
 	{
-		namePointers.push_back( appName.c_str() );
-	}
-
-	if ( namePointers.empty() )
-	{
-		aardvark::avUpdateDxgiTextureForGadgets( &*m_client, nullptr, 0, m_width, m_height, m_sharedTexture, true );
+		aardvark::avUpdateDxgiTextureForGadgets( &*m_client, nullptr, 0, m_gadgetManifest.m_width, m_gadgetManifest.m_height, m_sharedTexture, true );
 	}
 	else
 	{
-		aardvark::avUpdateDxgiTextureForGadgets( &*m_client, &namePointers[0], (uint32_t)namePointers.size(), m_width, m_height, m_sharedTexture, true );
+		aardvark::avUpdateDxgiTextureForGadgets( &*m_client, &m_gadgets[0], (uint32_t)m_gadgets.size(), m_gadgetManifest.m_width, m_gadgetManifest.m_height, m_sharedTexture, true );
 	}
 }
 

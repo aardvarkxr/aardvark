@@ -87,19 +87,21 @@ class CAardvarkGadgetObject : public CJavascriptObjectWithFunctions
 {
 	friend class CSceneContextObject;
 public:
-	CAardvarkGadgetObject( CAardvarkRenderProcessHandler *pRenderProcessHandler, AvGadget::Client client, const std::string & name );
+	CAardvarkGadgetObject( CAardvarkRenderProcessHandler *pRenderProcessHandler, AvGadget::Client client, const std::string & name, uint32_t gadgetId );
 
 	virtual bool init() override;
 	virtual void cleanup() override;
 
 	aardvark::EAvSceneGraphResult  finishSceneContext( CSceneContextObject *contextObject );
 	const std::string & getName() const { return m_name; }
+	uint32_t getId() const { return m_gadgetId; }
 	void runFrame();
 
 private:
 	AvGadget::Client m_gadgetClient;
 	CAardvarkRenderProcessHandler *m_handler = nullptr;
 	std::string m_name;
+	uint32_t m_gadgetId;
 	std::list<std::unique_ptr<CSceneContextObject>> m_sceneContexts;
 	std::set<uint32_t> m_nodeIdsThatNeedThisTexture;
 	std::unordered_map< uint32_t, CefRefPtr< CefV8Value > > m_pokerProcessors;
@@ -443,11 +445,12 @@ void CSceneContextObject::cleanup()
 }
 
 
-CAardvarkGadgetObject::CAardvarkGadgetObject( CAardvarkRenderProcessHandler *renderProcessHandler, AvGadget::Client client, const std::string & name )
+CAardvarkGadgetObject::CAardvarkGadgetObject( CAardvarkRenderProcessHandler *renderProcessHandler, AvGadget::Client client, const std::string & name, uint32_t gadgetId )
 	: m_gadgetClient( client )
 {
 	m_handler = renderProcessHandler;
 	m_name = name;
+	m_gadgetId = gadgetId;
 }
 
 
@@ -959,6 +962,7 @@ bool CAardvarkObject::init()
 
 			auto reqCreateGadget = m_handler->getClient()->Server().createGadgetRequest();
 			reqCreateGadget.setName( std::string( arguments[0]->GetStringValue() ).c_str() );
+			reqCreateGadget.setInitialHook( m_handler->getInitialHook() );
 			auto resCreateGadget = reqCreateGadget.send().wait( m_handler->getClient()->WaitScope() );
 			if ( !resCreateGadget.hasGadget() )
 			{
@@ -966,7 +970,7 @@ bool CAardvarkObject::init()
 			}
 			else
 			{
-				auto gadget = std::make_unique<CAardvarkGadgetObject>( m_handler, resCreateGadget.getGadget(), std::string( arguments[0]->GetStringValue() ) );
+				auto gadget = std::make_unique<CAardvarkGadgetObject>( m_handler, resCreateGadget.getGadget(), std::string( arguments[0]->GetStringValue() ), resCreateGadget.getGadgetId() );
 				if ( !gadget->init() )
 				{
 					retval = CefV8Value::CreateNull();
@@ -995,27 +999,16 @@ bool CAardvarkObject::init()
 				exception = "Invalid url argument";
 				return;
 			}
-			if ( !arguments[1]->IsArray() )
+			if ( !arguments[1]->IsString() )
 			{
-				exception = "Invalid permission argument";
+				exception = "Invalid hook argument";
 				return;
-			}
-
-			size_t listIndex = 0;
-			CefRefPtr< CefListValue> permissionList = CefListValue::Create();
-			for ( size_t n = 0; n < arguments[1]->GetArrayLength(); n++ )
-			{
-				auto arrayValue = arguments[1]->GetValue( (int)n );
-				if ( arrayValue->IsString() )
-				{
-					permissionList->SetString( listIndex++, arrayValue->GetStringValue() );
-				}
 			}
 
 			CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "start_gadget" );
 
 			msg->GetArgumentList()->SetString( 0, arguments[0]->GetStringValue() );
-			msg->GetArgumentList()->SetList( 1, permissionList );
+			msg->GetArgumentList()->SetString( 1, arguments[1]->GetStringValue() );
 			m_handler->getBrowser()->SendProcessMessage( PID_BROWSER, msg );
 		} );
 	}
@@ -1079,14 +1072,22 @@ bool CAardvarkRenderProcessHandler::OnProcessMessageReceived( CefRefPtr<CefBrows
 {
 	std::string messageName = message->GetName();
 
-	if ( messageName == "set_browser_permissions" )
+	if ( messageName == "gadget_info" )
 	{
-		m_permissions.clear();
-		auto permList = message->GetArgumentList()->GetList( 0 );
-		for ( size_t n = 0; n < permList->GetSize(); n++ )
+		m_gadgetUri = message->GetArgumentList()->GetString( 0 );
+		m_initialHook = message->GetArgumentList()->GetString( 1 );
+
+		try
 		{
-			std::string perm( permList->GetString( n ) );
-			m_permissions.insert( perm );
+			std::string manifestData = message->GetArgumentList()->GetString( 2 );
+			nlohmann::json j = nlohmann::json::parse( manifestData.begin(), manifestData.end() );
+			m_gadgetManifest = j.get<CAardvarkGadgetManifest>();
+		}
+		catch ( nlohmann::json::exception & )
+		{
+			// manifest parse failed
+			assert( false );
+			return false;
 		}
 	}
 	return false;
@@ -1096,21 +1097,21 @@ bool CAardvarkRenderProcessHandler::OnProcessMessageReceived( CefRefPtr<CefBrows
 void CAardvarkRenderProcessHandler::updateGadgetNamesForBrowser()
 {
 	size_t listIndex = 0;
-	CefRefPtr< CefListValue> nameList = CefListValue::Create();
+	CefRefPtr< CefListValue> idList = CefListValue::Create();
 	for ( auto & gadget : m_aardvarkObject->getGadgets() )
 	{
-		nameList->SetString( listIndex++, gadget->getName() );
+		idList->SetInt( listIndex++, gadget->getId() );
 	}
 
-	CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "update_browser_gadget_names" );
+	CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "update_browser_gadget_ids" );
 
-	msg->GetArgumentList()->SetList( 0, nameList );
+	msg->GetArgumentList()->SetList( 0, idList );
 	m_browser->SendProcessMessage( PID_BROWSER, msg );
 }
 
 bool CAardvarkRenderProcessHandler::hasPermission( const std::string & permission )
 {
-	return m_permissions.find( permission ) != m_permissions.end();
+	return m_gadgetManifest.m_permissions.find( permission ) != m_gadgetManifest.m_permissions.end();
 }
 
 void CAardvarkRenderProcessHandler::runFrame()

@@ -13,6 +13,7 @@
 #include "include/wrapper/cef_helpers.h"
 #include "av_cef_handler.h"
 #include "av_cef_javascript.h"
+#include <aardvark/aardvark_gadget_manifest.h>
 
 #include <processthreadsapi.h>
 
@@ -91,84 +92,19 @@ void CAardvarkCefApp::OnContextInitialized()
 	const bool use_views = false;
 #endif
 
-	std::vector<std::string> vecPermissions = { "master" };
 
-	// CAardvarkCefHandler implements browser-level callbacks.
-	CefRefPtr<CAardvarkCefHandler> handler(new CAardvarkCefHandler(use_views, m_application, vecPermissions ));
-	m_browsers.push_back( handler );
-
-	// Specify CEF browser settings here.
-	CefBrowserSettings browser_settings;
-
-	// Check if a "--url=" value was provided via the command-line. If so, use
-	// that instead of the default URL.
-	std::string url = "file:///E:/homedev/aardvark/build/apps/aardvark_master/index.html";
-
-	if (use_views) 
-	{
-		// Create the BrowserView.
-		CefRefPtr<CefBrowserView> browser_view = CefBrowserView::CreateBrowserView(
-		handler, url, browser_settings, NULL, NULL);
-
-		// Create the Window. It will show itself after creation.
-		CefWindow::CreateTopLevelWindow(new SimpleWindowDelegate(browser_view));
-	} 
-	else 
-	{
-		// Information used when creating the native window.
-		CefWindowInfo window_info;
-
-#if defined(OS_WIN)
-		// On Windows we need to specify certain flags that will be passed to
-		// CreateWindowEx().
-		window_info.SetAsPopup(NULL, "aardvark");
-#endif
-
-		window_info.windowless_rendering_enabled = true;
-		window_info.shared_texture_enabled = true;
-
-		window_info.width = 1024;
-		window_info.height = 1024;
-		window_info.x = window_info.y = 0;
-		
-		browser_settings.windowless_frame_rate = 90;
-
-		// Create the first browser window.
-		CefBrowserHost::CreateBrowser(window_info, handler, url, browser_settings,
-									NULL);
-	}
+	startGadget( "file:///E:/homedev/aardvark/build/gadgets/aardvark_master", "" );
 }
 
 
-void CAardvarkCefApp::startGadget( std::string & uri, const std::vector<std::string> & permissions )
+void CAardvarkCefApp::startGadget( const std::string & uri, const std::string & initialHook )
 {
 	CEF_REQUIRE_UI_THREAD();
 
 	// CAardvarkCefHandler implements browser-level callbacks.
-	CefRefPtr<CAardvarkCefHandler> handler( new CAardvarkCefHandler( false, m_application, permissions ) );
+	CefRefPtr<CAardvarkCefHandler> handler( new CAardvarkCefHandler( m_application, uri, initialHook ) );
 	m_browsers.push_back( handler );
-
-	// Specify CEF browser settings here.
-	CefBrowserSettings browser_settings;
-
-	CefWindowInfo window_info;
-
-	// On Windows we need to specify certain flags that will be passed to
-	// CreateWindowEx().
-	window_info.SetAsPopup( NULL, "aardvark app" );
-
-	window_info.windowless_rendering_enabled = true;
-	window_info.shared_texture_enabled = true;
-
-	window_info.width = 1024;
-	window_info.height = 1024;
-	window_info.x = window_info.y = 0;
-
-	browser_settings.windowless_frame_rate = 90;
-
-	// Create the first browser window.
-	CefBrowserHost::CreateBrowser( window_info, handler, uri, browser_settings,
-		NULL );
+	handler->start();
 }
 
 

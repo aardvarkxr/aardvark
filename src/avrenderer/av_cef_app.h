@@ -41,11 +41,12 @@ public:
 	// Request that all existing browser windows close.
 	void CloseAllBrowsers( bool force_close );
 
-	void startGadget( std::string & uri, const std::vector<std::string> & permissions );
+	void startGadget( const std::string & uri, const std::string & initialHook );
 
 
 
 private:
+
 	IApplication *m_application = nullptr;
 	CefRefPtr<CefRenderProcessHandler> m_renderProcessHandler;
 

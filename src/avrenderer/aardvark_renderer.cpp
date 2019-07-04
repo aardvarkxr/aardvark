@@ -1818,6 +1818,12 @@ void VulkanExample::TraverseSceneGraph( const SgRoot_t *root )
 	{
 		m_pCurrentRoot = root;
 
+		// set the node 0 transform to its hook by default
+		if ( !root->hook.empty() )
+		{
+			setHookOrigin( root->hook, root->nodes[0] );
+		}
+
 		// the 0th node is always the root
 		TraverseNode( root->nodes[0], nullptr );
 	}
@@ -1906,6 +1912,12 @@ void VulkanExample::TraverseNode( const AvNode::Reader & node, CPendingTransform
 void VulkanExample::TraverseOrigin( const AvNode::Reader & node, CPendingTransform *defaultParent )
 {
 	std::string origin = node.getPropOrigin();
+	setHookOrigin( origin, node );
+}
+
+
+void VulkanExample::setHookOrigin( std::string origin, const AvNode::Reader & node )
+{
 	auto iOrigin = m_universeFromOriginTransforms.find( origin );
 	if ( iOrigin != m_universeFromOriginTransforms.end() )
 	{
@@ -2180,6 +2192,7 @@ void VulkanExample::applyFrame( AvVisualFrame::Reader & newFrame )
 		rootStruct->root = tools::newOwnCapnp( root );
 		rootStruct->nodes.reserve( root.getNodes().size() );
 		rootStruct->gadgetId = root.getSourceId();
+		rootStruct->hook = root.getHook();
 
 		for ( auto & nodeWrapper : rootStruct->root.getNodes() )
 		{

@@ -1081,7 +1081,7 @@ class TinyGLTF {
 #endif
 #endif
 
-#include "json.hpp"
+#include <json/json.hpp>
 
 #ifdef TINYGLTF_ENABLE_DRACO
 #include "draco/core/decoder_buffer.h"

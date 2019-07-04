@@ -192,7 +192,7 @@ interface Av_CreateGadget
 
 interface Av_StartGadget
 {
-	( uri:string, permissions: string[]):void;
+	( uri:string, initialHook: string ):void;
 }
 
 export interface Aardvark

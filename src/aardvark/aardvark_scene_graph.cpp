@@ -431,17 +431,17 @@ namespace aardvark
 
 	// tells the renderer what DXGI to use for a scene graph node
 	EAvSceneGraphResult avUpdateDxgiTextureForGadgets( aardvark::CAardvarkClient *pClient, 
-		const char **pchGadgetName, uint32_t unNameCount, 
+		uint32_t *gadgetIds, uint32_t unIdCount,
 		uint32_t unWidth, uint32_t unHeight, 
 		void *pvSharedTextureHandle, bool bInvertY )
 	{
 		auto reqUpdate = pClient->Server().updateDxgiTextureForGadgetsRequest();
-		if ( unNameCount )
+		if ( unIdCount )
 		{
-			auto names = reqUpdate.initGadgetNames( unNameCount );
-			for ( uint32_t n = 0; n < unNameCount; n++ )
+			auto ids = reqUpdate.initGadgetIds( unIdCount );
+			for ( uint32_t n = 0; n < unIdCount; n++ )
 			{
-				names.set( n, pchGadgetName[n] );
+				ids.set( n, gadgetIds[n] );
 			}
 		}
 

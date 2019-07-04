@@ -32,6 +32,7 @@ namespace aardvark
 		kj::Maybe<AvGrabberProcessor::Client> findGrabberProcessor( uint32_t grabberLocalId );
 		kj::Maybe<AvGrabbableProcessor::Client> findGrabbableProcessor( uint32_t grabbableLocalId );
 
+		void setHook( const std::string & hook ) { m_hook = hook; }
 		void gatherVisuals( AvVisuals_t & visuals );
 
 		virtual ::kj::Promise<void> destroy( DestroyContext context ) override;
@@ -52,6 +53,7 @@ namespace aardvark
 		AvServerImpl *m_pParentServer = nullptr;
 		uint32_t m_id = 0;
 		uint32_t m_clientId;
+		std::string m_hook;
 	};
 }
 

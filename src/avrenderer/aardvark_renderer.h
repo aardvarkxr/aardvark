@@ -94,6 +94,9 @@ public:
 
 	void TraverseNode( const AvNode::Reader & node, CPendingTransform *defaultParent );
 	void TraverseOrigin( const AvNode::Reader & node, CPendingTransform *defaultParent );
+
+	void setHookOrigin( std::string origin, const AvNode::Reader & node );
+
 	void TraverseTransform( const AvNode::Reader & node, CPendingTransform *defaultParent );
 	void TraverseModel( const AvNode::Reader & node, CPendingTransform *defaultParent );
 	void TraversePanel( const AvNode::Reader & node, CPendingTransform *defaultParent );
@@ -143,6 +146,7 @@ private:
 		std::unordered_map<uint32_t, size_t> mapIdToIndex;
 		tools::OwnCapnp<AvNodeRoot> root = nullptr;
 		std::vector<AvNode::Reader> nodes;
+		std::string hook;
 		uint32_t gadgetId;
 	};
 

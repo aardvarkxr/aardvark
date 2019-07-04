@@ -130,6 +130,6 @@ namespace aardvark
 		uint64_t grabbableId, EGrabEventType type );
 
 	// tells the renderer what DXGI to use for a scene graph gadget
-	EAvSceneGraphResult avUpdateDxgiTextureForGadgets( aardvark::CAardvarkClient *pClient, const char **pchGadgetName, uint32_t unNameCount, uint32_t unWidth, uint32_t unHeight, void *pvSharedTextureHandle, bool bInvertY );
+	EAvSceneGraphResult avUpdateDxgiTextureForGadgets( aardvark::CAardvarkClient *pClient, uint32_t *gadgetIds, uint32_t unIdCount, uint32_t unWidth, uint32_t unHeight, void *pvSharedTextureHandle, bool bInvertY );
 
 }

@@ -67,16 +67,14 @@ class TestPanel extends React.Component< {}, TestPanelState >
 		return (
 			<div className={ sDivClasses } >
 				<AvGadget name="Fnord the gadget">
-					<AvOrigin path="/user/hand/left">
-						<AvGrabbable updateHighlight={ this.onHighlightGrabbable }>
-							<AvSphereHandle radius={0.1} />
-							
-							<AvTransform uniformScale={0.4}>
-								<AvPanel interactive={true}
-									onIdAssigned={ (id:number) => { this.m_panelId = id } }/>
-							</AvTransform>
-						</AvGrabbable>
-					</AvOrigin>
+					<AvGrabbable updateHighlight={ this.onHighlightGrabbable }>
+						<AvSphereHandle radius={0.1} />
+						
+						<AvTransform uniformScale={0.4}>
+							<AvPanel interactive={true}
+								onIdAssigned={ (id:number) => { this.m_panelId = id } }/>
+						</AvTransform>
+					</AvGrabbable>
 				</AvGadget>
 				<div className="Label">Count: { this.state.count }</div>
 				<div className="Button" onMouseDown={ this.incrementCount }
