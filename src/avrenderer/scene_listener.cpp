@@ -1,7 +1,6 @@
 #include "scene_listener.h"
 #include "aardvark_renderer.h"
 
-extern VulkanExample *vulkanExample;
 
 
 
@@ -15,10 +14,9 @@ void CSceneListener::earlyInit( CefRefPtr<CAardvarkCefApp> app )
 {
 	m_app = app;
 	m_app->setApplication( m_renderer.get() );
-	vulkanExample = m_renderer.get();
 }
 
-void CSceneListener::init( HINSTANCE hinstance, WNDPROC wndproc )
+void CSceneListener::init( HINSTANCE hinstance )
 {
 	m_pClient = kj::heap<aardvark::CAardvarkClient>();
 	m_pClient->Start();
@@ -32,10 +30,10 @@ void CSceneListener::init( HINSTANCE hinstance, WNDPROC wndproc )
 	reqListen.setListener( listenerClient );
 	reqListen.send().wait( m_pClient->WaitScope() );
 
-	vulkanExample->initOpenVR();
-	vulkanExample->initVulkan();
-	vulkanExample->setupWindow( hinstance, wndproc );
-	vulkanExample->prepare();
+	m_renderer->initOpenVR();
+	m_renderer->initVulkan();
+	m_renderer->setupWindow( hinstance );
+	m_renderer->prepare();
 }
 
 void CSceneListener::cleanup()
@@ -44,7 +42,7 @@ void CSceneListener::cleanup()
 	m_pClient = nullptr;
 
 
-	vulkanExample = nullptr;
+	m_renderer = nullptr;
 }
 
 void CSceneListener::run()

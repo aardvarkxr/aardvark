@@ -19,18 +19,8 @@
 #include "tiny_gltf.h"
 
 
-VulkanExample *vulkanExample;
-
 // OS specific macros for the example main entry points
 #if defined(_WIN32)
-LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
-{
-	if (vulkanExample != NULL)
-	{
-		vulkanExample->handleMessages(hWnd, uMsg, wParam, lParam);
-	}
-	return (DefWindowProc(hWnd, uMsg, wParam, lParam));
-}
 int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 {
 	// give the CEF subprocess the first crack
@@ -86,7 +76,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 	// Initialize CEF.
 	CefInitialize( mainArgs, settings, app.get(), sandbox_info );
 
-	sceneListener.init(hInstance, WndProc );
+	sceneListener.init( hInstance );
 
 	sceneListener.run();
 	sceneListener.cleanup();

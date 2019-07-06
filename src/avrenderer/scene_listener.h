@@ -29,7 +29,7 @@ public:
 
 	void earlyInit( CefRefPtr<CAardvarkCefApp> app );
 
-	void init( HINSTANCE hinstance, WNDPROC wndproc );
+	void init( HINSTANCE hinstance );
 	void cleanup();
 	void run();
 

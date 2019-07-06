@@ -733,7 +733,17 @@ void VulkanExampleBase::initVulkan()
 
 #if defined(_WIN32)
 
-HWND VulkanExampleBase::setupWindow(HINSTANCE hinstance, WNDPROC wndproc)
+LRESULT CALLBACK WndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
+{
+	VulkanExampleBase *example = (VulkanExampleBase*)GetWindowLongPtr( hWnd, GWLP_USERDATA );
+	if ( example != nullptr )
+	{
+		example->handleMessages( hWnd, uMsg, wParam, lParam );
+	}
+	return ( DefWindowProc( hWnd, uMsg, wParam, lParam ) );
+}
+
+HWND VulkanExampleBase::setupWindow( HINSTANCE hinstance )
 {
 	this->windowInstance = hinstance;
 
@@ -741,7 +751,7 @@ HWND VulkanExampleBase::setupWindow(HINSTANCE hinstance, WNDPROC wndproc)
 
 	wndClass.cbSize = sizeof(WNDCLASSEX);
 	wndClass.style = CS_HREDRAW | CS_VREDRAW;
-	wndClass.lpfnWndProc = wndproc;
+	wndClass.lpfnWndProc = WndProc;
 	wndClass.cbClsExtra = 0;
 	wndClass.cbWndExtra = 0;
 	wndClass.hInstance = hinstance;
@@ -824,6 +834,8 @@ HWND VulkanExampleBase::setupWindow(HINSTANCE hinstance, WNDPROC wndproc)
 		return nullptr;
 		exit(1);
 	}
+
+	SetWindowLongPtr( window, GWLP_USERDATA, (LONG_PTR)this );
 
 	ShowWindow(window, SW_SHOW);
 	SetForegroundWindow(window);
