@@ -21,6 +21,8 @@ add_executable(avrenderer
 	intersection_tester.h
 	pending_transform.cpp
 	pending_transform.h
+	uri_request_handler.cpp
+	uri_request_handler.h
 
 	${SHADERS}
 	)

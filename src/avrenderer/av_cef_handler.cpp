@@ -349,6 +349,7 @@ void CAardvarkCefHandler::updateSceneGraphTextures()
 void CAardvarkCefHandler::RunFrame()
 {
 	m_client->WaitScope().poll();
+	m_uriRequestHandler.doCefRequestWork();
 
 	CefPostDelayedTask( TID_UI, base::Bind( &CAardvarkCefHandler::RunFrame, this ), 11 );
 }

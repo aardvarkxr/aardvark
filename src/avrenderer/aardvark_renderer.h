@@ -25,6 +25,7 @@
 #include "intersection_tester.h"
 #include "collision_tester.h"
 #include "pending_transform.h"
+#include "uri_request_handler.h"
 
 #include <tools/capnprototools.h>
 
@@ -322,4 +323,5 @@ private:
 	};
 	std::unordered_map<uint64_t, NodeToNodeAnchor_t> m_nodeToNodeAnchors;
 
+	CUriRequestHandler m_uriRequests;
 };

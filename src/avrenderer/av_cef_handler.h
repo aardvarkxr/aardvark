@@ -11,6 +11,8 @@
 #include <aardvark/aardvark_client.h>
 #include <aardvark/aardvark_gadget_manifest.h>
 
+#include "uri_request_handler.h"
+
 #include <list>
 #include <set>
 #include <map>
@@ -150,6 +152,8 @@ private:
 	CefRefPtr<CefURLRequest> m_manifestRequest;
 	std::string m_gadgetUri;
 	std::string m_initialHook;
+
+	CUriRequestHandler m_uriRequestHandler;
 
 	// Include the default reference counting implementation.
 	IMPLEMENT_REFCOUNTING(CAardvarkCefHandler);

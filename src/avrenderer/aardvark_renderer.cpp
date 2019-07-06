@@ -2236,45 +2236,34 @@ std::shared_ptr<vkglTF::Model> VulkanExample::findOrLoadModel( std::string model
 
 	m_modelRequestsInProgress.insert( modelUri );
 
-	auto reqModelSource = m_pClient->Server().getModelSourceRequest();
-	reqModelSource.setUri( modelUri );
-	auto promModelSource = reqModelSource.send()
-		.then( [ this, modelUri ]( AvServer::GetModelSourceResults::Reader && res )
+	auto promUriLoad = m_uriRequests.requestUri( modelUri )
+		.then( [this, modelUri]( CUriRequestHandler::Result_t result )
 	{
-		if ( res.getSuccess() )
+		m_modelRequestsInProgress.erase( modelUri );
+		if ( !result.success )
 		{
-			// now get the actual data
-			auto promModelData = res.getSource().dataRequest().send()
-				.then( [this, modelUri]( AvModelSource::DataResults::Reader && res )
-			{
-				auto pModel = std::make_shared<vkglTF::Model>();
-				bool bLoaded = pModel->loadFromMemory( &res.getData()[0], res.getData().size(), vulkanDevice, m_descriptorManager, queue );
-
-				if ( bLoaded )
-				{
-					m_mapModels.insert( std::make_pair( modelUri, pModel ) );
-					setupDescriptorSetsForModel( pModel );
-					m_modelRequestsInProgress.erase( modelUri );
-				}
-				else
-				{
-					assert( bLoaded );
-					m_failedModelRequests.insert( modelUri );
-					m_modelRequestsInProgress.erase( modelUri );
-				}
-			} );
-
-			m_pClient->addToTasks( std::move( promModelData ) );
-
+			m_failedModelRequests.insert( modelUri );
 		}
 		else
 		{
-			m_failedModelRequests.insert( modelUri );
-			m_modelRequestsInProgress.erase( modelUri );
+			auto pModel = std::make_shared<vkglTF::Model>();
+			bool bLoaded = pModel->loadFromMemory( result.data.data(), result.data.size(), vulkanDevice, m_descriptorManager, queue );
+
+			assert( bLoaded );
+			if ( bLoaded )
+			{
+				m_mapModels.insert( std::make_pair( modelUri, pModel ) );
+				setupDescriptorSetsForModel( pModel );
+			}
+			else
+			{
+				m_failedModelRequests.insert( modelUri );
+			}
 		}
 	} );
+
 		
-	m_pClient->addToTasks( std::move( promModelSource ) );
+	m_pClient->addToTasks( std::move( promUriLoad ) );
 
 	return nullptr;
 }
@@ -2643,6 +2632,7 @@ void VulkanExample::render()
 
 	// pump messages from RPC
 	m_pClient->WaitScope().poll();
+	m_uriRequests.processResults();
 
 	// pump messages for CEF
 	//CefDoMessageLoopWork();
