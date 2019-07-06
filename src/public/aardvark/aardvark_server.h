@@ -17,7 +17,6 @@ namespace aardvark
 	public:
 		::kj::Promise<void> createGadget( uint32_t clientId, AvServer::Server::CreateGadgetContext context );
 		::kj::Promise<void> listenForFrames( uint32_t clientId, AvServer::Server::ListenForFramesContext context );
-		::kj::Promise<void> getModelSource( uint32_t clientId, AvServer::Server::GetModelSourceContext context );
 		::kj::Promise<void> updateDxgiTextureForGadgets( uint32_t clientId, AvServer::Server::UpdateDxgiTextureForGadgetsContext context );
 		::kj::Promise<void> pushPokerProximity( uint32_t clientId, AvServer::Server::PushPokerProximityContext context );
 		::kj::Promise<void> pushGrabIntersections( uint32_t clientId, AvServer::Server::PushGrabIntersectionsContext context );
@@ -59,11 +58,9 @@ namespace aardvark
 		void sendFrameToAllListeners();
 		void sendFrameToListener( AvFrameListener::Client listener );
 		void clearGadgets();
-		CAardvarkModelSource *findOrCreateSource( const std::string & sUri );
 		CAardvarkGadget *findGadgetByName( const std::string & sGadgetName );
 
 	private:
-		std::unordered_map< std::string, CAardvarkModelSource *> m_mapModelSources;
 		std::vector< CAardvarkGadget * > m_vecGadgets;
 
 		struct FrameListener_t

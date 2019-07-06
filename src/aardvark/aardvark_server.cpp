@@ -1,6 +1,5 @@
 #include "aardvark/aardvark_server.h"
 #include "aardvark_gadget_impl.h"
-#include "aardvark_model_source_impl.h"
 #include "framestructs.h"
 #include "tools/filetools.h"
 #include "tools/pathtools.h"
@@ -183,68 +182,6 @@ namespace aardvark
 		else
 		{
 			// if the poker or the gadget has gone away, just drop the request on the floor.
-		}
-		return kj::READY_NOW;
-	}
-
-
-	CAardvarkModelSource *AvServerImpl::findOrCreateSource( const std::string & sUri )
-	{
-		auto iSource = m_mapModelSources.find( sUri );
-		if ( iSource != m_mapModelSources.end() )
-		{
-			return iSource->second;
-		}
-
-		if ( !tools::IsFileUri( sUri ) )
-		{
-			// TODO(Joe): actual HTTP requests aren't supported yet
-			return nullptr;
-		}
-
-		auto path = tools::FileUriToPath( sUri );
-		if ( path.empty() )
-		{
-			// URI must have been malformed in some way
-			return nullptr;
-		}
-
-		auto modelBlob = tools::ReadBinaryFile( path );
-		if ( modelBlob.empty() )
-		{
-			return nullptr;
-		}
-
-		auto modelSource = kj::heap<CAardvarkModelSource>( sUri, std::move( modelBlob ) );
-
-		auto& modelSourceRef = *modelSource;
-		AvModelSource::Client capability = kj::mv( modelSource );
-
-		modelSourceRef.setClient( capability );
-
-		m_mapModelSources.insert( std::make_pair( std::string( sUri ), &modelSourceRef ) );
-
-		return &modelSourceRef;
-	}
-
-	::kj::Promise<void> AvServerImpl::getModelSource( uint32_t clientId, GetModelSourceContext context )
-	{
-		std::string sUri = context.getParams().getUri();
-		if ( sUri.size() == 0 )
-		{
-			context.getResults().setSuccess( false );
-			return kj::READY_NOW;
-		}
-
-		CAardvarkModelSource *pSource = findOrCreateSource( sUri );
-		if ( !pSource )
-		{
-			context.getResults().setSuccess( false );
-		}
-		else
-		{
-			context.getResults().setSource( pSource->getClient() );
-			context.getResults().setSuccess( true );
 		}
 		return kj::READY_NOW;
 	}
@@ -544,11 +481,6 @@ namespace aardvark
 			virtual ::kj::Promise<void> listenForFrames( ListenForFramesContext context ) override
 			{
 				return m_realServer->listenForFrames( m_clientId, context );
-			}
-
-			virtual ::kj::Promise<void> getModelSource( GetModelSourceContext context ) override
-			{
-				return m_realServer->getModelSource( m_clientId, context );
 			}
 
 			virtual ::kj::Promise<void> updateDxgiTextureForGadgets( UpdateDxgiTextureForGadgetsContext context ) override

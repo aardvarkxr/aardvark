@@ -23,12 +23,6 @@ struct AvSharedTextureInfo
 	invertY @5 : Bool;
 }
 
-interface AvModelSource
-{
-	uri @0 () -> ( uri: Text );
-	data @1 () -> ( data: Data );
-}
-
 struct AvVector
 {
 	x @0 : Float32;
@@ -57,12 +51,6 @@ struct AvTransform
 	position @0: AvVector;
 	rotation @1: AvQuaternion;
 	scale @2: AvVector;
-}
-
-struct AvModel
-{
-	transform @0: AvTransform;
-	source @1: AvModelSource;
 }
 
 struct AvLight
@@ -222,18 +210,17 @@ interface AvServer
 {
 	createGadget @0 ( name: Text, initialHook: Text ) -> ( gadget: AvGadget, gadgetId: UInt32 );
 	listenForFrames @1 ( listener: AvFrameListener ) -> ();
-	getModelSource @2 ( uri: Text ) -> ( success: Bool, source: AvModelSource );
-	updateDxgiTextureForGadgets @3 
+	updateDxgiTextureForGadgets @2 
 	( 
 		gadgetIds: List( UInt32 ), 
 		sharedTextureInfo: AvSharedTextureInfo 
 	) -> ( success: Bool );
-	pushPokerProximity @4 
+	pushPokerProximity @3 
 	(
 		pokerId : UInt64,
 		proximity: List( AvPanelProximity )
 	) -> ();
-	pushGrabIntersections @5 
+	pushGrabIntersections @4 
 	(
 		grabberId : UInt64,
 		isGrabPressed: Bool,

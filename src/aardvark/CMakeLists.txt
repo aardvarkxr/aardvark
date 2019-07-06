@@ -8,8 +8,6 @@ add_library(aardvark STATIC
 	aardvark_gadget_impl.cpp
 	aardvark_gadget_impl.h
 	aardvark_gadget_manifest.cpp
-	aardvark_model_source_impl.cpp
-	aardvark_model_source_impl.h
 	aardvark_grabbable_processor.cpp
 	aardvark_grabbable_processor.h
 	aardvark_grabber_processor.cpp
