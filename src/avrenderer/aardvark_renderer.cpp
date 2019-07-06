@@ -99,9 +99,6 @@ VulkanExample::VulkanExample()
 
 VulkanExample::~VulkanExample() noexcept
 {
-	m_pClient->Stop();
-	m_pClient = nullptr;
-
 	vkDestroyPipeline( device, pipelines.skybox, nullptr );
 	vkDestroyPipeline( device, pipelines.pbr, nullptr );
 	vkDestroyPipeline( device, pipelines.pbrAlphaBlend, nullptr );
@@ -1708,17 +1705,6 @@ void VulkanExample::prepare()
 	ui = new UI( vulkanDevice, renderPass, queue, pipelineCache, settings.sampleCount );
 	updateOverlay();
 
-	m_pClient = kj::heap<aardvark::CAardvarkClient>();
-	m_pClient->Start();
-
-	m_frameListener = kj::heap<AvFrameListenerImpl>();
-	m_frameListener->m_renderer = this;
-	
-	auto reqListen = m_pClient->Server().listenForFramesRequest();
-	AvFrameListener::Client listenerClient = std::move( m_frameListener );
-	reqListen.setListener( listenerClient );
-	reqListen.send().wait( m_pClient->WaitScope() );
-
 	vr::VRInput()->SetActionManifestPath( "e:/homedev/aardvark/data/input/aardvark_actions.json" );
 	vr::VRInput()->GetActionSetHandle( "/actions/aardvark", &m_actionSet );
 	vr::VRInput()->GetActionHandle( "/actions/aardvark/out/haptic", &m_actionHaptic );
@@ -2511,15 +2497,6 @@ glm::mat4 VulkanExample::glmMatFromVrMat( const vr::HmdMatrix34_t & mat )
 
 void VulkanExample::render()
 {
-	if ( !prepared )
-	{
-		// still pump the message loops
-		m_pClient->WaitScope().poll();
-		//			CefDoMessageLoopWork();
-
-		return;
-	}
-
 	if ( m_nextRoots )
 	{
 		m_roots = std::move( m_nextRoots );
@@ -2631,7 +2608,6 @@ void VulkanExample::render()
 	doInputWork();
 
 	// pump messages from RPC
-	m_pClient->WaitScope().poll();
 	m_uriRequests.processResults();
 
 	// pump messages for CEF
@@ -2777,37 +2753,4 @@ CPendingTransform *VulkanExample::updateTransform( uint64_t globalNodeId,
 	return transform;
 }
 
-
-::kj::Promise<void> AvFrameListenerImpl::newFrame( NewFrameContext context )
-{
-	m_renderer->applyFrame( context.getParams().getFrame() );
-	return kj::READY_NOW;
-}
-
-::kj::Promise<void> AvFrameListenerImpl::sendHapticEvent( SendHapticEventContext context )
-{
-	m_renderer->sendHapticEvent( context.getParams().getTargetGlobalId(),
-		context.getParams().getAmplitude(),
-		context.getParams().getFrequency(),
-		context.getParams().getDuration() );
-	return kj::READY_NOW;
-}
-
-::kj::Promise<void> AvFrameListenerImpl::startGrab( StartGrabContext context )
-{
-	uint64_t grabberGlobalId = context.getParams().getGrabberGlobalId();
-	uint64_t grabbableGlobalId = context.getParams().getGrabbableGlobalId();
-
-	m_renderer->startGrabImpl( grabberGlobalId, grabbableGlobalId );
-	return kj::READY_NOW;
-}
-
-
-::kj::Promise<void> AvFrameListenerImpl::endGrab( EndGrabContext context )
-{
-	uint64_t grabberGlobalId = context.getParams().getGrabberGlobalId();
-	uint64_t grabbableGlobalId = context.getParams().getGrabbableGlobalId();
-	m_renderer->endGrabImpl( grabberGlobalId, grabbableGlobalId );
-	return kj::READY_NOW;
-}
 

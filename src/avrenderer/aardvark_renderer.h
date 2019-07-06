@@ -34,21 +34,9 @@
 #include <aardvark/aardvark_scene_graph.h>
 
 
-class VulkanExample;
-
-class AvFrameListenerImpl : public AvFrameListener::Server
-{
-public:
-	virtual ::kj::Promise<void> newFrame( NewFrameContext context ) override;
-	virtual ::kj::Promise<void> sendHapticEvent( SendHapticEventContext context ) override;
-	virtual ::kj::Promise<void> startGrab( StartGrabContext context ) override;
-	virtual ::kj::Promise<void> endGrab( EndGrabContext context ) override;
-
-	VulkanExample *m_renderer = nullptr;
-};
-
 class VulkanExample : public VulkanExampleBase, public IApplication, public AvFrameListener::Server
 {
+	friend class CSceneListener;
 public:
 	enum class EEye
 	{
@@ -127,12 +115,12 @@ public:
 	void startGrabImpl( uint64_t grabberGlobalId, uint64_t grabbableGlobalId );
 	void endGrabImpl( uint64_t grabberGlobalId, uint64_t grabbableGlobalId );
 
-private:
+protected:
+	aardvark::CAardvarkClient *m_pClient;
+
 	CPendingTransform *getTransform( uint64_t globalNodeId );
 	CPendingTransform *updateTransform( uint64_t globalNodeId, CPendingTransform *parent, 
 		glm::mat4 parentFromNode, std::function<void( const glm::mat4 & universeFromNode )> applyFunction );
-
-	kj::Own< AvFrameListenerImpl > m_frameListener;
 
 	vr::VRActionSetHandle_t m_actionSet = vr::k_ulInvalidActionSetHandle;
 	vr::VRActionHandle_t m_actionGrab = vr::k_ulInvalidActionHandle;
@@ -241,7 +229,6 @@ private:
 	std::vector<VkSemaphore> renderCompleteSemaphores;
 	std::vector<VkSemaphore> presentCompleteSemaphores;
 
-	kj::Own<aardvark::CAardvarkClient> m_pClient;
 	std::unordered_map < std::string, std::shared_ptr< vkglTF::Model > > m_mapModels;
 	std::set< std::string > m_modelRequestsInProgress;
 	std::set< std::string > m_failedModelRequests;

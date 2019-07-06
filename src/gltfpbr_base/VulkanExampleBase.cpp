@@ -328,23 +328,43 @@ void VulkanExampleBase::renderFrame()
 	}
 }
 
+void VulkanExampleBase::runFrame( bool *shouldQuit, bool *shouldRender )
+{
+	if ( wantToQuit )
+	{
+		*shouldQuit = true;
+		*shouldRender = false;
+		return;
+	}
+
+	MSG msg;
+	while ( PeekMessage( &msg, NULL, 0, 0, PM_REMOVE ) ) 
+	{
+		TranslateMessage( &msg );
+		DispatchMessage( &msg );
+		if ( msg.message == WM_QUIT ) 
+		{
+			*shouldQuit = true;
+			break;
+		}
+	}
+
+	*shouldRender = !IsIconic( window );
+}
+
+
 void VulkanExampleBase::renderLoop()
 {
 	destWidth = width;
 	destHeight = height;
 #if defined(_WIN32)
-	MSG msg;
 	bool quitMessageReceived = false;
-	while (!quitMessageReceived && !wantToQuit) {
-		while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
-			if (msg.message == WM_QUIT) {
-				quitMessageReceived = true;
-				break;
-			}
-		}
-		if (!IsIconic(window)) {
+	while (!quitMessageReceived && !wantToQuit) 
+	{
+		bool shouldRender = false;
+		runFrame( &quitMessageReceived, &shouldRender );
+		if ( shouldRender ) 
+		{
 			renderFrame();
 		}
 	}

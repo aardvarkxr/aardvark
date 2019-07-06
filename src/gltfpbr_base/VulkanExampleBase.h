@@ -244,5 +244,6 @@ public:
 	void setupSwapChain();
 
 	void renderLoop();
+	void runFrame( bool *shouldQuit, bool *shouldRender );
 	void renderFrame();
 };

@@ -21,6 +21,8 @@ add_executable(avrenderer
 	intersection_tester.h
 	pending_transform.cpp
 	pending_transform.h
+	scene_listener.cpp
+	scene_listener.h
 	uri_request_handler.cpp
 	uri_request_handler.h
 

@@ -10,12 +10,14 @@
 // tinyglTF loader: https://github.com/syoyo/tinygltf
 
 #include "aardvark_renderer.h"
+#include "scene_listener.h"
 
 #define TINYGLTF_IMPLEMENTATION
 #define TINYGLTF_NO_STB_IMAGE_WRITE
 #define STB_IMAGE_IMPLEMENTATION
 #define STBI_MSC_SECURE_CRT
 #include "tiny_gltf.h"
+
 
 VulkanExample *vulkanExample;
 
@@ -78,18 +80,16 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 	// have to build the arg list before creating the example object
 	for ( int32_t i = 0; i < __argc; i++ ) { VulkanExample::args.push_back( __argv[i] ); };
 
-	vulkanExample = new VulkanExample();
-	app->setApplication( vulkanExample );
+	CSceneListener sceneListener;
+	sceneListener.earlyInit( app );
 
 	// Initialize CEF.
 	CefInitialize( mainArgs, settings, app.get(), sandbox_info );
 
-	vulkanExample->initOpenVR();
-	vulkanExample->initVulkan();
-	vulkanExample->setupWindow(hInstance, WndProc);
-	vulkanExample->prepare();
-	vulkanExample->renderLoop();
-	delete(vulkanExample);
+	sceneListener.init(hInstance, WndProc );
+
+	sceneListener.run();
+	sceneListener.cleanup();
 
 	app = nullptr;
 
