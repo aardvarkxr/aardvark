@@ -33,6 +33,16 @@
 #include <aardvark/aardvark_client.h>
 #include <aardvark/aardvark_scene_graph.h>
 
+struct SgRoot_t
+{
+	std::unordered_map<uint32_t, size_t> mapIdToIndex;
+	tools::OwnCapnp<AvNodeRoot> root = nullptr;
+	std::vector<AvNode::Reader> nodes;
+	std::string hook;
+	uint32_t gadgetId;
+};
+
+
 
 class VulkanExample : public VulkanExampleBase, public IApplication, public AvFrameListener::Server
 {
@@ -77,8 +87,6 @@ public:
 	virtual void onWindowClose() override;
 	virtual void allBrowsersClosed() override;
 
-	void TraverseSceneGraphs( float fFrameTime );
-
 	uint64_t GetGlobalId( const AvNode::Reader & node );
 
 	void TraverseNode( const AvNode::Reader & node, CPendingTransform *defaultParent );
@@ -94,11 +102,8 @@ public:
 	void TraverseHandle( const AvNode::Reader & node, CPendingTransform *defaultParent );
 	void TraverseGrabber( const AvNode::Reader & node, CPendingTransform *defaultParent );
 
-	void applyFrame( AvVisualFrame::Reader & newFrame );
 	void sendHapticEvent( uint64_t targetGlobalNodeId, float amplitude, float frequency, float duration );
 	std::shared_ptr<vkglTF::Model> VulkanExample::findOrLoadModel( std::string modelUri );
-
-	void updateOverlay();
 
 	glm::mat4 GetHMDMatrixProjectionEye( vr::Hmd_Eye nEye );
 
@@ -106,6 +111,8 @@ public:
 	glm::mat4 GetHMDMatrixPoseEye( vr::Hmd_Eye nEye );
 
 	virtual void render();
+
+	void updateOpenVrPoses();
 
 	void submitEyeBuffers();
 
@@ -130,15 +137,6 @@ protected:
 	bool m_leftPressed = false;
 	bool m_rightPressed = false;
 
-	struct SgRoot_t
-	{
-		std::unordered_map<uint32_t, size_t> mapIdToIndex;
-		tools::OwnCapnp<AvNodeRoot> root = nullptr;
-		std::vector<AvNode::Reader> nodes;
-		std::string hook;
-		uint32_t gadgetId;
-	};
-
 	struct SgNodeData_t
 	{
 		std::string lastModelUri;
@@ -149,15 +147,20 @@ protected:
 		std::shared_ptr< vks::Texture2D > overrideTexture;
 	};
 
+	void TraverseSceneGraphs( float fFrameTime,
+		std::vector<std::unique_ptr< SgRoot_t > > & roots,
+		std::map< uint32_t, tools::OwnCapnp< AvSharedTextureInfo > > & textureInfo );
+
+	void renderSceneGraph( std::vector<std::unique_ptr< SgRoot_t > > & roots,
+		std::map< uint32_t, tools::OwnCapnp< AvSharedTextureInfo > > & textureInfo );
+
 	SgNodeData_t *GetNodeData( const AvNode::Reader & node );
 
 	void TraverseSceneGraph( const SgRoot_t *root );
 
-	std::unique_ptr< std::vector<std::unique_ptr< SgRoot_t > > > m_roots, m_nextRoots;
 	bool inFrameTraversal = false;
 	bool m_updateDescriptors = false;
 
-	std::unique_ptr< std::map< uint32_t, tools::OwnCapnp< AvSharedTextureInfo > > > m_sharedTextureInfo, m_nextSharedTextureInfo;
 	std::map<uint64_t, vr::VRInputValueHandle_t> m_handDeviceForNode;
 
 	const SgRoot_t *m_pCurrentRoot = nullptr;
@@ -235,6 +238,7 @@ protected:
 	vks::RenderTarget leftEyeRT;
 	vks::RenderTarget rightEyeRT;
 	std::unordered_map< uint64_t, std::unique_ptr< CPendingTransform > > m_nodeTransforms;
+	std::map< uint32_t, tools::OwnCapnp< AvSharedTextureInfo > > *m_currentSharedTextureInfo;
 
 	uint32_t eyeWidth = 0;
 	uint32_t eyeHeight = 0;

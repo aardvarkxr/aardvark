@@ -245,5 +245,5 @@ public:
 
 	void renderLoop();
 	void runFrame( bool *shouldQuit, bool *shouldRender );
-	void renderFrame();
+	void renderFrame( std::function<void()> renderFunction );
 };

@@ -9,6 +9,7 @@
 
 class CSceneListener;
 class VulkanExample;
+struct SgRoot_t;
 
 class AvFrameListenerImpl : public AvFrameListener::Server
 {
@@ -33,12 +34,17 @@ public:
 	void cleanup();
 	void run();
 
+
 protected:
+	void applyFrame( AvVisualFrame::Reader & newFrame );
 
 	kj::Own< AvFrameListenerImpl > m_frameListener;
 	std::unique_ptr<VulkanExample> m_renderer;
 	CefRefPtr<CAardvarkCefApp> m_app;
 
 	kj::Own<aardvark::CAardvarkClient> m_pClient;
+
+	std::unique_ptr< std::vector<std::unique_ptr< SgRoot_t > > > m_roots, m_nextRoots;
+	std::unique_ptr< std::map< uint32_t, tools::OwnCapnp< AvSharedTextureInfo > > > m_sharedTextureInfo, m_nextSharedTextureInfo;
 };
 

@@ -310,11 +310,12 @@ void VulkanExampleBase::prepare()
 	setupFrameBuffer();
 }
 
-void VulkanExampleBase::renderFrame()
+void VulkanExampleBase::renderFrame( std::function<void()> renderFunction )
 {
 	auto tStart = std::chrono::high_resolution_clock::now();
 
-	render();
+	renderFunction();
+
 	frameCounter++;
 	auto tEnd = std::chrono::high_resolution_clock::now();
 	auto tDiff = std::chrono::duration<double, std::milli>(tEnd - tStart).count();
@@ -365,7 +366,7 @@ void VulkanExampleBase::renderLoop()
 		runFrame( &quitMessageReceived, &shouldRender );
 		if ( shouldRender ) 
 		{
-			renderFrame();
+			renderFrame( [this]() { this->render(); } );
 		}
 	}
 #elif defined(VK_USE_PLATFORM_ANDROID_KHR)
