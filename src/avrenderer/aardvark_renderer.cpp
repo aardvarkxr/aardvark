@@ -20,7 +20,6 @@
 #include "VulkanTexture.hpp"
 #include "VulkanglTFModel.hpp"
 #include "VulkanUtils.hpp"
-#include "ui.hpp"
 
 #include "include/cef_sandbox_win.h"
 #include "av_cef_app.h"
@@ -130,8 +129,6 @@ VulkanExample::~VulkanExample() noexcept
 	textures.prefilteredCube.destroy();
 	textures.lutBrdf.destroy();
 	textures.empty.destroy();
-
-	delete ui;
 }
 
 void VulkanExample::renderNode( std::shared_ptr<vkglTF::Model> pModel, std::shared_ptr<vkglTF::Node> node, uint32_t cbIndex, vkglTF::Material::AlphaMode alphaMode, EEye eEye )
@@ -319,12 +316,6 @@ void VulkanExample::renderScene( uint32_t cbIndex, VkRenderPass targetRenderPass
 	// TODO: Correct depth sorting
 	vkCmdBindPipeline( currentCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines.pbrAlphaBlend );
 	recordCommandsForModels( currentCB, cbIndex, vkglTF::Material::ALPHAMODE_BLEND, eEye );
-
-	if ( eEye == EEye::Mirror )
-	{
-		// User interface
-		ui->draw( currentCB );
-	}
 
 	vkCmdEndRenderPass( currentCB );
 }
@@ -1700,8 +1691,6 @@ void VulkanExample::prepare()
 	prepareUniformBuffers();
 	setupDescriptors();
 	preparePipelines();
-
-	ui = new UI( vulkanDevice, renderPass, queue, pipelineCache, settings.sampleCount );
 
 	vr::VRInput()->SetActionManifestPath( "e:/homedev/aardvark/data/input/aardvark_actions.json" );
 	vr::VRInput()->GetActionSetHandle( "/actions/aardvark", &m_actionSet );

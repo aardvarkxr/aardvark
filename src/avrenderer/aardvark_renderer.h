@@ -10,7 +10,6 @@
 #include "VulkanTexture.hpp"
 #include "VulkanglTFModel.hpp"
 #include "VulkanUtils.hpp"
-#include "ui.hpp"
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -222,8 +221,6 @@ protected:
 		glm::vec3 color = glm::vec3( 1.0f );
 		glm::vec3 rotation = glm::vec3( 75.0f, 40.0f, 0.0f );
 	} lightSource;
-
-	UI *ui;
 
 #if defined(VK_USE_PLATFORM_ANDROID_KHR)
 	const std::string assetpath = "";
