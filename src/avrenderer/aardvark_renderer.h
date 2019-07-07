@@ -22,10 +22,8 @@
 #include "include/cef_sandbox_win.h"
 #include "av_cef_app.h"
 #include "av_cef_handler.h"
-#include "intersection_tester.h"
-#include "collision_tester.h"
-#include "pending_transform.h"
 #include "uri_request_handler.h"
+#include "irenderer.h"
 
 #include <tools/capnprototools.h>
 
@@ -33,20 +31,34 @@
 #include <aardvark/aardvark_client.h>
 #include <aardvark/aardvark_scene_graph.h>
 
-struct SgRoot_t
+
+class VulkanExample;
+
+class CVulkanRendererModelInstance : public IModelInstance
 {
-	std::unordered_map<uint32_t, size_t> mapIdToIndex;
-	tools::OwnCapnp<AvNodeRoot> root = nullptr;
-	std::vector<AvNode::Reader> nodes;
-	std::string hook;
-	uint32_t gadgetId;
+public:
+	friend VulkanExample;
+
+	CVulkanRendererModelInstance( VulkanExample *renderer, const std::string & uri, std::shared_ptr< vkglTF::Model > model );
+	virtual void setUniverseFromModel( const glm::mat4 & universeFromModel ) override;
+	virtual void setOverrideTexture( AvSharedTextureInfo::Reader ) override;
+
+	void animate( float animationTimeElapsed );
+protected:
+	VulkanExample *m_renderer;
+	std::string m_modelUri;
+	std::shared_ptr<vkglTF::Model> m_model;
+	vkglTF::Transformable m_modelParent;
+
+	void *m_lastDxgiHandle = nullptr;
+	std::shared_ptr< vks::Texture2D > m_overrideTexture;
 };
 
 
-
-class VulkanExample : public VulkanExampleBase, public IApplication, public AvFrameListener::Server
+class VulkanExample : public VulkanExampleBase, public IApplication, public AvFrameListener::Server, IRenderer
 {
 	friend class CSceneListener;
+	friend CVulkanRendererModelInstance;
 public:
 	enum class EEye
 	{
@@ -87,22 +99,8 @@ public:
 	virtual void onWindowClose() override;
 	virtual void allBrowsersClosed() override;
 
-	uint64_t GetGlobalId( const AvNode::Reader & node );
+	vr::VRInputValueHandle_t getDeviceForHand( EHand hand );
 
-	void TraverseNode( const AvNode::Reader & node, CPendingTransform *defaultParent );
-	void TraverseOrigin( const AvNode::Reader & node, CPendingTransform *defaultParent );
-
-	void setHookOrigin( std::string origin, const AvNode::Reader & node );
-
-	void TraverseTransform( const AvNode::Reader & node, CPendingTransform *defaultParent );
-	void TraverseModel( const AvNode::Reader & node, CPendingTransform *defaultParent );
-	void TraversePanel( const AvNode::Reader & node, CPendingTransform *defaultParent );
-	void TraversePoker( const AvNode::Reader & node, CPendingTransform *defaultParent );
-	void TraverseGrabbable( const AvNode::Reader & node, CPendingTransform *defaultParent );
-	void TraverseHandle( const AvNode::Reader & node, CPendingTransform *defaultParent );
-	void TraverseGrabber( const AvNode::Reader & node, CPendingTransform *defaultParent );
-
-	void sendHapticEvent( uint64_t targetGlobalNodeId, float amplitude, float frequency, float duration );
 	std::shared_ptr<vkglTF::Model> VulkanExample::findOrLoadModel( std::string modelUri );
 
 	glm::mat4 GetHMDMatrixProjectionEye( vr::Hmd_Eye nEye );
@@ -119,15 +117,17 @@ public:
 	void doInputWork();
 	bool isGrabPressed( vr::VRInputValueHandle_t whichHand );
 
-	void startGrabImpl( uint64_t grabberGlobalId, uint64_t grabbableGlobalId );
-	void endGrabImpl( uint64_t grabberGlobalId, uint64_t grabbableGlobalId );
+	virtual std::unique_ptr<IModelInstance> createModelInstance( const std::string & uri ) override;
+	virtual void resetRenderList() override;
+	virtual void addToRenderList( IModelInstance *modelInstance ) override;
+
+	// these probably don't belong on the renderer
+	virtual bool getUniverseFromOrigin( const std::string & originPath, glm::mat4 *universeFromOrigin ) override;
+	virtual bool isGrabPressed( EHand hand ) override;
+	virtual void sentHapticEventForHand( EHand hand, float amplitude, float frequency, float duration ) override;
 
 protected:
 	aardvark::CAardvarkClient *m_pClient;
-
-	CPendingTransform *getTransform( uint64_t globalNodeId );
-	CPendingTransform *updateTransform( uint64_t globalNodeId, CPendingTransform *parent, 
-		glm::mat4 parentFromNode, std::function<void( const glm::mat4 & universeFromNode )> applyFunction );
 
 	vr::VRActionSetHandle_t m_actionSet = vr::k_ulInvalidActionSetHandle;
 	vr::VRActionHandle_t m_actionGrab = vr::k_ulInvalidActionHandle;
@@ -137,44 +137,10 @@ protected:
 	bool m_leftPressed = false;
 	bool m_rightPressed = false;
 
-	struct SgNodeData_t
-	{
-		std::string lastModelUri;
-		std::shared_ptr<vkglTF::Model> model;
-		vkglTF::Transformable modelParent;
 
-		void *lastDxgiHandle = nullptr;
-		std::shared_ptr< vks::Texture2D > overrideTexture;
-	};
+	void processRenderList();
 
-	void TraverseSceneGraphs( float fFrameTime,
-		std::vector<std::unique_ptr< SgRoot_t > > & roots,
-		std::map< uint32_t, tools::OwnCapnp< AvSharedTextureInfo > > & textureInfo );
-
-	void renderSceneGraph( std::vector<std::unique_ptr< SgRoot_t > > & roots,
-		std::map< uint32_t, tools::OwnCapnp< AvSharedTextureInfo > > & textureInfo );
-
-	SgNodeData_t *GetNodeData( const AvNode::Reader & node );
-
-	void TraverseSceneGraph( const SgRoot_t *root );
-
-	bool inFrameTraversal = false;
 	bool m_updateDescriptors = false;
-
-	std::map<uint64_t, vr::VRInputValueHandle_t> m_handDeviceForNode;
-
-	const SgRoot_t *m_pCurrentRoot = nullptr;
-	std::unordered_map<std::string, glm::mat4> m_universeFromOriginTransforms;
-	std::unordered_map<uint64_t, std::unique_ptr<SgNodeData_t>> m_mapNodeData;
-	float m_fThisFrameTime = 0;
-	std::vector<std::shared_ptr<vkglTF::Model>> m_vecModelsToRender;
-	std::set<uint64_t> setVisitedNodes;
-	vr::VRInputValueHandle_t m_currentHandDevice = vr::k_ulInvalidInputValueHandle;
-	std::unordered_map<uint64_t, glm::mat4> m_lastFrameUniverseFromNode;
-	uint64_t m_currentGrabbableGlobalId = 0;
-
-	CIntersectionTester m_intersections;
-	CCollisionTester m_collisions;
 
 	struct Textures {
 		vks::TextureCubeMap environmentCube;
@@ -237,8 +203,7 @@ protected:
 	std::set< std::string > m_failedModelRequests;
 	vks::RenderTarget leftEyeRT;
 	vks::RenderTarget rightEyeRT;
-	std::unordered_map< uint64_t, std::unique_ptr< CPendingTransform > > m_nodeTransforms;
-	std::map< uint32_t, tools::OwnCapnp< AvSharedTextureInfo > > *m_currentSharedTextureInfo;
+	std::unordered_map<std::string, glm::mat4> m_universeFromOriginTransforms;
 
 	uint32_t eyeWidth = 0;
 	uint32_t eyeHeight = 0;
@@ -307,12 +272,8 @@ protected:
 	int32_t debugViewInputs = 0;
 	int32_t debugViewEquation = 0;
 
-	struct NodeToNodeAnchor_t
-	{
-		uint64_t parentNodeId;
-		glm::mat4 parentNodeFromThisNode;
-	};
-	std::unordered_map<uint64_t, NodeToNodeAnchor_t> m_nodeToNodeAnchors;
-
 	CUriRequestHandler m_uriRequests;
+
+	std::vector< CVulkanRendererModelInstance *> m_modelsToRender;
+
 };

@@ -19,10 +19,13 @@ add_executable(avrenderer
 	collision_tester.h
 	intersection_tester.cpp
 	intersection_tester.h
+	irenderer.h
 	pending_transform.cpp
 	pending_transform.h
 	scene_listener.cpp
 	scene_listener.h
+	scene_traverser.cpp
+	scene_traverser.h
 	uri_request_handler.cpp
 	uri_request_handler.h
 

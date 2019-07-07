@@ -34,6 +34,8 @@ void CSceneListener::init( HINSTANCE hinstance )
 	m_renderer->initVulkan();
 	m_renderer->setupWindow( hinstance );
 	m_renderer->prepare();
+
+	m_traverser.init( m_renderer.get(), m_pClient );
 }
 
 void CSceneListener::cleanup()
@@ -67,7 +69,9 @@ void CSceneListener::run()
 
 				if ( m_roots && m_sharedTextureInfo )
 				{
-					m_renderer->renderSceneGraph( *m_roots, *m_sharedTextureInfo );
+					m_renderer->updateOpenVrPoses();
+					m_traverser.TraverseSceneGraphs( *m_roots, *m_sharedTextureInfo );
+					m_renderer->processRenderList();
 				}
 			} );
 		}
@@ -120,7 +124,7 @@ void CSceneListener::applyFrame( AvVisualFrame::Reader & newFrame )
 
 ::kj::Promise<void> AvFrameListenerImpl::sendHapticEvent( SendHapticEventContext context )
 {
-	m_listener->m_renderer->sendHapticEvent( context.getParams().getTargetGlobalId(),
+	m_listener->m_traverser.sendHapticEvent( context.getParams().getTargetGlobalId(),
 		context.getParams().getAmplitude(),
 		context.getParams().getFrequency(),
 		context.getParams().getDuration() );
@@ -132,7 +136,7 @@ void CSceneListener::applyFrame( AvVisualFrame::Reader & newFrame )
 	uint64_t grabberGlobalId = context.getParams().getGrabberGlobalId();
 	uint64_t grabbableGlobalId = context.getParams().getGrabbableGlobalId();
 
-	m_listener->m_renderer->startGrabImpl( grabberGlobalId, grabbableGlobalId );
+	m_listener->m_traverser.startGrabImpl( grabberGlobalId, grabbableGlobalId );
 	return kj::READY_NOW;
 }
 
@@ -141,7 +145,7 @@ void CSceneListener::applyFrame( AvVisualFrame::Reader & newFrame )
 {
 	uint64_t grabberGlobalId = context.getParams().getGrabberGlobalId();
 	uint64_t grabbableGlobalId = context.getParams().getGrabbableGlobalId();
-	m_listener->m_renderer->endGrabImpl( grabberGlobalId, grabbableGlobalId );
+	m_listener->m_traverser.endGrabImpl( grabberGlobalId, grabbableGlobalId );
 	return kj::READY_NOW;
 }
 

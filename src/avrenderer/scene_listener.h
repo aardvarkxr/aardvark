@@ -7,6 +7,8 @@
 
 #include "av_cef_app.h"
 
+#include "scene_traverser.h"
+
 class CSceneListener;
 class VulkanExample;
 struct SgRoot_t;
@@ -37,6 +39,8 @@ public:
 
 protected:
 	void applyFrame( AvVisualFrame::Reader & newFrame );
+
+	CSceneTraverser m_traverser;
 
 	kj::Own< AvFrameListenerImpl > m_frameListener;
 	std::unique_ptr<VulkanExample> m_renderer;
