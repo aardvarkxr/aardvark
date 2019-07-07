@@ -1,6 +1,6 @@
 #include "scene_listener.h"
 #include "aardvark_renderer.h"
-
+#include "vrmanager.h"
 
 
 
@@ -8,6 +8,7 @@
 CSceneListener::CSceneListener( )
 {
 	m_renderer = std::make_unique<VulkanExample>();
+	m_vrManager = std::make_unique<CVRManager>();
 }
 
 void CSceneListener::earlyInit( CefRefPtr<CAardvarkCefApp> app )
@@ -29,8 +30,9 @@ void CSceneListener::init( HINSTANCE hinstance )
 	reqListen.setListener( listenerClient );
 	reqListen.send().wait( m_pClient->WaitScope() );
 
-	m_renderer->init( hinstance, m_pClient );
-	m_traverser.init( m_renderer.get(), m_pClient );
+	m_vrManager->init();
+	m_renderer->init( hinstance, m_vrManager.get(), m_pClient );
+	m_traverser.init( m_renderer.get(), m_vrManager.get(), m_pClient );
 }
 
 void CSceneListener::cleanup()
@@ -51,12 +53,14 @@ void CSceneListener::run()
 
 		m_pClient->WaitScope().poll();
 
-		m_renderer->updateOpenVrPoses();
+		m_vrManager->updateOpenVrPoses();
 		m_traverser.TraverseSceneGraphs();
 		m_renderer->processRenderList();
 
 		auto tEnd = std::chrono::high_resolution_clock::now();
 		auto tDiff = std::chrono::duration<double, std::milli>( tEnd - tStart ).count();
+
+		m_vrManager->doInputWork();
 
 		m_renderer->runFrame( &shouldQuit, tDiff / 1000.0f );
 	}

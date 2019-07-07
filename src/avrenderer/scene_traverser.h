@@ -14,6 +14,7 @@
 #include "collision_tester.h"
 #include "pending_transform.h"
 #include "irenderer.h"
+#include "ivrmanager.h"
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -30,11 +31,12 @@ struct SgRoot_t
 };
 
 
+class IVrManager;
 
 class CSceneTraverser
 {
 public:
-	void init( IRenderer *renderer, aardvark::CAardvarkClient *client );
+	void init( IRenderer *renderer, IVrManager *vrManager, aardvark::CAardvarkClient *client );
 	void cleanup();
 
 
@@ -92,6 +94,7 @@ public:
 	std::unordered_map< uint64_t, std::unique_ptr< CPendingTransform > > m_nodeTransforms;
 
 	IRenderer *m_renderer = nullptr;
+	IVrManager *m_vrManager = nullptr;
 	aardvark::CAardvarkClient *m_client = nullptr;
 
 	struct NodeToNodeAnchor_t

@@ -21,6 +21,7 @@ add_executable(avrenderer
 	intersection_tester.h
 	iapplication.h
 	irenderer.h
+	ivrmanager.h
 	pending_transform.cpp
 	pending_transform.h
 	scene_listener.cpp
@@ -29,6 +30,8 @@ add_executable(avrenderer
 	scene_traverser.h
 	uri_request_handler.cpp
 	uri_request_handler.h
+	vrmanager.cpp
+	vrmanager.h
 
 	${SHADERS}
 	)

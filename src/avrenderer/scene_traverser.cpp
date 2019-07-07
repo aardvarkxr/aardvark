@@ -2,8 +2,9 @@
 
 #include <glm/gtc/quaternion.hpp>
 
-void CSceneTraverser::init( IRenderer *renderer, aardvark::CAardvarkClient *client )
+void CSceneTraverser::init( IRenderer *renderer, IVrManager *vrManager, aardvark::CAardvarkClient *client )
 {
+	m_vrManager = vrManager;
 	m_renderer = renderer;
 	m_client = client;
 }
@@ -187,7 +188,7 @@ void CSceneTraverser::TraverseOrigin( const AvNode::Reader & node, CPendingTrans
 void CSceneTraverser::setHookOrigin( std::string origin, const AvNode::Reader & node )
 {
 	glm::mat4 universeFromOrigin;
-	if ( m_renderer->getUniverseFromOrigin( origin, &universeFromOrigin ) )
+	if ( m_vrManager->getUniverseFromOrigin( origin, &universeFromOrigin ) )
 	{
 		updateTransform( GetGlobalId( node ), nullptr, universeFromOrigin, nullptr );
 
@@ -383,7 +384,7 @@ void CSceneTraverser::TraverseGrabber( const AvNode::Reader & node, CPendingTran
 		[this, node, globalId, currentHand = m_currentHand ]( const glm::mat4 & universeFromNode )
 	{
 		m_collisions.addGrabber( globalId, glm::inverse( universeFromNode ),
-			node.getPropVolume(), m_renderer->isGrabPressed( currentHand ) );
+			node.getPropVolume(), m_vrManager->isGrabPressed( currentHand ) );
 	} );
 }
 
@@ -447,7 +448,7 @@ void CSceneTraverser::sendHapticEvent( uint64_t targetGlobalNodeId, float amplit
 		return;
 	}
 
-	m_renderer->sentHapticEventForHand( iHapticHand->second, amplitude, frequency, duration );
+	m_vrManager->sentHapticEventForHand( iHapticHand->second, amplitude, frequency, duration );
 }
 
 

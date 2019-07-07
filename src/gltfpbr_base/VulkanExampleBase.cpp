@@ -1844,16 +1844,3 @@ void VulkanExampleBase::setupSwapChain()
 	swapChain.create(&width, &height, settings.vsync);
 }
 
-void VulkanExampleBase::initOpenVR()
-{
-	vr::EVRInitError vrErr;
-	vr::VR_Init( &vrErr, vr::VRApplication_Scene );
-	if ( vrErr != vr::VRInitError_None )
-	{
-		std::cout << "FATAL: VR_Init failed" << std::endl;
-		return;
-	}
-
-	vr::VRCompositor()->SetTrackingSpace( vr::TrackingUniverseStanding );
-
-}

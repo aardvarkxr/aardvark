@@ -12,6 +12,7 @@
 
 class CSceneListener;
 class VulkanExample;
+class IVRManager;
 struct SgRoot_t;
 
 class AvFrameListenerImpl : public AvFrameListener::Server
@@ -46,6 +47,7 @@ protected:
 
 	kj::Own< AvFrameListenerImpl > m_frameListener;
 	std::unique_ptr<IRenderer> m_renderer;
+	std::unique_ptr<IVrManager> m_vrManager;
 	CefRefPtr<CAardvarkCefApp> m_app;
 
 	kj::Own<aardvark::CAardvarkClient> m_pClient;
