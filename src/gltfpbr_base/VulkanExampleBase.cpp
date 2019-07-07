@@ -316,20 +316,26 @@ void VulkanExampleBase::renderFrame( std::function<void()> renderFunction )
 
 	renderFunction();
 
-	frameCounter++;
 	auto tEnd = std::chrono::high_resolution_clock::now();
 	auto tDiff = std::chrono::duration<double, std::milli>(tEnd - tStart).count();
-	frameTimer = (float)tDiff / 1000.0f;
-	camera.update(frameTimer);
-	fpsTimer += (float)tDiff;
-	if (fpsTimer > 1000.0f) {
-		lastFPS = static_cast<uint32_t>((float)frameCounter * (1000.0f / fpsTimer));
+	updateFrameTime( tDiff / 1000.0f );
+}
+
+void VulkanExampleBase::updateFrameTime( double elapsedSeconds )
+{
+	frameCounter++;
+
+	frameTimer = (float)elapsedSeconds;
+	camera.update( frameTimer );
+	fpsTimer += (float)elapsedSeconds;
+	if ( fpsTimer > 1000.0f ) {
+		lastFPS = static_cast<uint32_t>( (float)frameCounter * ( 1000.0f / fpsTimer ) );
 		fpsTimer = 0.0f;
 		frameCounter = 0;
 	}
 }
 
-void VulkanExampleBase::runFrame( bool *shouldQuit, bool *shouldRender )
+void VulkanExampleBase::pumpWindowEvents( bool *shouldQuit, bool *shouldRender )
 {
 	if ( wantToQuit )
 	{
@@ -363,7 +369,7 @@ void VulkanExampleBase::renderLoop()
 	while (!quitMessageReceived && !wantToQuit) 
 	{
 		bool shouldRender = false;
-		runFrame( &quitMessageReceived, &shouldRender );
+		pumpWindowEvents( &quitMessageReceived, &shouldRender );
 		if ( shouldRender ) 
 		{
 			renderFrame( [this]() { this->render(); } );

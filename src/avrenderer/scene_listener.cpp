@@ -53,73 +53,28 @@ void CSceneListener::run()
 	bool shouldQuit = false;
 	while ( !shouldQuit )
 	{
+		auto tStart = std::chrono::high_resolution_clock::now();
+
 		bool shouldRender = false;
-		m_renderer->runFrame( &shouldQuit, &shouldRender );
+		m_renderer->pumpWindowEvents( &shouldQuit, &shouldRender );
 		if ( shouldRender )
 		{
-			m_renderer->renderFrame( [this]() 
-			{ 
-				if ( m_nextRoots )
-				{
-					m_roots = std::move( m_nextRoots );
-				}
-				if ( m_nextSharedTextureInfo )
-				{
-					m_sharedTextureInfo = std::move( m_nextSharedTextureInfo );
-				}
+			m_renderer->updateOpenVrPoses();
+			m_traverser.TraverseSceneGraphs();
+			m_renderer->processRenderList();
 
-				if ( m_roots && m_sharedTextureInfo )
-				{
-					m_renderer->updateOpenVrPoses();
-					m_traverser.TraverseSceneGraphs( *m_roots, *m_sharedTextureInfo );
-					m_renderer->processRenderList();
-				}
-			} );
+			auto tEnd = std::chrono::high_resolution_clock::now();
+			auto tDiff = std::chrono::duration<double, std::milli>( tEnd - tStart ).count();
+			m_renderer->updateFrameTime( tDiff / 1000.0f );
 		}
 
 		m_pClient->WaitScope().poll();
 	}
 }
 
-
-void CSceneListener::applyFrame( AvVisualFrame::Reader & newFrame )
-{
-	m_renderer->camera.setPosition( { 0.0f, 0.0f, 1.0f } );
-	m_renderer->camera.setRotation( { 0.0f, 0.0f, 0.0f } );
-
-	auto nextRoots = std::make_unique < std::vector<std::unique_ptr<SgRoot_t>>>();
-	for ( auto & root : newFrame.getRoots() )
-	{
-		std::unique_ptr<SgRoot_t> rootStruct = std::make_unique<SgRoot_t>();
-		rootStruct->root = tools::newOwnCapnp( root );
-		rootStruct->nodes.reserve( root.getNodes().size() );
-		rootStruct->gadgetId = root.getSourceId();
-		rootStruct->hook = root.getHook();
-
-		for ( auto & nodeWrapper : rootStruct->root.getNodes() )
-		{
-			auto node = nodeWrapper.getNode();
-			rootStruct->mapIdToIndex[node.getId()] = rootStruct->nodes.size();
-			rootStruct->nodes.push_back( node );
-		}
-
-		nextRoots->push_back( std::move( rootStruct ) );
-	}
-
-	auto nextTextures = std::make_unique < std::map<uint32_t, tools::OwnCapnp< AvSharedTextureInfo > > >();
-	for ( auto & texture : newFrame.getGadgetTextures() )
-	{
-		nextTextures->insert_or_assign( texture.getGadgetId(), tools::newOwnCapnp( texture.getSharedTextureInfo() ) );
-	}
-
-	m_nextRoots = std::move( nextRoots );
-	m_nextSharedTextureInfo = std::move( nextTextures );
-}
-
-
 ::kj::Promise<void> AvFrameListenerImpl::newFrame( NewFrameContext context )
 {
-	m_listener->applyFrame( context.getParams().getFrame() );
+	m_listener->m_traverser.newSceneGraph( context.getParams().getFrame() );
 	return kj::READY_NOW;
 }
 

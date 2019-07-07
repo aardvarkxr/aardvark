@@ -38,8 +38,6 @@ public:
 
 
 protected:
-	void applyFrame( AvVisualFrame::Reader & newFrame );
-
 	CSceneTraverser m_traverser;
 
 	kj::Own< AvFrameListenerImpl > m_frameListener;
@@ -47,8 +45,5 @@ protected:
 	CefRefPtr<CAardvarkCefApp> m_app;
 
 	kj::Own<aardvark::CAardvarkClient> m_pClient;
-
-	std::unique_ptr< std::vector<std::unique_ptr< SgRoot_t > > > m_roots, m_nextRoots;
-	std::unique_ptr< std::map< uint32_t, tools::OwnCapnp< AvSharedTextureInfo > > > m_sharedTextureInfo, m_nextSharedTextureInfo;
 };
 

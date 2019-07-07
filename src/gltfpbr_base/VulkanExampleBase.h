@@ -244,6 +244,9 @@ public:
 	void setupSwapChain();
 
 	void renderLoop();
-	void runFrame( bool *shouldQuit, bool *shouldRender );
+	void pumpWindowEvents( bool *shouldQuit, bool *shouldRender );
 	void renderFrame( std::function<void()> renderFunction );
+
+	void updateFrameTime( double elapsedSeconds );
+
 };

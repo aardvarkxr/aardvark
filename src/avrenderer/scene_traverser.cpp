@@ -14,11 +14,9 @@ void CSceneTraverser::cleanup()
 	m_mapNodeData.clear();
 }
 
-void CSceneTraverser::TraverseSceneGraphs( 
-	std::vector<std::unique_ptr< SgRoot_t > > & roots,
-	std::map< uint32_t, tools::OwnCapnp< AvSharedTextureInfo > > & textureInfo )
+void CSceneTraverser::TraverseSceneGraphs()
 {
-	inFrameTraversal = true;
+	m_inFrameTraversal = true;
 	setVisitedNodes.clear();
 	m_handDeviceForNode.clear();
 	m_renderer->resetRenderList();
@@ -27,10 +25,9 @@ void CSceneTraverser::TraverseSceneGraphs(
 	m_currentHand = EHand::Invalid;
 	m_currentGrabbableGlobalId = 0;
 	m_nodeTransforms.clear();
-	m_currentSharedTextureInfo = &textureInfo;
-	for ( auto & root : roots )
+	for ( auto & root : m_roots )
 	{
-		TraverseSceneGraph( &*root );
+		TraverseSceneGraph( root.get() );
 	}
 	m_pCurrentRoot = nullptr;
 
@@ -42,7 +39,7 @@ void CSceneTraverser::TraverseSceneGraphs(
 		m_lastFrameUniverseFromNode.insert_or_assign( transform.first, transform.second->getUniverseFromNode() );
 	}
 
-	inFrameTraversal = false;
+	m_inFrameTraversal = false;
 
 	m_intersections.updatePokerProximity( m_client );
 	m_collisions.updateGrabberIntersections( m_client );
@@ -293,9 +290,9 @@ void CSceneTraverser::TraversePanel( const AvNode::Reader & node, CPendingTransf
 	SgNodeData_t *pData = GetNodeData( node );
 	assert( pData );
 
-	auto iSharedTexture = m_currentSharedTextureInfo->find( m_pCurrentRoot->gadgetId );
+	auto iSharedTexture = m_sharedTextureInfo.find( m_pCurrentRoot->gadgetId );
 
-	if ( !pData->model && iSharedTexture != m_currentSharedTextureInfo->end() )
+	if ( !pData->model && iSharedTexture != m_sharedTextureInfo.end() )
 	{
 		std::string sPanelModelUri = "file:///e:/homedev/aardvark/data/models/panel/panel.glb";
 		if ( iSharedTexture->second.getInvertY() )
@@ -309,7 +306,7 @@ void CSceneTraverser::TraversePanel( const AvNode::Reader & node, CPendingTransf
 	if ( pData->model )
 	{
 
-		if ( iSharedTexture != m_currentSharedTextureInfo->end() )
+		if ( iSharedTexture != m_sharedTextureInfo.end() )
 		{
 			pData->model->setOverrideTexture( iSharedTexture->second );
 		}
@@ -452,4 +449,41 @@ void CSceneTraverser::sendHapticEvent( uint64_t targetGlobalNodeId, float amplit
 
 	m_renderer->sentHapticEventForHand( iHapticHand->second, amplitude, frequency, duration );
 }
+
+
+void CSceneTraverser::newSceneGraph( AvVisualFrame::Reader & newFrame )
+{
+	// if you're hitting this then you're probably waiting on something from
+	// Cap'n Proto during traversal. Don't do that. It adds potentially unbounded
+	// time to the frame
+	assert( !m_inFrameTraversal );
+
+	m_roots.clear();
+	for ( auto & root : newFrame.getRoots() )
+	{
+		std::unique_ptr<SgRoot_t> rootStruct = std::make_unique<SgRoot_t>();
+		rootStruct->root = tools::newOwnCapnp( root );
+		rootStruct->nodes.reserve( root.getNodes().size() );
+		rootStruct->gadgetId = root.getSourceId();
+		rootStruct->hook = root.getHook();
+
+		for ( auto & nodeWrapper : rootStruct->root.getNodes() )
+		{
+			auto node = nodeWrapper.getNode();
+			rootStruct->mapIdToIndex[node.getId()] = rootStruct->nodes.size();
+			rootStruct->nodes.push_back( node );
+		}
+
+		m_roots.push_back( std::move( rootStruct ) );
+	}
+
+	auto nextTextures = std::make_unique < std::map<uint32_t, tools::OwnCapnp< AvSharedTextureInfo > > >();
+	for ( auto & texture : newFrame.getGadgetTextures() )
+	{
+		m_sharedTextureInfo.insert_or_assign( 
+			texture.getGadgetId(), 
+			tools::newOwnCapnp( texture.getSharedTextureInfo() ) );
+	}
+}
+
 

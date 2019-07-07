@@ -37,8 +37,9 @@ public:
 	void init( IRenderer *renderer, aardvark::CAardvarkClient *client );
 	void cleanup();
 
-	void TraverseSceneGraphs( std::vector<std::unique_ptr< SgRoot_t > > & roots,
-		std::map< uint32_t, tools::OwnCapnp< AvSharedTextureInfo > > & textureInfo );
+
+	void newSceneGraph( AvVisualFrame::Reader & newFrame );
+	void TraverseSceneGraphs();
 
 
 	uint64_t GetGlobalId( const AvNode::Reader & node );
@@ -73,7 +74,9 @@ public:
 
 	void TraverseSceneGraph( const SgRoot_t *root );
 
-	bool inFrameTraversal = false;
+	bool m_inFrameTraversal = false;
+	std::vector<std::unique_ptr< SgRoot_t > > m_roots;
+	std::map< uint32_t, tools::OwnCapnp< AvSharedTextureInfo > > m_sharedTextureInfo;
 
 	const SgRoot_t *m_pCurrentRoot = nullptr;
 	std::unordered_map<uint64_t, std::unique_ptr<SgNodeData_t>> m_mapNodeData;
@@ -88,7 +91,6 @@ public:
 
 	std::unordered_map< uint64_t, std::unique_ptr< CPendingTransform > > m_nodeTransforms;
 
-	std::map< uint32_t, tools::OwnCapnp< AvSharedTextureInfo > > *m_currentSharedTextureInfo;
 	IRenderer *m_renderer = nullptr;
 	aardvark::CAardvarkClient *m_client = nullptr;
 
