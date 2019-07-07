@@ -43,6 +43,7 @@ void CSceneListener::cleanup()
 	m_pClient->Stop();
 	m_pClient = nullptr;
 
+	m_traverser.cleanup();
 
 	m_renderer = nullptr;
 }

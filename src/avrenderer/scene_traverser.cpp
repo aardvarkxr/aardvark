@@ -8,6 +8,12 @@ void CSceneTraverser::init( IRenderer *renderer, aardvark::CAardvarkClient *clie
 	m_client = client;
 }
 
+
+void CSceneTraverser::cleanup()
+{
+	m_mapNodeData.clear();
+}
+
 void CSceneTraverser::TraverseSceneGraphs( 
 	std::vector<std::unique_ptr< SgRoot_t > > & roots,
 	std::map< uint32_t, tools::OwnCapnp< AvSharedTextureInfo > > & textureInfo )

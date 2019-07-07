@@ -35,6 +35,8 @@ class CSceneTraverser
 {
 public:
 	void init( IRenderer *renderer, aardvark::CAardvarkClient *client );
+	void cleanup();
+
 	void TraverseSceneGraphs( std::vector<std::unique_ptr< SgRoot_t > > & roots,
 		std::map< uint32_t, tools::OwnCapnp< AvSharedTextureInfo > > & textureInfo );
 

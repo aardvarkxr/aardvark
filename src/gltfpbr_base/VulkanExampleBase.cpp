@@ -1816,32 +1816,6 @@ void VulkanExampleBase::windowResize()
 
 void VulkanExampleBase::handleMouseMove(int32_t x, int32_t y)
 {
-	int32_t dx = (int32_t)mousePos.x - x;
-	int32_t dy = (int32_t)mousePos.y - y;
-
-	ImGuiIO& io = ImGui::GetIO();
-	bool handled = io.WantCaptureMouse;
-
-	if (handled) {
-		mousePos = glm::vec2((float)x, (float)y);
-		return;
-	}
-
-	if (handled) {
-		mousePos = glm::vec2((float)x, (float)y);
-		return;
-	}
-
-	if (mouseButtons.left) {
-		camera.rotate(glm::vec3(dy * camera.rotationSpeed, -dx * camera.rotationSpeed, 0.0f));
-	}
-	if (mouseButtons.right) {
-		camera.translate(glm::vec3(-0.0f, 0.0f, dy * .005f * camera.movementSpeed));
-	}
-	if (mouseButtons.middle) {
-		camera.translate(glm::vec3(-dx * 0.01f, -dy * 0.01f, 0.0f));
-	}
-	mousePos = glm::vec2((float)x, (float)y);
 }
 
 void VulkanExampleBase::initSwapchain()
