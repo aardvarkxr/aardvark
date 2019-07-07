@@ -8,6 +8,7 @@
 #include "av_cef_app.h"
 
 #include "scene_traverser.h"
+#include "iapplication.h"
 
 class CSceneListener;
 class VulkanExample;
@@ -24,7 +25,7 @@ public:
 	CSceneListener *m_listener = nullptr;
 };
 
-class CSceneListener
+class CSceneListener : public IApplication
 {
 	friend AvFrameListenerImpl;
 public:
@@ -37,13 +38,18 @@ public:
 	void run();
 
 
+	// ------------------ IApplication implementation -------------------------
+	virtual void quitRequested() override;
+
 protected:
 	CSceneTraverser m_traverser;
 
 	kj::Own< AvFrameListenerImpl > m_frameListener;
-	std::unique_ptr<VulkanExample> m_renderer;
+	std::unique_ptr<IRenderer> m_renderer;
 	CefRefPtr<CAardvarkCefApp> m_app;
 
 	kj::Own<aardvark::CAardvarkClient> m_pClient;
+
+	bool m_wantsQuit = false;
 };
 

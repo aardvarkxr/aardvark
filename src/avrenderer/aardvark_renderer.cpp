@@ -1710,13 +1710,6 @@ void VulkanExample::onWindowClose()
 	}
 }
 
-void VulkanExample::allBrowsersClosed()
-{
-	wantToQuit = true;
-}
-
-
-
 
 std::shared_ptr<vkglTF::Model> VulkanExample::findOrLoadModel( std::string modelUri )
 {
@@ -2161,4 +2154,22 @@ bool VulkanExample::getUniverseFromOrigin( const std::string & originPath, glm::
 bool VulkanExample::isGrabPressed( EHand hand )
 {
 	return isGrabPressed( getDeviceForHand( hand ) );
+}
+
+
+void VulkanExample::runFrame( bool *shouldQuit, double frameTime )
+{
+	bool unusedShouldRender;
+	pumpWindowEvents( shouldQuit, &unusedShouldRender );
+	updateFrameTime( frameTime );
+}
+
+void VulkanExample::init( HINSTANCE hInstance, aardvark::CAardvarkClient *client )
+{
+	m_pClient = client;
+
+	initOpenVR();
+	initVulkan();
+	setupWindow( hInstance );
+	prepare();
 }

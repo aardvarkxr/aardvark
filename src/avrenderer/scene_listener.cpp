@@ -13,14 +13,13 @@ CSceneListener::CSceneListener( )
 void CSceneListener::earlyInit( CefRefPtr<CAardvarkCefApp> app )
 {
 	m_app = app;
-	m_app->setApplication( m_renderer.get() );
+	m_app->setApplication( this );
 }
 
 void CSceneListener::init( HINSTANCE hinstance )
 {
 	m_pClient = kj::heap<aardvark::CAardvarkClient>();
 	m_pClient->Start();
-	m_renderer->m_pClient = m_pClient;
 
 	m_frameListener = kj::heap<AvFrameListenerImpl>();
 	m_frameListener->m_listener = this;
@@ -30,11 +29,7 @@ void CSceneListener::init( HINSTANCE hinstance )
 	reqListen.setListener( listenerClient );
 	reqListen.send().wait( m_pClient->WaitScope() );
 
-	m_renderer->initOpenVR();
-	m_renderer->initVulkan();
-	m_renderer->setupWindow( hinstance );
-	m_renderer->prepare();
-
+	m_renderer->init( hinstance, m_pClient );
 	m_traverser.init( m_renderer.get(), m_pClient );
 }
 
@@ -44,33 +39,34 @@ void CSceneListener::cleanup()
 	m_pClient = nullptr;
 
 	m_traverser.cleanup();
-
 	m_renderer = nullptr;
 }
 
 void CSceneListener::run()
 {
 	bool shouldQuit = false;
-	while ( !shouldQuit )
+	while ( !shouldQuit && !m_wantsQuit )
 	{
 		auto tStart = std::chrono::high_resolution_clock::now();
 
-		bool shouldRender = false;
-		m_renderer->pumpWindowEvents( &shouldQuit, &shouldRender );
-		if ( shouldRender )
-		{
-			m_renderer->updateOpenVrPoses();
-			m_traverser.TraverseSceneGraphs();
-			m_renderer->processRenderList();
-
-			auto tEnd = std::chrono::high_resolution_clock::now();
-			auto tDiff = std::chrono::duration<double, std::milli>( tEnd - tStart ).count();
-			m_renderer->updateFrameTime( tDiff / 1000.0f );
-		}
-
 		m_pClient->WaitScope().poll();
+
+		m_renderer->updateOpenVrPoses();
+		m_traverser.TraverseSceneGraphs();
+		m_renderer->processRenderList();
+
+		auto tEnd = std::chrono::high_resolution_clock::now();
+		auto tDiff = std::chrono::duration<double, std::milli>( tEnd - tStart ).count();
+
+		m_renderer->runFrame( &shouldQuit, tDiff / 1000.0f );
 	}
 }
+
+void CSceneListener::quitRequested()
+{
+	m_wantsQuit = true;
+}
+
 
 ::kj::Promise<void> AvFrameListenerImpl::newFrame( NewFrameContext context )
 {

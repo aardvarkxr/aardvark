@@ -9,12 +9,6 @@
 
 #include <thread>
 
-class IApplication
-{
-public:
-	virtual void allBrowsersClosed() = 0;
-};
-
 
 // Implement application-level callbacks for the browser process.
 class CAardvarkCefApp : public CefApp, public CefBrowserProcessHandler 

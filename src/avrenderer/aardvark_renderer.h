@@ -54,7 +54,7 @@ protected:
 };
 
 
-class VulkanExample : public VulkanExampleBase, public IApplication, public AvFrameListener::Server, IRenderer
+class VulkanExample : public VulkanExampleBase, public AvFrameListener::Server, public IRenderer
 {
 	friend class CSceneListener;
 	friend CVulkanRendererModelInstance;
@@ -96,7 +96,6 @@ public:
 	void prepare();
 
 	virtual void onWindowClose() override;
-	virtual void allBrowsersClosed() override;
 
 	vr::VRInputValueHandle_t getDeviceForHand( EHand hand );
 
@@ -109,21 +108,24 @@ public:
 
 	virtual void render();
 
-	void updateOpenVrPoses();
-
 	void submitEyeBuffers();
 
 	void doInputWork();
 	bool isGrabPressed( vr::VRInputValueHandle_t whichHand );
 
+	// ----------- IRenderer implementation -------------
+	virtual void init( HINSTANCE hInstance, aardvark::CAardvarkClient *client ) override;
 	virtual std::unique_ptr<IModelInstance> createModelInstance( const std::string & uri ) override;
 	virtual void resetRenderList() override;
 	virtual void addToRenderList( IModelInstance *modelInstance ) override;
+	virtual void processRenderList() override;
 
 	// these probably don't belong on the renderer
 	virtual bool getUniverseFromOrigin( const std::string & originPath, glm::mat4 *universeFromOrigin ) override;
 	virtual bool isGrabPressed( EHand hand ) override;
 	virtual void sentHapticEventForHand( EHand hand, float amplitude, float frequency, float duration ) override;
+	virtual void updateOpenVrPoses() override;
+	virtual void runFrame( bool *shouldQuit, double frameTime ) override;
 
 protected:
 	aardvark::CAardvarkClient *m_pClient;
@@ -135,9 +137,6 @@ protected:
 	vr::VRInputValueHandle_t m_rightHand = vr::k_ulInvalidInputValueHandle;
 	bool m_leftPressed = false;
 	bool m_rightPressed = false;
-
-
-	void processRenderList();
 
 	bool m_updateDescriptors = false;
 
