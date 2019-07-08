@@ -14,8 +14,6 @@ namespace aardvark
 };
 
 
-typedef std::function<void( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )> JavascriptFn;
-
 class CAardvarkObject;
 
 class CAardvarkRenderProcessHandler : public CefRenderProcessHandler

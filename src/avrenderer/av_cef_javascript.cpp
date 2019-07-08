@@ -11,77 +11,11 @@
 #include <include/base/cef_bind.h>
 #include <include/wrapper/cef_closure_task.h>
 #include <include/wrapper/cef_helpers.h>
+#include "javascript_object.h"
 
 using aardvark::AvSceneContext;
 using aardvark::EAvSceneGraphResult;
 using aardvark::EAvSceneGraphNodeType;
-
-class DynamicFunctionHandler : public CefV8Handler 
-{
-public:
-	DynamicFunctionHandler( const std::string & sFunctionName, JavascriptFn fn )
-	{
-		m_functionName = sFunctionName;
-		m_fn = fn;
-	}
-
-	virtual bool Execute( const CefString& name,
-		CefRefPtr<CefV8Value> object,
-		const CefV8ValueList& arguments,
-		CefRefPtr<CefV8Value>& retval,
-		CefString& exception ) override 
-	{
-		if ( name == m_functionName && m_fn ) 
-		{
-			m_fn( arguments, retval, exception );
-			return true;
-		}
-
-		// Function does not exist.
-		return false;
-	}
-
-private:
-	std::string m_functionName;
-	JavascriptFn m_fn = nullptr;
-
-	// Provide the reference counting implementation for this class.
-	IMPLEMENT_REFCOUNTING( DynamicFunctionHandler );
-};
-
-class CJavascriptObjectWithFunctions
-{
-public:
-	CJavascriptObjectWithFunctions();
-	~CJavascriptObjectWithFunctions();
-
-	virtual bool init() = 0;
-	virtual void cleanup() = 0;
-
-	CefRefPtr<CefV8Value> getContainer() { return m_container; }
-
-protected:
-	void RegisterFunction( const std::string & sName, JavascriptFn fn );
-
-	CefRefPtr<CefV8Value> m_container;
-
-};
-
-CJavascriptObjectWithFunctions::CJavascriptObjectWithFunctions()
-{
-	m_container = CefV8Value::CreateObject( nullptr, nullptr );
-}
-
-CJavascriptObjectWithFunctions::~CJavascriptObjectWithFunctions()
-{
-	m_container = nullptr;
-}
-
-void CJavascriptObjectWithFunctions::RegisterFunction( const std::string & sName, JavascriptFn fn )
-{
-	CefRefPtr< DynamicFunctionHandler > pFunction( new DynamicFunctionHandler( sName, fn ) );
-	m_container->SetValue( sName, CefV8Value::CreateFunction( sName, pFunction ), V8_PROPERTY_ATTRIBUTE_READONLY );
-}
 
 class CAardvarkGadgetObject : public CJavascriptObjectWithFunctions
 {
