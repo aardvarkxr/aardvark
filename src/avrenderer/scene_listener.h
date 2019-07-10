@@ -26,21 +26,17 @@ public:
 	CSceneListener *m_listener = nullptr;
 };
 
-class CSceneListener : public IApplication
+class CSceneListener 
 {
 	friend AvFrameListenerImpl;
 public:
 	CSceneListener( );
 
-	void earlyInit( CefRefPtr<CAardvarkCefApp> app );
-
-	void init( HINSTANCE hinstance );
+	void init( HINSTANCE hinstance, aardvark::CAardvarkClient *client );
 	void cleanup();
 	void run();
-
-
-	// ------------------ IApplication implementation -------------------------
-	virtual void quitRequested() override;
+	void runFrame();
+	bool wantsQuit() { return m_wantsQuit; }
 
 protected:
 	CSceneTraverser m_traverser;
@@ -48,9 +44,8 @@ protected:
 	kj::Own< AvFrameListenerImpl > m_frameListener;
 	std::unique_ptr<IRenderer> m_renderer;
 	std::unique_ptr<IVrManager> m_vrManager;
-	CefRefPtr<CAardvarkCefApp> m_app;
 
-	kj::Own<aardvark::CAardvarkClient> m_pClient;
+	aardvark::CAardvarkClient *m_pClient;
 
 	bool m_wantsQuit = false;
 };

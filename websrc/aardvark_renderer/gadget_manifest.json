@@ -1,0 +1,6 @@
+{
+	"name" : "Aardvark Renderer",
+	"resolution": [ 16, 16 ],
+	"permissions" : [ "renderer" ],
+	"model" : ""
+}

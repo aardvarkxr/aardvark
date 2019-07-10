@@ -102,7 +102,7 @@ void CAardvarkCefApp::startGadget( const std::string & uri, const std::string & 
 	CEF_REQUIRE_UI_THREAD();
 
 	// CAardvarkCefHandler implements browser-level callbacks.
-	CefRefPtr<CAardvarkCefHandler> handler( new CAardvarkCefHandler( m_application, uri, initialHook ) );
+	CefRefPtr<CAardvarkCefHandler> handler( new CAardvarkCefHandler( this, uri, initialHook ) );
 	m_browsers.push_back( handler );
 	handler->start();
 }
@@ -127,14 +127,37 @@ CefRefPtr<CefRenderProcessHandler> CAardvarkCefApp::GetRenderProcessHandler()
 
 void CAardvarkCefApp::CloseAllBrowsers( bool forceClose )
 {
-	for ( auto browser : m_browsers )
+	std::vector< CefRefPtr< CAardvarkCefHandler > > browsers = m_browsers;
+	for ( auto browser : browsers )
 	{
 		browser->triggerClose( forceClose );
 	}
-	m_browsers.clear();
 }
 
 CAardvarkCefApp* CAardvarkCefApp::instance()
 {
 	return g_instance;
 }
+
+bool CAardvarkCefApp::wantsToQuit()
+{
+	return m_browsers.empty() && m_quitRequested;
+}
+
+void CAardvarkCefApp::quitRequested()
+{
+	CloseAllBrowsers( true );
+	m_quitRequested = true;
+}
+
+
+void CAardvarkCefApp::browserClosed( CAardvarkCefHandler *handler )
+{
+	auto i = std::find( m_browsers.begin(), m_browsers.end(), handler );
+	if ( i != m_browsers.end() )
+	{
+		m_browsers.erase( i );
+	}
+}
+
+

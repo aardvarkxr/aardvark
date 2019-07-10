@@ -18,6 +18,8 @@
 #define STBI_MSC_SECURE_CRT
 #include "tiny_gltf.h"
 
+#include <chrono>
+#include <thread>
 
 // OS specific macros for the example main entry points
 #if defined(_WIN32)
@@ -70,18 +72,13 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 	// have to build the arg list before creating the example object
 	for ( int32_t i = 0; i < __argc; i++ ) { VulkanExample::args.push_back( __argv[i] ); };
 
-	CSceneListener sceneListener;
-	sceneListener.earlyInit( app );
-
 	// Initialize CEF.
 	CefInitialize( mainArgs, settings, app.get(), sandbox_info );
 
-	sceneListener.init( hInstance );
-
-	sceneListener.run();
-	sceneListener.cleanup();
-
-	app = nullptr;
+	while ( !app->wantsToQuit() )
+	{
+		std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+	}
 
 	// Shut down CEF.
 	CefShutdown();

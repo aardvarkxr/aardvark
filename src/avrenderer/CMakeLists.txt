@@ -24,6 +24,8 @@ add_executable(avrenderer
 	ivrmanager.h
 	javascript_object.cpp
 	javascript_object.h
+	javascript_renderer.cpp
+	javascript_renderer.h
 	pending_transform.cpp
 	pending_transform.h
 	scene_listener.cpp

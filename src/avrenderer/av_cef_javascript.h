@@ -8,6 +8,8 @@
 
 #include <aardvark/aardvark_gadget_manifest.h>
 
+#include "uri_request_handler.h"
+
 namespace aardvark
 {
 	class CAardvarkClient;
@@ -51,6 +53,7 @@ private:
 	std::string m_gadgetUri;
 	std::string m_initialHook;
 	CAardvarkGadgetManifest m_gadgetManifest;
+	CUriRequestHandler m_uriRequestHandler;
 
 	// Include the default reference counting implementation.
 	IMPLEMENT_REFCOUNTING( CAardvarkRenderProcessHandler );

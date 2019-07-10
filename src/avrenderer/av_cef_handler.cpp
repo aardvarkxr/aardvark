@@ -76,7 +76,6 @@ CAardvarkCefHandler::CAardvarkCefHandler( IApplication *application, const std::
 
 CAardvarkCefHandler::~CAardvarkCefHandler() 
 {
-	m_client->Stop();
 }
 
 // Called after creation to kick off the gadget
@@ -189,12 +188,13 @@ bool CAardvarkCefHandler::DoClose(CefRefPtr<CefBrowser> browser)
 {
 	CEF_REQUIRE_UI_THREAD();
 
-	// Closing the main window requires special handling. See the DoClose()
-	// documentation in the CEF header for a detailed destription of this
-	// process.
-
 	// Set a flag to indicate that the window close should be allowed.
 	m_isClosing = true;
+
+	m_client->Stop();
+	m_client = nullptr;
+
+	m_application->browserClosed( this );
 
 	// Allow the close. For windowed browsers this will result in the OS close
 	// event being sent.
@@ -275,6 +275,10 @@ bool CAardvarkCefHandler::OnProcessMessageReceived( CefRefPtr<CefBrowser> browse
 		updateSceneGraphTextures();
 		return true;
 	}
+	else if ( message->GetName() == "quit" )
+	{
+		m_application->quitRequested();
+	}
 	else if ( message->GetName() == "start_gadget" )
 	{
 		std::string uri( message->GetArgumentList()->GetString( 0 ) );
@@ -348,11 +352,16 @@ void CAardvarkCefHandler::updateSceneGraphTextures()
 
 void CAardvarkCefHandler::RunFrame()
 {
-	m_client->WaitScope().poll();
+	if ( m_client )
+	{
+		m_client->WaitScope().poll();
+		CefPostDelayedTask( TID_UI, base::Bind( &CAardvarkCefHandler::RunFrame, this ), 11 );
+	}
+
 	m_uriRequestHandler.doCefRequestWork();
 
-	CefPostDelayedTask( TID_UI, base::Bind( &CAardvarkCefHandler::RunFrame, this ), 11 );
 }
+
 
 
 void CAardvarkCefHandler::triggerClose( bool forceClose )

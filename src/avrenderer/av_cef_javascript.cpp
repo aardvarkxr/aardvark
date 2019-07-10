@@ -12,6 +12,7 @@
 #include <include/wrapper/cef_closure_task.h>
 #include <include/wrapper/cef_helpers.h>
 #include "javascript_object.h"
+#include "javascript_renderer.h"
 
 using aardvark::AvSceneContext;
 using aardvark::EAvSceneGraphResult;
@@ -856,6 +857,7 @@ public:
 private:
 	CAardvarkRenderProcessHandler *m_handler = nullptr;
 	std::list<std::unique_ptr<CAardvarkGadgetObject>> m_gadgets;
+	std::unique_ptr< CJavascriptRenderer > m_renderer;
 };
 
 CAardvarkObject::CAardvarkObject( CAardvarkRenderProcessHandler *renderProcessHandler )
@@ -873,6 +875,11 @@ void CAardvarkObject::runFrame()
 	for ( auto & gadget : m_gadgets )
 	{
 		gadget->runFrame();
+	}
+
+	if ( m_renderer )
+	{
+		m_renderer->runFrame();
 	}
 }
 
@@ -947,6 +954,12 @@ bool CAardvarkObject::init()
 		} );
 	}
 
+	if ( hasPermission( "renderer" ) )
+	{
+		m_renderer = std::make_unique<CJavascriptRenderer>( m_handler );
+		m_renderer->init();
+	}
+
 	return true;
 
 }
@@ -958,6 +971,11 @@ void CAardvarkObject::cleanup()
 		gadget->cleanup();
 	}
 	m_gadgets.clear();
+	if ( m_renderer )
+	{
+		m_renderer->cleanup();
+	}
+	m_renderer = nullptr;
 }
 
 
@@ -1056,6 +1074,13 @@ void CAardvarkRenderProcessHandler::runFrame()
 	}
 
 	m_client->WaitScope().poll();
+	m_uriRequestHandler.doCefRequestWork();
 
-	CefPostDelayedTask( TID_RENDERER, base::Bind( &CAardvarkRenderProcessHandler::runFrame, this ), 10 );
+	int64_t frameDelay = 10;
+	if ( hasPermission( "renderer" ) )
+	{
+		frameDelay = 0;
+	}
+
+	CefPostDelayedTask( TID_RENDERER, base::Bind( &CAardvarkRenderProcessHandler::runFrame, this ), frameDelay );
 }

@@ -6,18 +6,17 @@
 
 #include "include/cef_app.h"
 #include "av_cef_handler.h"
+#include "iapplication.h"
 
 #include <thread>
 
 
 // Implement application-level callbacks for the browser process.
-class CAardvarkCefApp : public CefApp, public CefBrowserProcessHandler 
+class CAardvarkCefApp : public CefApp, public CefBrowserProcessHandler , IApplication
 {
 public:
 	CAardvarkCefApp();
 	virtual ~CAardvarkCefApp();
-
-	void setApplication( IApplication *application ) { m_application = application; }
 
 	static CAardvarkCefApp* instance();
 
@@ -37,12 +36,14 @@ public:
 
 	void startGadget( const std::string & uri, const std::string & initialHook );
 
+	virtual void quitRequested() override;
+	virtual void browserClosed( CAardvarkCefHandler *handler ) override;
 
-
+	bool wantsToQuit();
 private:
 
-	IApplication *m_application = nullptr;
 	CefRefPtr<CefRenderProcessHandler> m_renderProcessHandler;
+	bool m_quitRequested = false;
 
 	std::vector< CefRefPtr<CAardvarkCefHandler> > m_browsers;
 

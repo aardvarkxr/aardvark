@@ -121,7 +121,6 @@ public:
 
 	// Called when the manifest load is completed
 	void onGadgetManifestReceived( bool success, const std::string & manifestData );
-
 private:
 	// Platform-specific implementation.
 	void PlatformTitleChange(CefRefPtr<CefBrowser> browser,
@@ -152,6 +151,7 @@ private:
 	CefRefPtr<CefURLRequest> m_manifestRequest;
 	std::string m_gadgetUri;
 	std::string m_initialHook;
+	bool m_wantsToQuit = false;
 
 	CUriRequestHandler m_uriRequestHandler;
 

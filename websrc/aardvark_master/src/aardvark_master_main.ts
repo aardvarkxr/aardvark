@@ -1,5 +1,6 @@
 import { Av } from 'common/aardvark'
 
+Av().startGadget( "file:///E:/homedev/aardvark/build/gadgets/aardvark_renderer", "" );
 Av().startGadget( "file:///E:/homedev/aardvark/build/gadgets/default_hand", "/user/hand/right" );
 Av().startGadget( "file:///E:/homedev/aardvark/build/gadgets/default_hand", "/user/hand/left" );
 Av().startGadget( "file:///E:/homedev/aardvark/build/gadgets/test_panel", "/user/hand/left" );
