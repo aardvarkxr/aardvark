@@ -34,15 +34,6 @@
                "path" : "/user/hand/right/input/trigger"
             }
          ]
-      },
-      "/actions/legacy" : {
-         "sources" : [
-            {
-               "inputs" : {},
-               "mode" : "button",
-               "path" : "/user/hand/left/input/trigger"
-            }
-         ]
       }
    },
    "category" : "steamvr_input",
