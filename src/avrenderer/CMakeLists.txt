@@ -28,8 +28,6 @@ add_executable(avrenderer
 	javascript_renderer.h
 	pending_transform.cpp
 	pending_transform.h
-	scene_listener.cpp
-	scene_listener.h
 	scene_traverser.cpp
 	scene_traverser.h
 	uri_request_handler.cpp

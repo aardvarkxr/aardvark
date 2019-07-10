@@ -9,14 +9,15 @@
 // glTF format: https://github.com/KhronosGroup/glTF
 // tinyglTF loader: https://github.com/syoyo/tinygltf
 
-#include "aardvark_renderer.h"
-#include "scene_listener.h"
 
 #define TINYGLTF_IMPLEMENTATION
 #define TINYGLTF_NO_STB_IMAGE_WRITE
 #define STB_IMAGE_IMPLEMENTATION
 #define STBI_MSC_SECURE_CRT
 #include "tiny_gltf.h"
+
+#include <aardvark/aardvark_server.h>
+#include "av_cef_app.h"
 
 #include <chrono>
 #include <thread>
@@ -68,9 +69,6 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 
 	settings.multi_threaded_message_loop = true;
 	settings.windowless_rendering_enabled = true;
-
-	// have to build the arg list before creating the example object
-	for ( int32_t i = 0; i < __argc; i++ ) { VulkanExample::args.push_back( __argv[i] ); };
 
 	// Initialize CEF.
 	CefInitialize( mainArgs, settings, app.get(), sandbox_info );
