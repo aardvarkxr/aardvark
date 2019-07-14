@@ -61,6 +61,9 @@ protected:
 
 	CefRefPtr< CefV8Value > m_jsSceneProcessor;
 	CefRefPtr< CefV8Value > m_jsTraverser;
+	CefRefPtr< CefV8Value > m_jsHapticProcessor;
+	CIntersectionTester m_intersections;
+	CCollisionTester m_collisions;
 
 	CAardvarkRenderProcessHandler *m_handler = nullptr;
 	bool m_quitting = false;

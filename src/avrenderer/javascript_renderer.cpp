@@ -10,6 +10,34 @@ CJavascriptModelInstance::CJavascriptModelInstance( std::unique_ptr<IModelInstan
 	m_modelInstance = std::move( modelInstance );
 }
 
+bool mat4FromJavascript( CefRefPtr<CefV8Value> arg, glm::mat4 *out )
+{
+	if ( !arg->IsArray()
+		|| arg->GetArrayLength() != 16
+		|| !arg->GetValue( 0 )->IsDouble() )
+	{
+		return false;
+	}
+
+	(*out)[0][0] = arg->GetValue( 0 )->GetDoubleValue();
+	(*out)[0][1] = arg->GetValue( 1 )->GetDoubleValue();
+	(*out)[0][2] = arg->GetValue( 2 )->GetDoubleValue();
+	(*out)[0][3] = arg->GetValue( 3 )->GetDoubleValue();
+	(*out)[1][0] = arg->GetValue( 4 )->GetDoubleValue();
+	(*out)[1][1] = arg->GetValue( 5 )->GetDoubleValue();
+	(*out)[1][2] = arg->GetValue( 6 )->GetDoubleValue();
+	(*out)[1][3] = arg->GetValue( 7 )->GetDoubleValue();
+	(*out)[2][0] = arg->GetValue( 8 )->GetDoubleValue();
+	(*out)[2][1] = arg->GetValue( 9 )->GetDoubleValue();
+	(*out)[2][2] = arg->GetValue( 10 )->GetDoubleValue();
+	(*out)[2][3] = arg->GetValue( 11 )->GetDoubleValue();
+	(*out)[3][0] = arg->GetValue( 12 )->GetDoubleValue();
+	(*out)[3][1] = arg->GetValue( 13 )->GetDoubleValue();
+	(*out)[3][2] = arg->GetValue( 14 )->GetDoubleValue();
+	(*out)[3][3] = arg->GetValue( 15 )->GetDoubleValue();
+
+	return true;
+}
 
 bool CJavascriptModelInstance::init( CefRefPtr<CefV8Value > container )
 {
@@ -21,31 +49,12 @@ bool CJavascriptModelInstance::init( CefRefPtr<CefV8Value > container )
 			return;
 		}
 
-		if ( !arguments[0]->IsArray() 
-			|| arguments[0]->GetArrayLength() != 16 
-			|| !arguments[0]->GetValue( 0 )->IsDouble() )
+		glm::mat4 universeFromModel;
+		if ( !mat4FromJavascript( arguments[0], &universeFromModel ) )
 		{
 			exception = "argument must be an array of 16 numbers";
 			return;
 		}
-
-		glm::mat4 universeFromModel;
-		universeFromModel[0][0] = arguments[0]->GetValue( 0 )->GetDoubleValue();
-		universeFromModel[0][1] = arguments[0]->GetValue( 1 )->GetDoubleValue();
-		universeFromModel[0][2] = arguments[0]->GetValue( 2 )->GetDoubleValue();
-		universeFromModel[0][3] = arguments[0]->GetValue( 3 )->GetDoubleValue();
-		universeFromModel[1][0] = arguments[0]->GetValue( 4 )->GetDoubleValue();
-		universeFromModel[1][1] = arguments[0]->GetValue( 5 )->GetDoubleValue();
-		universeFromModel[1][2] = arguments[0]->GetValue( 6 )->GetDoubleValue();
-		universeFromModel[1][3] = arguments[0]->GetValue( 7 )->GetDoubleValue();
-		universeFromModel[2][0] = arguments[0]->GetValue( 8 )->GetDoubleValue();
-		universeFromModel[2][1] = arguments[0]->GetValue( 9 )->GetDoubleValue();
-		universeFromModel[2][2] = arguments[0]->GetValue( 10 )->GetDoubleValue();
-		universeFromModel[2][3] = arguments[0]->GetValue( 11 )->GetDoubleValue();
-		universeFromModel[3][0] = arguments[0]->GetValue( 12 )->GetDoubleValue();
-		universeFromModel[3][1] = arguments[0]->GetValue( 13 )->GetDoubleValue();
-		universeFromModel[3][2] = arguments[0]->GetValue( 14 )->GetDoubleValue();
-		universeFromModel[3][3] = arguments[0]->GetValue( 15 )->GetDoubleValue();
 
 		m_modelInstance->setUniverseFromModel( universeFromModel );
 	} );
@@ -101,12 +110,18 @@ void CJavascriptRenderer::runFrame()
 
 	if ( m_jsTraverser )
 	{
+		// we'll use our local intersections and collisions for callbacks from JS
+		m_intersections.reset();
+		m_collisions.reset();
+
 		m_handler->getContext()->Enter();
 
 		m_jsTraverser->ExecuteFunction( nullptr, CefV8ValueList{} );
 
 		m_handler->getContext()->Exit();
 
+		m_intersections.updatePokerProximity( m_handler->getClient() );
+		m_collisions.updateGrabberIntersections( m_handler->getClient() );
 	}
 	else
 	{
@@ -207,6 +222,51 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 		}
 	} );
 
+	RegisterFunction( container, "registerHapticProcessor", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 1 )
+		{
+			exception = "Invalid arguments";
+			return;
+		}
+
+		if ( !arguments[0]->IsFunction() )
+		{
+			exception = "argument must be a function";
+			return;
+		}
+
+		m_jsHapticProcessor = arguments[0];
+	} );
+
+	RegisterFunction( container, "sendHapticEventForHand", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 4 )
+		{
+			exception = "Invalid arguments";
+			return;
+		}
+
+		if ( !arguments[0]->IsInt() )
+		{
+			exception = "first argument must be an int";
+			return;
+		}
+		if ( !arguments[1]->IsDouble()
+			|| !arguments[2]->IsDouble() 
+			|| !arguments[3]->IsDouble() )
+		{
+			exception = "second, third, and fourth arguments must be an numbers";
+			return;
+		}
+
+		m_vrManager->sentHapticEventForHand( (EHand)arguments[0]->GetIntValue(),
+			arguments[1]->GetDoubleValue(),
+			arguments[2]->GetDoubleValue(),
+			arguments[3]->GetDoubleValue() );
+	} );
+
+
 	RegisterFunction( container, "getUniverseFromOriginTransform", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
 		if ( arguments.size() != 1 )
@@ -268,6 +328,70 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 			retval = newModelInstance.object;
 		}
 	} );
+
+
+	RegisterFunction( container, "addActivePanel", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 3 )
+		{
+			exception = "Invalid arguments";
+			return;
+		}
+
+		if ( !arguments[0]->IsString() )
+		{
+			exception = "argument must be the global panel ID as a string";
+			return;
+		}
+
+		glm::mat4 panelFromUniverse;
+		if ( !mat4FromJavascript( arguments[1], &panelFromUniverse ) )
+		{
+			exception = "second argument must be an array of 16 numbers";
+			return;
+		}
+
+		if ( !arguments[2]->IsDouble() )
+		{
+			exception = "third argument must be a number";
+			return;
+		}
+
+		uint64_t globalPanelId = std::strtoull( std::string( arguments[0]->GetStringValue() ).c_str(), nullptr, 0 );
+		m_intersections.addActivePanel( globalPanelId, panelFromUniverse, arguments[2]->GetDoubleValue() );
+	} );
+
+	RegisterFunction( container, "addActivePoker", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 2 )
+		{
+			exception = "Invalid arguments";
+			return;
+		}
+
+		if ( !arguments[0]->IsString() )
+		{
+			exception = "argument must be the global panel ID as a string";
+			return;
+		}
+
+		if ( !arguments[1]->IsArray()
+			|| arguments[1]->GetArrayLength() != 3
+			|| !arguments[1]->GetValue( 0 )->IsDouble() )
+		{
+			exception = "second argument must be an array of 3 numbers";
+			return;
+		}
+
+		glm::vec3 pokerInUniverse;
+		pokerInUniverse.x = arguments[1]->GetValue( 0 )->GetDoubleValue();
+		pokerInUniverse.y = arguments[1]->GetValue( 1 )->GetDoubleValue();
+		pokerInUniverse.z = arguments[1]->GetValue( 2 )->GetDoubleValue();
+
+		uint64_t globalPokerId = std::strtoull( std::string( arguments[0]->GetStringValue() ).c_str(), nullptr, 0 );
+		m_intersections.addActivePoker( globalPokerId, pokerInUniverse );
+	} );
+
 	return true;
 }
 
@@ -510,10 +634,27 @@ CefRefPtr<CefV8Value> CJavascriptRenderer::frameToJsObject( AvVisualFrame::Reade
 
 ::kj::Promise<void> AvFrameListenerImpl::sendHapticEvent( SendHapticEventContext context )
 {
-	m_renderer->m_traverser.sendHapticEvent( context.getParams().getTargetGlobalId(),
-		context.getParams().getAmplitude(),
-		context.getParams().getFrequency(),
-		context.getParams().getDuration() );
+	if ( m_renderer->m_jsHapticProcessor )
+	{
+		m_renderer->m_handler->getContext()->Enter();
+
+		m_renderer->m_jsHapticProcessor->ExecuteFunction( nullptr, CefV8ValueList
+			{
+				CefV8Value::CreateString( std::to_string( context.getParams().getTargetGlobalId() ) ),
+				CefV8Value::CreateDouble( context.getParams().getAmplitude() ),
+				CefV8Value::CreateDouble( context.getParams().getFrequency() ),
+				CefV8Value::CreateDouble( context.getParams().getDuration() ),
+			} );
+
+		m_renderer->m_handler->getContext()->Exit();
+	}
+	else
+	{
+		m_renderer->m_traverser.sendHapticEvent( context.getParams().getTargetGlobalId(),
+			context.getParams().getAmplitude(),
+			context.getParams().getFrequency(),
+			context.getParams().getDuration() );
+	}
 	return kj::READY_NOW;
 }
 

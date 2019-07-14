@@ -1,6 +1,6 @@
 import { Av } from 'common/aardvark';
 import { AvModelInstance, AvNode, AvNodeRoot, AvNodeType, AvVisualFrame, EHand } from './aardvark';
-import { mat4, vec3, quat } from '@tlaukkan/tsm';
+import { mat4, vec3, quat, vec4 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
 
 interface NodeData
@@ -351,11 +351,7 @@ export class AvDefaultTraverser
 
 		if ( nodeData.modelInstance )
 		{
-			nodeData.modelInstance.setOverrideTexture( 1 );
-			// if ( iSharedTexture != m_sharedTextureInfo.end() )
-			// {
-			// 	pData->model->setOverrideTexture( iSharedTexture->second );
-			// }
+			nodeData.modelInstance.setOverrideTexture( this.m_currentRoot.gadgetId );
 
 			this.updateTransform( node.globalId, defaultParent, mat4.identity,
 				( universeFromNode: mat4 ) =>
@@ -365,12 +361,13 @@ export class AvDefaultTraverser
 
 				if ( node.propInteractive )
 				{
-					// glm::vec4 panelTangent = universeFromNode * glm::vec4( 0, 1.f, 0, 0 );
-					// float zScale = glm::length( panelTangent );
-					// m_intersections.addActivePanel(
-					// 	globalId,
-					// 	glm::inverse( universeFromNode ),
-					// 	zScale );
+					let panelNormal = universeFromNode.multiplyVec4( new vec4( [ 0, 1, 0, 0 ] ) );
+					let zScale = panelNormal.length();
+					let nodeFromUniverse = new mat4( universeFromNode.all() ).inverse();
+					Av().renderer.addActivePanel(
+						node.globalId,
+						nodeFromUniverse.all(),
+						zScale );
 				}
 			} );
 		}
@@ -381,8 +378,8 @@ export class AvDefaultTraverser
 		this.updateTransform( node.globalId, defaultParent, null,
 			( universeFromNode: mat4 ) =>
 		{
-			// glm::vec4 vPokerInUniverse = universeFromNode * glm::vec4( 0, 0, 0, 1.f );
-			// m_intersections.addActivePoker( globalId, vPokerInUniverse );
+			let pokerInUniverse = universeFromNode.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) );
+			Av().renderer.addActivePoker( node.globalId, [ pokerInUniverse.x, pokerInUniverse.y, pokerInUniverse.z ] );
 		} );
 	}
 	
@@ -475,7 +472,8 @@ export class AvDefaultTraverser
 	}
 
 	
-	sendHapticEventForNode( targetGlobalNodeId: string, amplitude: number, frequency: number, duration: number )
+	@bind
+	public sendHapticEventForNode( targetGlobalNodeId: string, amplitude: number, frequency: number, duration: number )
 	{
 		let hapticHand = this.m_handDeviceForNode[ targetGlobalNodeId ];
 		if( hapticHand )
@@ -492,7 +490,7 @@ export class AvDefaultTraverser
 		{
 			throw "Received a new scene graph during traversal";
 		}
-		console.log( "New scene graph frame " + frame.id );
+//		console.log( "New scene graph frame " + frame.id );
 		if( frame.nodeRoots == undefined )
 		{
 			console.log( "roots were undefined");

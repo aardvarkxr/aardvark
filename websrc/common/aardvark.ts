@@ -14,7 +14,7 @@ interface AvSceneContext_Finish
 export enum AvNodeType
 {
 	Invalid = -1,
-	
+
 	Container = 0,
 	Origin = 1,
 	Transform = 2,
@@ -272,6 +272,10 @@ export interface AvTraversalRenderer
 {
 	(): void;
 }
+export interface AvHapticProcessor
+{
+	( globalNodeId: string, amplitude: number, frequence: number, duration: number ): void;
+}
 
 export interface AvModelInstance
 {
@@ -294,8 +298,13 @@ interface AvRenderer
 	renderList( renderList: AvModelInstance[] ): void,
 	createModelInstance( uri: string): AvModelInstance;
 	addToRenderList( modelInstance: AvModelInstance ): void;
-	sendHapticEventForHand( hand: EHand, amplitude: number, frequency: number, duration: number ): void;
 	getUniverseFromOriginTransform( origin: string ): number[];
+
+	registerHapticProcessor( hapticProcessor: AvHapticProcessor ) : void;
+	sendHapticEventForHand( hand: EHand, amplitude: number, frequency: number, duration: number ): void;
+
+	addActivePanel( panelGlobalId: string, nodeFromUniverse: number[], zScale: number ): void;
+	addActivePoker( pokerGlobalId: string, pokerInUniverse: number[] ): void;
 }
 
 export interface Aardvark
