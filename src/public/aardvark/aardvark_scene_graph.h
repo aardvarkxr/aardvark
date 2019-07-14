@@ -23,6 +23,8 @@ namespace aardvark
 
 	enum class EAvSceneGraphNodeType
 	{
+		Invalid = -1,
+
 		Container = 0,	// no properties. Only contains other nodes
 		Origin = 1,		// Sets the origin path for its children
 		Transform = 2,	// Sets the transform for its children

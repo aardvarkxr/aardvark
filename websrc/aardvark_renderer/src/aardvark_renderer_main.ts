@@ -1,6 +1,10 @@
 import { Av } from 'common/aardvark'
+import { AvDefaultTraverser } from 'common/aardvark_traverser';
 
 console.log( "I'm a renderer!" );
-// Av().startGadget( "file:///E:/homedev/aardvark/build/apps/test_panel/index.html", [ "scenegraph" ] );
-// Av().startGadget( "file:///E:/homedev/aardvark/build/apps/default_poker/index.html", [ "scenegraph" ] );
-// Av().startGadget( "file:///E:/homedev/aardvark/build/apps/default_grabber/index.html", [ "scenegraph" ] );
+
+let traverser = new AvDefaultTraverser();
+
+Av().renderer.registerSceneProcessor( traverser.newSceneGraph );
+Av().renderer.registerTraverser( traverser.traverse );
+

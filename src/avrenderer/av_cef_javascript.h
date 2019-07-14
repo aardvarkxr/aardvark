@@ -9,6 +9,7 @@
 #include <aardvark/aardvark_gadget_manifest.h>
 
 #include "uri_request_handler.h"
+#include "javascript_object.h"
 
 namespace aardvark
 {
@@ -47,7 +48,7 @@ public:
 private:
 
 	std::unique_ptr<aardvark::CAardvarkClient> m_client;
-	std::unique_ptr<CAardvarkObject> m_aardvarkObject;
+	JsObjectPtr< CAardvarkObject > m_aardvarkObject;
 	CefRefPtr<CefBrowser> m_browser;
 	CefRefPtr<CefV8Context> m_context;
 	std::string m_gadgetUri;

@@ -39,21 +39,46 @@ private:
 	IMPLEMENT_REFCOUNTING( DynamicFunctionHandler );
 };
 
-class CJavascriptObjectWithFunctions
+template< typename T >
+struct JsObjectPtr
+{
+	T *impl;
+	CefRefPtr<CefV8Value> object;
+
+	T *operator->() { return impl; }
+	JsObjectPtr & operator=(void*) 
+	{
+		impl = nullptr;
+		object = nullptr;
+		return *this;
+	}
+	operator bool() const { return object != nullptr;  }
+};
+
+
+class CJavascriptObjectWithFunctions : public CefBaseRefCounted
 {
 public:
-	CJavascriptObjectWithFunctions();
-	~CJavascriptObjectWithFunctions();
+	virtual ~CJavascriptObjectWithFunctions();
 
-	virtual bool init() = 0;
-	virtual void cleanup() = 0;
+	template< typename T, class ...Ts >
+	static JsObjectPtr<T> create( Ts&& ... args )
+	{
+		JsObjectPtr<T> res;
+		res.object = CefV8Value::CreateObject( nullptr, nullptr );
 
-	CefRefPtr<CefV8Value> getContainer() { return m_container; }
+		CefRefPtr<T> impl = new T( std::forward<Ts>( args )... );
+		impl->init( res.object );
+		res.object->SetUserData( impl );
+		res.impl = impl.get();
+		return res;
+	}
+
+	virtual bool init( CefRefPtr< CefV8Value > container ) = 0;
 
 protected:
-	void RegisterFunction( const std::string & sName, JavascriptFn fn );
+	void RegisterFunction( CefRefPtr<CefV8Value> container, const std::string & sName, JavascriptFn fn );
 
-	CefRefPtr<CefV8Value> m_container;
-
+	IMPLEMENT_REFCOUNTING( CJavascriptObjectWithFunctions );
 };
 

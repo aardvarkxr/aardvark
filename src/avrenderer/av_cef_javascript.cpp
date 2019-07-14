@@ -22,10 +22,11 @@ class CAardvarkGadgetObject : public CJavascriptObjectWithFunctions
 {
 	friend class CSceneContextObject;
 public:
-	CAardvarkGadgetObject( CAardvarkRenderProcessHandler *pRenderProcessHandler, AvGadget::Client client, const std::string & name, uint32_t gadgetId );
+	CAardvarkGadgetObject( CAardvarkRenderProcessHandler *pRenderProcessHandler, 
+		AvGadget::Client client, const std::string & name, uint32_t gadgetId );
+	virtual ~CAardvarkGadgetObject() noexcept;
 
-	virtual bool init() override;
-	virtual void cleanup() override;
+	virtual bool init( CefRefPtr<CefV8Value > container ) override;
 
 	aardvark::EAvSceneGraphResult  finishSceneContext( CSceneContextObject *contextObject );
 	const std::string & getName() const { return m_name; }
@@ -37,7 +38,7 @@ private:
 	CAardvarkRenderProcessHandler *m_handler = nullptr;
 	std::string m_name;
 	uint32_t m_gadgetId;
-	std::list<std::unique_ptr<CSceneContextObject>> m_sceneContexts;
+	std::list<JsObjectPtr<CSceneContextObject>> m_sceneContexts;
 	std::set<uint32_t> m_nodeIdsThatNeedThisTexture;
 	std::unordered_map< uint32_t, CefRefPtr< CefV8Value > > m_pokerProcessors;
 	std::unordered_map< uint32_t, CefRefPtr< CefV8Value > > m_panelProcessors;
@@ -52,8 +53,7 @@ class CSceneContextObject : public CJavascriptObjectWithFunctions
 public:
 	CSceneContextObject( CAardvarkGadgetObject *parentGadget, CAardvarkRenderProcessHandler *pRenderProcessHandler, aardvark::AvSceneContext context );
 
-	virtual bool init() override;
-	virtual void cleanup() override;
+	virtual bool init( CefRefPtr<CefV8Value > container ) override;
 	AvSceneContext getContext() { return m_context; }
 
 	uint32_t getCurrentNodeId();
@@ -87,9 +87,9 @@ uint32_t CSceneContextObject::getCurrentNodeId()
 }
 
 
-bool CSceneContextObject::init()
+bool CSceneContextObject::init( CefRefPtr<CefV8Value> container )
 {
-	RegisterFunction( "finish", [this, parentGadget = m_parentGadget]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	RegisterFunction( container, "finish", [this, parentGadget = m_parentGadget]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
 		if ( arguments.size() != 0 )
 		{
@@ -104,7 +104,7 @@ bool CSceneContextObject::init()
 		}
 	} );
 
-	RegisterFunction( "startNode", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	RegisterFunction( container, "startNode", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
 		if ( arguments.size() != 3 )
 		{
@@ -147,9 +147,9 @@ bool CSceneContextObject::init()
 	typeEnum->SetValue( "Grabbable", CefV8Value::CreateInt( (int32_t)EAvSceneGraphNodeType::Grabbable), V8_PROPERTY_ATTRIBUTE_READONLY );
 	typeEnum->SetValue( "Handle", CefV8Value::CreateInt( (int32_t)EAvSceneGraphNodeType::Handle ), V8_PROPERTY_ATTRIBUTE_READONLY );
 	typeEnum->SetValue( "Grabber", CefV8Value::CreateInt( (int32_t)EAvSceneGraphNodeType::Grabber ), V8_PROPERTY_ATTRIBUTE_READONLY );
-	m_container->SetValue( "type", typeEnum, V8_PROPERTY_ATTRIBUTE_READONLY );
+	container->SetValue( "type", typeEnum, V8_PROPERTY_ATTRIBUTE_READONLY );
 
-	RegisterFunction( "finishNode", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	RegisterFunction( container, "finishNode", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
 		if ( arguments.size() != 0 )
 		{
@@ -171,7 +171,7 @@ bool CSceneContextObject::init()
 		}
 	} );
 
-	RegisterFunction( "setOriginPath", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	RegisterFunction( container, "setOriginPath", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
 		if ( arguments.size() != 1 )
 		{
@@ -191,7 +191,7 @@ bool CSceneContextObject::init()
 		}
 	} );
 
-	RegisterFunction( "setTranslation", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	RegisterFunction( container, "setTranslation", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
 		if ( arguments.size() != 3 )
 		{
@@ -214,7 +214,7 @@ bool CSceneContextObject::init()
 		}
 	} );
 
-	RegisterFunction( "setScale", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	RegisterFunction( container, "setScale", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
 		if ( arguments.size() != 3 )
 		{
@@ -237,7 +237,7 @@ bool CSceneContextObject::init()
 		}
 	} );
 
-	RegisterFunction( "setUniformScale", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	RegisterFunction( container, "setUniformScale", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
 		if ( arguments.size() != 1 )
 		{
@@ -260,7 +260,7 @@ bool CSceneContextObject::init()
 		}
 	} );
 
-	RegisterFunction( "setRotationEulerDegrees", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	RegisterFunction( container, "setRotationEulerDegrees", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
 		if ( arguments.size() != 3 )
 		{
@@ -290,7 +290,7 @@ bool CSceneContextObject::init()
 		}
 	} );
 
-	RegisterFunction( "setModelUri", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	RegisterFunction( container, "setModelUri", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
 		if ( arguments.size() != 1 )
 		{
@@ -310,7 +310,7 @@ bool CSceneContextObject::init()
 		}
 	} );
 
-	RegisterFunction( "setTextureSource", [this, handler = m_handler ]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	RegisterFunction( container, "setTextureSource", [this, handler = m_handler ]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
 		if ( arguments.size() != 1 )
 		{
@@ -330,7 +330,7 @@ bool CSceneContextObject::init()
 		}
 	} );
 
-	RegisterFunction( "setInteractive", [this, handler = m_handler ]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	RegisterFunction( container, "setInteractive", [this, handler = m_handler ]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
 		if ( arguments.size() != 1 )
 		{
@@ -350,7 +350,7 @@ bool CSceneContextObject::init()
 		}
 	} );
 
-	RegisterFunction( "setSphereVolume", [this, handler = m_handler]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	RegisterFunction( container, "setSphereVolume", [this, handler = m_handler]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
 		if ( arguments.size() != 1 )
 		{
@@ -374,12 +374,6 @@ bool CSceneContextObject::init()
 }
 
 
-void CSceneContextObject::cleanup()
-{
-
-}
-
-
 CAardvarkGadgetObject::CAardvarkGadgetObject( CAardvarkRenderProcessHandler *renderProcessHandler, AvGadget::Client client, const std::string & name, uint32_t gadgetId )
 	: m_gadgetClient( client )
 {
@@ -389,9 +383,9 @@ CAardvarkGadgetObject::CAardvarkGadgetObject( CAardvarkRenderProcessHandler *ren
 }
 
 
-bool CAardvarkGadgetObject::init()
+bool CAardvarkGadgetObject::init( CefRefPtr<CefV8Value> container )
 {
-	RegisterFunction( "getName", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	RegisterFunction( container, "getName", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
 		if ( arguments.size() != 0 )
 		{
@@ -410,7 +404,7 @@ bool CAardvarkGadgetObject::init()
 		}
 	} );
 
-	RegisterFunction( "startSceneContext", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	RegisterFunction( container, "startSceneContext", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
 		if ( arguments.size() != 0 )
 		{
@@ -425,19 +419,14 @@ bool CAardvarkGadgetObject::init()
 			return;
 		}
 
-		auto newContext = std::make_unique<CSceneContextObject>( this, m_handler, context );
-		if ( !newContext->init() )
-		{
-			exception = "Failed to init context";
-			return;
-		}
-		retval = newContext->getContainer();
+		auto newContext = CJavascriptObjectWithFunctions::create<CSceneContextObject>( this, m_handler, context );
+		retval = newContext.object;
 
 		m_sceneContexts.push_back( std::move( newContext ) );
 
 	} );
 
-	RegisterFunction( "registerPokerHandler", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	RegisterFunction( container, "registerPokerHandler", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
 		if ( arguments.size() != 2 )
 		{
@@ -460,7 +449,7 @@ bool CAardvarkGadgetObject::init()
 		m_pokerProcessors.insert_or_assign( arguments[0]->GetUIntValue(), arguments[1] );
 	} );
 
-	RegisterFunction( "registerPanelHandler", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	RegisterFunction( container, "registerPanelHandler", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
 		if ( arguments.size() != 2 )
 		{
@@ -483,7 +472,7 @@ bool CAardvarkGadgetObject::init()
 		m_panelProcessors.insert_or_assign( arguments[0]->GetUIntValue(), arguments[1] );
 	} );
 
-	RegisterFunction( "registerGrabberProcessor", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	RegisterFunction( container, "registerGrabberProcessor", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
 		if ( arguments.size() != 2 )
 		{
@@ -506,7 +495,7 @@ bool CAardvarkGadgetObject::init()
 		m_grabberProcessors.insert_or_assign( arguments[0]->GetUIntValue(), arguments[1] );
 	} );
 
-	RegisterFunction( "registerGrabbableProcessor", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	RegisterFunction( container, "registerGrabbableProcessor", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
 		if ( arguments.size() != 2 )
 		{
@@ -529,7 +518,7 @@ bool CAardvarkGadgetObject::init()
 		m_grabbableProcessors.insert_or_assign( arguments[0]->GetUIntValue(), arguments[1] );
 	} );
 
-	RegisterFunction( "enableDefaultPanelHandling", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	RegisterFunction( container, "enableDefaultPanelHandling", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
 		if ( arguments.size() != 1 )
 		{
@@ -546,7 +535,7 @@ bool CAardvarkGadgetObject::init()
 		m_defaultPanels.insert( arguments[0]->GetUIntValue() );
 	} );
 
-	RegisterFunction( "sendMouseEvent", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	RegisterFunction( container, "sendMouseEvent", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
 		if ( arguments.size() != 5 )
 		{
@@ -585,7 +574,7 @@ bool CAardvarkGadgetObject::init()
 			(float)arguments[3]->GetDoubleValue(), (float)arguments[4]->GetDoubleValue() );
 	} );
 
-	RegisterFunction( "sendHapticEventFromPanel", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	RegisterFunction( container, "sendHapticEventFromPanel", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
 		if ( arguments.size() != 4 )
 		{
@@ -628,7 +617,7 @@ bool CAardvarkGadgetObject::init()
 		}
 	} );
 
-	RegisterFunction( "sendGrabEvent", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	RegisterFunction( container, "sendGrabEvent", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
 		if ( arguments.size() != 3 )
 		{
@@ -668,12 +657,8 @@ bool CAardvarkGadgetObject::init()
 	return true;
 }
 
-void CAardvarkGadgetObject::cleanup()
+CAardvarkGadgetObject::~CAardvarkGadgetObject() noexcept
 {
-	for ( auto &context : m_sceneContexts )
-	{
-		context->cleanup();
-	}
 	m_sceneContexts.clear();
 
 	m_gadgetClient = nullptr;
@@ -830,7 +815,7 @@ aardvark::EAvSceneGraphResult CAardvarkGadgetObject::finishSceneContext( CSceneC
 
 	for ( auto iEntry = m_sceneContexts.begin(); iEntry != m_sceneContexts.end(); iEntry++ )
 	{
-		if ( &*(*iEntry) == contextObject )
+		if ( iEntry->impl == contextObject )
 		{
 			m_sceneContexts.erase( iEntry );
 			break;
@@ -846,18 +831,18 @@ class CAardvarkObject : public CJavascriptObjectWithFunctions
 {
 public:
 	CAardvarkObject( CAardvarkRenderProcessHandler *pRenderProcessHandler );
+	virtual ~CAardvarkObject();
 
-	virtual bool init() override;
-	void cleanup() override;
-	std::list<std::unique_ptr<CAardvarkGadgetObject>> & getGadgets() { return m_gadgets;  }
+	virtual bool init( CefRefPtr<CefV8Value> container ) override;
+	std::list<JsObjectPtr<CAardvarkGadgetObject>> & getGadgets() { return m_gadgets;  }
 
 	bool hasPermission( const std::string & permission );
 	void runFrame();
 
 private:
 	CAardvarkRenderProcessHandler *m_handler = nullptr;
-	std::list<std::unique_ptr<CAardvarkGadgetObject>> m_gadgets;
-	std::unique_ptr< CJavascriptRenderer > m_renderer;
+	std::list<JsObjectPtr<CAardvarkGadgetObject>> m_gadgets;
+	JsObjectPtr< CJavascriptRenderer > m_renderer;
 };
 
 CAardvarkObject::CAardvarkObject( CAardvarkRenderProcessHandler *renderProcessHandler )
@@ -884,11 +869,11 @@ void CAardvarkObject::runFrame()
 }
 
 
-bool CAardvarkObject::init()
+bool CAardvarkObject::init( CefRefPtr<CefV8Value> container )
 {
 	if ( hasPermission( "scenegraph" ) )
 	{
-		RegisterFunction( "createGadget", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+		RegisterFunction( container, "createGadget", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 		{
 			if ( arguments.size() != 1 )
 			{
@@ -911,24 +896,17 @@ bool CAardvarkObject::init()
 			}
 			else
 			{
-				auto gadget = std::make_unique<CAardvarkGadgetObject>( m_handler, resCreateGadget.getGadget(), std::string( arguments[0]->GetStringValue() ), resCreateGadget.getGadgetId() );
-				if ( !gadget->init() )
-				{
-					retval = CefV8Value::CreateNull();
-				}
-				else
-				{
-					retval = gadget->getContainer();
-					m_gadgets.push_back( std::move( gadget ) );
-					m_handler->updateGadgetNamesForBrowser();
-				}
+				auto gadget = CJavascriptObjectWithFunctions::create<CAardvarkGadgetObject>( m_handler, resCreateGadget.getGadget(), std::string( arguments[0]->GetStringValue() ), resCreateGadget.getGadgetId() );
+				retval = gadget.object;
+				m_gadgets.push_back( std::move( gadget ) );
+				m_handler->updateGadgetNamesForBrowser();
 			}
 		} );
 	}
 
 	if ( hasPermission( "master" ) )
 	{
-		RegisterFunction( "startGadget", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+		RegisterFunction( container, "startGadget", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 		{
 			if ( arguments.size() != 2 )
 			{
@@ -956,25 +934,17 @@ bool CAardvarkObject::init()
 
 	if ( hasPermission( "renderer" ) )
 	{
-		m_renderer = std::make_unique<CJavascriptRenderer>( m_handler );
-		m_renderer->init();
+		m_renderer = CJavascriptObjectWithFunctions::create<CJavascriptRenderer>( m_handler );
+		container->SetValue( "renderer", m_renderer.object, V8_PROPERTY_ATTRIBUTE_READONLY );
 	}
 
 	return true;
 
 }
 
-void CAardvarkObject::cleanup()
+CAardvarkObject::~CAardvarkObject()
 {
-	for ( auto & gadget : m_gadgets )
-	{
-		gadget->cleanup();
-	}
 	m_gadgets.clear();
-	if ( m_renderer )
-	{
-		m_renderer->cleanup();
-	}
 	m_renderer = nullptr;
 }
 
@@ -999,9 +969,8 @@ void CAardvarkRenderProcessHandler::OnContextCreated(
 	CefRefPtr<CefV8Value> windowObj = m_context->GetGlobal();
 
 	// Create an object to store our functions in
-	m_aardvarkObject = std::make_unique<CAardvarkObject>( this );
-	assert( m_aardvarkObject->init() );
-	windowObj->SetValue( "aardvark", m_aardvarkObject->getContainer(), V8_PROPERTY_ATTRIBUTE_READONLY );
+	m_aardvarkObject = CJavascriptObjectWithFunctions::create< CAardvarkObject>( this );
+	windowObj->SetValue( "aardvark", m_aardvarkObject.object, V8_PROPERTY_ATTRIBUTE_READONLY );
 
 	CefPostDelayedTask( TID_RENDERER, base::Bind( &CAardvarkRenderProcessHandler::runFrame, this ), 0 );
 
@@ -1011,7 +980,6 @@ void CAardvarkRenderProcessHandler::OnContextReleased( CefRefPtr<CefBrowser> bro
 	CefRefPtr<CefFrame> frame,
 	CefRefPtr<CefV8Context> context )
 {
-	m_aardvarkObject->cleanup();
 	m_aardvarkObject = nullptr;
 	m_client->Stop();
 	m_browser = nullptr;

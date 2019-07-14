@@ -1,4 +1,3 @@
-
 export interface PokerProximity
 {
 	panelId: string;
@@ -14,7 +13,9 @@ interface AvSceneContext_Finish
 
 export enum AvNodeType
 {
-	Container = 1,
+	Invalid = -1,
+	
+	Container = 0,
 	Origin = 1,
 	Transform = 2,
 	Model = 3,
@@ -195,10 +196,113 @@ interface Av_StartGadget
 	( uri:string, initialHook: string ):void;
 }
 
+export interface AvVector
+{
+	x: number;
+	y: number;
+	z: number;
+}
+
+export interface AvQuaternion
+{
+	x: number;
+	y: number;
+	z: number;
+	w: number;
+}
+
+export interface AvNodeTransform
+{
+	position?: AvVector;
+	rotation?: AvQuaternion;
+	scale?: AvVector;
+}
+
+export enum EVolumeType
+{
+	Invalid = -1,
+
+	Sphere = 0,
+};
+
+
+export interface AvVolume
+{
+	type: EVolumeType;
+
+	radius?: number;
+}
+
+
+export interface AvNode
+{
+	type: AvNodeType;
+	id: number;
+	globalId: string;
+	flags: number;
+	children?: AvNode[];
+
+	propOrigin?: string;
+	propTransform?: AvNodeTransform;
+	propModelUri?: string;
+	propVolume?: AvVolume;
+	propInteractive?: boolean;
+}
+
+
+export interface AvNodeRoot
+{
+	gadgetId: number;
+	root: AvNode;
+	hook?: string;
+}
+
+export interface AvVisualFrame
+{
+	id: string;
+	nodeRoots: AvNodeRoot[];
+}
+
+export interface AvTraversalFrameProcessor
+{
+	( frame: AvVisualFrame ): void;
+}
+
+export interface AvTraversalRenderer
+{
+	(): void;
+}
+
+export interface AvModelInstance
+{
+	setUniverseFromModelTransform( universeFromModel: number[] ): void;
+	setOverrideTexture( textureId: number ): void;
+}
+
+export enum EHand
+{
+	Invalid = 0,
+	Left = 1,
+	Right = 2,
+};
+
+
+interface AvRenderer
+{
+	registerSceneProcessor( sceneProcessor: AvTraversalFrameProcessor ): void;
+	registerTraverser( traverser: AvTraversalRenderer ): void;
+	renderList( renderList: AvModelInstance[] ): void,
+	createModelInstance( uri: string): AvModelInstance;
+	addToRenderList( modelInstance: AvModelInstance ): void;
+	sendHapticEventForHand( hand: EHand, amplitude: number, frequency: number, duration: number ): void;
+	getUniverseFromOriginTransform( origin: string ): number[];
+}
+
 export interface Aardvark
 {
 	createGadget: Av_CreateGadget;
 	startGadget: Av_StartGadget;
+	renderer: AvRenderer;
 }
 
 declare global
