@@ -27,10 +27,6 @@ figure out how to get command line options into the renderer. Maybe init it when
 
 ========= DEAL WITH THIS NEXT ===========
 
-* Add grabbing back to JS traverser
-  - needs registration function for grab start/end
-  - needs add grabber/grabbable/handle functions
-  - Probably needs bugs fixed in NodeToNodeAnchor code.
 * Fix dynamic reload of renderer tab. This should tear down the whole renderer and recreate it. Not having this is a pain when there are code changes on the Javascript side.
 
 
