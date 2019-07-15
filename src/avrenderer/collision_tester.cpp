@@ -11,18 +11,31 @@ void CCollisionTester::addGrabber( uint64_t globalGrabberId, const glm::mat4 & m
 	AvVolume::Reader & volume, bool isPressed )
 {
 	assert( volume.getType() == AvVolume::Type::SPHERE );
-	m_activeGrabbers.push_back( { globalGrabberId, isPressed, matGrabberFromUniverse, volume.getRadius() } );
+	addGrabber_Sphere( globalGrabberId, matGrabberFromUniverse, volume.getRadius(), isPressed );
+}
+
+void CCollisionTester::addGrabber_Sphere( uint64_t globalGrabberId, const glm::mat4 & grabberFromUniverse,
+	float radius, bool isPressed )
+{
+	m_activeGrabbers.push_back( { globalGrabberId, isPressed, grabberFromUniverse, radius } );
 }
 
 void CCollisionTester::addGrabbableHandle( uint64_t globalGrabbableId, const glm::mat4 & matUniverseFromHandle, 
 	AvVolume::Reader & volume )
 {
 	assert( volume.getType() == AvVolume::Type::SPHERE );
+
+	addGrabbableHandle_Sphere( globalGrabbableId, matUniverseFromHandle, volume.getRadius() );
+}
+
+void CCollisionTester::addGrabbableHandle_Sphere( uint64_t globalGrabbableId, const glm::mat4 & universeFromHandle,
+	float radius )
+{
 	for ( auto & grabbable : m_activeGrabbables )
 	{
 		if ( grabbable.globalGrabbableId == globalGrabbableId )
 		{
-			grabbable.handles.push_back( { matUniverseFromHandle, volume.getRadius() } );
+			grabbable.handles.push_back( { universeFromHandle, radius } );
 			return;
 		}
 	}
@@ -31,7 +44,7 @@ void CCollisionTester::addGrabbableHandle( uint64_t globalGrabbableId, const glm
 		{
 			globalGrabbableId,
 			{
-				{ matUniverseFromHandle, volume.getRadius() }
+				{ universeFromHandle, radius }
 			}
 		} );
 }

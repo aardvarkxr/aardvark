@@ -267,6 +267,106 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 	} );
 
 
+	RegisterFunction( container, "registerGrabStartProcessor", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 1 )
+		{
+			exception = "Invalid arguments";
+			return;
+		}
+
+		if ( !arguments[0]->IsFunction() )
+		{
+			exception = "argument must be a function";
+			return;
+		}
+
+		m_jsGrabStartProcessor = arguments[0];
+	} );
+
+	RegisterFunction( container, "registerGrabEndProcessor", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 1 )
+		{
+			exception = "Invalid arguments";
+			return;
+		}
+
+		if ( !arguments[0]->IsFunction() )
+		{
+			exception = "argument must be a function";
+			return;
+		}
+
+		m_jsGrabEndProcessor = arguments[0];
+	} );
+
+	RegisterFunction( container, "addGrabbableHandle_Sphere", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 3 )
+		{
+			exception = "Invalid arguments";
+			return;
+		}
+
+		if ( !arguments[0]->IsString() )
+		{
+			exception = "argument must be a string";
+			return;
+		}
+
+		glm::mat4 grabberFromUniverse;
+		if ( !mat4FromJavascript( arguments[1], &grabberFromUniverse ) )
+		{
+			exception = "argument must be a string";
+			return;
+		}
+
+		m_collisions.addGrabbableHandle_Sphere(
+			std::strtoull( std::string( arguments[0]->GetStringValue() ).c_str(), nullptr, 0 ),
+			grabberFromUniverse,
+			arguments[2]->GetDoubleValue() );
+	} );
+
+	RegisterFunction( container, "addGrabber_Sphere", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 4 )
+		{
+			exception = "Invalid arguments";
+			return;
+		}
+
+		if ( !arguments[0]->IsString() )
+		{
+			exception = "argument must be a string";
+			return;
+		}
+
+		glm::mat4 universeFromHandle;
+		if ( !mat4FromJavascript( arguments[1], &universeFromHandle ) )
+		{
+			exception = "second argument must be an array of 16 numbers";
+			return;
+		}
+
+		if ( !arguments[2]->IsDouble() )
+		{
+			exception = "third argument must be a number";
+		}
+		if ( !arguments[3]->IsInt() )
+		{
+			exception = "fourth argument must be a number (and a hand enum)";
+		}
+
+		EHand hand = (EHand)arguments[3]->GetIntValue();
+
+		m_collisions.addGrabber_Sphere(
+			std::strtoull( std::string( arguments[0]->GetStringValue() ).c_str(), nullptr, 0 ),
+			universeFromHandle,
+			arguments[2]->GetDoubleValue(),
+			m_vrManager->isGrabPressed( hand ) );
+	} );
+
 	RegisterFunction( container, "getUniverseFromOriginTransform", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
 		if ( arguments.size() != 1 )
@@ -501,7 +601,7 @@ CefRefPtr< CefV8Value> protoVolumeToJsVolume( AvVolume::Reader & volume )
 	CefRefPtr<CefV8Value> jsVolume = CefV8Value::CreateObject( nullptr, nullptr );
 	jsVolume->SetValue( "type", 
 		CefV8Value::CreateInt( (int)protoVolumeTypeToEnum( volume.getType() ) ), V8_PROPERTY_ATTRIBUTE_NONE );
-	jsVolume->SetValue( "radius", CefV8Value::CreateDouble( (int)volume.getRadius() ), V8_PROPERTY_ATTRIBUTE_NONE );
+	jsVolume->SetValue( "radius", CefV8Value::CreateDouble( volume.getRadius() ), V8_PROPERTY_ATTRIBUTE_NONE );
 	return jsVolume;
 }
 
@@ -545,7 +645,7 @@ CefRefPtr<CefV8Value> CJavascriptRenderer::nodeToJsObject( AvNodeRoot::Reader & 
 	}
 	if ( node.hasPropVolume() )
 	{
-		jsNode->SetValue( "radius", protoVolumeToJsVolume( node.getPropVolume() ), V8_PROPERTY_ATTRIBUTE_NONE );
+		jsNode->SetValue( "propVolume", protoVolumeToJsVolume( node.getPropVolume() ), V8_PROPERTY_ATTRIBUTE_NONE );
 	}
 	jsNode->SetValue( "propInteractive",
 		CefV8Value::CreateBool( node.getPropInteractive() ), V8_PROPERTY_ATTRIBUTE_NONE );
@@ -663,7 +763,23 @@ CefRefPtr<CefV8Value> CJavascriptRenderer::frameToJsObject( AvVisualFrame::Reade
 	uint64_t grabberGlobalId = context.getParams().getGrabberGlobalId();
 	uint64_t grabbableGlobalId = context.getParams().getGrabbableGlobalId();
 
-	m_renderer->m_traverser.startGrabImpl( grabberGlobalId, grabbableGlobalId );
+	if ( m_renderer->m_jsGrabStartProcessor )
+	{
+		m_renderer->m_handler->getContext()->Enter();
+
+		m_renderer->m_jsGrabStartProcessor->ExecuteFunction( nullptr, CefV8ValueList
+			{
+				CefV8Value::CreateString( std::to_string( grabberGlobalId ) ),
+				CefV8Value::CreateString( std::to_string( grabbableGlobalId ) ),
+			} );
+
+		m_renderer->m_handler->getContext()->Exit();
+	}
+	else
+	{
+		m_renderer->m_traverser.startGrabImpl( grabberGlobalId, grabbableGlobalId );
+	}
+
 	return kj::READY_NOW;
 }
 
@@ -672,7 +788,24 @@ CefRefPtr<CefV8Value> CJavascriptRenderer::frameToJsObject( AvVisualFrame::Reade
 {
 	uint64_t grabberGlobalId = context.getParams().getGrabberGlobalId();
 	uint64_t grabbableGlobalId = context.getParams().getGrabbableGlobalId();
-	m_renderer->m_traverser.endGrabImpl( grabberGlobalId, grabbableGlobalId );
+
+	if ( m_renderer->m_jsGrabEndProcessor )
+	{
+		m_renderer->m_handler->getContext()->Enter();
+
+		m_renderer->m_jsGrabEndProcessor->ExecuteFunction( nullptr, CefV8ValueList
+			{
+				CefV8Value::CreateString( std::to_string( grabberGlobalId ) ),
+				CefV8Value::CreateString( std::to_string( grabbableGlobalId ) ),
+			} );
+
+		m_renderer->m_handler->getContext()->Exit();
+	}
+	else
+	{
+		m_renderer->m_traverser.endGrabImpl( grabberGlobalId, grabbableGlobalId );
+	}
+
 	return kj::READY_NOW;
 }
 

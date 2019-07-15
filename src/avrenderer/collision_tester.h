@@ -25,6 +25,11 @@ public:
 	void addGrabbableHandle( uint64_t globalGrabbableId, const glm::mat4 & matUniverseFromHandle, 
 		AvVolume::Reader & volume );
 
+	void addGrabber_Sphere( uint64_t globalGrabberId, const glm::mat4 & grabberFromUniverse,
+		float radius, bool isPressed );
+	void addGrabbableHandle_Sphere( uint64_t globalGrabbableId, const glm::mat4 & universeFromHandle,
+		float radius );
+
 	void reset();
 	void updateGrabberIntersections( aardvark::CAardvarkClient *client );
 

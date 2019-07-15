@@ -1,3 +1,4 @@
+
 export interface PokerProximity
 {
 	panelId: string;
@@ -277,6 +278,11 @@ export interface AvHapticProcessor
 	( globalNodeId: string, amplitude: number, frequence: number, duration: number ): void;
 }
 
+export interface AvGrabEventProcessor
+{
+	( grabberGlobalId: string, grabbableGlobalId: string ): void;
+}
+
 export interface AvModelInstance
 {
 	setUniverseFromModelTransform( universeFromModel: number[] ): void;
@@ -305,6 +311,11 @@ interface AvRenderer
 
 	addActivePanel( panelGlobalId: string, nodeFromUniverse: number[], zScale: number ): void;
 	addActivePoker( pokerGlobalId: string, pokerInUniverse: number[] ): void;
+
+	registerGrabStartProcessor( grabProcessor: AvGrabEventProcessor ): void;
+	registerGrabEndProcessor( grabProcessor: AvGrabEventProcessor ): void;
+	addGrabbableHandle_Sphere( grabbableGlobalId: string, universeFromGrabbable: number[], radius: number ): void;
+	addGrabber_Sphere( grabberGlobalId: string, universeFromGrabber: number[], radius: number, hand: EHand ): void;
 }
 
 export interface Aardvark

@@ -62,6 +62,8 @@ protected:
 	CefRefPtr< CefV8Value > m_jsSceneProcessor;
 	CefRefPtr< CefV8Value > m_jsTraverser;
 	CefRefPtr< CefV8Value > m_jsHapticProcessor;
+	CefRefPtr< CefV8Value > m_jsGrabStartProcessor;
+	CefRefPtr< CefV8Value > m_jsGrabEndProcessor;
 	CIntersectionTester m_intersections;
 	CCollisionTester m_collisions;
 

@@ -1,5 +1,5 @@
 import { Av } from 'common/aardvark';
-import { AvModelInstance, AvNode, AvNodeRoot, AvNodeType, AvVisualFrame, EHand } from './aardvark';
+import { AvModelInstance, AvNode, AvNodeRoot, AvNodeType, AvVisualFrame, EHand, EVolumeType } from './aardvark';
 import { mat4, vec3, quat, vec4 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
 
@@ -401,12 +401,18 @@ export class AvDefaultTraverser
 			return;
 		}
 	
+		let grabbableGlobalId = this.m_currentGrabbableGlobalId;
 		this.updateTransform( node.globalId, defaultParent, null,
 			( universeFromNode: mat4 ) =>
 		{
-			// TODO: Figure out how to capture grabbableId
-
-			//m_collisions.addGrabbableHandle( grabbableId, universeFromNode, node.getPropVolume() );
+			switch( node.propVolume.type )
+			{
+				case EVolumeType.Sphere:
+					Av().renderer.addGrabbableHandle_Sphere( grabbableGlobalId, universeFromNode.all(), node.propVolume.radius );
+					break;
+				default:
+					throw "unsupported volume type";
+			}
 		} );
 	}
 
@@ -417,16 +423,25 @@ export class AvDefaultTraverser
 			return;
 		}
 
+		let grabberGlobalId = node.globalId;
+		let grabberHand = this.m_currentHand;
 		this.updateTransform( node.globalId, defaultParent, null,
 			( universeFromNode: mat4 ) =>
 		{
-			// TODO: figure out how to capture current hand
-			// m_collisions.addGrabber( globalId, glm::inverse( universeFromNode ),
-			// 	node.getPropVolume(), m_vrManager->isGrabPressed( currentHand ) );
+			let nodeFromUniverse = new mat4( universeFromNode.all() ).inverse();
+			switch( node.propVolume.type )
+			{
+				case EVolumeType.Sphere:
+					Av().renderer.addGrabber_Sphere( grabberGlobalId, nodeFromUniverse.all(), node.propVolume.radius, grabberHand );
+					break;
+				default:
+					throw "unsupported volume type";
+			}
 		} );
 	}
 
-	startGrabImpl( grabberGlobalId: string, grabbableGlobalId: string )
+	@bind
+	public startGrab( grabberGlobalId: string, grabbableGlobalId: string )
 	{
 		if( !this.m_lastFrameUniverseFromNodeTransforms.hasOwnProperty( grabbableGlobalId ) )
 		{
@@ -448,9 +463,10 @@ export class AvDefaultTraverser
 		};
 	}
 
-	endGrabImpl( grabberGlobalId: string, grabbableGlobalId: string )
+	@bind
+	public endGrab( grabberGlobalId: string, grabbableGlobalId: string )
 	{
-		delete this.m_nodeToNodeAnchors[ grabberGlobalId ];
+		delete this.m_nodeToNodeAnchors[ grabbableGlobalId ];
 	}
 
 	getTransform( globalNodeId: string  ): PendingTransform
