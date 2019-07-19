@@ -62,6 +62,7 @@ class CAardvarkCefHandler : public CefClient,
                       public CefDisplayHandler,
                       public CefLifeSpanHandler,
                       public CefLoadHandler,
+					  public CefRequestHandler,
 					  public CefRenderHandler
 {
 public:
@@ -82,6 +83,7 @@ public:
 	virtual bool OnProcessMessageReceived( CefRefPtr<CefBrowser> browser,
 		CefProcessId source_process,
 		CefRefPtr<CefProcessMessage> message ) override;
+	virtual CefRefPtr<CefRequestHandler> GetRequestHandler() override { return this; }
 
 	// CefDisplayHandler methods:
 	virtual void OnTitleChange(CefRefPtr<CefBrowser> browser,
@@ -111,6 +113,13 @@ public:
 		PaintElementType type,
 		const RectList& dirtyRects,
 		void* shared_handle ) override;
+
+	// CefRequestHandler methods:
+	virtual ReturnValue OnBeforeResourceLoad(
+		CefRefPtr<CefBrowser> browser,
+		CefRefPtr<CefFrame> frame,
+		CefRefPtr<CefRequest> request,
+		CefRefPtr<CefRequestCallback> callback ) override;
 
 	bool IsClosing() const { return m_isClosing; }
 

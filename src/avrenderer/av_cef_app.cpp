@@ -92,8 +92,7 @@ void CAardvarkCefApp::OnContextInitialized()
 	const bool use_views = false;
 #endif
 
-
-	startGadget( "file:///E:/homedev/aardvark/build/gadgets/aardvark_master", "" );
+	startGadget( "http://aardvark.install/gadgets/aardvark_master", "" );
 }
 
 
