@@ -295,10 +295,10 @@ void CSceneTraverser::TraversePanel( const AvNode::Reader & node, CPendingTransf
 
 	if ( !pData->model && iSharedTexture != m_sharedTextureInfo.end() )
 	{
-		std::string sPanelModelUri = "file:///e:/homedev/aardvark/data/models/panel/panel.glb";
+		std::string sPanelModelUri = "https://aardvark.install/models/panel/panel.glb";
 		if ( iSharedTexture->second.getInvertY() )
 		{
-			sPanelModelUri = "file:///e:/homedev/aardvark/data/models/panel/panel_inverted.glb";
+			sPanelModelUri = "https://aardvark.install/models/panel/panel_inverted.glb";
 		}
 
 		pData->model = m_renderer->createModelInstance( sPanelModelUri );

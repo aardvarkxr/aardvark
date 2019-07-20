@@ -1,5 +1,6 @@
 #include "uri_request_handler.h"
 #include <include/cef_urlrequest.h>
+#include <tools/pathtools.h>
 
 class CUriRequestImpl
 {
@@ -159,7 +160,7 @@ void CUriRequest::start()
 	m_cefRequestClient = new CCefUriRequest( this );
 
 	CefRefPtr<CefRequest> request = CefRequest::Create();
-	request->SetURL( m_uri );
+	request->SetURL( tools::filterUriForInstall( m_uri ) );
 	request->SetMethod( "GET" );
 
 	m_cefRequest = CefURLRequest::Create( request, m_cefRequestClient, nullptr );

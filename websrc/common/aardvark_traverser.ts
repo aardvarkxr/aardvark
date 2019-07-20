@@ -340,10 +340,10 @@ export class AvDefaultTraverser
 
 		if ( !nodeData.modelInstance )
 		{
-			let sPanelModelUri = "file:///e:/homedev/aardvark/data/models/panel/panel.glb";
+			let sPanelModelUri = "https://aardvark.install/models/panel/panel.glb";
 			// if ( iSharedTexture->second.getInvertY() )
 			// {
-				sPanelModelUri = "file:///e:/homedev/aardvark/data/models/panel/panel_inverted.glb";
+				sPanelModelUri = "https://aardvark.install/models/panel/panel_inverted.glb";
 			// }
 
 			nodeData.modelInstance = Av().renderer.createModelInstance( sPanelModelUri );

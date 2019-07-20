@@ -7,7 +7,6 @@
 
 #include <sstream>
 #include <string>
-#include <cctype>
 
 #include <aardvark/aardvark_scene_graph.h>
 
@@ -17,38 +16,10 @@
 #include "include/views/cef_window.h"
 #include "include/wrapper/cef_closure_task.h"
 #include "include/wrapper/cef_helpers.h"
+#include <tools/pathtools.h>
 
 #include <json/json.hpp>
 
-std::string filterUriForInstall( const std::string & originalUri )
-{
-	std::string lowerUrl( originalUri );
-	std::transform( lowerUrl.begin(), lowerUrl.end(), lowerUrl.begin(),
-		[]( unsigned char c ) { return std::tolower( c ); } );
-
-	std::string httpPrefix = "http://aardvark.install/";
-	std::string httpsPrefix = "https://aardvark.install/";
-
-	auto httpMatch = std::mismatch( httpPrefix.begin(), httpPrefix.end(), lowerUrl.begin() );
-	if ( httpMatch.first == httpPrefix.end() )
-	{
-		std::string updatedUrl = std::string( "file:///E:/homedev/aardvark/build/" )
-			+ std::string( originalUri.begin() + httpPrefix.size(), originalUri.end() );
-		return updatedUrl;
-	}
-	else
-	{
-		auto httpsMatch = std::mismatch( httpsPrefix.begin(), httpsPrefix.end(), lowerUrl.begin() );
-		if ( httpsMatch.first == httpsPrefix.end() )
-		{
-			std::string updatedUrl = std::string( "file:///E:/homedev/aardvark/build/" )
-				+ std::string( originalUri.begin() + httpsPrefix.size(), originalUri.end() );
-			return updatedUrl;
-		}
-	}
-
-	return originalUri;
-}
 
 CStartGadgetRequestClient::CStartGadgetRequestClient( CAardvarkCefHandler *cefHandler )
 {
@@ -100,7 +71,7 @@ CAardvarkCefHandler::CAardvarkCefHandler( IApplication *application, const std::
 	m_client = std::make_unique<aardvark::CAardvarkClient>();
 	m_client->Start();
 
-	m_gadgetUri = filterUriForInstall( gadgetUri );
+	m_gadgetUri = tools::filterUriForInstall( gadgetUri );
 	m_initialHook = initialHook;
 }
 
@@ -414,7 +385,7 @@ CAardvarkCefHandler::ReturnValue CAardvarkCefHandler::OnBeforeResourceLoad(
 	CefRefPtr<CefRequest> request,
 	CefRefPtr<CefRequestCallback> callback )
 {
-	std::string filteredUri = filterUriForInstall( request->GetURL() );
+	std::string filteredUri = tools::filterUriForInstall( request->GetURL() );
 	request->SetURL( filteredUri );
 	return RV_CONTINUE;
 }

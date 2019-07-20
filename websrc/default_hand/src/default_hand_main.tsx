@@ -41,21 +41,21 @@ class DefaultHand extends React.Component< {}, DefaultHandState >
 	
 	public render()
 	{
-		let modelUri = "file:///e:/homedev/aardvark/data/models/sphere/sphere.glb";
+		let modelUri = "https://aardvark.install/models/sphere/sphere.glb";
 		switch( this.state.grabberHighlight )
 		{
 			case GrabberHighlight.InRange:
-					modelUri = "file:///e:/homedev/aardvark/data/models/sphere/sphere_highlight.glb";
+					modelUri = "https://aardvark.install/models/sphere/sphere_highlight.glb";
 					break;
 			case GrabberHighlight.InRange:
-					modelUri = "file:///e:/homedev/aardvark/data/models/sphere/sphere_highlight.glb";
+					modelUri = "https://aardvark.install/models/sphere/sphere_highlight.glb";
 					break;
 		}
 
 		// poker highlight takes priority
 		if( this.state.pokerHighlight )
 		{
-			modelUri = "file:///e:/homedev/aardvark/data/models/sphere/sphere_highlight.glb";
+			modelUri = "https://aardvark.install/models/sphere/sphere_highlight.glb";
 		}
 
 		return (

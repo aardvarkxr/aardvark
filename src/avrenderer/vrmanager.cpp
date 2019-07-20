@@ -1,12 +1,14 @@
 #include "vrmanager.h"
 
 #include <iostream>
+#include <tools/pathtools.h>
 
 void CVRManager::init()
 {
 	initOpenVR();
 
-	vr::VRInput()->SetActionManifestPath( "e:/homedev/aardvark/data/input/aardvark_actions.json" );
+	auto actionManifestPath = tools::GetDataPath() / "input/aardvark_actions.json";
+	vr::VRInput()->SetActionManifestPath( actionManifestPath.string().c_str() );
 	vr::VRInput()->GetActionSetHandle( "/actions/aardvark", &m_actionSet );
 	vr::VRInput()->GetActionHandle( "/actions/aardvark/out/haptic", &m_actionHaptic );
 	vr::VRInput()->GetActionHandle( "/actions/aardvark/in/grab", &m_actionGrab );

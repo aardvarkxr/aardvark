@@ -12,5 +12,11 @@ namespace tools
 
 	/** Generates a filename to use for a temp file */
 	std::filesystem::path GetUniqueTempFilePath();
+
+	/** returns the data path */
+	std::filesystem::path GetDataPath();
+
+	std::string filterUriForInstall( const std::string & originalUri );
+
 };
 

@@ -56,7 +56,7 @@ function createConfig( appName, appTitle, ext )
 		defaults
 	);
 
-	let dest = path.resolve( __dirname, '../build/gadgets/' + appName );
+	let dest = path.resolve( __dirname, '../data/gadgets/' + appName );
 	config.output =
 	{
 		filename: appName + '_bundle.js',

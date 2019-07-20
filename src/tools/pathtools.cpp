@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <stdio.h>
 #include <algorithm>
+#include <cctype>
 
 namespace tools
 {
@@ -78,5 +79,42 @@ namespace tools
 		return sUri;
 	}
 
+
+	std::filesystem::path GetDataPath()
+	{
+		std::filesystem::path myPath = std::filesystem::current_path();
+		myPath /= "data";
+		return myPath;
+	}
+
+	std::string filterUriForInstall( const std::string & originalUri )
+	{
+		std::string lowerUrl( originalUri );
+		std::transform( lowerUrl.begin(), lowerUrl.end(), lowerUrl.begin(),
+			[]( unsigned char c ) { return std::tolower( c ); } );
+
+		std::string httpPrefix = "http://aardvark.install/";
+		std::string httpsPrefix = "https://aardvark.install/";
+
+		auto httpMatch = std::mismatch( httpPrefix.begin(), httpPrefix.end(), lowerUrl.begin() );
+		if ( httpMatch.first == httpPrefix.end() )
+		{
+			auto updatedPath = tools::GetDataPath()
+				/ std::string( originalUri.begin() + httpPrefix.size(), originalUri.end() );
+			return tools::PathToFileUri( updatedPath );
+		}
+		else
+		{
+			auto httpsMatch = std::mismatch( httpsPrefix.begin(), httpsPrefix.end(), lowerUrl.begin() );
+			if ( httpsMatch.first == httpsPrefix.end() )
+			{
+				auto updatedPath = tools::GetDataPath()
+					/ std::string( originalUri.begin() + httpsPrefix.size(), originalUri.end() );
+				return tools::PathToFileUri( updatedPath );
+			}
+		}
+
+		return originalUri;
+	}
 
 }

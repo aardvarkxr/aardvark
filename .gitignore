@@ -7,6 +7,6 @@ Release
 *.blend1
 ~*
 packages
-
+data/gadgets
 
 
