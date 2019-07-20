@@ -15,7 +15,7 @@ This has also only been tested in debug.
 2. Build web code
    1. cd d:\aardvark\websrc
    2. npm install
-   3. npm runscript build
+   3. npm run-script build
 3. Build Cap'n Proto
    1. cd d:\aardvark\src\thirdparty\capnproto-c++-0.7.0
    2. mkdir build
