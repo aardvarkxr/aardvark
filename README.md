@@ -20,7 +20,7 @@ This has also only been tested in debug.
    1. cd d:\aardvark\src\thirdparty\capnproto-c++-0.7.0
    2. mkdir build
    3. cd build
-   4. cmake -D CMAKE_INSTALL_PREFIX="E:\homedev/aardvark_test/src/packages/capnproto" -G "Visual Studio 15 2017 Win64" .. 
+   4. cmake -D CMAKE_INSTALL_PREFIX="D:\aardvark/src/packages/capnproto" -G "Visual Studio 15 2017 Win64" .. 
    5. Open "Cap'n Proto.sln" in Visual Studio 2017
    6. Build in Debug (There will be about a billion warnings.)
    7. Right-click on the INSTALL project and build it. You will get an error about permission denied on a symlink, but we don't need it.
