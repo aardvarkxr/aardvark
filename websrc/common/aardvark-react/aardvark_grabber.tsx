@@ -22,6 +22,7 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 {
 	m_lastHighlight = GrabberHighlight.None;
 	m_lastGrabbable:string = null;
+	m_lastHook: string = null;
 
 	public startNode( context:AvSceneContext )
 	{
@@ -31,10 +32,11 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 		AvGadget.instance().setGrabberProcessor( this.m_nodeId, this.onGrabberIntersections );
 	}
 
-	@bind private onGrabberIntersections( isPressed: boolean, grabbableIds: string[] )
+	@bind private onGrabberIntersections( isPressed: boolean, grabbableIds: string[], hookIds: string[] )
 	{
 		let newHighlight = this.m_lastHighlight;
 	
+		let newHookId: string = null;
 		let newGrabbableId:string = null;
 		if( this.m_lastGrabbable )
 		{
@@ -49,14 +51,14 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 				if( newHighlight == GrabberHighlight.Grabbed )
 				{
 					AvGadget.instance().sendGrabEvent( this.m_nodeId, 
-						this.m_lastGrabbable, AvGrabEventType.EndGrab );
+						this.m_lastGrabbable, null, AvGrabEventType.EndGrab );
 					newHighlight = GrabberHighlight.InRange;
 				}
 
 				if( newHighlight == GrabberHighlight.InRange )
 				{
 					AvGadget.instance().sendGrabEvent( this.m_nodeId, 
-						this.m_lastGrabbable, AvGrabEventType.LeaveRange );
+						this.m_lastGrabbable, null, AvGrabEventType.LeaveRange );
 					newHighlight = GrabberHighlight.InRange;
 					this.m_lastGrabbable = null;
 				}
@@ -65,6 +67,19 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 				{
 					newGrabbableId = grabbableIds[0];
 				}
+			}
+		}
+
+		// try to stick with the same hook if possible
+		if( this.m_lastHook && -1 != hookIds.indexOf( this.m_lastHook ) )
+		{
+			newHookId = this.m_lastHook;
+		}
+		else
+		{
+			if( hookIds.length > 0 )
+			{
+				newHookId = hookIds[0];
 			}
 		}
 
@@ -81,13 +96,13 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 				if( isPressed && newHighlight == GrabberHighlight.InRange )
 				{
 					AvGadget.instance().sendGrabEvent( this.m_nodeId,
-						newGrabbableId, AvGrabEventType.StartGrab );
+						newGrabbableId, null, AvGrabEventType.StartGrab );
 					newHighlight = GrabberHighlight.Grabbed;
 				}
 				else if( !isPressed && newHighlight == GrabberHighlight.Grabbed )
 				{
 					AvGadget.instance().sendGrabEvent( this.m_nodeId,
-						newGrabbableId, AvGrabEventType.EndGrab );
+						newGrabbableId, newHookId, AvGrabEventType.EndGrab );
 					newHighlight = GrabberHighlight.InRange;
 				}
 			}
@@ -95,18 +110,42 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 			{
 				// new grabbable. Update in range and maybe grab
 				AvGadget.instance().sendGrabEvent( this.m_nodeId,
-					newGrabbableId, AvGrabEventType.EnterRange );
+					newGrabbableId, null, AvGrabEventType.EnterRange );
 				newHighlight = GrabberHighlight.InRange;
 
 				if( isPressed )
 				{
 					AvGadget.instance().sendGrabEvent( this.m_nodeId,
-						newGrabbableId, AvGrabEventType.StartGrab );
+						newGrabbableId, null, AvGrabEventType.StartGrab );
 					newHighlight = GrabberHighlight.Grabbed;
 				}
 
 				this.m_lastGrabbable = newGrabbableId;
 			}
+		}
+
+		if( newHighlight != GrabberHighlight.Grabbed )
+		{
+			// if we're not grabbing we don't want to highlight any hooks
+			newHookId = null;
+		}
+
+		if( newHookId != this.m_lastHook )
+		{
+			// notify any hooks we entered/left
+			if( this.m_lastHook )
+			{
+				AvGadget.instance().sendGrabEvent( this.m_nodeId, 
+					null, this.m_lastHook, AvGrabEventType.LeaveHookRange );
+			}
+
+			if( newHookId )
+			{
+				AvGadget.instance().sendGrabEvent( this.m_nodeId, 
+					null, newHookId, AvGrabEventType.EnterHookRange );
+			}
+
+			this.m_lastHook = newHookId;
 		}
 
 		if( this.m_lastHighlight != newHighlight )

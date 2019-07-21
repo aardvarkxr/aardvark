@@ -57,6 +57,7 @@ CAardvarkGadget::CAardvarkGadget( uint32_t clientId, const std::string & sName, 
 			m_grabberProcessors.insert_or_assign( realNode.getId(), root.getGrabberProcessor() );
 			break;
 
+		case AvNode::Type::CUSTOM:
 		case AvNode::Type::GRABBABLE:
 			m_grabbableProcessors.insert_or_assign( realNode.getId(), root.getGrabbableProcessor() );
 			break;
@@ -94,35 +95,48 @@ CAardvarkGadget::CAardvarkGadget( uint32_t clientId, const std::string & sName, 
 }
 
 
+void CAardvarkGadget::sendGrabEventToGlobalId( uint64_t globalNodeId, uint64_t globalGrabberId,
+	AvGrabEvent::Reader grabEvent )
+{
+	if ( !globalNodeId )
+		return;
+
+	KJ_IF_MAYBE( grabbableProcessor, m_pParentServer->findGrabbableProcessor( globalNodeId ) )
+	{
+		auto req = grabbableProcessor->grabEventRequest();
+
+		uint32_t localGrabbableId = (uint32_t)( 0xFFFFFFFF & globalNodeId );
+		req.setGrabbableId( localGrabbableId );
+		auto outGrabEvent = req.initEvent();
+		outGrabEvent.setGrabbableId( grabEvent.getGrabbableId() );
+		outGrabEvent.setHookId( grabEvent.getHookId() );
+		outGrabEvent.setGrabberId( globalGrabberId );
+		outGrabEvent.setType( grabEvent.getType() );
+		m_pParentServer->addRequestToTasks( std::move( req ) );
+	}
+
+}
+
 ::kj::Promise<void> CAardvarkGadget::pushGrabEvent( PushGrabEventContext context )
 {
 	auto & inGrabEvent = context.getParams().getEvent();
 	uint64_t globalGrabberId = (uint64_t)m_id << 32 | (uint64_t)context.getParams().getGrabberNodeId();
 	uint64_t globalGrabbableId = inGrabEvent.getGrabbableId();
+	uint64_t globalHookId = inGrabEvent.getHookId();
 
-	KJ_IF_MAYBE( grabbableProcessor, m_pParentServer->findGrabbableProcessor( globalGrabbableId ) )
+	sendGrabEventToGlobalId( globalGrabbableId, globalGrabberId, inGrabEvent );
+	sendGrabEventToGlobalId( globalHookId, globalGrabberId, inGrabEvent );
+
+	// we need to tell the renderer about some event types
+	switch ( inGrabEvent.getType() )
 	{
-		auto req = grabbableProcessor->grabEventRequest();
+	case AvGrabEvent::Type::START_GRAB:
+		m_pParentServer->startGrab( globalGrabberId, globalGrabbableId );
+		break;
 
-		uint32_t localGrabbableId = (uint32_t)( 0xFFFFFFFF & globalGrabbableId );
-		req.setGrabbableId( localGrabbableId );
-		auto outGrabEvent = req.initEvent();
-		outGrabEvent.setGrabbableId( globalGrabbableId );
-		outGrabEvent.setGrabberId( globalGrabberId );
-		outGrabEvent.setType( inGrabEvent.getType() );
-		m_pParentServer->addRequestToTasks( std::move( req ) );
-
-		// we need to tell the renderer about some event types
-		switch ( inGrabEvent.getType() )
-		{
-		case AvGrabEvent::Type::START_GRAB:
-			m_pParentServer->startGrab( globalGrabberId, globalGrabbableId );
-			break;
-
-		case AvGrabEvent::Type::END_GRAB:
-			m_pParentServer->endGrab( globalGrabberId, globalGrabbableId );
-			break;
-		}
+	case AvGrabEvent::Type::END_GRAB:
+		m_pParentServer->endGrab( globalGrabberId, globalGrabbableId );
+		break;
 	}
 	return kj::READY_NOW;
 }

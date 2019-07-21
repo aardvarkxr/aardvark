@@ -49,6 +49,9 @@ namespace aardvark
 		// valid for volume nodes
 		EAvSceneGraphResult avSetSphereVolume( float radius );
 
+		// valid for Custom nodes
+		EAvSceneGraphResult avSetCustomNodeType( const char *pchCustomNodeType );
+
 		AvNode::Builder & CurrentNode();
 	private:
 		struct NodeInProgress_t
@@ -201,6 +204,15 @@ namespace aardvark
 			return EAvSceneGraphResult::InvalidContext;
 	}
 
+	EAvSceneGraphResult avSetCustomNodeType( AvSceneContext context, const char *pchCustomNodeType )
+	{
+		CSceneGraphContext *pContext = (CSceneGraphContext *)context;
+		if ( pContext )
+			return pContext->avSetCustomNodeType( pchCustomNodeType );
+		else
+			return EAvSceneGraphResult::InvalidContext;
+	}
+
 
 	// -------------------------- CSceneGraphContext implementation ------------------------------------
 
@@ -270,6 +282,7 @@ namespace aardvark
 		case EAvSceneGraphNodeType::Grabbable: return AvNode::Type::GRABBABLE;
 		case EAvSceneGraphNodeType::Handle: return AvNode::Type::HANDLE;
 		case EAvSceneGraphNodeType::Grabber: return AvNode::Type::GRABBER;
+		case EAvSceneGraphNodeType::Custom: return AvNode::Type::CUSTOM;
 
 		default: return AvNode::Type::INVALID;
 		}
@@ -348,7 +361,7 @@ namespace aardvark
 	// valid for Origin nodes.
 	EAvSceneGraphResult CSceneGraphContext::avSetOriginPath( const char *pchOriginPath )
 	{
-		if ( CurrentNode().getType() != AvNode::Type::ORIGIN )
+		if ( CurrentNode().getType() != AvNode::Type::ORIGIN && CurrentNode().getType() != AvNode::Type::CUSTOM )
 			return EAvSceneGraphResult::InvalidNodeType;
 		CurrentNode().setPropOrigin( pchOriginPath );
 		return EAvSceneGraphResult::Success;
@@ -357,7 +370,7 @@ namespace aardvark
 	// valid for Transform nodes
 	EAvSceneGraphResult CSceneGraphContext::avSetTranslation( float x, float y, float z )
 	{
-		if ( CurrentNode().getType() != AvNode::Type::TRANSFORM )
+		if ( CurrentNode().getType() != AvNode::Type::TRANSFORM && CurrentNode().getType() != AvNode::Type::CUSTOM )
 			return EAvSceneGraphResult::InvalidNodeType;
 		AvVector::Builder & trans = CurrentNode().getPropTransform().getPosition();
 		trans.setX( x );
@@ -367,7 +380,7 @@ namespace aardvark
 	}
 	EAvSceneGraphResult CSceneGraphContext::avSetScale( float x, float y, float z )
 	{
-		if ( CurrentNode().getType() != AvNode::Type::TRANSFORM )
+		if ( CurrentNode().getType() != AvNode::Type::TRANSFORM && CurrentNode().getType() != AvNode::Type::CUSTOM )
 			return EAvSceneGraphResult::InvalidNodeType;
 		AvVector::Builder & scale = CurrentNode().getPropTransform().getScale();
 		scale.setX( x );
@@ -377,7 +390,7 @@ namespace aardvark
 	}
 	EAvSceneGraphResult CSceneGraphContext::avSetRotation( float x, float y, float z, float w )
 	{
-		if ( CurrentNode().getType() != AvNode::Type::TRANSFORM )
+		if ( CurrentNode().getType() != AvNode::Type::TRANSFORM && CurrentNode().getType() != AvNode::Type::CUSTOM )
 			return EAvSceneGraphResult::InvalidNodeType;
 		AvQuaternion::Builder & rot = CurrentNode().getPropTransform().getRotation();
 		rot.setX( x );
@@ -390,7 +403,7 @@ namespace aardvark
 	// valid for Model nodes
 	EAvSceneGraphResult CSceneGraphContext::avSetModelUri( const char *pchModelUri )
 	{
-		if ( CurrentNode().getType() != AvNode::Type::MODEL )
+		if ( CurrentNode().getType() != AvNode::Type::MODEL && CurrentNode().getType() != AvNode::Type::CUSTOM )
 			return EAvSceneGraphResult::InvalidNodeType;
 		CurrentNode().setPropModelUri( pchModelUri );
 		return EAvSceneGraphResult::Success;
@@ -398,7 +411,7 @@ namespace aardvark
 
 	EAvSceneGraphResult CSceneGraphContext::avSetPanelTextureSource( const char *pchTextureSource )
 	{
-		if ( CurrentNode().getType() != AvNode::Type::PANEL )
+		if ( CurrentNode().getType() != AvNode::Type::PANEL && CurrentNode().getType() != AvNode::Type::CUSTOM )
 			return EAvSceneGraphResult::InvalidNodeType;
 		CurrentNode().setPropTextureSource( pchTextureSource );
 		return EAvSceneGraphResult::Success;
@@ -406,7 +419,7 @@ namespace aardvark
 
 	EAvSceneGraphResult CSceneGraphContext::avSetPanelInteractive( bool interactive )
 	{
-		if ( CurrentNode().getType() != AvNode::Type::PANEL )
+		if ( CurrentNode().getType() != AvNode::Type::PANEL && CurrentNode().getType() != AvNode::Type::CUSTOM )
 			return EAvSceneGraphResult::InvalidNodeType;
 		CurrentNode().setPropInteractive( interactive );
 		return EAvSceneGraphResult::Success;
@@ -416,11 +429,22 @@ namespace aardvark
 	{
 		if ( radius < 0 )
 			return EAvSceneGraphResult::InvalidParameter;
-		if ( CurrentNode().getType() != AvNode::Type::HANDLE && CurrentNode().getType() != AvNode::Type::GRABBER )
+		if ( CurrentNode().getType() != AvNode::Type::HANDLE && CurrentNode().getType() != AvNode::Type::GRABBER
+			&& CurrentNode().getType() != AvNode::Type::CUSTOM )
 			return EAvSceneGraphResult::InvalidNodeType;
 		auto volume = CurrentNode().initPropVolume();
 		volume.setType( AvVolume::Type::SPHERE );
 		volume.setRadius( radius );
+		return EAvSceneGraphResult::Success;
+	}
+
+	EAvSceneGraphResult CSceneGraphContext::avSetCustomNodeType( const char *pchCustomNodeType )
+	{
+		if ( !pchCustomNodeType || !*pchCustomNodeType )
+			return EAvSceneGraphResult::InvalidParameter;
+		if ( CurrentNode().getType() != AvNode::Type::CUSTOM )
+			return EAvSceneGraphResult::InvalidNodeType;
+		CurrentNode().setPropCustomNodeType( pchCustomNodeType );
 		return EAvSceneGraphResult::Success;
 	}
 
@@ -530,12 +554,15 @@ namespace aardvark
 		uint32_t grabberNodeId,
 		bool *isGrabberPressed,
 		uint64_t *grabberIntersections, uint32_t intersectionArraySize,
-		uint32_t *usedIntersectionCount )
+		uint32_t *usedIntersectionCount,
+		uint64_t *hooks, uint32_t hookArraySize,
+		uint32_t *usedHookCount )
 	{
 		KJ_IF_MAYBE( grabberProcessor, pClient->getGrabberProcessorServer() )
 		{
 			return ( *grabberProcessor )->avGetNextGrabberIntersection( grabberNodeId, isGrabberPressed, 
-				grabberIntersections, intersectionArraySize, usedIntersectionCount );
+				grabberIntersections, intersectionArraySize, usedIntersectionCount,
+				hooks, hookArraySize, usedHookCount );
 		}
 		else
 		{
@@ -558,12 +585,13 @@ namespace aardvark
 
 	EAvSceneGraphResult avPushGrabEventFromGrabber( aardvark::CAardvarkClient *pClient,
 		AvGadget::Client *gadget, uint32_t grabberNodeId,
-		uint64_t grabbableId, EGrabEventType type )
+		uint64_t grabbableId, uint64_t hookId, EGrabEventType type )
 	{
 		auto reqPushEvent = gadget->pushGrabEventRequest();
 		reqPushEvent.setGrabberNodeId( grabberNodeId );
 		AvGrabEvent::Builder bldEvent = reqPushEvent.initEvent();
 		bldEvent.setGrabbableId( grabbableId );
+		bldEvent.setHookId( hookId );
 		switch ( type )
 		{
 		case EGrabEventType::EnterRange:
@@ -577,6 +605,12 @@ namespace aardvark
 			break;
 		case EGrabEventType::EndGrab:
 			bldEvent.setType( AvGrabEvent::Type::END_GRAB );
+			break;
+		case EGrabEventType::EnterHookRange:
+			bldEvent.setType( AvGrabEvent::Type::ENTER_HOOK_RANGE );
+			break;
+		case EGrabEventType::LeaveHookRange:
+			bldEvent.setType( AvGrabEvent::Type::LEAVE_HOOK_RANGE );
 			break;
 
 		default:

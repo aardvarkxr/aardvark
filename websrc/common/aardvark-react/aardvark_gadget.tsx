@@ -74,10 +74,10 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 		this.markDirty();
 	}
 
-	public sendGrabEvent( grabberId: number, grabbableId: string, 
+	public sendGrabEvent( grabberId: number, grabbableId: string, hookId: string,
 		eventType:AvGrabEventType )
 	{
-		this.m_gadget.sendGrabEvent( grabberId, grabbableId, eventType );
+		this.m_gadget.sendGrabEvent( grabberId, grabbableId, hookId, eventType );
 	}
 
 

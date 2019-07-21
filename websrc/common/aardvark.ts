@@ -25,6 +25,7 @@ export enum AvNodeType
 	Grabbable = 6,
 	Handle = 7,
 	Grabber = 8,
+	Custom = 9,
 }
 
 interface AvSceneContext_StartNode
@@ -91,6 +92,7 @@ export interface AvSceneContext
 	setTextureSource: AvSceneContext_SetTextureSource;
 	setInteractive: AvSceneContext_SetInteractive;
 	setSphereVolume( radius: number ): void;
+	startCustomNode( nodeId: number, name: string, customNodeType: string ): void;
 }
 
 interface AvGadget_GetName
@@ -154,6 +156,8 @@ export enum AvGrabEventType
 	LeaveRange = 2,
 	StartGrab = 3,
 	EndGrab = 4,
+	EnterHookRange = 5,
+	LeaveHookRange = 6,
 };
 
 export interface AvGrabEvent
@@ -170,7 +174,7 @@ export interface AvGrabbableProcessor
 
 export interface AvGrabberProcessor
 {
-	( isPressed: boolean, grabbableIds: string[] ): void;
+	( isPressed: boolean, grabbableIds: string[], hookIds: string[] ): void;
 }
 
 export interface AvGadgetObj
@@ -184,7 +188,7 @@ export interface AvGadgetObj
 	sendMouseEvent: AvGadget_SendMouseEvent;
 	registerGrabbableProcessor( nodeId: number, processor: AvGrabbableProcessor ): void;
 	registerGrabberProcessor( nodeId: number, processor: AvGrabberProcessor ): void;
-	sendGrabEvent( grabberId: number, grabbableId: string, eventType: AvGrabEventType ): void;
+	sendGrabEvent( grabberId: number, grabbableId: string, hookId: string, eventType: AvGrabEventType ): void;
 }
 
 interface Av_CreateGadget
@@ -248,6 +252,7 @@ export interface AvNode
 	propModelUri?: string;
 	propVolume?: AvVolume;
 	propInteractive?: boolean;
+	propCustomNodeType?: string;
 }
 
 
@@ -316,6 +321,7 @@ interface AvRenderer
 	registerGrabEndProcessor( grabProcessor: AvGrabEventProcessor ): void;
 	addGrabbableHandle_Sphere( grabbableGlobalId: string, universeFromGrabbable: number[], radius: number ): void;
 	addGrabber_Sphere( grabberGlobalId: string, universeFromGrabber: number[], radius: number, hand: EHand ): void;
+	addHook_Sphere( hookGlobalId: string, universeFromGrabber: number[], radius: number ): void;
 }
 
 export interface Aardvark

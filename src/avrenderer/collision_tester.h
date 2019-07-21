@@ -30,6 +30,9 @@ public:
 	void addGrabbableHandle_Sphere( uint64_t globalGrabbableId, const glm::mat4 & universeFromHandle,
 		float radius );
 
+	void addHook_Sphere( uint64_t globalHookId, const glm::mat4 & universeFromHook,
+		float radius );
+
 	void reset();
 	void updateGrabberIntersections( aardvark::CAardvarkClient *client );
 
@@ -55,5 +58,14 @@ private:
 		std::vector<Handle_t> handles;
 	};
 	std::vector<ActiveGrabbable_t> m_activeGrabbables;
+
+	struct ActiveHook_t
+	{
+		uint64_t globalHookId;
+		glm::mat4 universeFromHook;
+		float radius;
+	};
+	std::vector<ActiveHook_t> m_activeHooks;
+
 
 };

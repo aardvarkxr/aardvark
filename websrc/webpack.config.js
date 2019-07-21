@@ -92,4 +92,5 @@ module.exports =
 	createConfig( 'aardvark_renderer', 'Renderer', 'ts' ),
 	createConfig( 'default_hand', 'Default Poker', 'tsx' ),
 	createConfig( 'test_panel', 'Test Panel', 'tsx' ),
+	createConfig( 'charm_bracelet', 'Charm Bracelet', 'tsx' ),
 ];

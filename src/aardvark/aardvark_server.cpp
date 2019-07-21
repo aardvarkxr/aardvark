@@ -345,6 +345,7 @@ namespace aardvark
 			req.setGrabPressed( context.getParams().getIsGrabPressed() );
 
 			req.setIntersections( context.getParams().getIntersections() );
+			req.setHooks( context.getParams().getHooks() );
 			addRequestToTasks( std::move( req ) );
 		}
 

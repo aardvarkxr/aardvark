@@ -1,0 +1,6 @@
+{
+	"name" : "charm bracelet",
+	"permissions" : [ "scenegraph" ],
+	"resolution": [ 128, 128 ],
+	"model" : "http://aardvark.data/models/Panel/panel.glb"
+}

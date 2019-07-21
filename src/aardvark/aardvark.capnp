@@ -120,7 +120,13 @@ interface AvPanelProcessor
 
 interface AvGrabberProcessor
 {
-	updateGrabberIntersections @0 ( grabberId: UInt32, grabPressed: Bool, intersections: List( UInt64) ) -> ();
+	updateGrabberIntersections @0 
+	( 
+		grabberId: UInt32, 
+		grabPressed: Bool, 
+		intersections: List( UInt64 ),
+		hooks: List( UInt64 )
+	) -> ();
 }
 
 struct AvGrabEvent
@@ -131,12 +137,15 @@ struct AvGrabEvent
 		leaveRange @1;
 		startGrab @2;
 		endGrab @3;
+		enterHookRange @4;
+		leaveHookRange @5;
 	}
 
 	type @0: Type;
 	grabbableId @1: UInt64;
 	grabberId @2: UInt64;
-	transform @3: AvTransform;
+	hookId @3: UInt64;
+	transform @4: AvTransform;
 }
 
 interface AvGrabbableProcessor
@@ -173,6 +182,7 @@ struct AvNode
 		grabbable @7;		# has no properties; contains handles
 		handle @8;			# contains a volume
 		grabber @9;			# contains a volume
+		custom @10;			# contains a custom node type and who knows what else
 	}
 
 	id @0: UInt32;
@@ -188,6 +198,7 @@ struct AvNode
 	propTextureSource @8: Text;		# panel
 	propInteractive @9: Bool;		# panel
 	propVolume @10: AvVolume;		# grabber and handle
+	propCustomNodeType @11: Text;	# custom
 }
 
 struct AvNodeWrapper
@@ -224,7 +235,8 @@ interface AvServer
 	(
 		grabberId : UInt64,
 		isGrabPressed: Bool,
-		intersections: List( UInt64 )
+		intersections: List( UInt64 ),
+		hooks: List( UInt64 )
 	) -> ();
 }
 

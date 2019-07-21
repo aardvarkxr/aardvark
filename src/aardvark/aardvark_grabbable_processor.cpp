@@ -22,6 +22,12 @@ namespace aardvark
 		case AvGrabEvent::Type::END_GRAB:
 			outEvent->type = EGrabEventType::EndGrab;
 			break;
+		case AvGrabEvent::Type::ENTER_HOOK_RANGE:
+			outEvent->type = EGrabEventType::EnterHookRange;
+			break;
+		case AvGrabEvent::Type::LEAVE_HOOK_RANGE:
+			outEvent->type = EGrabEventType::LeaveHookRange;
+			break;
 
 		default:
 			outEvent->type = EGrabEventType::Unknown;

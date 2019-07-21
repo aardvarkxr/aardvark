@@ -206,6 +206,18 @@ export class AvDefaultTraverser
 			this.traverseGrabber( node, defaultParent );
 			break;
 
+		case AvNodeType.Custom:
+			switch( node.propCustomNodeType )
+			{
+				case "Hook":
+					this.traverseHook( node, defaultParent );
+					break;
+
+				default:
+					throw "Invalid node type";
+			}
+			break;
+		
 		default:
 			throw "Invalid node type";
 		}
@@ -285,7 +297,7 @@ export class AvDefaultTraverser
 			}
 			else
 			{
-				vScale = new vec3( [ 0, 0, 0 ] );
+				vScale = new vec3( [ 1, 1, 1 ] );
 			}
 			let qRot: quat;
 			if ( transform.rotation )
@@ -433,6 +445,28 @@ export class AvDefaultTraverser
 			{
 				case EVolumeType.Sphere:
 					Av().renderer.addGrabber_Sphere( grabberGlobalId, nodeFromUniverse.all(), node.propVolume.radius, grabberHand );
+					break;
+				default:
+					throw "unsupported volume type";
+			}
+		} );
+	}
+
+	traverseHook( node: AvNode, defaultParent: PendingTransform )
+	{
+		if( !node.propVolume )
+		{
+			return;
+		}
+
+		let hookGlobalId = node.globalId;
+		this.updateTransform( node.globalId, defaultParent, null,
+			( universeFromNode: mat4 ) =>
+		{
+			switch( node.propVolume.type )
+			{
+				case EVolumeType.Sphere:
+					Av().renderer.addHook_Sphere( hookGlobalId, universeFromNode.all(), node.propVolume.radius );
 					break;
 				default:
 					throw "unsupported volume type";

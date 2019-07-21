@@ -364,6 +364,38 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 			m_vrManager->isGrabPressed( hand ) );
 	} );
 
+	RegisterFunction( container, "addHook_Sphere", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 3 )
+		{
+			exception = "Invalid arguments";
+			return;
+		}
+
+		if ( !arguments[0]->IsString() )
+		{
+			exception = "argument must be a string";
+			return;
+		}
+
+		glm::mat4 universeFromHandle;
+		if ( !mat4FromJavascript( arguments[1], &universeFromHandle ) )
+		{
+			exception = "second argument must be an array of 16 numbers";
+			return;
+		}
+
+		if ( !arguments[2]->IsDouble() )
+		{
+			exception = "third argument must be a number";
+		}
+
+		m_collisions.addHook_Sphere(
+			std::strtoull( std::string( arguments[0]->GetStringValue() ).c_str(), nullptr, 0 ),
+			universeFromHandle,
+			arguments[2]->GetDoubleValue() );
+	} );
+
 	RegisterFunction( container, "getUniverseFromOriginTransform", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
 		if ( arguments.size() != 1 )
@@ -520,6 +552,8 @@ aardvark::EAvSceneGraphNodeType sgTypeFromCapnProtoType( AvNode::Type capnType )
 		return aardvark::EAvSceneGraphNodeType::Handle;
 	case AvNode::Type::GRABBER:
 		return aardvark::EAvSceneGraphNodeType::Grabber;
+	case AvNode::Type::CUSTOM:
+		return aardvark::EAvSceneGraphNodeType::Custom;
 	default:
 		return aardvark::EAvSceneGraphNodeType::Invalid;
 	}
@@ -646,6 +680,12 @@ CefRefPtr<CefV8Value> CJavascriptRenderer::nodeToJsObject( AvNodeRoot::Reader & 
 	}
 	jsNode->SetValue( "propInteractive",
 		CefV8Value::CreateBool( node.getPropInteractive() ), V8_PROPERTY_ATTRIBUTE_NONE );
+
+	if ( node.hasPropCustomNodeType() )
+	{
+		jsNode->SetValue( "propCustomNodeType",
+			CefV8Value::CreateString( node.getPropCustomNodeType() ), V8_PROPERTY_ATTRIBUTE_NONE );
+	}
 
 	if ( node.hasChildren() && node.getChildren().size() > 0 )
 	{

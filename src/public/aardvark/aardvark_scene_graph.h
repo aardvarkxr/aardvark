@@ -34,6 +34,7 @@ namespace aardvark
 		Grabbable = 6,	// Thing that can be grabbed by its handles
 		Handle = 7,		// Volume that a grabbable can be grabbed by
 		Grabber = 8,	// Tool that can grab the handles of grabbables
+		Custom = 9,		// A custom node type. Caller must call avSetCustomNodeType
 	};
 
 	struct AvSceneContextStruct;
@@ -68,6 +69,9 @@ namespace aardvark
 
 	// valid for Volume nodes
 	EAvSceneGraphResult avSetSphereVolume( AvSceneContext context, float radius );
+
+	// valid for Custom nodes
+	EAvSceneGraphResult avSetCustomNodeType( AvSceneContext context, const char *pchCustomNodeType );
 
 	// valid for poker nodes
 	struct PokerProximity_t
@@ -111,6 +115,8 @@ namespace aardvark
 		LeaveRange = 2,
 		StartGrab = 3,
 		EndGrab = 4,
+		EnterHookRange = 5,
+		LeaveHookRange = 6,
 	};
 
 	struct GrabEvent_t
@@ -118,18 +124,21 @@ namespace aardvark
 		EGrabEventType type;
 		uint64_t grabbableId;
 		uint64_t grabberId;
+		uint64_t hookId;
 	};
 
 	EAvSceneGraphResult avGetNextGrabberIntersection( aardvark::CAardvarkClient *pClient,
 		uint32_t grabberNodeId,
 		bool *isGrabberPressed,
 		uint64_t *grabberIntersections, uint32_t intersectionArraySize,
-		uint32_t *usedIntersectionCount );
+		uint32_t *usedIntersectionCount,
+		uint64_t *hooks, uint32_t hookArraySize,
+		uint32_t *usedHookCount );
 	EAvSceneGraphResult avGetNextGrabEvent( aardvark::CAardvarkClient *pClient,
 		uint32_t grabbableNodeId, GrabEvent_t *grabEvent );
 	EAvSceneGraphResult avPushGrabEventFromGrabber( aardvark::CAardvarkClient *pClient,
 		AvGadget::Client *gadget, uint32_t grabberNodeId,
-		uint64_t grabbableId, EGrabEventType type );
+		uint64_t grabbableId, uint64_t hookId, EGrabEventType type );
 
 	// tells the renderer what DXGI to use for a scene graph gadget
 	EAvSceneGraphResult avUpdateDxgiTextureForGadgets( aardvark::CAardvarkClient *pClient, uint32_t *gadgetIds, uint32_t unIdCount, uint32_t unWidth, uint32_t unHeight, void *pvSharedTextureHandle, bool bInvertY );

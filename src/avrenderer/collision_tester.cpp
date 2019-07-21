@@ -49,6 +49,12 @@ void CCollisionTester::addGrabbableHandle_Sphere( uint64_t globalGrabbableId, co
 		} );
 }
 
+void CCollisionTester::addHook_Sphere( uint64_t globalHookId, const glm::mat4 & universeFromHook,
+	float radius )
+{
+	m_activeHooks.push_back( { globalHookId, universeFromHook, radius } );
+}
+
 
 void CCollisionTester::reset()
 {
@@ -70,6 +76,7 @@ bool SpheresIntersect( const glm::mat4 & grabberFromUniverse, float grabberRadiu
 void CCollisionTester::updateGrabberIntersections( aardvark::CAardvarkClient *client )
 {
 	std::vector<uint64_t> grabbablesToSend;
+	std::vector<uint64_t> hooksToSend;
 	for ( auto & grabber : m_activeGrabbers )
 	{
 		auto req = client->Server().pushGrabIntersectionsRequest();
@@ -90,10 +97,26 @@ void CCollisionTester::updateGrabberIntersections( aardvark::CAardvarkClient *cl
 			}
 		}
 
+		hooksToSend.clear();
+		for ( auto & hook : m_activeHooks)
+		{
+			if ( SpheresIntersect( grabber.matGrabberFromUniverse, grabber.radius,
+				hook.universeFromHook, hook.radius ) )
+			{
+				hooksToSend.push_back( hook.globalHookId );
+				break;
+			}
+		}
+
 		auto intersections = req.initIntersections( (int)grabbablesToSend.size() );
 		for( int n = 0; n < grabbablesToSend.size(); n++ )
 		{
 			intersections.set( n, grabbablesToSend[n] );
+		}
+		auto hooks = req.initHooks( (int)hooksToSend.size() );
+		for ( int n = 0; n < hooksToSend.size(); n++ )
+		{
+			hooks.set( n, hooksToSend[n] );
 		}
 
 		client->addRequestToTasks( std::move( req ) );
