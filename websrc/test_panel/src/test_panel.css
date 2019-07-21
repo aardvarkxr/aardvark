@@ -1,6 +1,7 @@
-body
+body, html
 {
 	background-color: lightskyblue;
+	height: 100%;
 }
 
 .Button 

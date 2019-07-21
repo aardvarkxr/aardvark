@@ -42,7 +42,7 @@ private:
 template< typename T >
 struct JsObjectPtr
 {
-	T *impl;
+	T *impl = nullptr;
 	CefRefPtr<CefV8Value> object;
 
 	T *operator->() { return impl; }

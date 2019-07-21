@@ -82,6 +82,7 @@ class TestPanel extends React.Component< {}, TestPanelState >
 					onMouseLeave={ this.onMouseEnterOrLeave }>
 					Click Me!
 					</div> 
+				<iframe src="http://programmerjoe.com" style={ { width: "100%", height: "100%" }} />
 			</div>
 		)
 	}

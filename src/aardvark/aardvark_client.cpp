@@ -160,6 +160,10 @@ namespace aardvark
 		m_panelProcessorImpl = nullptr;
 		m_pokerProcessor = nullptr;
 		m_pokerProcessorImpl = nullptr;
+		m_grabbableProcessor = nullptr;
+		m_grabbableProcessorImpl = nullptr;
+		m_grabberProcessor = nullptr;
+		m_grabberProcessorImpl = nullptr;
 		m_setupPromise = nullptr;
 		m_pMainInterface = nullptr;
 		m_clientContext = nullptr;

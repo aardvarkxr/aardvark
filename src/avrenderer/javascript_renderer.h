@@ -15,6 +15,7 @@ public:
 	virtual ::kj::Promise<void> endGrab( EndGrabContext context ) override;
 
 	CJavascriptRenderer *m_renderer = nullptr;
+	CefRefPtr< CefV8Context > m_context;
 };
 
 

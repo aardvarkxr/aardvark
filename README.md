@@ -43,4 +43,7 @@ This has also only been tested in debug.
    1. Pick "avrenderer" as the startup project in visual studio
    2. Start Debugging from the Debug menu
 
+**Debugging web stuff**
+
+You can use chrome dev tools on your gadgets by browsing to <a href="http://localhost:8042/">http://localhost:8042/</a> while Aardvark is running.
 

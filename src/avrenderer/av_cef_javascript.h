@@ -34,11 +34,11 @@ public:
 	virtual bool OnProcessMessageReceived( CefRefPtr<CefBrowser> browser,
 		CefProcessId source_process,
 		CefRefPtr<CefProcessMessage> message ) override;
+	virtual void OnBrowserDestroyed( CefRefPtr<CefBrowser> browser ) override;
 
 
 	aardvark::CAardvarkClient *getClient() { return &*m_client; }
-	CefRefPtr<CefBrowser> getBrowser() { return m_browser;  }
-	CefRefPtr<CefV8Context> getContext() { return m_context; }
+	void sendBrowserMessage( CefRefPtr< CefProcessMessage > msg );
 
 	void updateGadgetNamesForBrowser();
 	bool hasPermission( const std::string & permission );
@@ -46,11 +46,17 @@ public:
 
 	void runFrame();
 private:
+	struct PerContextInfo_t
+	{
+		CefRefPtr<CefBrowser> browser;
+		CefRefPtr<CefFrame> frame;
+		CefRefPtr<CefV8Context> context;
+		JsObjectPtr< CAardvarkObject > aardvarkObject;
+	};
+	std::vector< PerContextInfo_t > m_contexts;
 
+	bool m_clientNeedsReset = false;
 	std::unique_ptr<aardvark::CAardvarkClient> m_client;
-	JsObjectPtr< CAardvarkObject > m_aardvarkObject;
-	CefRefPtr<CefBrowser> m_browser;
-	CefRefPtr<CefV8Context> m_context;
 	std::string m_gadgetUri;
 	std::string m_initialHook;
 	CAardvarkGadgetManifest m_gadgetManifest;

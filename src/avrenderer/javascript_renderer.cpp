@@ -114,11 +114,7 @@ void CJavascriptRenderer::runFrame()
 		m_intersections.reset();
 		m_collisions.reset();
 
-		m_handler->getContext()->Enter();
-
 		m_jsTraverser->ExecuteFunction( nullptr, CefV8ValueList{} );
-
-		m_handler->getContext()->Exit();
 
 		m_intersections.updatePokerProximity( m_handler->getClient() );
 		m_collisions.updateGrabberIntersections( m_handler->getClient() );
@@ -143,7 +139,7 @@ void CJavascriptRenderer::runFrame()
 	{
 		m_quitting = true;
 		CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "quit" );
-		m_handler->getBrowser()->SendProcessMessage( PID_BROWSER, msg );
+		m_handler->sendBrowserMessage( msg );
 	}
 }
 
@@ -152,6 +148,7 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 {
 	m_frameListener = kj::heap<AvFrameListenerImpl>();
 	m_frameListener->m_renderer = this;
+	m_frameListener->m_context = CefV8Context::GetCurrentContext();
 
 	auto reqListen = m_handler->getClient()->Server().listenForFramesRequest();
 	AvFrameListener::Client listenerClient = std::move( m_frameListener );
@@ -718,12 +715,12 @@ CefRefPtr<CefV8Value> CJavascriptRenderer::frameToJsObject( AvVisualFrame::Reade
 			}
 		}
 
-		m_renderer->m_handler->getContext()->Enter();
+		m_context->Enter();
 
 		CefRefPtr< CefV8Value > jsFrame = m_renderer->frameToJsObject( context.getParams().getFrame() );
 		m_renderer->m_jsSceneProcessor->ExecuteFunction( nullptr, CefV8ValueList{ jsFrame } );
 
-		m_renderer->m_handler->getContext()->Exit();
+		m_context->Exit();
 	}
 	else
 	{
@@ -736,7 +733,7 @@ CefRefPtr<CefV8Value> CJavascriptRenderer::frameToJsObject( AvVisualFrame::Reade
 {
 	if ( m_renderer->m_jsHapticProcessor )
 	{
-		m_renderer->m_handler->getContext()->Enter();
+		m_context->Enter();
 
 		m_renderer->m_jsHapticProcessor->ExecuteFunction( nullptr, CefV8ValueList
 			{
@@ -746,7 +743,7 @@ CefRefPtr<CefV8Value> CJavascriptRenderer::frameToJsObject( AvVisualFrame::Reade
 				CefV8Value::CreateDouble( context.getParams().getDuration() ),
 			} );
 
-		m_renderer->m_handler->getContext()->Exit();
+		m_context->Exit();
 	}
 	else
 	{
@@ -765,7 +762,7 @@ CefRefPtr<CefV8Value> CJavascriptRenderer::frameToJsObject( AvVisualFrame::Reade
 
 	if ( m_renderer->m_jsGrabStartProcessor )
 	{
-		m_renderer->m_handler->getContext()->Enter();
+		m_context->Enter();
 
 		m_renderer->m_jsGrabStartProcessor->ExecuteFunction( nullptr, CefV8ValueList
 			{
@@ -773,7 +770,7 @@ CefRefPtr<CefV8Value> CJavascriptRenderer::frameToJsObject( AvVisualFrame::Reade
 				CefV8Value::CreateString( std::to_string( grabbableGlobalId ) ),
 			} );
 
-		m_renderer->m_handler->getContext()->Exit();
+		m_context->Exit();
 	}
 	else
 	{
@@ -791,7 +788,7 @@ CefRefPtr<CefV8Value> CJavascriptRenderer::frameToJsObject( AvVisualFrame::Reade
 
 	if ( m_renderer->m_jsGrabEndProcessor )
 	{
-		m_renderer->m_handler->getContext()->Enter();
+		m_context->Enter();
 
 		m_renderer->m_jsGrabEndProcessor->ExecuteFunction( nullptr, CefV8ValueList
 			{
@@ -799,7 +796,7 @@ CefRefPtr<CefV8Value> CJavascriptRenderer::frameToJsObject( AvVisualFrame::Reade
 				CefV8Value::CreateString( std::to_string( grabbableGlobalId ) ),
 			} );
 
-		m_renderer->m_handler->getContext()->Exit();
+		m_context->Exit();
 	}
 	else
 	{

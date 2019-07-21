@@ -675,8 +675,6 @@ void CAardvarkGadgetObject::runFrame()
 		assert( result != EAvSceneGraphResult::InsufficientBufferSize );
 		if ( result == EAvSceneGraphResult::Success )
 		{
-			m_handler->getContext()->Enter();
-
 			CefRefPtr< CefV8Value > list = CefV8Value::CreateArray( (int)usedCount );
 			for ( uint32_t n = 0; n < usedCount; n++ )
 			{
@@ -698,8 +696,6 @@ void CAardvarkGadgetObject::runFrame()
 			}
 
 			iHandler.second->ExecuteFunction( nullptr, CefV8ValueList{ list } );
-
-			m_handler->getContext()->Exit();
 		}
 	}
 
@@ -710,8 +706,6 @@ void CAardvarkGadgetObject::runFrame()
 		while ( ++unLimit < 100 && EAvSceneGraphResult::Success == aardvark::avGetNextMouseEvent(
 			m_handler->getClient(), iHandler.first, &panelMouseEvent ) )
 		{
-			m_handler->getContext()->Enter();
-
 			CefRefPtr< CefV8Value > evt = CefV8Value::CreateObject( nullptr, nullptr );
 			evt->SetValue( CefString( "panelId" ),
 				CefV8Value::CreateString( std::to_string( panelMouseEvent.panelId ) ),
@@ -730,8 +724,6 @@ void CAardvarkGadgetObject::runFrame()
 				V8_PROPERTY_ATTRIBUTE_NONE );
 
 			iHandler.second->ExecuteFunction( nullptr, CefV8ValueList{ evt } );
-
-			m_handler->getContext()->Exit();
 		}
 	}
 
@@ -747,7 +739,7 @@ void CAardvarkGadgetObject::runFrame()
 			msg->GetArgumentList()->SetDouble( 1, panelMouseEvent.x );
 			msg->GetArgumentList()->SetDouble( 2, panelMouseEvent.y );
 
-			m_handler->getBrowser()->SendProcessMessage( PID_BROWSER, msg );
+			m_handler->sendBrowserMessage( msg );
 		}
 	}
 
@@ -761,8 +753,6 @@ void CAardvarkGadgetObject::runFrame()
 		assert( result != EAvSceneGraphResult::InsufficientBufferSize );
 		if ( result == EAvSceneGraphResult::Success )
 		{
-			m_handler->getContext()->Enter();
-
 			CefRefPtr< CefV8Value > list = CefV8Value::CreateArray( (int)usedCount );
 			for ( uint32_t n = 0; n < usedCount; n++ )
 			{
@@ -771,8 +761,6 @@ void CAardvarkGadgetObject::runFrame()
 
 			iHandler.second->ExecuteFunction( nullptr, 
 				CefV8ValueList{ CefV8Value::CreateBool( isGrabberPressed ), list } );
-
-			m_handler->getContext()->Exit();
 		}
 	}
 
@@ -783,8 +771,6 @@ void CAardvarkGadgetObject::runFrame()
 		while ( ++unLimit < 100 && EAvSceneGraphResult::Success == aardvark::avGetNextGrabEvent(
 			m_handler->getClient(), iHandler.first, &grabEvent) )
 		{
-			m_handler->getContext()->Enter();
-
 			CefRefPtr< CefV8Value > evt = CefV8Value::CreateObject( nullptr, nullptr );
 			evt->SetValue( CefString( "grabberId" ),
 				CefV8Value::CreateString( std::to_string( grabEvent.grabberId) ),
@@ -797,8 +783,6 @@ void CAardvarkGadgetObject::runFrame()
 				V8_PROPERTY_ATTRIBUTE_NONE );
 
 			iHandler.second->ExecuteFunction( nullptr, CefV8ValueList{ evt } );
-
-			m_handler->getContext()->Exit();
 		}
 	}
 }
@@ -928,7 +912,7 @@ bool CAardvarkObject::init( CefRefPtr<CefV8Value> container )
 
 			msg->GetArgumentList()->SetString( 0, arguments[0]->GetStringValue() );
 			msg->GetArgumentList()->SetString( 1, arguments[1]->GetStringValue() );
-			m_handler->getBrowser()->SendProcessMessage( PID_BROWSER, msg );
+			m_handler->sendBrowserMessage( msg );
 		} );
 	}
 
@@ -960,29 +944,61 @@ void CAardvarkRenderProcessHandler::OnContextCreated(
 	CefRefPtr<CefFrame> frame,
 	CefRefPtr<CefV8Context> context )
 {
-	assert( !m_browser );
-	m_browser = browser;
-	m_context = context;
-	m_client->Start();
+	if ( m_contexts.empty() )
+	{
+		if ( m_clientNeedsReset )
+		{
+			m_client->Stop();
+			m_clientNeedsReset = false;
+		}
 
+		// first time setup tasks
+		CefPostDelayedTask( TID_RENDERER, base::Bind( &CAardvarkRenderProcessHandler::runFrame, this ), 0 );
+		m_client->Start();
+	}
+
+
+	PerContextInfo_t info;
+	info.browser = browser;
+	info.frame = frame;
+	info.context = context;
+	
 	// Retrieve the context's window object.
-	CefRefPtr<CefV8Value> windowObj = m_context->GetGlobal();
+	CefRefPtr<CefV8Value> windowObj = context->GetGlobal();
 
 	// Create an object to store our functions in
-	m_aardvarkObject = CJavascriptObjectWithFunctions::create< CAardvarkObject>( this );
-	windowObj->SetValue( "aardvark", m_aardvarkObject.object, V8_PROPERTY_ATTRIBUTE_READONLY );
+	info.aardvarkObject = CJavascriptObjectWithFunctions::create< CAardvarkObject>( this );
+	windowObj->SetValue( "aardvark", info.aardvarkObject.object, V8_PROPERTY_ATTRIBUTE_READONLY );
 
-	CefPostDelayedTask( TID_RENDERER, base::Bind( &CAardvarkRenderProcessHandler::runFrame, this ), 0 );
-
+	m_contexts.push_back( std::move( info ) );
 }
 
 void CAardvarkRenderProcessHandler::OnContextReleased( CefRefPtr<CefBrowser> browser,
 	CefRefPtr<CefFrame> frame,
 	CefRefPtr<CefV8Context> context )
 {
-	m_aardvarkObject = nullptr;
-	m_client->Stop();
-	m_browser = nullptr;
+	for ( auto iInfo = m_contexts.begin(); iInfo != m_contexts.end(); iInfo++ )
+	{
+		if ( iInfo->context->IsSame( context ) )
+		{
+			m_contexts.erase( iInfo );
+			break;
+		}
+	}
+
+	if ( m_contexts.empty() )
+	{
+		m_clientNeedsReset = true;
+	}
+}
+
+void CAardvarkRenderProcessHandler::OnBrowserDestroyed( CefRefPtr<CefBrowser> browser )
+{
+	if ( m_clientNeedsReset )
+	{
+		m_client->Stop();
+		m_clientNeedsReset = false;
+	}
 }
 
 
@@ -1018,15 +1034,18 @@ void CAardvarkRenderProcessHandler::updateGadgetNamesForBrowser()
 {
 	size_t listIndex = 0;
 	CefRefPtr< CefListValue> idList = CefListValue::Create();
-	for ( auto & gadget : m_aardvarkObject->getGadgets() )
+	for ( auto & info : m_contexts )
 	{
-		idList->SetInt( listIndex++, gadget->getId() );
+		for ( auto & gadget : info.aardvarkObject->getGadgets() )
+		{
+			idList->SetInt( listIndex++, gadget->getId() );
+		}
 	}
 
 	CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "update_browser_gadget_ids" );
 
 	msg->GetArgumentList()->SetList( 0, idList );
-	m_browser->SendProcessMessage( PID_BROWSER, msg );
+	sendBrowserMessage( msg );
 }
 
 bool CAardvarkRenderProcessHandler::hasPermission( const std::string & permission )
@@ -1036,9 +1055,11 @@ bool CAardvarkRenderProcessHandler::hasPermission( const std::string & permissio
 
 void CAardvarkRenderProcessHandler::runFrame()
 {
-	if ( m_aardvarkObject )
+	for ( auto & info : m_contexts )
 	{
-		m_aardvarkObject->runFrame();
+		info.context->Enter();
+		info.aardvarkObject->runFrame();
+		info.context->Exit();
 	}
 
 	m_client->WaitScope().poll();
@@ -1052,3 +1073,10 @@ void CAardvarkRenderProcessHandler::runFrame()
 
 	CefPostDelayedTask( TID_RENDERER, base::Bind( &CAardvarkRenderProcessHandler::runFrame, this ), frameDelay );
 }
+
+void CAardvarkRenderProcessHandler::sendBrowserMessage( CefRefPtr< CefProcessMessage > msg )
+{
+	CefV8Context::GetCurrentContext()->GetBrowser()->SendProcessMessage( PID_BROWSER, msg );
+}
+
+

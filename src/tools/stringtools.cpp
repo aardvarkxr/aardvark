@@ -3,6 +3,8 @@
 #include <locale>
 #include <clocale>
 #include <codecvt>
+#include <algorithm>
+#include <cctype>
 
 namespace tools
 {
@@ -17,5 +19,28 @@ namespace tools
 		return std::wstring_convert< std::codecvt_utf8< wchar_t >, wchar_t >().from_bytes( sString );
 	}
 #pragma warning(push)
+
+	std::string stringToLower( const std::string & s )
+	{
+		std::string lower( s );
+		std::transform( lower.begin(), lower.end(), lower.begin(),
+			[]( unsigned char c ) { return std::tolower( c ); } );
+		return lower;
+	}
+
+	bool stringIsPrefix( const std::string & prefix, const std::string & testString )
+	{
+		return stringIsPrefixCaseSensitive( stringToLower( prefix ), stringToLower( testString ) );
+	}
+
+	bool stringIsPrefixCaseSensitive( const std::string & prefix, const std::string & testString )
+	{
+		if ( testString.size() < prefix.size() )
+		{
+			return false;
+		}
+
+		return prefix.end() == std::mismatch( prefix.begin(), prefix.end(), testString.begin() ).first;
+	}
 
 }

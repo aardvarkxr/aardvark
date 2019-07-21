@@ -89,15 +89,12 @@ namespace tools
 
 	std::string filterUriForInstall( const std::string & originalUri )
 	{
-		std::string lowerUrl( originalUri );
-		std::transform( lowerUrl.begin(), lowerUrl.end(), lowerUrl.begin(),
-			[]( unsigned char c ) { return std::tolower( c ); } );
+		std::string lowerUrl = stringToLower( originalUri );
 
 		std::string httpPrefix = "http://aardvark.install/";
 		std::string httpsPrefix = "https://aardvark.install/";
 
-		auto httpMatch = std::mismatch( httpPrefix.begin(), httpPrefix.end(), lowerUrl.begin() );
-		if ( httpMatch.first == httpPrefix.end() )
+		if ( stringIsPrefixCaseSensitive( httpPrefix, lowerUrl ) )
 		{
 			auto updatedPath = tools::GetDataPath()
 				/ std::string( originalUri.begin() + httpPrefix.size(), originalUri.end() );
@@ -105,8 +102,7 @@ namespace tools
 		}
 		else
 		{
-			auto httpsMatch = std::mismatch( httpsPrefix.begin(), httpsPrefix.end(), lowerUrl.begin() );
-			if ( httpsMatch.first == httpsPrefix.end() )
+			if ( stringIsPrefixCaseSensitive( httpsPrefix, lowerUrl ) )
 			{
 				auto updatedPath = tools::GetDataPath()
 					/ std::string( originalUri.begin() + httpsPrefix.size(), originalUri.end() );
