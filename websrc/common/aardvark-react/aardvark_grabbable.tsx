@@ -33,7 +33,6 @@ export class AvGrabbable extends AvBaseNode< AvGrabbableProps, {} >
 	{
 		var newHighlight = HighlightType.None;
 	
-		console.log( "Grab event", evt );
 		switch( evt.type )
 		{
 			case AvGrabEventType.EnterRange:
