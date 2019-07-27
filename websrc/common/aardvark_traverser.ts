@@ -525,8 +525,21 @@ export class AvDefaultTraverser
 				break;
 
 			case AvGrabEventType.EndGrab:
+				if( grabEvent.hookId )
+				{
+					// we're dropping onto a hook
+					this.m_nodeToNodeAnchors[ grabEvent.grabbableId ] = 
+					{
+						parentGlobalId: grabEvent.hookId,
+						parentFromNodeTransform: null,
+					};
+				}
+				else
+				{
+					// we're dropping into open space
 					delete this.m_nodeToNodeAnchors[ grabEvent.grabbableId ];
-					break;
+				}
+				break;
 		}
 	}
 

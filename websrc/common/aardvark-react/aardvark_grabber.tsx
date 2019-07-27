@@ -133,13 +133,13 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 			if( this.m_lastHook )
 			{
 				AvGadget.instance().sendGrabEvent( this.m_nodeId, 
-					null, this.m_lastHook, AvGrabEventType.LeaveHookRange );
+					this.m_lastGrabbable, this.m_lastHook, AvGrabEventType.LeaveHookRange );
 			}
 
 			if( newHookId )
 			{
 				AvGadget.instance().sendGrabEvent( this.m_nodeId, 
-					null, newHookId, AvGrabEventType.EnterHookRange );
+					this.m_lastGrabbable, newHookId, AvGrabEventType.EnterHookRange );
 			}
 
 			this.m_lastHook = newHookId;

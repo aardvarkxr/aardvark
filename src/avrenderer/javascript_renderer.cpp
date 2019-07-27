@@ -760,15 +760,27 @@ CefRefPtr<CefV8Value> CJavascriptRenderer::frameToJsObject( AvVisualFrame::Reade
 		m_context->Enter();
 
 		CefRefPtr< CefV8Value > evt = CefV8Value::CreateObject( nullptr, nullptr );
-		evt->SetValue( CefString( "grabberId" ),
-			CefV8Value::CreateString( std::to_string( grabEvent.getGrabberId() ) ),
-			V8_PROPERTY_ATTRIBUTE_NONE );
-		evt->SetValue( CefString( "grabbableId" ),
-			CefV8Value::CreateString( std::to_string( grabEvent.getGrabbableId() ) ),
-			V8_PROPERTY_ATTRIBUTE_NONE );
-		evt->SetValue( CefString( "hookId" ),
-			CefV8Value::CreateString( std::to_string( grabEvent.getHookId() ) ),
-			V8_PROPERTY_ATTRIBUTE_NONE );
+		uint64_t grabberId = grabEvent.getGrabberId();
+		if ( grabberId )
+		{
+			evt->SetValue( CefString( "grabberId" ),
+				CefV8Value::CreateString( std::to_string( grabberId ) ),
+				V8_PROPERTY_ATTRIBUTE_NONE );
+		}
+		uint64_t grabbableId = grabEvent.getGrabbableId();
+		if ( grabbableId )
+		{
+			evt->SetValue( CefString( "grabbableId" ),
+				CefV8Value::CreateString( std::to_string( grabbableId ) ),
+				V8_PROPERTY_ATTRIBUTE_NONE );
+		}
+		uint64_t hookId = grabEvent.getHookId();
+		if ( hookId )
+		{
+			evt->SetValue( CefString( "hookId" ),
+				CefV8Value::CreateString( std::to_string( hookId ) ),
+				V8_PROPERTY_ATTRIBUTE_NONE );
+		}
 		evt->SetValue( CefString( "type" ),
 			CefV8Value::CreateInt( (int)aardvark::grabTypeFromProtoType( grabEvent.getType() ) ),
 			V8_PROPERTY_ATTRIBUTE_NONE );

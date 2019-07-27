@@ -48,6 +48,7 @@ class TestPanel extends React.Component< {}, TestPanelState >
 	public render()
 	{
 		let sDivClasses:string;
+		let scale = 0.4;
 		switch( this.state.grabbableHighlight )
 		{
 			case HighlightType.None:
@@ -62,6 +63,11 @@ class TestPanel extends React.Component< {}, TestPanelState >
 				sDivClasses = "FullPage GrabbedHighlight";
 				break;
 
+			case HighlightType.InHookRange:
+				sDivClasses = "FullPage GrabbedHighlight";
+				scale = 0.05;
+				break;
+		
 		}
 
 		return (
@@ -70,7 +76,7 @@ class TestPanel extends React.Component< {}, TestPanelState >
 					<AvGrabbable updateHighlight={ this.onHighlightGrabbable }>
 						<AvSphereHandle radius={0.1} />
 						
-						<AvTransform uniformScale={0.4}>
+						<AvTransform uniformScale={ scale }>
 							<AvPanel interactive={true}
 								onIdAssigned={ (id:number) => { this.m_panelId = id } }/>
 						</AvTransform>

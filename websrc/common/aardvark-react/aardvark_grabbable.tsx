@@ -10,6 +10,7 @@ export enum HighlightType
 	None = 0,
 	InRange = 1,
 	Grabbed = 2,
+	InHookRange = 3,
 }
 
 interface AvGrabbableProps extends AvBaseNodeProps
@@ -32,6 +33,7 @@ export class AvGrabbable extends AvBaseNode< AvGrabbableProps, {} >
 	{
 		var newHighlight = HighlightType.None;
 	
+		console.log( "Grab event", evt );
 		switch( evt.type )
 		{
 			case AvGrabEventType.EnterRange:
@@ -48,6 +50,15 @@ export class AvGrabbable extends AvBaseNode< AvGrabbableProps, {} >
 			case AvGrabEventType.EndGrab:
 				newHighlight = HighlightType.InRange;
 				break;
+
+			case AvGrabEventType.EnterHookRange:
+				newHighlight = HighlightType.InHookRange;
+				break;
+
+			case AvGrabEventType.LeaveHookRange:
+				newHighlight = HighlightType.Grabbed;
+				break;
+
 		}
 
 		if( newHighlight != this.m_lastHighlight )
