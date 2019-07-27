@@ -310,13 +310,13 @@ interface AvRenderer
 	registerHapticProcessor( hapticProcessor: AvHapticProcessor ) : void;
 	sendHapticEventForHand( hand: EHand, amplitude: number, frequency: number, duration: number ): void;
 
-	addActivePanel( panelGlobalId: string, nodeFromUniverse: number[], zScale: number ): void;
-	addActivePoker( pokerGlobalId: string, pokerInUniverse: number[] ): void;
+	addActivePanel( panelGlobalId: string, nodeFromUniverse: number[], zScale: number, hand: EHand  ): void;
+	addActivePoker( pokerGlobalId: string, pokerInUniverse: number[], hand: EHand  ): void;
 
 	registerGrabEventProcessor( grabEventProcessor: AvGrabEventProcessor ): void;
-	addGrabbableHandle_Sphere( grabbableGlobalId: string, universeFromGrabbable: number[], radius: number ): void;
+	addGrabbableHandle_Sphere( grabbableGlobalId: string, universeFromGrabbable: number[], radius: number, hand: EHand ): void;
 	addGrabber_Sphere( grabberGlobalId: string, universeFromGrabber: number[], radius: number, hand: EHand ): void;
-	addHook_Sphere( hookGlobalId: string, universeFromGrabber: number[], radius: number ): void;
+	addHook_Sphere( hookGlobalId: string, universeFromGrabber: number[], radius: number, hand: EHand  ): void;
 }
 
 export interface Aardvark

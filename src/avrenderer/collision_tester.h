@@ -1,6 +1,7 @@
 #pragma once
 
 #include "aardvark.capnp.h"
+#include "ivrmanager.h"
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -26,12 +27,12 @@ public:
 		AvVolume::Reader & volume );
 
 	void addGrabber_Sphere( uint64_t globalGrabberId, const glm::mat4 & grabberFromUniverse,
-		float radius, bool isPressed );
+		float radius, EHand hand, bool isPressed );
 	void addGrabbableHandle_Sphere( uint64_t globalGrabbableId, const glm::mat4 & universeFromHandle,
-		float radius );
+		float radius, EHand hand );
 
 	void addHook_Sphere( uint64_t globalHookId, const glm::mat4 & universeFromHook,
-		float radius );
+		float radius, EHand hand );
 
 	void reset();
 	void updateGrabberIntersections( aardvark::CAardvarkClient *client );
@@ -40,6 +41,7 @@ private:
 	struct ActiveGrabber_t
 	{
 		uint64_t globalGrabberId;
+		EHand hand;
 		bool isPressed;
 		glm::mat4 matGrabberFromUniverse;
 		float radius;
@@ -55,6 +57,7 @@ private:
 	struct ActiveGrabbable_t
 	{
 		uint64_t globalGrabbableId;
+		EHand hand;
 		std::vector<Handle_t> handles;
 	};
 	std::vector<ActiveGrabbable_t> m_activeGrabbables;
@@ -62,6 +65,7 @@ private:
 	struct ActiveHook_t
 	{
 		uint64_t globalHookId;
+		EHand hand;
 		glm::mat4 universeFromHook;
 		float radius;
 	};

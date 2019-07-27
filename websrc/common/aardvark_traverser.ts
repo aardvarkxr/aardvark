@@ -389,6 +389,7 @@ export class AvDefaultTraverser
 		{
 			nodeData.modelInstance.setOverrideTexture( this.m_currentRoot.gadgetId );
 
+			let hand = this.m_currentHand;
 			this.updateTransform( node.globalId, defaultParent, mat4.identity,
 				( universeFromNode: mat4 ) =>
 			{
@@ -403,7 +404,8 @@ export class AvDefaultTraverser
 					Av().renderer.addActivePanel(
 						node.globalId,
 						nodeFromUniverse.all(),
-						zScale );
+						zScale, 
+						hand );
 				}
 			} );
 		}
@@ -411,11 +413,12 @@ export class AvDefaultTraverser
 
 	traversePoker( node: AvNode, defaultParent: PendingTransform )
 	{
+		let hand = this.m_currentHand;
 		this.updateTransform( node.globalId, defaultParent, null,
 			( universeFromNode: mat4 ) =>
 		{
 			let pokerInUniverse = universeFromNode.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) );
-			Av().renderer.addActivePoker( node.globalId, [ pokerInUniverse.x, pokerInUniverse.y, pokerInUniverse.z ] );
+			Av().renderer.addActivePoker( node.globalId, [ pokerInUniverse.x, pokerInUniverse.y, pokerInUniverse.z ], hand );
 		} );
 	}
 	
@@ -438,13 +441,15 @@ export class AvDefaultTraverser
 		}
 	
 		let grabbableGlobalId = this.m_currentGrabbableGlobalId;
+		let hand = this.m_currentHand;
 		this.updateTransform( node.globalId, defaultParent, null,
 			( universeFromNode: mat4 ) =>
 		{
 			switch( node.propVolume.type )
 			{
 				case EVolumeType.Sphere:
-					Av().renderer.addGrabbableHandle_Sphere( grabbableGlobalId, universeFromNode.all(), node.propVolume.radius );
+					Av().renderer.addGrabbableHandle_Sphere( grabbableGlobalId, universeFromNode.all(), 
+						node.propVolume.radius, hand );
 					break;
 				default:
 					throw "unsupported volume type";
@@ -484,13 +489,14 @@ export class AvDefaultTraverser
 		}
 
 		let hookGlobalId = node.globalId;
+		let hand = this.m_currentHand;
 		this.updateTransform( node.globalId, defaultParent, null,
 			( universeFromNode: mat4 ) =>
 		{
 			switch( node.propVolume.type )
 			{
 				case EVolumeType.Sphere:
-					Av().renderer.addHook_Sphere( hookGlobalId, universeFromNode.all(), node.propVolume.radius );
+					Av().renderer.addHook_Sphere( hookGlobalId, universeFromNode.all(), node.propVolume.radius, hand );
 					break;
 				default:
 					throw "unsupported volume type";

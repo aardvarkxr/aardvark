@@ -11,13 +11,13 @@ void CCollisionTester::addGrabber( uint64_t globalGrabberId, const glm::mat4 & m
 	AvVolume::Reader & volume, bool isPressed )
 {
 	assert( volume.getType() == AvVolume::Type::SPHERE );
-	addGrabber_Sphere( globalGrabberId, matGrabberFromUniverse, volume.getRadius(), isPressed );
+	addGrabber_Sphere( globalGrabberId, matGrabberFromUniverse, volume.getRadius(), EHand::Invalid, isPressed );
 }
 
 void CCollisionTester::addGrabber_Sphere( uint64_t globalGrabberId, const glm::mat4 & grabberFromUniverse,
-	float radius, bool isPressed )
+	float radius, EHand hand, bool isPressed )
 {
-	m_activeGrabbers.push_back( { globalGrabberId, isPressed, grabberFromUniverse, radius } );
+	m_activeGrabbers.push_back( { globalGrabberId, hand, isPressed, grabberFromUniverse, radius } );
 }
 
 void CCollisionTester::addGrabbableHandle( uint64_t globalGrabbableId, const glm::mat4 & matUniverseFromHandle, 
@@ -25,11 +25,11 @@ void CCollisionTester::addGrabbableHandle( uint64_t globalGrabbableId, const glm
 {
 	assert( volume.getType() == AvVolume::Type::SPHERE );
 
-	addGrabbableHandle_Sphere( globalGrabbableId, matUniverseFromHandle, volume.getRadius() );
+	addGrabbableHandle_Sphere( globalGrabbableId, matUniverseFromHandle, volume.getRadius(), EHand::Invalid );
 }
 
 void CCollisionTester::addGrabbableHandle_Sphere( uint64_t globalGrabbableId, const glm::mat4 & universeFromHandle,
-	float radius )
+	float radius, EHand hand )
 {
 	for ( auto & grabbable : m_activeGrabbables )
 	{
@@ -42,7 +42,8 @@ void CCollisionTester::addGrabbableHandle_Sphere( uint64_t globalGrabbableId, co
 
 	m_activeGrabbables.push_back(
 		{
-			globalGrabbableId,
+			globalGrabbableId, 
+			hand,
 			{
 				{ universeFromHandle, radius }
 			}
@@ -50,9 +51,9 @@ void CCollisionTester::addGrabbableHandle_Sphere( uint64_t globalGrabbableId, co
 }
 
 void CCollisionTester::addHook_Sphere( uint64_t globalHookId, const glm::mat4 & universeFromHook,
-	float radius )
+	float radius, EHand hand )
 {
-	m_activeHooks.push_back( { globalHookId, universeFromHook, radius } );
+	m_activeHooks.push_back( { globalHookId, hand, universeFromHook, radius } );
 }
 
 
@@ -86,6 +87,9 @@ void CCollisionTester::updateGrabberIntersections( aardvark::CAardvarkClient *cl
 		grabbablesToSend.clear();
 		for ( auto & grabbable : m_activeGrabbables )
 		{
+			if ( isSameHand( grabber.hand, grabbable.hand ) )
+				continue;
+
 			for ( auto & handle : grabbable.handles )
 			{
 				if ( SpheresIntersect( grabber.matGrabberFromUniverse, grabber.radius,
@@ -100,6 +104,9 @@ void CCollisionTester::updateGrabberIntersections( aardvark::CAardvarkClient *cl
 		hooksToSend.clear();
 		for ( auto & hook : m_activeHooks)
 		{
+			if ( isSameHand( grabber.hand, hook.hand ) )
+				continue;
+
 			if ( SpheresIntersect( grabber.matGrabberFromUniverse, grabber.radius,
 				hook.universeFromHook, hook.radius ) )
 			{

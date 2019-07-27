@@ -283,7 +283,7 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 
 	RegisterFunction( container, "addGrabbableHandle_Sphere", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
-		if ( arguments.size() != 3 )
+		if ( arguments.size() != 4 )
 		{
 			exception = "Invalid arguments";
 			return;
@@ -305,7 +305,9 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 		m_collisions.addGrabbableHandle_Sphere(
 			std::strtoull( std::string( arguments[0]->GetStringValue() ).c_str(), nullptr, 0 ),
 			grabberFromUniverse,
-			arguments[2]->GetDoubleValue() );
+			arguments[2]->GetDoubleValue(),
+			(EHand )arguments[3]->GetIntValue()
+			);
 	} );
 
 	RegisterFunction( container, "addGrabber_Sphere", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
@@ -344,12 +346,13 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 			std::strtoull( std::string( arguments[0]->GetStringValue() ).c_str(), nullptr, 0 ),
 			universeFromHandle,
 			arguments[2]->GetDoubleValue(),
+			hand,
 			m_vrManager->isGrabPressed( hand ) );
 	} );
 
 	RegisterFunction( container, "addHook_Sphere", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
-		if ( arguments.size() != 3 )
+		if ( arguments.size() != 4 )
 		{
 			exception = "Invalid arguments";
 			return;
@@ -372,11 +375,16 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 		{
 			exception = "third argument must be a number";
 		}
+		if ( !arguments[3]->IsInt() )
+		{
+			exception = "fourth argument must be a number (and hand enum value)";
+		}
 
 		m_collisions.addHook_Sphere(
 			std::strtoull( std::string( arguments[0]->GetStringValue() ).c_str(), nullptr, 0 ),
 			universeFromHandle,
-			arguments[2]->GetDoubleValue() );
+			arguments[2]->GetDoubleValue(),
+			(EHand)arguments[3]->GetIntValue() );
 	} );
 
 	RegisterFunction( container, "getUniverseFromOriginTransform", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
@@ -444,7 +452,7 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 
 	RegisterFunction( container, "addActivePanel", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
-		if ( arguments.size() != 3 )
+		if ( arguments.size() != 4 )
 		{
 			exception = "Invalid arguments";
 			return;
@@ -469,13 +477,20 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 			return;
 		}
 
+		if ( !arguments[3]->IsDouble() )
+		{
+			exception = "foruth argument must be an int (and hand enum value)";
+			return;
+		}
+
 		uint64_t globalPanelId = std::strtoull( std::string( arguments[0]->GetStringValue() ).c_str(), nullptr, 0 );
-		m_intersections.addActivePanel( globalPanelId, panelFromUniverse, arguments[2]->GetDoubleValue() );
+		m_intersections.addActivePanel( globalPanelId, panelFromUniverse, 
+			arguments[2]->GetDoubleValue(), (EHand)arguments[3]->GetIntValue() );
 	} );
 
 	RegisterFunction( container, "addActivePoker", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
-		if ( arguments.size() != 2 )
+		if ( arguments.size() != 3 )
 		{
 			exception = "Invalid arguments";
 			return;
@@ -494,6 +509,11 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 			exception = "second argument must be an array of 3 numbers";
 			return;
 		}
+		if ( !arguments[2]->IsInt() )
+		{
+			exception = "third argument must be an int (and hand enum)";
+			return;
+		}
 
 		glm::vec3 pokerInUniverse;
 		pokerInUniverse.x = arguments[1]->GetValue( 0 )->GetDoubleValue();
@@ -501,7 +521,7 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 		pokerInUniverse.z = arguments[1]->GetValue( 2 )->GetDoubleValue();
 
 		uint64_t globalPokerId = std::strtoull( std::string( arguments[0]->GetStringValue() ).c_str(), nullptr, 0 );
-		m_intersections.addActivePoker( globalPokerId, pokerInUniverse );
+		m_intersections.addActivePoker( globalPokerId, pokerInUniverse, (EHand)arguments[2]->GetIntValue() );
 	} );
 
 	return true;

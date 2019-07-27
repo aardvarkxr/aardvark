@@ -15,6 +15,11 @@ enum class EHand
 };
 
 
+inline bool isSameHand( EHand h1, EHand h2 )
+{
+	return h1 != EHand::Invalid && h1 == h2;
+}
+
 class IVrManager
 {
 public:

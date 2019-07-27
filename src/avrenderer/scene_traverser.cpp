@@ -326,7 +326,7 @@ void CSceneTraverser::TraversePanel( const AvNode::Reader & node, CPendingTransf
 				m_intersections.addActivePanel(
 					globalId,
 					glm::inverse( universeFromNode ),
-					zScale );
+					zScale, EHand::Invalid );
 			}
 		} );
 	}
@@ -339,7 +339,7 @@ void CSceneTraverser::TraversePoker( const AvNode::Reader & node, CPendingTransf
 		[this, globalId]( const glm::mat4 & universeFromNode )
 	{
 		glm::vec4 vPokerInUniverse = universeFromNode * glm::vec4( 0, 0, 0, 1.f );
-		m_intersections.addActivePoker( globalId, vPokerInUniverse );
+		m_intersections.addActivePoker( globalId, vPokerInUniverse, EHand::Invalid );
 	} );
 }
 

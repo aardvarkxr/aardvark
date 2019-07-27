@@ -7,15 +7,17 @@ CIntersectionTester::CIntersectionTester()
 {
 }
 
-void CIntersectionTester::addActivePanel( uint64_t globalPanelId, const glm::mat4 & matPanelFromUniverse, float zScale )
+void CIntersectionTester::addActivePanel( uint64_t globalPanelId, const glm::mat4 & matPanelFromUniverse, 
+	float zScale, EHand hand )
 {
 	assert( zScale > 0.f );
-	m_activePanels.push_back( { globalPanelId, matPanelFromUniverse, zScale } );
+	m_activePanels.push_back( { globalPanelId, hand, matPanelFromUniverse, zScale } );
 }
 
-void CIntersectionTester::addActivePoker( uint64_t globalPokerId, const glm::vec3 & posPokerInUniverse )
+void CIntersectionTester::addActivePoker( uint64_t globalPokerId, const glm::vec3 & posPokerInUniverse, 
+	EHand hand )
 {
-	m_activePokers.push_back( { globalPokerId, posPokerInUniverse } );
+	m_activePokers.push_back( { globalPokerId, hand, posPokerInUniverse } );
 }
 
 
@@ -42,6 +44,9 @@ void CIntersectionTester::updatePokerProximity( aardvark::CAardvarkClient *clien
 		proxToSend.clear();
 		for ( auto & panel : m_activePanels )
 		{
+			if ( isSameHand( poker.hand, panel.hand ) )
+				continue;
+
 			glm::vec4 vecPointInUniverse( poker.pokerPosInUniverse, 1.f );
 			glm::vec4 positionOnPanel = panel.matPanelFromUniverse * vecPointInUniverse;
 
