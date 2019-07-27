@@ -264,7 +264,7 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 	} );
 
 
-	RegisterFunction( container, "registerGrabStartProcessor", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	RegisterFunction( container, "registerGrabEventProcessor", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
 		if ( arguments.size() != 1 )
 		{
@@ -278,24 +278,7 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 			return;
 		}
 
-		m_jsGrabStartProcessor = arguments[0];
-	} );
-
-	RegisterFunction( container, "registerGrabEndProcessor", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
-	{
-		if ( arguments.size() != 1 )
-		{
-			exception = "Invalid arguments";
-			return;
-		}
-
-		if ( !arguments[0]->IsFunction() )
-		{
-			exception = "argument must be a function";
-			return;
-		}
-
-		m_jsGrabEndProcessor = arguments[0];
+		m_jsGrabEventProcessor = arguments[0];
 	} );
 
 	RegisterFunction( container, "addGrabbableHandle_Sphere", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
@@ -530,34 +513,6 @@ CJavascriptRenderer::~CJavascriptRenderer() noexcept
 	m_renderer = nullptr;
 }
 
-aardvark::EAvSceneGraphNodeType sgTypeFromCapnProtoType( AvNode::Type capnType )
-{
-	switch ( capnType )
-	{
-	case AvNode::Type::CONTAINER:
-		return aardvark::EAvSceneGraphNodeType::Container;
-	case AvNode::Type::ORIGIN:
-		return aardvark::EAvSceneGraphNodeType::Origin;
-	case AvNode::Type::TRANSFORM:
-		return aardvark::EAvSceneGraphNodeType::Transform;
-	case AvNode::Type::MODEL:
-		return aardvark::EAvSceneGraphNodeType::Model;
-	case AvNode::Type::PANEL:
-		return aardvark::EAvSceneGraphNodeType::Panel;
-	case AvNode::Type::POKER:
-		return aardvark::EAvSceneGraphNodeType::Poker;
-	case AvNode::Type::GRABBABLE:
-		return aardvark::EAvSceneGraphNodeType::Grabbable;
-	case AvNode::Type::HANDLE:
-		return aardvark::EAvSceneGraphNodeType::Handle;
-	case AvNode::Type::GRABBER:
-		return aardvark::EAvSceneGraphNodeType::Grabber;
-	case AvNode::Type::CUSTOM:
-		return aardvark::EAvSceneGraphNodeType::Custom;
-	default:
-		return aardvark::EAvSceneGraphNodeType::Invalid;
-	}
-}
 
 CefRefPtr< CefV8Value > protoVectorToJsVector( AvVector::Reader & vector )
 {
@@ -647,7 +602,7 @@ CefRefPtr<CefV8Value> CJavascriptRenderer::nodeToJsObject( AvNodeRoot::Reader & 
 	auto node = nodeRoot.getNodes()[ nodeIndex ].getNode();
 	CefRefPtr<CefV8Value> jsNode = CefV8Value::CreateObject( nullptr, nullptr );
 
-	aardvark::EAvSceneGraphNodeType nodeType = sgTypeFromCapnProtoType( node.getType() );
+	aardvark::EAvSceneGraphNodeType nodeType = aardvark::ApiTypeFromProtoType( node.getType() );
 	if ( nodeType == aardvark::EAvSceneGraphNodeType::Invalid )
 		return nullptr;
 
@@ -795,53 +750,40 @@ CefRefPtr<CefV8Value> CJavascriptRenderer::frameToJsObject( AvVisualFrame::Reade
 	return kj::READY_NOW;
 }
 
-::kj::Promise<void> AvFrameListenerImpl::startGrab( StartGrabContext context )
-{
-	uint64_t grabberGlobalId = context.getParams().getGrabberGlobalId();
-	uint64_t grabbableGlobalId = context.getParams().getGrabbableGlobalId();
 
-	if ( m_renderer->m_jsGrabStartProcessor )
+::kj::Promise<void> AvFrameListenerImpl::grabEvent( GrabEventContext context )
+{
+	if ( m_renderer->m_jsGrabEventProcessor )
 	{
+		auto grabEvent = context.getParams().getEvent();
+
 		m_context->Enter();
 
-		m_renderer->m_jsGrabStartProcessor->ExecuteFunction( nullptr, CefV8ValueList
+		CefRefPtr< CefV8Value > evt = CefV8Value::CreateObject( nullptr, nullptr );
+		evt->SetValue( CefString( "grabberId" ),
+			CefV8Value::CreateString( std::to_string( grabEvent.getGrabberId() ) ),
+			V8_PROPERTY_ATTRIBUTE_NONE );
+		evt->SetValue( CefString( "grabbableId" ),
+			CefV8Value::CreateString( std::to_string( grabEvent.getGrabbableId() ) ),
+			V8_PROPERTY_ATTRIBUTE_NONE );
+		evt->SetValue( CefString( "hookId" ),
+			CefV8Value::CreateString( std::to_string( grabEvent.getHookId() ) ),
+			V8_PROPERTY_ATTRIBUTE_NONE );
+		evt->SetValue( CefString( "type" ),
+			CefV8Value::CreateInt( (int)aardvark::grabTypeFromProtoType( grabEvent.getType() ) ),
+			V8_PROPERTY_ATTRIBUTE_NONE );
+
+		m_renderer->m_jsGrabEventProcessor->ExecuteFunction( nullptr, CefV8ValueList
 			{
-				CefV8Value::CreateString( std::to_string( grabberGlobalId ) ),
-				CefV8Value::CreateString( std::to_string( grabbableGlobalId ) ),
+				evt,
 			} );
 
 		m_context->Exit();
 	}
-	else
-	{
-		m_renderer->m_traverser.startGrabImpl( grabberGlobalId, grabbableGlobalId );
-	}
-
-	return kj::READY_NOW;
-}
-
-
-::kj::Promise<void> AvFrameListenerImpl::endGrab( EndGrabContext context )
-{
-	uint64_t grabberGlobalId = context.getParams().getGrabberGlobalId();
-	uint64_t grabbableGlobalId = context.getParams().getGrabbableGlobalId();
-
-	if ( m_renderer->m_jsGrabEndProcessor )
-	{
-		m_context->Enter();
-
-		m_renderer->m_jsGrabEndProcessor->ExecuteFunction( nullptr, CefV8ValueList
-			{
-				CefV8Value::CreateString( std::to_string( grabberGlobalId ) ),
-				CefV8Value::CreateString( std::to_string( grabbableGlobalId ) ),
-			} );
-
-		m_context->Exit();
-	}
-	else
-	{
-		m_renderer->m_traverser.endGrabImpl( grabberGlobalId, grabbableGlobalId );
-	}
+	//else
+	//{
+	//	m_renderer->m_traverser.endGrabImpl( grabberGlobalId, grabbableGlobalId );
+	//}
 
 	return kj::READY_NOW;
 }

@@ -75,12 +75,9 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 		{
 			newHookId = this.m_lastHook;
 		}
-		else
+		else if( hookIds.length > 0 )
 		{
-			if( hookIds.length > 0 )
-			{
-				newHookId = hookIds[0];
-			}
+			newHookId = hookIds[0];
 		}
 
 		if( !newGrabbableId && grabbableIds.length > 0 )

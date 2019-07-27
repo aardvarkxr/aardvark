@@ -108,10 +108,7 @@ void CAardvarkGadget::sendGrabEventToGlobalId( uint64_t globalNodeId, uint64_t g
 		uint32_t localGrabbableId = (uint32_t)( 0xFFFFFFFF & globalNodeId );
 		req.setGrabbableId( localGrabbableId );
 		auto outGrabEvent = req.initEvent();
-		outGrabEvent.setGrabbableId( grabEvent.getGrabbableId() );
-		outGrabEvent.setHookId( grabEvent.getHookId() );
-		outGrabEvent.setGrabberId( globalGrabberId );
-		outGrabEvent.setType( grabEvent.getType() );
+		copyGrabEvent( outGrabEvent, grabEvent, globalGrabberId );
 		m_pParentServer->addRequestToTasks( std::move( req ) );
 	}
 
@@ -126,18 +123,8 @@ void CAardvarkGadget::sendGrabEventToGlobalId( uint64_t globalNodeId, uint64_t g
 
 	sendGrabEventToGlobalId( globalGrabbableId, globalGrabberId, inGrabEvent );
 	sendGrabEventToGlobalId( globalHookId, globalGrabberId, inGrabEvent );
+	m_pParentServer->sendGrabEventToFrameListeners( inGrabEvent, globalGrabberId );
 
-	// we need to tell the renderer about some event types
-	switch ( inGrabEvent.getType() )
-	{
-	case AvGrabEvent::Type::START_GRAB:
-		m_pParentServer->startGrab( globalGrabberId, globalGrabbableId );
-		break;
-
-	case AvGrabEvent::Type::END_GRAB:
-		m_pParentServer->endGrab( globalGrabberId, globalGrabbableId );
-		break;
-	}
 	return kj::READY_NOW;
 }
 
@@ -225,4 +212,12 @@ kj::Maybe<AvGrabbableProcessor::Client> CAardvarkGadget::findGrabbableProcessor(
 	m_pParentServer->sendHapticEvent( context.getParams().getNodeGlobalId(),
 		context.getParams().getAmplitude(), context.getParams().getFrequency(), context.getParams().getDuration() );
 	return kj::READY_NOW;
+}
+
+void aardvark::copyGrabEvent( AvGrabEvent::Builder & outGrabEvent, AvGrabEvent::Reader &grabEvent, uint64_t globalGrabberId )
+{
+	outGrabEvent.setGrabbableId( grabEvent.getGrabbableId() );
+	outGrabEvent.setHookId( grabEvent.getHookId() );
+	outGrabEvent.setGrabberId( globalGrabberId );
+	outGrabEvent.setType( grabEvent.getType() );
 }

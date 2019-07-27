@@ -8,6 +8,5 @@ let traverser = new AvDefaultTraverser();
 Av().renderer.registerSceneProcessor( traverser.newSceneGraph );
 Av().renderer.registerTraverser( traverser.traverse );
 Av().renderer.registerHapticProcessor( traverser.sendHapticEventForNode );
-Av().renderer.registerGrabStartProcessor( traverser.startGrab );
-Av().renderer.registerGrabEndProcessor( traverser.endGrab );
+Av().renderer.registerGrabEventProcessor( traverser.grabEvent );
 

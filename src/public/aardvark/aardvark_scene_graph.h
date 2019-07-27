@@ -40,6 +40,9 @@ namespace aardvark
 	struct AvSceneContextStruct;
 	typedef AvSceneContextStruct *AvSceneContext;
 
+	AvNode::Type ProtoTypeFromApiType( EAvSceneGraphNodeType apiType );
+	EAvSceneGraphNodeType ApiTypeFromProtoType( AvNode::Type protoType );
+
 	EAvSceneGraphResult avStartSceneContext( aardvark::CAardvarkClient *pClient, AvSceneContext *pContext );
 	EAvSceneGraphResult avFinishSceneContext( AvSceneContext context, AvGadget::Client *gadget );
 
@@ -142,5 +145,8 @@ namespace aardvark
 
 	// tells the renderer what DXGI to use for a scene graph gadget
 	EAvSceneGraphResult avUpdateDxgiTextureForGadgets( aardvark::CAardvarkClient *pClient, uint32_t *gadgetIds, uint32_t unIdCount, uint32_t unWidth, uint32_t unHeight, void *pvSharedTextureHandle, bool bInvertY );
+
+	AvGrabEvent::Type protoTypeFromGrabType( EGrabEventType type );
+	EGrabEventType grabTypeFromProtoType( AvGrabEvent::Type type );
 
 }

@@ -165,9 +165,10 @@ export interface AvGrabEvent
 	type: AvGrabEventType;
 	grabbableId: string;
 	grabberId: string;
+	hookId: string;
 }
 
-export interface AvGrabbableProcessor
+export interface AvGrabEventProcessor
 {
 	( event: AvGrabEvent ): void;
 }
@@ -186,7 +187,7 @@ export interface AvGadgetObj
 	enableDefaultPanelHandling( panelId: number ): void;
 	sendHapticEventFromPanel( panelId: number, amplitude: number, frequency: number, duration: number ): void;
 	sendMouseEvent: AvGadget_SendMouseEvent;
-	registerGrabbableProcessor( nodeId: number, processor: AvGrabbableProcessor ): void;
+	registerGrabbableProcessor( nodeId: number, processor: AvGrabEventProcessor ): void;
 	registerGrabberProcessor( nodeId: number, processor: AvGrabberProcessor ): void;
 	sendGrabEvent( grabberId: number, grabbableId: string, hookId: string, eventType: AvGrabEventType ): void;
 }
@@ -283,11 +284,6 @@ export interface AvHapticProcessor
 	( globalNodeId: string, amplitude: number, frequence: number, duration: number ): void;
 }
 
-export interface AvGrabEventProcessor
-{
-	( grabberGlobalId: string, grabbableGlobalId: string ): void;
-}
-
 export interface AvModelInstance
 {
 	setUniverseFromModelTransform( universeFromModel: number[] ): void;
@@ -317,8 +313,7 @@ interface AvRenderer
 	addActivePanel( panelGlobalId: string, nodeFromUniverse: number[], zScale: number ): void;
 	addActivePoker( pokerGlobalId: string, pokerInUniverse: number[] ): void;
 
-	registerGrabStartProcessor( grabProcessor: AvGrabEventProcessor ): void;
-	registerGrabEndProcessor( grabProcessor: AvGrabEventProcessor ): void;
+	registerGrabEventProcessor( grabEventProcessor: AvGrabEventProcessor ): void;
 	addGrabbableHandle_Sphere( grabbableGlobalId: string, universeFromGrabbable: number[], radius: number ): void;
 	addGrabber_Sphere( grabberGlobalId: string, universeFromGrabber: number[], radius: number, hand: EHand ): void;
 	addHook_Sphere( hookGlobalId: string, universeFromGrabber: number[], radius: number ): void;

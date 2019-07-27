@@ -12,6 +12,7 @@ namespace aardvark
 	class AvServerImpl;
 	struct AvVisuals_t;
 
+	void copyGrabEvent( AvGrabEvent::Builder & outGrabEvent, AvGrabEvent::Reader &grabEvent, uint64_t globalGrabberId );
 
 	class CAardvarkGadget : public AvGadget::Server
 	{

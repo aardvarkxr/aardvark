@@ -288,6 +288,25 @@ namespace aardvark
 		}
 	}
 
+	EAvSceneGraphNodeType ApiTypeFromProtoType( AvNode::Type protoType )
+	{
+		switch ( protoType )
+		{
+		case AvNode::Type::CONTAINER: return EAvSceneGraphNodeType::Container;
+		case AvNode::Type::ORIGIN: return EAvSceneGraphNodeType::Origin;
+		case AvNode::Type::TRANSFORM: return EAvSceneGraphNodeType::Transform;
+		case AvNode::Type::MODEL: return EAvSceneGraphNodeType::Model;
+		case AvNode::Type::PANEL: return EAvSceneGraphNodeType::Panel;
+		case AvNode::Type::POKER: return EAvSceneGraphNodeType::Poker;
+		case AvNode::Type::GRABBABLE: return EAvSceneGraphNodeType::Grabbable;
+		case AvNode::Type::HANDLE: return EAvSceneGraphNodeType::Handle;
+		case AvNode::Type::GRABBER: return EAvSceneGraphNodeType::Grabber;
+		case AvNode::Type::CUSTOM: return EAvSceneGraphNodeType::Custom;
+
+		default: return EAvSceneGraphNodeType::Invalid;
+		}
+	}
+
 	EAvSceneGraphResult CSceneGraphContext::avStartNode( uint32_t id, const char *pchName, EAvSceneGraphNodeType type )
 	{
 		if ( m_usedIds.find( id ) != m_usedIds.end() )
@@ -642,5 +661,48 @@ namespace aardvark
 		}
 	}
 
+	AvGrabEvent::Type protoTypeFromGrabType( EGrabEventType type )
+	{
+		switch ( type )
+		{
+		case EGrabEventType::EnterRange:
+			return AvGrabEvent::Type::ENTER_RANGE;
+		case EGrabEventType::LeaveRange:
+			return AvGrabEvent::Type::LEAVE_RANGE;
+		case EGrabEventType::StartGrab:
+			return AvGrabEvent::Type::START_GRAB;
+		case EGrabEventType::EndGrab:
+			return AvGrabEvent::Type::END_GRAB;
+		case EGrabEventType::EnterHookRange:
+			return AvGrabEvent::Type::ENTER_HOOK_RANGE;
+		case EGrabEventType::LeaveHookRange:
+			return AvGrabEvent::Type::LEAVE_HOOK_RANGE;
+
+		default:
+			return AvGrabEvent::Type::INVALID;
+		}
+	}
+
+	EGrabEventType grabTypeFromProtoType( AvGrabEvent::Type type )
+	{
+		switch ( type )
+		{
+		case AvGrabEvent::Type::ENTER_RANGE:
+			return EGrabEventType::EnterRange;
+		case AvGrabEvent::Type::LEAVE_RANGE:
+			return EGrabEventType::LeaveRange;
+		case AvGrabEvent::Type::START_GRAB:
+			return EGrabEventType::StartGrab;
+		case AvGrabEvent::Type::END_GRAB:
+			return EGrabEventType::EndGrab;
+		case AvGrabEvent::Type::ENTER_HOOK_RANGE:
+			return EGrabEventType::EnterHookRange;
+		case AvGrabEvent::Type::LEAVE_HOOK_RANGE:
+			return EGrabEventType::LeaveHookRange;
+
+		default:
+			return EGrabEventType::Unknown;
+		}
+	}
 }
 

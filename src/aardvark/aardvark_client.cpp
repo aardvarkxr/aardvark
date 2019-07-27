@@ -171,6 +171,11 @@ namespace aardvark
 		m_context = nullptr;
 	}
 
+	bool CAardvarkClient::isRunning() const
+	{
+		return m_context != nullptr;
+	}
+
 	void CAardvarkClient::addToTasks( kj::Promise<void> && promRequest )
 	{
 		m_tasks->add( std::move( promRequest ) );

@@ -44,8 +44,6 @@ namespace aardvark
 		}
 
 		void sendHapticEvent( uint64_t targetNodeId, float amplitude, float frequency, float duration );
-		void startGrab( uint64_t globalGrabberId, uint64_t globalGrabbableId );
-		void endGrab( uint64_t globalGrabberId, uint64_t globalGrabbableId );
 
 		kj::Maybe<CAardvarkGadget&> findGadget( uint32_t gadgetId );
 		kj::Maybe<AvPokerProcessor::Client> findPokerProcessor( uint64_t pokerGlobalId );
@@ -54,6 +52,7 @@ namespace aardvark
 		kj::Maybe<AvGrabbableProcessor::Client> findGrabbableProcessor( uint64_t grabbableGlobalId );
 
 		void clientDisconnected( uint32_t clientId );
+		void sendGrabEventToFrameListeners( AvGrabEvent::Reader &grabEvent, uint64_t globalGrabberId );
 	protected:
 		void sendFrameToAllListeners();
 		void sendFrameToListener( AvFrameListener::Client listener );

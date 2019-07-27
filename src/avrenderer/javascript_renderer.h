@@ -11,8 +11,7 @@ class AvFrameListenerImpl : public AvFrameListener::Server
 public:
 	virtual ::kj::Promise<void> newFrame( NewFrameContext context ) override;
 	virtual ::kj::Promise<void> sendHapticEvent( SendHapticEventContext context ) override;
-	virtual ::kj::Promise<void> startGrab( StartGrabContext context ) override;
-	virtual ::kj::Promise<void> endGrab( EndGrabContext context ) override;
+	virtual ::kj::Promise<void> grabEvent( GrabEventContext context ) override;
 
 	CJavascriptRenderer *m_renderer = nullptr;
 	CefRefPtr< CefV8Context > m_context;
@@ -63,8 +62,7 @@ protected:
 	CefRefPtr< CefV8Value > m_jsSceneProcessor;
 	CefRefPtr< CefV8Value > m_jsTraverser;
 	CefRefPtr< CefV8Value > m_jsHapticProcessor;
-	CefRefPtr< CefV8Value > m_jsGrabStartProcessor;
-	CefRefPtr< CefV8Value > m_jsGrabEndProcessor;
+	CefRefPtr< CefV8Value > m_jsGrabEventProcessor;
 	CIntersectionTester m_intersections;
 	CCollisionTester m_collisions;
 

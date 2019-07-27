@@ -810,7 +810,7 @@ void CAardvarkGadgetObject::runFrame()
 				list->SetValue( n, CefV8Value::CreateString( std::to_string( grabbableIntersections[ n ] ) ) );
 			}
 
-			CefRefPtr< CefV8Value > hookList = CefV8Value::CreateArray( (int)usedCount );
+			CefRefPtr< CefV8Value > hookList = CefV8Value::CreateArray( (int)usedHookCount );
 			for ( uint32_t n = 0; n < usedHookCount; n++ )
 			{
 				hookList->SetValue( n, CefV8Value::CreateString( std::to_string( hookIntersections[n] ) ) );
@@ -1119,7 +1119,11 @@ void CAardvarkRenderProcessHandler::runFrame()
 		info.context->Exit();
 	}
 
-	m_client->WaitScope().poll();
+	if ( m_client->isRunning() )
+	{
+		m_client->WaitScope().poll();
+	}
+
 	m_uriRequestHandler.doCefRequestWork();
 
 	int64_t frameDelay = 10;

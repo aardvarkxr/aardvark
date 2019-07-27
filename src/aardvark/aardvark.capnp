@@ -77,8 +77,7 @@ interface AvFrameListener
 {
 	newFrame @0 (frame: AvVisualFrame) -> (  );
 	sendHapticEvent @1 ( targetGlobalId: UInt64, amplitude: Float32, frequency: Float32, duration: Float32 ) -> ();
-	startGrab @2 ( grabberGlobalId: UInt64, grabbableGlobalId: UInt64 ) -> ();
-	endGrab @3 ( grabberGlobalId: UInt64, grabbableGlobalId: UInt64 ) -> ();
+	grabEvent @2 ( event: AvGrabEvent ) -> ();
 }
 
 struct AvPanelProximity
@@ -133,12 +132,13 @@ struct AvGrabEvent
 {
 	enum Type
 	{
-		enterRange @0;
-		leaveRange @1;
-		startGrab @2;
-		endGrab @3;
-		enterHookRange @4;
-		leaveHookRange @5;
+		invalid @0;
+		enterRange @1;
+		leaveRange @2;
+		startGrab @3;
+		endGrab @4;
+		enterHookRange @5;
+		leaveHookRange @6;
 	}
 
 	type @0: Type;

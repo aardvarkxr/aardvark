@@ -133,6 +133,20 @@ namespace aardvark
 		addRequestToTasks( std::move( reqNewFrame ) );
 	}
 
+	void AvServerImpl::sendGrabEventToFrameListeners( AvGrabEvent::Reader &grabEvent, uint64_t globalGrabberId )
+	{
+		for ( auto & listener : m_frameListeners )
+		{
+			auto req = listener.client.grabEventRequest();
+
+			auto outGrabEvent = req.initEvent();
+			copyGrabEvent( outGrabEvent, grabEvent, globalGrabberId );
+			addRequestToTasks( std::move( req ) );
+		}
+
+	}
+
+
 	CAardvarkGadget *AvServerImpl::findGadgetByName( const std::string & sGadgetName )
 	{
 		for ( auto gadget : m_vecGadgets )
@@ -308,28 +322,6 @@ namespace aardvark
 			req.setAmplitude( amplitude );
 			req.setFrequency( frequency );
 			req.setDuration( duration );
-			addRequestToTasks( std::move( req ) );
-		}
-	}
-
-	void AvServerImpl::startGrab( uint64_t globalGrabberId, uint64_t globalGrabbableId )
-	{
-		for ( auto iFrameListener : m_frameListeners )
-		{
-			auto req = iFrameListener.client.startGrabRequest();
-			req.setGrabberGlobalId( globalGrabberId );
-			req.setGrabbableGlobalId( globalGrabbableId );
-			addRequestToTasks( std::move( req ) );
-		}
-	}
-
-	void AvServerImpl::endGrab( uint64_t globalGrabberId, uint64_t globalGrabbableId )
-	{
-		for ( auto iFrameListener : m_frameListeners )
-		{
-			auto req = iFrameListener.client.endGrabRequest();
-			req.setGrabberGlobalId( globalGrabberId );
-			req.setGrabbableGlobalId( globalGrabbableId );
 			addRequestToTasks( std::move( req ) );
 		}
 	}

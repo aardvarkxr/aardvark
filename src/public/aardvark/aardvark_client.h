@@ -21,6 +21,7 @@ namespace aardvark
 
 		void Start();
 		void Stop();
+		bool isRunning() const;
 
 		AvServer::Client & Server() { return *m_pMainInterface; }
 		kj::WaitScope & WaitScope();

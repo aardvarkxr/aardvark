@@ -1,5 +1,5 @@
-import { Av } from 'common/aardvark';
-import { AvModelInstance, AvNode, AvNodeRoot, AvNodeType, AvVisualFrame, EHand, EVolumeType } from './aardvark';
+import { Av, AvGrabEventType } from 'common/aardvark';
+import { AvModelInstance, AvNode, AvNodeRoot, AvNodeType, AvVisualFrame, EHand, EVolumeType, AvGrabEvent } from './aardvark';
 import { mat4, vec3, quat, vec4 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
 
@@ -33,6 +33,7 @@ class PendingTransform
 	private m_parentFromNode: mat4 = null;
 	private m_universeFromNode: mat4 = null;
 	private m_applyFunction: (universeFromNode: mat4) => void = null;
+	private m_currentlyResolving = false;
 
 	public resolve()
 	{
@@ -46,6 +47,13 @@ class PendingTransform
 			console.log( "Pending transform needs an update in resolve");
 			this.m_parentFromNode = mat4.identity;
 		}
+		
+		if( this.m_currentlyResolving )
+		{
+			throw "Loop in pending transform parents";
+		}
+
+		this.m_currentlyResolving = true;
 
 		if( this.m_parent )
 		{
@@ -58,10 +66,13 @@ class PendingTransform
 			this.m_universeFromNode = this.m_parentFromNode;
 		}
 
+		this.m_currentlyResolving = false;
+
 		if( this.m_applyFunction )
 		{
 			this.m_applyFunction( this.m_universeFromNode );
 		}
+
 	}
 
 	public getUniverseFromNode():mat4
@@ -78,6 +89,19 @@ class PendingTransform
 		this.m_parent = parent;
 		this.m_parentFromNode = parentFromNode ? parentFromNode : mat4.identity;
 		this.m_applyFunction = updateCallback;
+
+//		this.checkForLoops();
+	}
+
+	private checkForLoops()
+	{
+		for( let test = this.m_parent; test != null; test = test.m_parent )
+		{
+			if( test == this )
+			{
+				throw "Somebody created a loop in transform parents";
+			}
+		}
 	}
 }
 
@@ -475,32 +499,35 @@ export class AvDefaultTraverser
 	}
 
 	@bind
-	public startGrab( grabberGlobalId: string, grabbableGlobalId: string )
+	public grabEvent( grabEvent: AvGrabEvent )
 	{
-		if( !this.m_lastFrameUniverseFromNodeTransforms.hasOwnProperty( grabbableGlobalId ) )
+		switch( grabEvent.type )
 		{
-			throw "grabbable wasn't rendered last frame";
+			case AvGrabEventType.StartGrab:
+				if( !this.m_lastFrameUniverseFromNodeTransforms.hasOwnProperty( grabEvent.grabbableId  ) )
+				{
+					throw "grabbable wasn't rendered last frame";
+				}
+				if( !this.m_lastFrameUniverseFromNodeTransforms.hasOwnProperty( grabEvent.grabberId ) )
+				{
+					throw "grabber wasn't rendered last frame";
+				}
+		
+				let universeFromGrabbable = this.m_lastFrameUniverseFromNodeTransforms[ grabEvent.grabbableId ];
+				let grabberFromUniverse = this.m_lastFrameUniverseFromNodeTransforms[ grabEvent.grabberId ].inverse();
+		
+				let grabberFromGrabbable = grabberFromUniverse.multiply( universeFromGrabbable );
+				this.m_nodeToNodeAnchors[ grabEvent.grabbableId ] = 
+				{
+					parentGlobalId: grabEvent.grabberId,
+					parentFromNodeTransform: grabberFromGrabbable,
+				};
+				break;
+
+			case AvGrabEventType.EndGrab:
+					delete this.m_nodeToNodeAnchors[ grabEvent.grabbableId ];
+					break;
 		}
-		if( !this.m_lastFrameUniverseFromNodeTransforms.hasOwnProperty( grabberGlobalId ) )
-		{
-			throw "grabber wasn't rendered last frame";
-		}
-
-		let universeFromGrabbable = this.m_lastFrameUniverseFromNodeTransforms[ grabbableGlobalId ];
-		let grabberFromUniverse = this.m_lastFrameUniverseFromNodeTransforms[ grabberGlobalId ].inverse();
-
-		let grabberFromGrabbable = grabberFromUniverse.multiply( universeFromGrabbable );
-		this.m_nodeToNodeAnchors[ grabbableGlobalId ] = 
-		{
-			parentGlobalId: grabberGlobalId,
-			parentFromNodeTransform: grabberFromGrabbable,
-		};
-	}
-
-	@bind
-	public endGrab( grabberGlobalId: string, grabbableGlobalId: string )
-	{
-		delete this.m_nodeToNodeAnchors[ grabbableGlobalId ];
 	}
 
 	getTransform( globalNodeId: string  ): PendingTransform
