@@ -1803,12 +1803,41 @@ void VulkanExample::render()
 {
 }
 
+struct SortableModel_t
+{
+	float distance;
+	CVulkanRendererModelInstance *model;
+};
+
+bool operator<( const SortableModel_t & lhs, const SortableModel_t & rhs )
+{
+	return lhs.distance > rhs.distance;
+}
+
 void VulkanExample::processRenderList()
 {
 	// animate everything
+	glm::mat4 hmdFromUniverse = m_vrManager->getHmdFromUniverse();
+	std::vector<SortableModel_t> sortableModels;
 	for ( auto model : m_modelsToRender )
 	{
 		model->animate( frameTimer );
+
+		glm::mat4 hmdFromModel = hmdFromUniverse * model->m_modelParent.matParentFromNode;
+		glm::vec4 modelInHmdSpace = hmdFromModel * glm::vec4( { 0, 0, 0, 1.f } );
+		float dist = glm::length( glm::vec3( modelInHmdSpace ) );
+
+		sortableModels.push_back( { dist, model } );
+	}
+
+	// sort models back to front so transparency will work 
+	// if there is any. Yes, this will be wrong when things 
+	// intersect.
+	std::sort( sortableModels.begin(), sortableModels.end() );
+	m_modelsToRender.clear();
+	for ( auto & sorted : sortableModels )
+	{
+		m_modelsToRender.push_back( sorted.model );
 	}
 
 	if ( m_updateDescriptors )
