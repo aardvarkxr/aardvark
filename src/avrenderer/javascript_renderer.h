@@ -1,7 +1,11 @@
 #pragma once
 
 #include "javascript_object.h"
-#include "scene_traverser.h"
+#include "aardvark.capnp.h"
+#include "irenderer.h"
+#include <tools/capnprototools.h>
+#include "intersection_tester.h"
+#include "collision_tester.h"
 
 class CAardvarkRenderProcessHandler;
 class CJavascriptRenderer;
@@ -52,8 +56,6 @@ public:
 		const std::unordered_map<uint32_t, uint32_t> & nodeIdToNodeIndex, uint32_t nodeIndex );
 
 protected:
-	CSceneTraverser m_traverser;
-
 	kj::Own< AvFrameListenerImpl > m_frameListener;
 	std::unique_ptr<IRenderer> m_renderer;
 	std::unique_ptr<IVrManager> m_vrManager;

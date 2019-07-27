@@ -21,11 +21,6 @@ class CCollisionTester
 public:
 	CCollisionTester( );
 
-	void addGrabber( uint64_t globalGrabberId, const glm::mat4 & matGrabberFromUniverse, 
-		AvVolume::Reader & volume, bool isPressed );
-	void addGrabbableHandle( uint64_t globalGrabbableId, const glm::mat4 & matUniverseFromHandle, 
-		AvVolume::Reader & volume );
-
 	void addGrabber_Sphere( uint64_t globalGrabberId, const glm::mat4 & grabberFromUniverse,
 		float radius, EHand hand, bool isPressed );
 	void addGrabbableHandle_Sphere( uint64_t globalGrabbableId, const glm::mat4 & universeFromHandle,

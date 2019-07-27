@@ -7,25 +7,10 @@ CCollisionTester::CCollisionTester()
 {
 }
 
-void CCollisionTester::addGrabber( uint64_t globalGrabberId, const glm::mat4 & matGrabberFromUniverse,
-	AvVolume::Reader & volume, bool isPressed )
-{
-	assert( volume.getType() == AvVolume::Type::SPHERE );
-	addGrabber_Sphere( globalGrabberId, matGrabberFromUniverse, volume.getRadius(), EHand::Invalid, isPressed );
-}
-
 void CCollisionTester::addGrabber_Sphere( uint64_t globalGrabberId, const glm::mat4 & grabberFromUniverse,
 	float radius, EHand hand, bool isPressed )
 {
 	m_activeGrabbers.push_back( { globalGrabberId, hand, isPressed, grabberFromUniverse, radius } );
-}
-
-void CCollisionTester::addGrabbableHandle( uint64_t globalGrabbableId, const glm::mat4 & matUniverseFromHandle, 
-	AvVolume::Reader & volume )
-{
-	assert( volume.getType() == AvVolume::Type::SPHERE );
-
-	addGrabbableHandle_Sphere( globalGrabbableId, matUniverseFromHandle, volume.getRadius(), EHand::Invalid );
 }
 
 void CCollisionTester::addGrabbableHandle_Sphere( uint64_t globalGrabbableId, const glm::mat4 & universeFromHandle,

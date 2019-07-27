@@ -119,10 +119,6 @@ void CJavascriptRenderer::runFrame()
 		m_intersections.updatePokerProximity( m_handler->getClient() );
 		m_collisions.updateGrabberIntersections( m_handler->getClient() );
 	}
-	else
-	{
-		m_traverser.TraverseSceneGraphs();
-	}
 
 
 	m_renderer->processRenderList();
@@ -157,7 +153,6 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 
 	m_vrManager->init();
 	m_renderer->init( nullptr, m_vrManager.get(), m_handler->getClient() );
-	m_traverser.init( m_renderer.get(), m_vrManager.get(), m_handler->getClient() );
 
 	RegisterFunction( container, "registerSceneProcessor", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
@@ -529,7 +524,6 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 
 CJavascriptRenderer::~CJavascriptRenderer() noexcept
 {
-	m_traverser.cleanup();
 	m_renderer = nullptr;
 }
 
@@ -737,10 +731,6 @@ CefRefPtr<CefV8Value> CJavascriptRenderer::frameToJsObject( AvVisualFrame::Reade
 
 		m_context->Exit();
 	}
-	else
-	{
-		m_renderer->m_traverser.newSceneGraph( context.getParams().getFrame() );
-	}
 	return kj::READY_NOW;
 }
 
@@ -759,13 +749,6 @@ CefRefPtr<CefV8Value> CJavascriptRenderer::frameToJsObject( AvVisualFrame::Reade
 			} );
 
 		m_context->Exit();
-	}
-	else
-	{
-		m_renderer->m_traverser.sendHapticEvent( context.getParams().getTargetGlobalId(),
-			context.getParams().getAmplitude(),
-			context.getParams().getFrequency(),
-			context.getParams().getDuration() );
 	}
 	return kj::READY_NOW;
 }
@@ -812,10 +795,6 @@ CefRefPtr<CefV8Value> CJavascriptRenderer::frameToJsObject( AvVisualFrame::Reade
 
 		m_context->Exit();
 	}
-	//else
-	//{
-	//	m_renderer->m_traverser.endGrabImpl( grabberGlobalId, grabbableGlobalId );
-	//}
 
 	return kj::READY_NOW;
 }
