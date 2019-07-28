@@ -9,6 +9,25 @@ import { AvModel } from 'common/aardvark-react/aardvark_model';
 import { AvPoker } from 'common/aardvark-react/aardvark_poker';
 
 
+function parseURL(url: string) 
+{
+    var parser = document.createElement('a'),
+        searchObject: {[ key: string ]: string } = {},
+        queries, split, i;
+
+	// Let the browser do the work
+	parser.href = url;
+	
+    // Convert query string to object
+    queries = parser.search.replace(/^\?/, '').split('&');
+    for( i = 0; i < queries.length; i++ ) {
+        split = queries[i].split('=');
+        searchObject[split[0]] = split[1];
+	}
+	
+	return searchObject;
+}
+
 interface DefaultHandState
 {
 	grabberHighlight: GrabberHighlight;
@@ -21,6 +40,15 @@ class DefaultHand extends React.Component< {}, DefaultHandState >
 	{
 		super( props );
 
+		let params = parseURL( window.location.href );
+		if( params["initialHook"] == "/user/hand/left" )
+		{
+			window.document.title = "Left Hand";
+		}
+		else if( params["initialHook"] == "/user/hand/right" )
+		{
+			window.document.title = "Right Hand";
+		}
 		this.state = 
 		{ 
 			grabberHighlight: GrabberHighlight.None,
@@ -44,9 +72,6 @@ class DefaultHand extends React.Component< {}, DefaultHandState >
 		let modelUri = "https://aardvark.install/models/sphere/sphere.glb";
 		switch( this.state.grabberHighlight )
 		{
-			case GrabberHighlight.InRange:
-					modelUri = "https://aardvark.install/models/sphere/sphere_highlight.glb";
-					break;
 			case GrabberHighlight.InRange:
 					modelUri = "https://aardvark.install/models/sphere/sphere_highlight.glb";
 					break;
