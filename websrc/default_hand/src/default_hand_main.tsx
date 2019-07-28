@@ -72,6 +72,9 @@ class DefaultHand extends React.Component< {}, DefaultHandState >
 		let modelUri = "https://aardvark.install/models/sphere/sphere.glb";
 		switch( this.state.grabberHighlight )
 		{
+			case GrabberHighlight.NearHook:
+			case GrabberHighlight.Grabbed:
+			case GrabberHighlight.WaitingForConfirmation:
 			case GrabberHighlight.InRange:
 					modelUri = "https://aardvark.install/models/sphere/sphere_highlight.glb";
 					break;
