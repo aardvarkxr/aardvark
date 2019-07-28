@@ -139,6 +139,9 @@ struct AvGrabEvent
 		endGrab @4;
 		enterHookRange @5;
 		leaveHookRange @6;
+		requestGrab @7;
+		requestGrabResponse @8;
+		cancelGrab @9;
 	}
 
 	type @0: Type;

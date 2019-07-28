@@ -8,30 +8,7 @@ namespace aardvark
 	{
 		outEvent->grabbableId = inEvent.getGrabbableId();
 		outEvent->grabberId = inEvent.getGrabberId();
-		switch ( inEvent.getType() )
-		{
-		case AvGrabEvent::Type::ENTER_RANGE:
-			outEvent->type = EGrabEventType::EnterRange;
-			break;
-		case AvGrabEvent::Type::LEAVE_RANGE:
-			outEvent->type = EGrabEventType::LeaveRange;
-			break;
-		case AvGrabEvent::Type::START_GRAB:
-			outEvent->type = EGrabEventType::StartGrab;
-			break;
-		case AvGrabEvent::Type::END_GRAB:
-			outEvent->type = EGrabEventType::EndGrab;
-			break;
-		case AvGrabEvent::Type::ENTER_HOOK_RANGE:
-			outEvent->type = EGrabEventType::EnterHookRange;
-			break;
-		case AvGrabEvent::Type::LEAVE_HOOK_RANGE:
-			outEvent->type = EGrabEventType::LeaveHookRange;
-			break;
-
-		default:
-			outEvent->type = EGrabEventType::Unknown;
-		}
+		outEvent->type = grabTypeFromProtoType( inEvent.getType() );
 	}
 
 

@@ -611,31 +611,7 @@ namespace aardvark
 		AvGrabEvent::Builder bldEvent = reqPushEvent.initEvent();
 		bldEvent.setGrabbableId( grabbableId );
 		bldEvent.setHookId( hookId );
-		switch ( type )
-		{
-		case EGrabEventType::EnterRange:
-			bldEvent.setType( AvGrabEvent::Type::ENTER_RANGE );
-			break;
-		case EGrabEventType::LeaveRange:
-			bldEvent.setType( AvGrabEvent::Type::LEAVE_RANGE );
-			break;
-		case EGrabEventType::StartGrab:
-			bldEvent.setType( AvGrabEvent::Type::START_GRAB );
-			break;
-		case EGrabEventType::EndGrab:
-			bldEvent.setType( AvGrabEvent::Type::END_GRAB );
-			break;
-		case EGrabEventType::EnterHookRange:
-			bldEvent.setType( AvGrabEvent::Type::ENTER_HOOK_RANGE );
-			break;
-		case EGrabEventType::LeaveHookRange:
-			bldEvent.setType( AvGrabEvent::Type::LEAVE_HOOK_RANGE );
-			break;
-
-		default:
-			return EAvSceneGraphResult::InvalidParameter;
-		}
-
+		bldEvent.setType( protoTypeFromGrabType( type ) );
 		pClient->addRequestToTasks( std::move( reqPushEvent ) );
 		return EAvSceneGraphResult::Success;
 	}
@@ -677,6 +653,12 @@ namespace aardvark
 			return AvGrabEvent::Type::ENTER_HOOK_RANGE;
 		case EGrabEventType::LeaveHookRange:
 			return AvGrabEvent::Type::LEAVE_HOOK_RANGE;
+		case EGrabEventType::RequestGrab:
+			return AvGrabEvent::Type::REQUEST_GRAB;
+		case EGrabEventType::RequestGrabResponse:
+			return AvGrabEvent::Type::REQUEST_GRAB_RESPONSE;
+		case EGrabEventType::CancelGrab:
+			return AvGrabEvent::Type::CANCEL_GRAB;
 
 		default:
 			return AvGrabEvent::Type::INVALID;
@@ -699,10 +681,15 @@ namespace aardvark
 			return EGrabEventType::EnterHookRange;
 		case AvGrabEvent::Type::LEAVE_HOOK_RANGE:
 			return EGrabEventType::LeaveHookRange;
+		case AvGrabEvent::Type::REQUEST_GRAB:
+			return EGrabEventType::RequestGrab;
+		case AvGrabEvent::Type::REQUEST_GRAB_RESPONSE:
+			return EGrabEventType::RequestGrabResponse;
+		case AvGrabEvent::Type::CANCEL_GRAB:
+			return EGrabEventType::CancelGrab;
 
 		default:
 			return EGrabEventType::Unknown;
 		}
 	}
 }
-

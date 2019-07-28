@@ -120,6 +120,9 @@ namespace aardvark
 		EndGrab = 4,
 		EnterHookRange = 5,
 		LeaveHookRange = 6,
+		RequestGrab = 7,
+		RequestGrabResponse = 8,
+		CancelGrab = 9,
 	};
 
 	struct GrabEvent_t

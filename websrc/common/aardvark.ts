@@ -158,6 +158,9 @@ export enum AvGrabEventType
 	EndGrab = 4,
 	EnterHookRange = 5,
 	LeaveHookRange = 6,
+	RequestGrab = 7,
+	RequestGrabResponse = 8,
+	CancelGrab = 9,
 };
 
 export interface AvGrabEvent
