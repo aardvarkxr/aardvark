@@ -55,6 +55,7 @@ CAardvarkGadget::CAardvarkGadget( uint32_t clientId, const std::string & sName, 
 
 		case AvNode::Type::GRABBER:
 			m_grabberProcessors.insert_or_assign( realNode.getId(), root.getGrabberProcessor() );
+			m_grabbableProcessors.insert_or_assign( realNode.getId(), root.getGrabbableProcessor() );
 			break;
 
 		case AvNode::Type::CUSTOM:
@@ -95,11 +96,17 @@ CAardvarkGadget::CAardvarkGadget( uint32_t clientId, const std::string & sName, 
 }
 
 
-void CAardvarkGadget::sendGrabEventToGlobalId( uint64_t globalNodeId, uint64_t globalGrabberId,
-	AvGrabEvent::Reader grabEvent )
+void CAardvarkGadget::sendGrabEventToGlobalId( uint64_t globalSenderId, uint64_t globalNodeId, 
+	uint64_t globalGrabberId, AvGrabEvent::Reader grabEvent )
 {
 	if ( !globalNodeId )
 		return;
+
+	if ( globalSenderId == globalNodeId )
+	{
+		// no need to send this event back to its sender
+		return;
+	}
 
 	KJ_IF_MAYBE( grabbableProcessor, m_pParentServer->findGrabbableProcessor( globalNodeId ) )
 	{
@@ -111,18 +118,24 @@ void CAardvarkGadget::sendGrabEventToGlobalId( uint64_t globalNodeId, uint64_t g
 		copyGrabEvent( outGrabEvent, grabEvent, globalGrabberId );
 		m_pParentServer->addRequestToTasks( std::move( req ) );
 	}
-
 }
 
 ::kj::Promise<void> CAardvarkGadget::pushGrabEvent( PushGrabEventContext context )
 {
 	auto & inGrabEvent = context.getParams().getEvent();
-	uint64_t globalGrabberId = (uint64_t)m_id << 32 | (uint64_t)context.getParams().getGrabberNodeId();
+	uint64_t globalSenderId = (uint64_t)m_id << 32 | (uint64_t)context.getParams().getGrabberNodeId();
 	uint64_t globalGrabbableId = inGrabEvent.getGrabbableId();
 	uint64_t globalHookId = inGrabEvent.getHookId();
 
-	sendGrabEventToGlobalId( globalGrabbableId, globalGrabberId, inGrabEvent );
-	sendGrabEventToGlobalId( globalHookId, globalGrabberId, inGrabEvent );
+	uint64_t globalGrabberId = globalSenderId;
+	if ( inGrabEvent.getType() == AvGrabEvent::Type::REQUEST_GRAB_RESPONSE )
+	{
+		globalGrabberId = inGrabEvent.getGrabberId();
+	}
+
+	sendGrabEventToGlobalId( globalSenderId, globalGrabbableId, globalGrabberId, inGrabEvent );
+	sendGrabEventToGlobalId( globalSenderId, globalHookId, globalGrabberId, inGrabEvent );
+	sendGrabEventToGlobalId( globalSenderId, globalGrabberId, globalGrabberId, inGrabEvent );
 	m_pParentServer->sendGrabEventToFrameListeners( inGrabEvent, globalGrabberId );
 
 	return kj::READY_NOW;
@@ -219,5 +232,7 @@ void aardvark::copyGrabEvent( AvGrabEvent::Builder & outGrabEvent, AvGrabEvent::
 	outGrabEvent.setGrabbableId( grabEvent.getGrabbableId() );
 	outGrabEvent.setHookId( grabEvent.getHookId() );
 	outGrabEvent.setGrabberId( globalGrabberId );
+	outGrabEvent.setRequestId( grabEvent.getRequestId() );
+	outGrabEvent.setAllowed( grabEvent.getAllowed() );
 	outGrabEvent.setType( grabEvent.getType() );
 }

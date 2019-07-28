@@ -8,6 +8,9 @@ namespace aardvark
 	{
 		outEvent->grabbableId = inEvent.getGrabbableId();
 		outEvent->grabberId = inEvent.getGrabberId();
+		outEvent->hookId = inEvent.getHookId();
+		outEvent->requestId = inEvent.getRequestId();
+		outEvent->allowed = inEvent.getAllowed();
 		outEvent->type = grabTypeFromProtoType( inEvent.getType() );
 	}
 

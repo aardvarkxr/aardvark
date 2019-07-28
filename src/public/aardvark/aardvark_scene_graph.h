@@ -131,6 +131,8 @@ namespace aardvark
 		uint64_t grabbableId;
 		uint64_t grabberId;
 		uint64_t hookId;
+		uint32_t requestId;
+		bool allowed;
 	};
 
 	EAvSceneGraphResult avGetNextGrabberIntersection( aardvark::CAardvarkClient *pClient,

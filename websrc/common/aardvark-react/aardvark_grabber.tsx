@@ -27,6 +27,7 @@ export enum GrabberHighlight
 	WaitingForConfirmation = 2,
 	Grabbed = 3,
 	NearHook = 4,
+	WaitingForReleaseAfterRejection = 5,
 }
 
 interface AvGrabberProps extends AvBaseNodeProps
@@ -53,6 +54,7 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 
 	@bind private onGrabEvent( evt: AvGrabEvent )
 	{
+		let prevHighlight = this.m_lastHighlight;
 		switch( evt.type )
 		{
 			case AvGrabEventType.CancelGrab:
@@ -60,10 +62,30 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 
 			case AvGrabEventType.RequestGrabResponse:
 				assert( this.m_lastHighlight == GrabberHighlight.WaitingForConfirmation );
+				assert( this.m_grabRequestId == evt.requestId );
+				if( evt.allowed )
+				{
+					AvGadget.instance().sendGrabEvent( 
+						{
+							type: AvGrabEventType.StartGrab,
+							senderId: this.m_nodeId,
+							grabbableId: this.m_lastGrabbable,
+						});
+					this.m_lastHighlight = GrabberHighlight.Grabbed;
+				}
+				else
+				{
+					this.m_lastHighlight = GrabberHighlight.WaitingForReleaseAfterRejection;
+				}
 				break;
+		}
 
-			default:
-				throw "Unexpected grab event in grabber";
+		if( prevHighlight != this.m_lastHighlight )
+		{
+			if( this.props.updateHighlight )
+			{
+				this.props.updateHighlight( this.m_lastHighlight );
+			}
 		}
 	}
 
@@ -114,16 +136,29 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 
 				// we were in range and pressed the grab button. Ask the
 				// grabbable if we can grab them.
+				this.m_grabRequestId++;
 				AvGadget.instance().sendGrabEvent( 
 					{
-						type: AvGrabEventType.StartGrab,
+						type: AvGrabEventType.RequestGrab,
 						senderId: this.m_nodeId,
-						grabbableId: this.m_lastGrabbable
+						grabbableId: this.m_lastGrabbable,
+						requestId: this.m_grabRequestId,
 					});
-				this.m_lastHighlight = GrabberHighlight.Grabbed;
+				this.m_lastHighlight = GrabberHighlight.WaitingForConfirmation;
+				break;
 
-				// FALL THROUGH ( in case we're also near a hook )
+			case GrabberHighlight.WaitingForConfirmation:
+				// nothing to do here until we hear from the thing we sent a grab request to
+				break;
 
+			case GrabberHighlight.WaitingForReleaseAfterRejection:
+				// when the button gets released, go back to in range
+				if( !isPressed )
+				{
+					this.m_lastHighlight = GrabberHighlight.InRange;
+				}
+				break;
+				
 			case GrabberHighlight.Grabbed:
 				if( -1 == grabbableIds.indexOf( this.m_lastGrabbable ) )
 				{

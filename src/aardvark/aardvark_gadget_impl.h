@@ -35,7 +35,8 @@ namespace aardvark
 
 		void setHook( const std::string & hook ) { m_hook = hook; }
 		void gatherVisuals( AvVisuals_t & visuals );
-		void sendGrabEventToGlobalId( uint64_t globalNodeId, uint64_t grabberGlobalId, AvGrabEvent::Reader grabEvent );
+		void sendGrabEventToGlobalId( uint64_t globalSenderId, uint64_t globalNodeId, 
+			uint64_t grabberGlobalId, AvGrabEvent::Reader grabEvent );
 
 		virtual ::kj::Promise<void> destroy( DestroyContext context ) override;
 		virtual ::kj::Promise<void> name( NameContext context ) override;

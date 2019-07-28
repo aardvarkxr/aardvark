@@ -691,6 +691,14 @@ bool CAardvarkGadgetObject::init( CefRefPtr<CefV8Value> container )
 				nullptr, 0 );
 			bldEvent.setHookId( hookId );
 		}
+		if ( arguments[0]->HasValue( "requestId" ) )
+		{
+			bldEvent.setRequestId( arguments[0]->GetValue( "requestId" )->GetUIntValue() );
+		}
+		if ( arguments[0]->HasValue( "allowed" ) )
+		{
+			bldEvent.setAllowed( arguments[0]->GetValue( "allowed" )->GetBoolValue() );
+		}
 
 		m_handler->getClient()->addRequestToTasks( std::move( reqPushEvent ) );
 	} );
@@ -827,6 +835,15 @@ void CAardvarkGadgetObject::runFrame()
 				V8_PROPERTY_ATTRIBUTE_NONE );
 			evt->SetValue( CefString( "grabbableId" ),
 				CefV8Value::CreateString( std::to_string( grabEvent.grabbableId ) ),
+				V8_PROPERTY_ATTRIBUTE_NONE );
+			evt->SetValue( CefString( "hookId" ),
+				CefV8Value::CreateString( std::to_string( grabEvent.hookId ) ),
+				V8_PROPERTY_ATTRIBUTE_NONE );
+			evt->SetValue( CefString( "requestId" ),
+				CefV8Value::CreateUInt( grabEvent.requestId ),
+				V8_PROPERTY_ATTRIBUTE_NONE );
+			evt->SetValue( CefString( "allowed" ),
+				CefV8Value::CreateBool( grabEvent.allowed ),
 				V8_PROPERTY_ATTRIBUTE_NONE );
 			evt->SetValue( CefString( "type" ),
 				CefV8Value::CreateInt( (int)grabEvent.type ),

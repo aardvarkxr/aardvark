@@ -58,6 +58,19 @@ export class AvGrabbable extends AvBaseNode< AvGrabbableProps, {} >
 				newHighlight = HighlightType.Grabbed;
 				break;
 
+			case AvGrabEventType.RequestGrab:
+				// the grabber is asking us for permission. FOr now just say yes
+				AvGadget.instance().sendGrabEvent(
+					{
+						type: AvGrabEventType.RequestGrabResponse,
+						senderId: this.m_nodeId,
+						grabbableId: evt.grabbableId,
+						grabberId: evt.grabberId,
+						requestId: evt.requestId,
+						allowed: true,
+					});
+				break;
+
 		}
 
 		if( newHighlight != this.m_lastHighlight )
