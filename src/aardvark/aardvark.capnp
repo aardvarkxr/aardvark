@@ -149,6 +149,8 @@ struct AvGrabEvent
 	grabberId @2: UInt64;
 	hookId @3: UInt64;
 	transform @4: AvTransform;
+	requestId @5: UInt32;
+	allowed @6: Bool;
 }
 
 interface AvGrabbableProcessor

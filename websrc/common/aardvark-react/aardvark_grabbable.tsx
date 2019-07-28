@@ -26,7 +26,7 @@ export class AvGrabbable extends AvBaseNode< AvGrabbableProps, {} >
 	{
 		context.startNode( this.m_nodeId, "grabbable" + this.m_nodeId, AvNodeType.Grabbable );
 
-		AvGadget.instance().setGrabbableProcessor( this.m_nodeId, this.onGrabEvent );
+		AvGadget.instance().setGrabEventProcessor( this.m_nodeId, this.onGrabEvent );
 	}
 
 	@bind private onGrabEvent( evt: AvGrabEvent )

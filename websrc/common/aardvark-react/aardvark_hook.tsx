@@ -25,7 +25,7 @@ export class AvHook extends AvBaseNode< AvHookProps, {} >
 		context.startCustomNode( this.m_nodeId, "hook" + this.m_nodeId, "Hook" );
 		context.setSphereVolume( this.props.radius );
 
-		AvGadget.instance().setGrabbableProcessor( this.m_nodeId, this.onGrabEvent );
+		AvGadget.instance().setGrabEventProcessor( this.m_nodeId, this.onGrabEvent );
 	}
 
 	@bind private onGrabEvent( evt: AvGrabEvent )

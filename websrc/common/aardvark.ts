@@ -166,9 +166,12 @@ export enum AvGrabEventType
 export interface AvGrabEvent
 {
 	type: AvGrabEventType;
-	grabbableId: string;
-	grabberId: string;
-	hookId: string;
+	senderId?: number;
+	grabbableId?: string;
+	grabberId?: string;
+	hookId?: string;
+	requestId?: number;
+	allowed?: boolean;
 }
 
 export interface AvGrabEventProcessor
@@ -192,7 +195,7 @@ export interface AvGadgetObj
 	sendMouseEvent: AvGadget_SendMouseEvent;
 	registerGrabbableProcessor( nodeId: number, processor: AvGrabEventProcessor ): void;
 	registerGrabberProcessor( nodeId: number, processor: AvGrabberProcessor ): void;
-	sendGrabEvent( grabberId: number, grabbableId: string, hookId: string, eventType: AvGrabEventType ): void;
+	sendGrabEvent( event: AvGrabEvent ): void;
 }
 
 interface Av_CreateGadget

@@ -658,48 +658,41 @@ bool CAardvarkGadgetObject::init( CefRefPtr<CefV8Value> container )
 
 	RegisterFunction( container, "sendGrabEvent", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
-		if ( arguments.size() != 4 )
+		if ( arguments.size() != 1 || !arguments[0]->IsObject() )
 		{
 			exception = "Invalid arguments";
 			return;
 		}
 
-		if ( !arguments[0]->IsUInt() )
+		aardvark::EGrabEventType apiType = (aardvark::EGrabEventType)arguments[0]->GetValue( "type" )->GetIntValue();
+
+		auto reqPushEvent = m_gadgetClient.pushGrabEventRequest();
+		AvGrabEvent::Builder bldEvent = reqPushEvent.initEvent();
+		bldEvent.setType( protoTypeFromGrabType( apiType ) );
+		if ( arguments[0]->HasValue( "senderId" ) )
 		{
-			exception = "first argument must be a grabber node ID";
-			return;
+			reqPushEvent.setGrabberNodeId( arguments[0]->GetValue( "senderId" )->GetUIntValue() );
+		}
+		if ( arguments[0]->HasValue( "grabbableId" ) )
+		{
+			uint64_t grabbableId = std::wcstoull( arguments[0]->GetValue( "grabbableId" )->GetStringValue().c_str(),
+				nullptr, 0 );
+			bldEvent.setGrabbableId( grabbableId );
+		}
+		if ( arguments[0]->HasValue( "grabberId" ) )
+		{
+			uint64_t grabberId = std::wcstoull( arguments[0]->GetValue( "grabberId" )->GetStringValue().c_str(),
+				nullptr, 0 );
+			bldEvent.setGrabberId( grabberId );
+		}
+		if ( arguments[0]->HasValue( "hookId" ) )
+		{
+			uint64_t hookId = std::wcstoull( arguments[0]->GetValue( "hookId" )->GetStringValue().c_str(),
+				nullptr, 0 );
+			bldEvent.setHookId( hookId );
 		}
 
-		if ( !arguments[1]->IsString() && !arguments[1]->IsNull() )
-		{
-			exception = "second argument must be the grabbable ID string";
-			return;
-		}
-
-		if ( !arguments[2]->IsString() && !arguments[2]->IsNull() )
-		{
-			exception = "third argument must be the hook ID string or null";
-			return;
-		}
-		if ( !arguments[3]->IsInt() )
-		{
-			exception = "third argument must be a grab event type";
-			return;
-		}
-
-		uint64_t grabbableId = arguments[1]->IsNull() ? 0 
-			: std::stoull( std::string( arguments[1]->GetStringValue() ).c_str() );
-		uint64_t hookId = arguments[2]->IsNull() ? 0
-			: std::stoull( std::string( arguments[2]->GetStringValue() ).c_str() );
-		aardvark::EAvSceneGraphResult result = aardvark::avPushGrabEventFromGrabber(
-			m_handler->getClient(), &m_gadgetClient,
-			arguments[0]->GetUIntValue(),
-			grabbableId, hookId,
-			( aardvark::EGrabEventType)arguments[3]->GetIntValue() );
-		if ( result != aardvark::EAvSceneGraphResult::Success )
-		{
-			exception = "Error returned by avPushGrabEventFromGrabber: " + std::to_string( (int)result );
-		}
+		m_handler->getClient()->addRequestToTasks( std::move( reqPushEvent ) );
 	} );
 
 	return true;

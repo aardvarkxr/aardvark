@@ -1,7 +1,7 @@
 import * as React from 'react';
 
 import { Av, AvPanelHandler, AvGadgetObj, AvSceneContext, AvPokerHandler, AvPanelMouseEventType, 
-	AvGrabEventProcessor, AvGrabberProcessor, AvGrabEventType } from 'common/aardvark';
+	AvGrabEventProcessor, AvGrabberProcessor, AvGrabEventType, AvGrabEvent } from 'common/aardvark';
 import { IAvBaseNode } from './aardvark_base_node';
 import bind from 'bind-decorator';
 
@@ -63,7 +63,7 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 		this.markDirty();
 	}
 
-	public setGrabbableProcessor( nodeId: number, processor: AvGrabEventProcessor )
+	public setGrabEventProcessor( nodeId: number, processor: AvGrabEventProcessor )
 	{
 		this.m_gadget.registerGrabbableProcessor( nodeId, processor );
 		this.markDirty();
@@ -75,10 +75,9 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 		this.markDirty();
 	}
 
-	public sendGrabEvent( grabberId: number, grabbableId: string, hookId: string,
-		eventType:AvGrabEventType )
+	public sendGrabEvent( event: AvGrabEvent )
 	{
-		this.m_gadget.sendGrabEvent( grabberId, grabbableId, hookId, eventType );
+		this.m_gadget.sendGrabEvent( event );
 	}
 
 
