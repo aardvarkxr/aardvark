@@ -238,6 +238,8 @@ interface AvGadget
 	pushMouseEvent @3 ( pokerNodeId: UInt32, event: AvPanelMouseEvent ) -> ();
 	sendHapticEvent @4 ( nodeGlobalId: UInt64, amplitude: Float32, frequency: Float32, duration: Float32 ) -> ();
 	pushGrabEvent @5 ( grabberNodeId: UInt32, event: AvGrabEvent ) -> ();
+
+	mainGrabbableId @6 () -> ( globalId: UInt64 );
 }
 
 

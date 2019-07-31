@@ -20,7 +20,7 @@ namespace aardvark
 	public:
 
 		EAvSceneGraphResult avStartSceneContext( aardvark::CAardvarkClient *pClient );
-		EAvSceneGraphResult avFinishSceneContext( AvGadget::Client *gadget );
+		EAvSceneGraphResult avFinishSceneContext( AvGadget::Client *gadget, uint64_t *mainGrabbableId );
 
 		// Starts a node as a child of the current node
 		EAvSceneGraphResult avStartNode( uint32_t id, const char *pchName, EAvSceneGraphNodeType type );
@@ -91,12 +91,12 @@ namespace aardvark
 	// -----------------------------------------------------------------------------------------------
 	// Finishing contexts
 	// -----------------------------------------------------------------------------------------------
-	EAvSceneGraphResult avFinishSceneContext( AvSceneContext context, AvGadget::Client *gadget )
+	EAvSceneGraphResult avFinishSceneContext( AvSceneContext context, AvGadget::Client *gadget, uint64_t *mainGrabbableId )
 	{
 		CSceneGraphContext *pContext = (CSceneGraphContext *)context;
 		if ( !pContext )
 			return EAvSceneGraphResult::InvalidContext;
-		EAvSceneGraphResult res = pContext->avFinishSceneContext( gadget );
+		EAvSceneGraphResult res = pContext->avFinishSceneContext( gadget, mainGrabbableId );
 		delete pContext;
 		return res;
 	}
@@ -214,7 +214,7 @@ namespace aardvark
 		return res;
 	}
 
-	EAvSceneGraphResult CSceneGraphContext::avFinishSceneContext( AvGadget::Client *gadget )
+	EAvSceneGraphResult CSceneGraphContext::avFinishSceneContext( AvGadget::Client *gadget, uint64_t *mainGrabbableId )
 	{
 		if ( m_vecBuilders.size() != 1 )
 		{
@@ -245,8 +245,19 @@ namespace aardvark
 		auto reqUpdateSceneGraph = gadget->updateSceneGraphRequest();
 		reqUpdateSceneGraph.setRoot( root );
 
-		auto resUpdateSceneGraph = reqUpdateSceneGraph.send().wait( m_pClient->WaitScope() );
-		if ( !resUpdateSceneGraph.getSuccess() )
+
+		bool success = false;
+		auto resGrabbableId = reqUpdateSceneGraph.send()
+			.then( [gadget,&success ]( AvGadget::UpdateSceneGraphResults::Reader && res )
+			{
+				success = res.getSuccess();
+				return gadget->mainGrabbableIdRequest().send();
+			}
+		).wait( m_pClient->WaitScope() );
+
+		*mainGrabbableId = resGrabbableId.getGlobalId();
+
+		if ( !success )
 		{
 			return EAvSceneGraphResult::RequestFailed;
 		}

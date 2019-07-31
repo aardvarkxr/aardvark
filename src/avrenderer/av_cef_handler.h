@@ -66,7 +66,7 @@ class CAardvarkCefHandler : public CefClient,
 					  public CefRenderHandler
 {
 public:
-	explicit CAardvarkCefHandler( IApplication *application, const std::string & gadgetUri, const std::string & initialHook );
+	explicit CAardvarkCefHandler( IApplication *application, const std::string & gadgetUri, const std::string & initialHook, int requestId, CefRefPtr<CefBrowser> browserToNotifyWhenCreated );
 	~CAardvarkCefHandler();
 
 	// CefClient methods:
@@ -163,6 +163,9 @@ private:
 	bool m_wantsToQuit = false;
 
 	CUriRequestHandler m_uriRequestHandler;
+
+	int m_startRequestId = 0;
+	CefRefPtr<CefBrowser> m_browserToNotifyWhenCreated;
 
 	// Include the default reference counting implementation.
 	IMPLEMENT_REFCOUNTING(CAardvarkCefHandler);

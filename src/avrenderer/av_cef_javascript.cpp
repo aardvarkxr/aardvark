@@ -807,7 +807,8 @@ void CAardvarkGadgetObject::runFrame()
 
 aardvark::EAvSceneGraphResult CAardvarkGadgetObject::finishSceneContext( CSceneContextObject *contextObject )
 {
-	aardvark::EAvSceneGraphResult res = avFinishSceneContext( contextObject->getContext(), &m_gadgetClient );
+	uint64_t mainGrabbableId = 0;
+	aardvark::EAvSceneGraphResult res = avFinishSceneContext( contextObject->getContext(), &m_gadgetClient, &mainGrabbableId );
 	if ( res != EAvSceneGraphResult::Success )
 	{
 		return res;
@@ -822,6 +823,7 @@ aardvark::EAvSceneGraphResult CAardvarkGadgetObject::finishSceneContext( CSceneC
 		}
 	}
 
+	m_handler->sceneFinished( mainGrabbableId );
 	return res;
 }
 
@@ -908,7 +910,7 @@ bool CAardvarkObject::init( CefRefPtr<CefV8Value> container )
 	{
 		RegisterFunction( container, "startGadget", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 		{
-			if ( arguments.size() != 2 )
+			if ( arguments.size() != 3 )
 			{
 				exception = "Invalid arguments";
 				return;
@@ -923,12 +925,13 @@ bool CAardvarkObject::init( CefRefPtr<CefV8Value> container )
 				exception = "Invalid hook argument";
 				return;
 			}
+			if ( !arguments[2]->IsFunction() && !arguments[2]->IsNull() )
+			{
+				exception = "Invalid callback argument";
+				return;
+			}
 
-			CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "start_gadget" );
-
-			msg->GetArgumentList()->SetString( 0, arguments[0]->GetStringValue() );
-			msg->GetArgumentList()->SetString( 1, arguments[1]->GetStringValue() );
-			m_handler->getBrowser()->SendProcessMessage( PID_BROWSER, msg );
+			m_handler->requestStartGadget( arguments[0]->GetStringValue(), arguments[1]->GetStringValue(), arguments[2] );
 		} );
 	}
 
@@ -1010,6 +1013,24 @@ bool CAardvarkRenderProcessHandler::OnProcessMessageReceived( CefRefPtr<CefBrows
 			return false;
 		}
 	}
+	else if ( messageName == "gadget_started" )
+	{
+		int gadgetStartRequestId = message->GetArgumentList()->GetInt( 0 );
+		auto callback = m_startGadgetCallbacks.find( gadgetStartRequestId );
+		if ( callback != m_startGadgetCallbacks.end() )
+		{
+			bool success = message->GetArgumentList()->GetBool( 1 );
+			CefString mainGrabbableId = message->GetArgumentList()->GetString( 2 );
+
+			getContext()->Enter();
+			callback->second->ExecuteFunction( nullptr,
+				{
+					CefV8Value::CreateBool( success ),
+					CefV8Value::CreateString( mainGrabbableId ),
+				} );
+			getContext()->Exit();
+		}
+	}
 	return false;
 }
 
@@ -1051,4 +1072,32 @@ void CAardvarkRenderProcessHandler::runFrame()
 	}
 
 	CefPostDelayedTask( TID_RENDERER, base::Bind( &CAardvarkRenderProcessHandler::runFrame, this ), frameDelay );
+}
+
+void CAardvarkRenderProcessHandler::requestStartGadget( const CefString & uri, const CefString & initialHook, CefRefPtr<CefV8Value> callback )
+{
+	int requestId = 0;
+	if ( callback->IsFunction() )
+	{
+		requestId = this->m_nextGadgetRequestId++;
+		m_startGadgetCallbacks.insert_or_assign( requestId, callback );
+	}
+
+	CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "start_gadget" );
+
+	msg->GetArgumentList()->SetString( 0, uri );
+	msg->GetArgumentList()->SetString( 1, initialHook );
+	msg->GetArgumentList()->SetInt( 2, requestId );
+
+	m_browser->SendProcessMessage( PID_BROWSER, msg );
+}
+
+
+void CAardvarkRenderProcessHandler::sceneFinished( uint64_t mainGrabbableId )
+{
+	CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "scene_finished" );
+
+	msg->GetArgumentList()->SetString( 0, std::to_string( mainGrabbableId ) );
+
+	m_browser->SendProcessMessage( PID_BROWSER, msg );
 }
