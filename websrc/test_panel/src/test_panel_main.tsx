@@ -6,8 +6,9 @@ import { AvOrigin } from 'common/aardvark-react/aardvark_origin';
 import { AvTransform } from 'common/aardvark-react/aardvark_transform';
 import { AvPanel } from 'common/aardvark-react/aardvark_panel';
 import bind from 'bind-decorator';
-import { AvGrabbable, HighlightType } from 'common/aardvark-react/aardvark_grabbable';
+import { AvGrabbable, HighlightType, GrabResponse } from 'common/aardvark-react/aardvark_grabbable';
 import { AvSphereHandle } from 'common/aardvark-react/aardvark_handles';
+import { AvGrabEvent } from 'common/aardvark';
 
 
 interface TestPanelState
@@ -45,6 +46,18 @@ class TestPanel extends React.Component< {}, TestPanelState >
 	{
 		this.setState( { grabbableHighlight: highlight } );
 	}
+
+	@bind public onGrabRequest( grabRequest: AvGrabEvent ): Promise< GrabResponse >
+	{
+		// this is totally unnecessary, but a good test of the plumbing.
+		let response: GrabResponse =
+		{
+			requestEvent: grabRequest,
+			approve: true,
+		};
+		return Promise.resolve( response );
+	}
+
 	public render()
 	{
 		let sDivClasses:string;
@@ -73,7 +86,8 @@ class TestPanel extends React.Component< {}, TestPanelState >
 		return (
 			<div className={ sDivClasses } >
 				<AvGadget name="Fnord the gadget">
-					<AvGrabbable updateHighlight={ this.onHighlightGrabbable }>
+					<AvGrabbable updateHighlight={ this.onHighlightGrabbable }
+						onGrabRequest={ this.onGrabRequest }>
 						<AvSphereHandle radius={0.1} />
 						
 						<AvTransform uniformScale={ scale }>
@@ -88,7 +102,6 @@ class TestPanel extends React.Component< {}, TestPanelState >
 					onMouseLeave={ this.onMouseEnterOrLeave }>
 					Click Me!
 					</div> 
-				<iframe src="http://programmerjoe.com" style={ { width: "100%", height: "100%" }} />
 			</div>
 		)
 	}
