@@ -64,9 +64,12 @@ bool CStartGadgetRequestClient::GetAuthCredentials( bool isProxy,
 	return false;  // Not handled.
 }
 
-CAardvarkCefHandler::CAardvarkCefHandler( IApplication *application, const std::string & gadgetUri, const std::string & initialHook )
+CAardvarkCefHandler::CAardvarkCefHandler( IApplication *application, const std::string & gadgetUri, const std::string & initialHook, int requestId, CefRefPtr<CefBrowser> browserToNotifyWhenCreated )
     : m_useViews( false ), m_isClosing(false) 
 {
+	m_startRequestId = requestId;
+	m_browserToNotifyWhenCreated = browserToNotifyWhenCreated;
+
 	m_application = application;
 	m_client = std::make_unique<aardvark::CAardvarkClient>();
 	m_client->Start();
@@ -285,8 +288,25 @@ bool CAardvarkCefHandler::OnProcessMessageReceived( CefRefPtr<CefBrowser> browse
 	{
 		std::string uri( message->GetArgumentList()->GetString( 0 ) );
 		std::string initialHook( message->GetArgumentList()->GetString( 1 ) );
+		int requestId = message->GetArgumentList()->GetInt( 2 );
 
-		CAardvarkCefApp::instance()->startGadget( uri, initialHook );
+		CAardvarkCefApp::instance()->startGadget( uri, initialHook, requestId, browser );
+	}
+	else if ( message->GetName() == "scene_finished" )
+	{
+		std::string mainGrabbableId( message->GetArgumentList()->GetString( 0 ) );
+
+		if ( m_browserToNotifyWhenCreated )
+		{
+			CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "gadget_started" );
+
+			msg->GetArgumentList()->SetInt( 0, m_startRequestId );
+			msg->GetArgumentList()->SetBool( 1, true );
+			msg->GetArgumentList()->SetString( 2, mainGrabbableId );
+
+			m_browserToNotifyWhenCreated->SendProcessMessage( PID_RENDERER, msg );
+			m_browserToNotifyWhenCreated = nullptr;
+		}
 	}
 	else if ( message->GetName() == "mouse_event" )
 	{

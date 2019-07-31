@@ -34,7 +34,7 @@ public:
 	// Request that all existing browser windows close.
 	void CloseAllBrowsers( bool force_close );
 
-	void startGadget( const std::string & uri, const std::string & initialHook );
+	void startGadget( const std::string & uri, const std::string & initialHook, int requestId, CefRefPtr<CefBrowser> browserToNotifyWhenCreated );
 
 	virtual void quitRequested() override;
 	virtual void browserClosed( CAardvarkCefHandler *handler ) override;

@@ -43,6 +43,8 @@ public:
 	void updateGadgetNamesForBrowser();
 	bool hasPermission( const std::string & permission );
 	const std::string getInitialHook() const { return m_initialHook; }
+	void requestStartGadget( const CefString & uri, const CefString & initialHook, CefRefPtr<CefV8Value> callback );
+	void sceneFinished( uint64_t mainGrabbableId );
 
 	void runFrame();
 private:
@@ -61,6 +63,8 @@ private:
 	std::string m_initialHook;
 	CAardvarkGadgetManifest m_gadgetManifest;
 	CUriRequestHandler m_uriRequestHandler;
+	int m_nextGadgetRequestId = 1;
+	std::map< int, CefRefPtr< CefV8Value> > m_startGadgetCallbacks;
 
 	// Include the default reference counting implementation.
 	IMPLEMENT_REFCOUNTING( CAardvarkRenderProcessHandler );

@@ -44,7 +44,7 @@ namespace aardvark
 	EAvSceneGraphNodeType ApiTypeFromProtoType( AvNode::Type protoType );
 
 	EAvSceneGraphResult avStartSceneContext( aardvark::CAardvarkClient *pClient, AvSceneContext *pContext );
-	EAvSceneGraphResult avFinishSceneContext( AvSceneContext context, AvGadget::Client *gadget );
+	EAvSceneGraphResult avFinishSceneContext( AvSceneContext context, AvGadget::Client *gadget, uint64_t *mainGrabbableId );
 
 	// Starts a node as a child of the current node
 	EAvSceneGraphResult avStartNode( AvSceneContext context, uint32_t id, const char *pchName, EAvSceneGraphNodeType type );

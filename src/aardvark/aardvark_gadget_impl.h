@@ -44,6 +44,7 @@ namespace aardvark
 		virtual ::kj::Promise<void> pushMouseEvent( PushMouseEventContext context ) override;
 		virtual ::kj::Promise<void> sendHapticEvent( SendHapticEventContext context ) override;
 		virtual ::kj::Promise<void> pushGrabEvent( PushGrabEventContext context ) override;
+		virtual ::kj::Promise<void> mainGrabbableId( MainGrabbableIdContext context ) override;
 	private:
 		std::string m_sName;
 		std::vector< AvGadget::Client > m_vecClients;

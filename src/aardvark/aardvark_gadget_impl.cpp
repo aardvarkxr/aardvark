@@ -33,6 +33,22 @@ CAardvarkGadget::CAardvarkGadget( uint32_t clientId, const std::string & sName, 
 }
 
 
+::kj::Promise<void> CAardvarkGadget::mainGrabbableId( MainGrabbableIdContext context )
+{
+	uint64_t globalId = 0;
+	for ( auto & node : this->m_sceneGraph.getNodes() )
+	{
+		if ( node.getNode().getType() == AvNode::Type::GRABBABLE )
+		{
+			globalId = ( (uint64_t)this->m_id << 32 ) | (uint64_t)node.getNode().getId();
+		}
+	}
+
+	context.getResults().setGlobalId( globalId );
+	return kj::READY_NOW;
+}
+
+
 ::kj::Promise<void> CAardvarkGadget::updateSceneGraph( UpdateSceneGraphContext context )
 {
 	auto root = context.getParams().getRoot();
