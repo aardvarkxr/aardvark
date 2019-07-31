@@ -52,8 +52,7 @@ class TestPanel extends React.Component< {}, TestPanelState >
 		// this is totally unnecessary, but a good test of the plumbing.
 		let response: GrabResponse =
 		{
-			requestEvent: grabRequest,
-			approve: true,
+			allowed: true,
 		};
 		return Promise.resolve( response );
 	}

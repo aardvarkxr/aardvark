@@ -5,6 +5,12 @@ import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 import { AvSceneContext, AvNodeType, AvGrabEvent, AvGrabEventType } from 'common/aardvark';
 import bind from 'bind-decorator';
 
+export interface GrabResponse
+{
+	allowed: boolean;
+	proxyGrabbableGlobalId?: string;
+}
+
 export enum HighlightType
 {
 	None = 0,
@@ -16,6 +22,7 @@ export enum HighlightType
 interface AvGrabbableProps extends AvBaseNodeProps
 {
 	updateHighlight?: ( highlightType: HighlightType ) => void;
+	onGrabRequest?: ( event: AvGrabEvent ) => Promise<GrabResponse>;
 }
 
 export class AvGrabbable extends AvBaseNode< AvGrabbableProps, {} >
@@ -59,16 +66,49 @@ export class AvGrabbable extends AvBaseNode< AvGrabbableProps, {} >
 				break;
 
 			case AvGrabEventType.RequestGrab:
-				// the grabber is asking us for permission. FOr now just say yes
-				AvGadget.instance().sendGrabEvent(
+				if( !this.props.onGrabRequest )
+				{
+					// The grabber is asking us for permission. If our owner has
+					// no opinion, just say yes.
+					AvGadget.instance().sendGrabEvent(
+						{
+							type: AvGrabEventType.RequestGrabResponse,
+							senderId: this.m_nodeId,
+							grabbableId: evt.grabbableId,
+							grabberId: evt.grabberId,
+							requestId: evt.requestId,
+							allowed: true,
+						});
+				}
+				else
+				{
+					this.props.onGrabRequest( evt )
+					.then( ( response: GrabResponse ) =>
 					{
-						type: AvGrabEventType.RequestGrabResponse,
-						senderId: this.m_nodeId,
-						grabbableId: evt.grabbableId,
-						grabberId: evt.grabberId,
-						requestId: evt.requestId,
-						allowed: true,
+						AvGadget.instance().sendGrabEvent(
+							{
+								type: AvGrabEventType.RequestGrabResponse,
+								senderId: this.m_nodeId,
+								grabbableId: response.proxyGrabbableGlobalId ? response.proxyGrabbableGlobalId : evt.grabbableId,
+								grabberId: evt.grabberId,
+								requestId: evt.requestId,
+								allowed: response.allowed,
+							});
+					})
+					.catch( ( reason: any ) =>
+					{
+						console.log( "Promise from onGrabRequest was unfulfilled", reason );
+						AvGadget.instance().sendGrabEvent(
+							{
+								type: AvGrabEventType.RequestGrabResponse,
+								senderId: this.m_nodeId,
+								grabbableId: evt.grabbableId,
+								grabberId: evt.grabberId,
+								requestId: evt.requestId,
+								allowed: false,
+							});
 					});
+				}
 				break;
 
 		}

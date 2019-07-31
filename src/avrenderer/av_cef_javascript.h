@@ -64,7 +64,12 @@ private:
 	CAardvarkGadgetManifest m_gadgetManifest;
 	CUriRequestHandler m_uriRequestHandler;
 	int m_nextGadgetRequestId = 1;
-	std::map< int, CefRefPtr< CefV8Value> > m_startGadgetCallbacks;
+	struct StartGadgetCallback_t
+	{
+		CefRefPtr<CefV8Context> context;
+		CefRefPtr< CefV8Value> callback;
+	};
+	std::map< int, StartGadgetCallback_t > m_startGadgetCallbacks;
 
 	// Include the default reference counting implementation.
 	IMPLEMENT_REFCOUNTING( CAardvarkRenderProcessHandler );

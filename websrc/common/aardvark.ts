@@ -203,10 +203,6 @@ interface Av_CreateGadget
 	(gadgetName:string):AvGadgetObj;
 }
 
-interface Av_StartGadget
-{
-	( uri:string, initialHook: string ):void;
-}
 
 export interface AvVector
 {
@@ -325,10 +321,15 @@ interface AvRenderer
 	addHook_Sphere( hookGlobalId: string, universeFromGrabber: number[], radius: number, hand: EHand  ): void;
 }
 
+export interface AvStartGadgetCallback
+{
+	(success: boolean, mainGrabbableGlobalId: string) : void;
+}
+
 export interface Aardvark
 {
 	createGadget: Av_CreateGadget;
-	startGadget: Av_StartGadget;
+	startGadget( uri: string, initialHook: string, callback: AvStartGadgetCallback ): void;
 	renderer: AvRenderer;
 }
 
