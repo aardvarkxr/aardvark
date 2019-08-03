@@ -1,0 +1,41 @@
+body, html
+{
+	background-color: lightskyblue;
+	height: 100%;
+}
+
+.Button 
+{
+	background-color: lightcoral;
+	font-size: 4rem;
+}
+
+.Label
+{
+	font-size: 4rem;
+}
+.Button:hover
+{
+	background-color: red;
+}
+
+.FullPage
+{
+	width: 100%;
+	height: 100%;
+}
+
+.NoGrabHighlight
+{
+	background-color: white;
+}
+
+.InRangeHighlight
+{
+	background-color: lightblue;
+}
+
+.GrabbedHighlight
+{
+	background-color: blue;
+}

@@ -20,6 +20,8 @@ namespace aardvark
 		::kj::Promise<void> updateDxgiTextureForGadgets( uint32_t clientId, AvServer::Server::UpdateDxgiTextureForGadgetsContext context );
 		::kj::Promise<void> pushPokerProximity( uint32_t clientId, AvServer::Server::PushPokerProximityContext context );
 		::kj::Promise<void> pushGrabIntersections( uint32_t clientId, AvServer::Server::PushGrabIntersectionsContext context );
+		::kj::Promise<void> pushGrabEvent( uint32_t clientId, AvServer::Server::PushGrabEventContext context );
+
 		virtual void taskFailed( kj::Exception&& exception ) override;
 
 		void removeGadget( CAardvarkGadget *gadget );
@@ -53,6 +55,9 @@ namespace aardvark
 
 		void clientDisconnected( uint32_t clientId );
 		void sendGrabEventToFrameListeners( AvGrabEvent::Reader &grabEvent, uint64_t globalGrabberId );
+		void sendGrabEventToGlobalId( uint64_t globalSenderId, uint64_t globalNodeId,
+			uint64_t globalGrabberId, AvGrabEvent::Reader grabEvent );
+		void proxyGrabEvent( uint64_t globalSenderId, AvGrabEvent::Reader & inGrabEvent );
 	protected:
 		void sendFrameToAllListeners();
 		void sendFrameToListener( AvFrameListener::Client listener );

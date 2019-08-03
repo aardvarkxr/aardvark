@@ -670,6 +670,8 @@ namespace aardvark
 			return AvGrabEvent::Type::REQUEST_GRAB_RESPONSE;
 		case EGrabEventType::CancelGrab:
 			return AvGrabEvent::Type::CANCEL_GRAB;
+		case EGrabEventType::GrabStarted:
+			return AvGrabEvent::Type::GRAB_STARTED;
 
 		default:
 			return AvGrabEvent::Type::INVALID;
@@ -698,9 +700,24 @@ namespace aardvark
 			return EGrabEventType::RequestGrabResponse;
 		case AvGrabEvent::Type::CANCEL_GRAB:
 			return EGrabEventType::CancelGrab;
+		case AvGrabEvent::Type::GRAB_STARTED:
+			return EGrabEventType::GrabStarted;
 
 		default:
 			return EGrabEventType::Unknown;
 		}
 	}
+
+	void protoGrabEventToLocalEvent( AvGrabEvent::Reader inEvent, GrabEvent_t *outEvent )
+	{
+		outEvent->grabbableId = inEvent.getGrabbableId();
+		outEvent->grabberId = inEvent.getGrabberId();
+		outEvent->hookId = inEvent.getHookId();
+		outEvent->requestId = inEvent.getRequestId();
+		outEvent->allowed = inEvent.getAllowed();
+		outEvent->useIdentityTransform = inEvent.getUseIdentityTransform();
+		outEvent->type = grabTypeFromProtoType( inEvent.getType() );
+	}
 }
+
+

@@ -387,7 +387,16 @@ export class AvDefaultTraverser
 
 		if ( nodeData.modelInstance )
 		{
-			nodeData.modelInstance.setOverrideTexture( this.m_currentRoot.gadgetId );
+			try
+			{
+				nodeData.modelInstance.setOverrideTexture( this.m_currentRoot.gadgetId );
+			}
+			catch( e )
+			{
+				// just eat these and don't add the panel. Sometimes we find out about a panel 
+				// before we find out about its texture
+				return;
+			}
 
 			let hand = this.m_currentHand;
 			this.updateTransform( node.globalId, defaultParent, mat4.identity,
@@ -510,27 +519,46 @@ export class AvDefaultTraverser
 		switch( grabEvent.type )
 		{
 			case AvGrabEventType.StartGrab:
-				if( !this.m_lastFrameUniverseFromNodeTransforms.hasOwnProperty( grabEvent.grabbableId  ) )
-				{
-					throw "grabbable wasn't rendered last frame";
-				}
+				console.log( "Traverser starting grab of " + grabEvent.grabbableId + " by " + grabEvent.grabberId );
+
 				if( !this.m_lastFrameUniverseFromNodeTransforms.hasOwnProperty( grabEvent.grabberId ) )
 				{
 					throw "grabber wasn't rendered last frame";
 				}
+
+				let grabberFromGrabbable: mat4;
+				if( !this.m_lastFrameUniverseFromNodeTransforms.hasOwnProperty( grabEvent.grabbableId  ) 
+					|| grabEvent.useIdentityTransform )
+				{
+					grabberFromGrabbable = mat4.identity;
+				}
+				else
+				{
+					let universeFromGrabbable = this.m_lastFrameUniverseFromNodeTransforms[ grabEvent.grabbableId ];
+					let grabberFromUniverse = this.m_lastFrameUniverseFromNodeTransforms[ grabEvent.grabberId ].inverse();
 		
-				let universeFromGrabbable = this.m_lastFrameUniverseFromNodeTransforms[ grabEvent.grabbableId ];
-				let grabberFromUniverse = this.m_lastFrameUniverseFromNodeTransforms[ grabEvent.grabberId ].inverse();
+					grabberFromGrabbable = grabberFromUniverse.multiply( universeFromGrabbable );
+				}
 		
-				let grabberFromGrabbable = grabberFromUniverse.multiply( universeFromGrabbable );
 				this.m_nodeToNodeAnchors[ grabEvent.grabbableId ] = 
 				{
 					parentGlobalId: grabEvent.grabberId,
 					parentFromNodeTransform: grabberFromGrabbable,
 				};
+				Av().renderer.startGrab( grabEvent.grabberId, grabEvent.grabbableId );
+
+				Av().sendGrabEvent( 
+					{
+						type: AvGrabEventType.GrabStarted,
+						grabberId: grabEvent.grabberId,
+						grabbableId: grabEvent.grabbableId,
+					}
+				);
 				break;
 
 			case AvGrabEventType.EndGrab:
+				console.log( "Traverser ending grab of " + grabEvent.grabbableId + " by " + grabEvent.grabberId );
+				Av().renderer.endGrab( grabEvent.grabberId, grabEvent.grabbableId );
 				if( grabEvent.hookId )
 				{
 					// we're dropping onto a hook

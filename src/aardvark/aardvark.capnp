@@ -142,6 +142,7 @@ struct AvGrabEvent
 		requestGrab @7;
 		requestGrabResponse @8;
 		cancelGrab @9;
+		grabStarted @10;
 	}
 
 	type @0: Type;
@@ -151,6 +152,7 @@ struct AvGrabEvent
 	transform @4: AvTransform;
 	requestId @5: UInt32;
 	allowed @6: Bool;
+	useIdentityTransform @7: Bool;
 }
 
 interface AvGrabbableProcessor
@@ -243,6 +245,7 @@ interface AvServer
 		intersections: List( UInt64 ),
 		hooks: List( UInt64 )
 	) -> ();
+	pushGrabEvent @5 ( event: AvGrabEvent ) -> ();
 }
 
 interface AvGadget

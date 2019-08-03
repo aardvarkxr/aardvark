@@ -161,6 +161,7 @@ export enum AvGrabEventType
 	RequestGrab = 7,
 	RequestGrabResponse = 8,
 	CancelGrab = 9,
+	GrabStarted = 10,
 };
 
 export interface AvGrabEvent
@@ -172,6 +173,7 @@ export interface AvGrabEvent
 	hookId?: string;
 	requestId?: number;
 	allowed?: boolean;
+	useIdentityTransform?: boolean;
 }
 
 export interface AvGrabEventProcessor
@@ -319,6 +321,9 @@ interface AvRenderer
 	addGrabbableHandle_Sphere( grabbableGlobalId: string, universeFromGrabbable: number[], radius: number, hand: EHand ): void;
 	addGrabber_Sphere( grabberGlobalId: string, universeFromGrabber: number[], radius: number, hand: EHand ): void;
 	addHook_Sphere( hookGlobalId: string, universeFromGrabber: number[], radius: number, hand: EHand  ): void;
+
+	startGrab( grabberGlobalId: string, grabbableGlobalId: string  ): void;
+	endGrab( grabberGlobalId: string, grabbableGlobalId: string  ): void;
 }
 
 export interface AvStartGadgetCallback
@@ -328,9 +333,15 @@ export interface AvStartGadgetCallback
 
 export interface Aardvark
 {
+	// requires scenegraph permissions
 	createGadget: Av_CreateGadget;
+
+	// requires master permissions
 	startGadget( uri: string, initialHook: string, callback: AvStartGadgetCallback ): void;
+
+	// requires renderer permissions
 	renderer: AvRenderer;
+	sendGrabEvent( event: AvGrabEvent ): void;
 }
 
 declare global

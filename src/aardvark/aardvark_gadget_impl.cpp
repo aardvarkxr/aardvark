@@ -112,48 +112,11 @@ CAardvarkGadget::CAardvarkGadget( uint32_t clientId, const std::string & sName, 
 }
 
 
-void CAardvarkGadget::sendGrabEventToGlobalId( uint64_t globalSenderId, uint64_t globalNodeId, 
-	uint64_t globalGrabberId, AvGrabEvent::Reader grabEvent )
-{
-	if ( !globalNodeId )
-		return;
-
-	if ( globalSenderId == globalNodeId )
-	{
-		// no need to send this event back to its sender
-		return;
-	}
-
-	KJ_IF_MAYBE( grabbableProcessor, m_pParentServer->findGrabbableProcessor( globalNodeId ) )
-	{
-		auto req = grabbableProcessor->grabEventRequest();
-
-		uint32_t localGrabbableId = (uint32_t)( 0xFFFFFFFF & globalNodeId );
-		req.setGrabbableId( localGrabbableId );
-		auto outGrabEvent = req.initEvent();
-		copyGrabEvent( outGrabEvent, grabEvent, globalGrabberId );
-		m_pParentServer->addRequestToTasks( std::move( req ) );
-	}
-}
-
 ::kj::Promise<void> CAardvarkGadget::pushGrabEvent( PushGrabEventContext context )
 {
 	auto & inGrabEvent = context.getParams().getEvent();
 	uint64_t globalSenderId = (uint64_t)m_id << 32 | (uint64_t)context.getParams().getGrabberNodeId();
-	uint64_t globalGrabbableId = inGrabEvent.getGrabbableId();
-	uint64_t globalHookId = inGrabEvent.getHookId();
-
-	uint64_t globalGrabberId = globalSenderId;
-	if ( inGrabEvent.getType() == AvGrabEvent::Type::REQUEST_GRAB_RESPONSE )
-	{
-		globalGrabberId = inGrabEvent.getGrabberId();
-	}
-
-	sendGrabEventToGlobalId( globalSenderId, globalGrabbableId, globalGrabberId, inGrabEvent );
-	sendGrabEventToGlobalId( globalSenderId, globalHookId, globalGrabberId, inGrabEvent );
-	sendGrabEventToGlobalId( globalSenderId, globalGrabberId, globalGrabberId, inGrabEvent );
-	m_pParentServer->sendGrabEventToFrameListeners( inGrabEvent, globalGrabberId );
-
+	m_pParentServer->proxyGrabEvent( globalSenderId, inGrabEvent );
 	return kj::READY_NOW;
 }
 
@@ -250,5 +213,6 @@ void aardvark::copyGrabEvent( AvGrabEvent::Builder & outGrabEvent, AvGrabEvent::
 	outGrabEvent.setGrabberId( globalGrabberId );
 	outGrabEvent.setRequestId( grabEvent.getRequestId() );
 	outGrabEvent.setAllowed( grabEvent.getAllowed() );
+	outGrabEvent.setUseIdentityTransform( grabEvent.getUseIdentityTransform() );
 	outGrabEvent.setType( grabEvent.getType() );
 }

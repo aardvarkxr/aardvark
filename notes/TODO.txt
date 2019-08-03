@@ -25,15 +25,12 @@ figure out how to get command line options into the renderer. Maybe init it when
 
 * Fix dynamic reload of renderer tab. This should tear down the whole renderer and recreate it. Not having this is a pain when there are code changes on the Javascript side.
 
-* Plumbing is there for grabbables to do something other than move themselves. Rough plan is:
-  grabbable returns data that means "switch grab to gadget X when it's available"
-  Grabbable returns a proxy object? Or maybe grabber does this?  Maybe the model in the manifest?
-  When gadget X starts up it's inital hook is the grabber instead of a hand or whatever.
-  Drop doesn't change. Might need to add drop in world for this to work.
-
 Will also need a gadget that's a list of potential gadgets, each of which is grabbable.
 
 
+I'm sparning a gadget, but it's not attaching to itself to the grabber correctly. And I may be spawning more than one per grab.
+
+At least one of the new objects is also having trouble with its texture.
 
 
 ========= DEAL WITH THIS NEXT ===========

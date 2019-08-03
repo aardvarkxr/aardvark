@@ -3,6 +3,9 @@
 #include "aardvark_renderer.h"
 #include "vrmanager.h"
 
+extern void protoEventFromCefEvent( CefRefPtr<CefV8Value> cefEvent, AvGrabEvent::Builder &bldEvent );
+extern CefRefPtr<CefV8Value> grabEventToCefEvent( const aardvark::GrabEvent_t & grabEvent );
+
 CJavascriptModelInstance::CJavascriptModelInstance( std::unique_ptr<IModelInstance> modelInstance, 
 	std::unordered_map< uint32_t, tools::OwnCapnp< AvSharedTextureInfo > > &textureInfo )
 	: m_textureInfo( textureInfo )
@@ -519,6 +522,55 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 		m_intersections.addActivePoker( globalPokerId, pokerInUniverse, (EHand)arguments[2]->GetIntValue() );
 	} );
 
+	RegisterFunction( container, "startGrab", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 2 )
+		{
+			exception = "Invalid arguments";
+			return;
+		}
+
+		if ( !arguments[0]->IsString() )
+		{
+			exception = "first argument must be a grabber global ID";
+			return;
+		}
+		if ( !arguments[1]->IsString() )
+		{
+			exception = "second argument must be a grabbable global ID";
+			return;
+		}
+
+		m_collisions.startGrab(
+			std::strtoull( std::string( arguments[0]->GetStringValue() ).c_str(), nullptr, 0 ),
+			std::strtoull( std::string( arguments[1]->GetStringValue() ).c_str(), nullptr, 0 ) );
+	} );
+
+	RegisterFunction( container, "endGrab", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 2 )
+		{
+			exception = "Invalid arguments";
+			return;
+		}
+
+		if ( !arguments[0]->IsString() )
+		{
+			exception = "first argument must be a grabber global ID";
+			return;
+		}
+		if ( !arguments[1]->IsString() )
+		{
+			exception = "second argument must be a grabbable global ID";
+			return;
+		}
+
+		m_collisions.endGrab(
+			std::strtoull( std::string( arguments[0]->GetStringValue() ).c_str(), nullptr, 0 ),
+			std::strtoull( std::string( arguments[1]->GetStringValue() ).c_str(), nullptr, 0 ) );
+	} );
+
+
 	return true;
 }
 
@@ -762,31 +814,10 @@ CefRefPtr<CefV8Value> CJavascriptRenderer::frameToJsObject( AvVisualFrame::Reade
 
 		m_context->Enter();
 
-		CefRefPtr< CefV8Value > evt = CefV8Value::CreateObject( nullptr, nullptr );
-		uint64_t grabberId = grabEvent.getGrabberId();
-		if ( grabberId )
-		{
-			evt->SetValue( CefString( "grabberId" ),
-				CefV8Value::CreateString( std::to_string( grabberId ) ),
-				V8_PROPERTY_ATTRIBUTE_NONE );
-		}
-		uint64_t grabbableId = grabEvent.getGrabbableId();
-		if ( grabbableId )
-		{
-			evt->SetValue( CefString( "grabbableId" ),
-				CefV8Value::CreateString( std::to_string( grabbableId ) ),
-				V8_PROPERTY_ATTRIBUTE_NONE );
-		}
-		uint64_t hookId = grabEvent.getHookId();
-		if ( hookId )
-		{
-			evt->SetValue( CefString( "hookId" ),
-				CefV8Value::CreateString( std::to_string( hookId ) ),
-				V8_PROPERTY_ATTRIBUTE_NONE );
-		}
-		evt->SetValue( CefString( "type" ),
-			CefV8Value::CreateInt( (int)aardvark::grabTypeFromProtoType( grabEvent.getType() ) ),
-			V8_PROPERTY_ATTRIBUTE_NONE );
+		aardvark::GrabEvent_t localGrabEvent;
+		aardvark::protoGrabEventToLocalEvent( context.getParams().getEvent(), &localGrabEvent );
+
+		CefRefPtr< CefV8Value > evt = grabEventToCefEvent( localGrabEvent );
 
 		m_renderer->m_jsGrabEventProcessor->ExecuteFunction( nullptr, CefV8ValueList
 			{

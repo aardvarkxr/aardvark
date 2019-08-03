@@ -123,6 +123,7 @@ namespace aardvark
 		RequestGrab = 7,
 		RequestGrabResponse = 8,
 		CancelGrab = 9,
+		GrabStarted = 10,
 	};
 
 	struct GrabEvent_t
@@ -133,6 +134,7 @@ namespace aardvark
 		uint64_t hookId;
 		uint32_t requestId;
 		bool allowed;
+		bool useIdentityTransform;
 	};
 
 	EAvSceneGraphResult avGetNextGrabberIntersection( aardvark::CAardvarkClient *pClient,
@@ -153,5 +155,6 @@ namespace aardvark
 
 	AvGrabEvent::Type protoTypeFromGrabType( EGrabEventType type );
 	EGrabEventType grabTypeFromProtoType( AvGrabEvent::Type type );
+	void protoGrabEventToLocalEvent( AvGrabEvent::Reader inEvent, GrabEvent_t *outEvent );
 
 }

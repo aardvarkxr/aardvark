@@ -345,6 +345,54 @@ namespace aardvark
 	}
 
 
+	::kj::Promise<void> AvServerImpl::pushGrabEvent( uint32_t clientId, AvServer::Server::PushGrabEventContext context )
+	{
+		proxyGrabEvent( 0, context.getParams().getEvent() );
+		return kj::READY_NOW;
+	}
+
+	void AvServerImpl::sendGrabEventToGlobalId( uint64_t globalSenderId, uint64_t globalNodeId,
+		uint64_t globalGrabberId, AvGrabEvent::Reader grabEvent )
+	{
+		if ( !globalNodeId )
+			return;
+
+		if ( globalSenderId == globalNodeId )
+		{
+			// no need to send this event back to its sender
+			return;
+		}
+
+		KJ_IF_MAYBE( grabbableProcessor, findGrabbableProcessor( globalNodeId ) )
+		{
+			auto req = grabbableProcessor->grabEventRequest();
+
+			uint32_t localGrabbableId = (uint32_t)( 0xFFFFFFFF & globalNodeId );
+			req.setGrabbableId( localGrabbableId );
+			auto outGrabEvent = req.initEvent();
+			copyGrabEvent( outGrabEvent, grabEvent, globalGrabberId );
+			addRequestToTasks( std::move( req ) );
+		}
+	}
+
+	void AvServerImpl::proxyGrabEvent( uint64_t globalSenderId, AvGrabEvent::Reader & inGrabEvent )
+	{
+		uint64_t globalGrabbableId = inGrabEvent.getGrabbableId();
+		uint64_t globalHookId = inGrabEvent.getHookId();
+
+		uint64_t globalGrabberId = globalSenderId;
+		if ( inGrabEvent.getType() == AvGrabEvent::Type::REQUEST_GRAB_RESPONSE 
+			|| !globalSenderId )
+		{
+			globalGrabberId = inGrabEvent.getGrabberId();
+		}
+
+		sendGrabEventToGlobalId( globalSenderId, globalGrabbableId, globalGrabberId, inGrabEvent );
+		sendGrabEventToGlobalId( globalSenderId, globalHookId, globalGrabberId, inGrabEvent );
+		sendGrabEventToGlobalId( globalSenderId, globalGrabberId, globalGrabberId, inGrabEvent );
+		sendGrabEventToFrameListeners( inGrabEvent, globalGrabberId );
+	}
+
 	namespace {
 
 		class DummyFilter : public kj::LowLevelAsyncIoProvider::NetworkFilter {
@@ -489,6 +537,11 @@ namespace aardvark
 			virtual ::kj::Promise<void> pushGrabIntersections( AvServer::Server::PushGrabIntersectionsContext context )
 			{
 				return m_realServer->pushGrabIntersections( m_clientId, context );
+			}
+
+			virtual ::kj::Promise<void> pushGrabEvent( AvServer::Server::PushGrabEventContext context ) override
+			{
+				return m_realServer->pushGrabEvent( m_clientId, context );
 			}
 
 		private:

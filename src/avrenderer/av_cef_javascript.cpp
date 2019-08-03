@@ -18,6 +18,43 @@ using aardvark::AvSceneContext;
 using aardvark::EAvSceneGraphResult;
 using aardvark::EAvSceneGraphNodeType;
 
+void protoEventFromCefEvent( CefRefPtr<CefV8Value> cefEvent, AvGrabEvent::Builder &bldEvent )
+{
+	aardvark::EGrabEventType apiType = ( aardvark::EGrabEventType )cefEvent->GetValue( "type" )->GetIntValue();
+	bldEvent.setType( protoTypeFromGrabType( apiType ) );
+	if ( cefEvent->HasValue( "grabbableId" ) && cefEvent->GetValue( "grabbableId" )->IsString() )
+	{
+		uint64_t grabbableId = std::wcstoull( cefEvent->GetValue( "grabbableId" )->GetStringValue().c_str(),
+			nullptr, 0 );
+		bldEvent.setGrabbableId( grabbableId );
+	}
+	if ( cefEvent->HasValue( "grabberId" ) && cefEvent->GetValue( "grabberId" )->IsString() )
+	{
+		uint64_t grabberId = std::wcstoull( cefEvent->GetValue( "grabberId" )->GetStringValue().c_str(),
+			nullptr, 0 );
+		bldEvent.setGrabberId( grabberId );
+	}
+	if ( cefEvent->HasValue( "hookId" ) && cefEvent->GetValue( "hookId" )->IsString() )
+	{
+		uint64_t hookId = std::wcstoull( cefEvent->GetValue( "hookId" )->GetStringValue().c_str(),
+			nullptr, 0 );
+		bldEvent.setHookId( hookId );
+	}
+	if ( cefEvent->HasValue( "requestId" ) && cefEvent->GetValue( "requestId" )->IsUInt() )
+	{
+		bldEvent.setRequestId( cefEvent->GetValue( "requestId" )->GetUIntValue() );
+	}
+	if ( cefEvent->HasValue( "allowed" ) && cefEvent->GetValue( "allowed" )->IsBool() )
+	{
+		bldEvent.setAllowed( cefEvent->GetValue( "allowed" )->GetBoolValue() );
+	}
+	if ( cefEvent->HasValue( "useIdentityTransform" ) && cefEvent->GetValue( "useIdentityTransform" )->IsBool() )
+	{
+		bldEvent.setUseIdentityTransform( cefEvent->GetValue( "useIdentityTransform" )->GetBoolValue() );
+	}
+}
+
+
 class CAardvarkGadgetObject : public CJavascriptObjectWithFunctions
 {
 	friend class CSceneContextObject;
@@ -664,41 +701,15 @@ bool CAardvarkGadgetObject::init( CefRefPtr<CefV8Value> container )
 			return;
 		}
 
-		aardvark::EGrabEventType apiType = (aardvark::EGrabEventType)arguments[0]->GetValue( "type" )->GetIntValue();
 
 		auto reqPushEvent = m_gadgetClient.pushGrabEventRequest();
 		AvGrabEvent::Builder bldEvent = reqPushEvent.initEvent();
-		bldEvent.setType( protoTypeFromGrabType( apiType ) );
-		if ( arguments[0]->HasValue( "senderId" ) )
+		CefRefPtr< CefV8Value > cefEvent = arguments[0];
+		if ( cefEvent->HasValue( "senderId" ) )
 		{
-			reqPushEvent.setGrabberNodeId( arguments[0]->GetValue( "senderId" )->GetUIntValue() );
+			reqPushEvent.setGrabberNodeId( cefEvent->GetValue( "senderId" )->GetUIntValue() );
 		}
-		if ( arguments[0]->HasValue( "grabbableId" ) )
-		{
-			uint64_t grabbableId = std::wcstoull( arguments[0]->GetValue( "grabbableId" )->GetStringValue().c_str(),
-				nullptr, 0 );
-			bldEvent.setGrabbableId( grabbableId );
-		}
-		if ( arguments[0]->HasValue( "grabberId" ) )
-		{
-			uint64_t grabberId = std::wcstoull( arguments[0]->GetValue( "grabberId" )->GetStringValue().c_str(),
-				nullptr, 0 );
-			bldEvent.setGrabberId( grabberId );
-		}
-		if ( arguments[0]->HasValue( "hookId" ) )
-		{
-			uint64_t hookId = std::wcstoull( arguments[0]->GetValue( "hookId" )->GetStringValue().c_str(),
-				nullptr, 0 );
-			bldEvent.setHookId( hookId );
-		}
-		if ( arguments[0]->HasValue( "requestId" ) )
-		{
-			bldEvent.setRequestId( arguments[0]->GetValue( "requestId" )->GetUIntValue() );
-		}
-		if ( arguments[0]->HasValue( "allowed" ) )
-		{
-			bldEvent.setAllowed( arguments[0]->GetValue( "allowed" )->GetBoolValue() );
-		}
+		protoEventFromCefEvent( cefEvent, bldEvent );
 
 		m_handler->getClient()->addRequestToTasks( std::move( reqPushEvent ) );
 	} );
@@ -711,6 +722,33 @@ CAardvarkGadgetObject::~CAardvarkGadgetObject() noexcept
 	m_sceneContexts.clear();
 
 	m_gadgetClient = nullptr;
+}
+
+CefRefPtr<CefV8Value> grabEventToCefEvent( const aardvark::GrabEvent_t & grabEvent )
+{
+	CefRefPtr< CefV8Value > evt = CefV8Value::CreateObject( nullptr, nullptr );
+	evt->SetValue( CefString( "grabberId" ),
+		CefV8Value::CreateString( std::to_string( grabEvent.grabberId ) ),
+		V8_PROPERTY_ATTRIBUTE_NONE );
+	evt->SetValue( CefString( "grabbableId" ),
+		CefV8Value::CreateString( std::to_string( grabEvent.grabbableId ) ),
+		V8_PROPERTY_ATTRIBUTE_NONE );
+	evt->SetValue( CefString( "hookId" ),
+		CefV8Value::CreateString( std::to_string( grabEvent.hookId ) ),
+		V8_PROPERTY_ATTRIBUTE_NONE );
+	evt->SetValue( CefString( "requestId" ),
+		CefV8Value::CreateUInt( grabEvent.requestId ),
+		V8_PROPERTY_ATTRIBUTE_NONE );
+	evt->SetValue( CefString( "allowed" ),
+		CefV8Value::CreateBool( grabEvent.allowed ),
+		V8_PROPERTY_ATTRIBUTE_NONE );
+	evt->SetValue( CefString( "useIdentityTransform" ),
+		CefV8Value::CreateBool( grabEvent.useIdentityTransform ),
+		V8_PROPERTY_ATTRIBUTE_NONE );
+	evt->SetValue( CefString( "type" ),
+		CefV8Value::CreateInt( (int)grabEvent.type ),
+		V8_PROPERTY_ATTRIBUTE_NONE );
+	return evt;
 }
 
 void CAardvarkGadgetObject::runFrame()
@@ -829,26 +867,7 @@ void CAardvarkGadgetObject::runFrame()
 		while ( ++unLimit < 100 && EAvSceneGraphResult::Success == aardvark::avGetNextGrabEvent(
 			m_handler->getClient(), iHandler.first, &grabEvent) )
 		{
-			CefRefPtr< CefV8Value > evt = CefV8Value::CreateObject( nullptr, nullptr );
-			evt->SetValue( CefString( "grabberId" ),
-				CefV8Value::CreateString( std::to_string( grabEvent.grabberId) ),
-				V8_PROPERTY_ATTRIBUTE_NONE );
-			evt->SetValue( CefString( "grabbableId" ),
-				CefV8Value::CreateString( std::to_string( grabEvent.grabbableId ) ),
-				V8_PROPERTY_ATTRIBUTE_NONE );
-			evt->SetValue( CefString( "hookId" ),
-				CefV8Value::CreateString( std::to_string( grabEvent.hookId ) ),
-				V8_PROPERTY_ATTRIBUTE_NONE );
-			evt->SetValue( CefString( "requestId" ),
-				CefV8Value::CreateUInt( grabEvent.requestId ),
-				V8_PROPERTY_ATTRIBUTE_NONE );
-			evt->SetValue( CefString( "allowed" ),
-				CefV8Value::CreateBool( grabEvent.allowed ),
-				V8_PROPERTY_ATTRIBUTE_NONE );
-			evt->SetValue( CefString( "type" ),
-				CefV8Value::CreateInt( (int)grabEvent.type ),
-				V8_PROPERTY_ATTRIBUTE_NONE );
-
+			CefRefPtr< CefV8Value > evt = grabEventToCefEvent( grabEvent );
 			iHandler.second->ExecuteFunction( nullptr, CefV8ValueList{ evt } );
 		}
 	}
@@ -990,6 +1009,21 @@ bool CAardvarkObject::init( CefRefPtr<CefV8Value> container )
 	{
 		m_renderer = CJavascriptObjectWithFunctions::create<CJavascriptRenderer>( m_handler );
 		container->SetValue( "renderer", m_renderer.object, V8_PROPERTY_ATTRIBUTE_READONLY );
+
+		RegisterFunction( container, "sendGrabEvent", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+		{
+			if ( arguments.size() != 1 || !arguments[0]->IsObject() )
+			{
+				exception = "Invalid arguments";
+				return;
+			}
+
+			aardvark::EGrabEventType apiType = ( aardvark::EGrabEventType )arguments[0]->GetValue( "type" )->GetIntValue();
+
+			auto reqPushEvent = m_handler->getClient()->Server().pushGrabEventRequest();
+			protoEventFromCefEvent( arguments[0], reqPushEvent.initEvent() );
+			m_handler->getClient()->addRequestToTasks( std::move( reqPushEvent ) );
+		} );
 	}
 
 	return true;

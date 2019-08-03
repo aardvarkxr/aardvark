@@ -25,9 +25,10 @@ export enum GrabberHighlight
 	None = 0,
 	InRange = 1,
 	WaitingForConfirmation = 2,
-	Grabbed = 3,
-	NearHook = 4,
-	WaitingForReleaseAfterRejection = 5,
+	WaitingForGrabToStart = 3,
+	Grabbed = 4,
+	NearHook = 5,
+	WaitingForReleaseAfterRejection = 6,
 }
 
 interface AvGrabberProps extends AvBaseNodeProps
@@ -65,18 +66,45 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 				assert( this.m_grabRequestId == evt.requestId );
 				if( evt.allowed )
 				{
+					// switch to the grabbable specified by the response
+					let useIdentityTransform = false;
+					if( evt.grabbableId != this.m_lastGrabbable )
+					{
+						AvGadget.instance().sendGrabEvent( 
+							{
+								type: AvGrabEventType.LeaveRange,
+								senderId: this.m_nodeId,
+								grabbableId: this.m_lastGrabbable
+							});
+						AvGadget.instance().sendGrabEvent( 
+							{
+								type: AvGrabEventType.EnterRange,
+								senderId: this.m_nodeId,
+								grabbableId: evt.grabbableId,
+							});
+						this.m_lastGrabbable = evt.grabbableId;
+						useIdentityTransform = true;
+					}
+
 					AvGadget.instance().sendGrabEvent( 
 						{
 							type: AvGrabEventType.StartGrab,
 							senderId: this.m_nodeId,
 							grabbableId: this.m_lastGrabbable,
+							useIdentityTransform,
 						});
-					this.m_lastHighlight = GrabberHighlight.Grabbed;
+					this.m_lastHighlight = GrabberHighlight.WaitingForGrabToStart;
 				}
 				else
 				{
 					this.m_lastHighlight = GrabberHighlight.WaitingForReleaseAfterRejection;
 				}
+				break;
+
+			case AvGrabEventType.GrabStarted:
+				console.log( "GrabStarted event received for " + evt.grabbableId + " being grabbed by " + evt.grabberId );
+				assert( this.m_lastHighlight == GrabberHighlight.WaitingForGrabToStart );
+				this.m_lastHighlight = GrabberHighlight.Grabbed;
 				break;
 		}
 
@@ -114,6 +142,7 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 				// FALL THROUGH (in case we also pressed on the same frame)
 
 			case GrabberHighlight.InRange:
+				assert( this.m_lastGrabbable != null );
 				if( -1 == grabbableIds.indexOf( this.m_lastGrabbable ) )
 				{
 					// stop being in range.
@@ -151,6 +180,11 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 				// nothing to do here until we hear from the thing we sent a grab request to
 				break;
 
+			case GrabberHighlight.WaitingForGrabToStart:
+				// nothing to do here until we hear back from the renderer that our grab has 
+				// started.
+				break;
+
 			case GrabberHighlight.WaitingForReleaseAfterRejection:
 				// when the button gets released, go back to in range
 				if( !isPressed )
@@ -163,6 +197,7 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 				if( -1 == grabbableIds.indexOf( this.m_lastGrabbable ) )
 				{
 					// cancel grabbing
+					console.log( "Ending grab of " + this.m_lastGrabbable + " because it wasn't in the grabbable list")
 					AvGadget.instance().sendGrabEvent( 
 						{
 							type: AvGrabEventType.EndGrab,

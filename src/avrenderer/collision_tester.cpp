@@ -59,6 +59,22 @@ bool SpheresIntersect( const glm::mat4 & grabberFromUniverse, float grabberRadiu
 }
 
 
+void CCollisionTester::startGrab( uint64_t globalGrabberId, uint64_t globalGrabbableId )
+{
+	m_activeGrabs.insert_or_assign( globalGrabberId, globalGrabbableId );
+}
+
+
+void CCollisionTester::endGrab( uint64_t globalGrabberId, uint64_t globalGrabbableId )
+{
+	auto i = m_activeGrabs.find( globalGrabberId );
+	if ( m_activeGrabs.end() != i && i->second == globalGrabbableId )
+	{
+		m_activeGrabs.erase( i );
+	}
+}
+
+
 void CCollisionTester::updateGrabberIntersections( aardvark::CAardvarkClient *client )
 {
 	std::vector<uint64_t> grabbablesToSend;
@@ -69,11 +85,24 @@ void CCollisionTester::updateGrabberIntersections( aardvark::CAardvarkClient *cl
 		req.setGrabberId( grabber.globalGrabberId );
 		req.setIsGrabPressed( grabber.isPressed );
 
+		uint64_t currentlyGrabbedGrabbableId = 0;
+		auto activeGrab = m_activeGrabs.find( grabber.globalGrabberId );
+		if ( activeGrab != m_activeGrabs.end() )
+		{
+			currentlyGrabbedGrabbableId = activeGrab->second;
+		}
+
 		grabbablesToSend.clear();
 		for ( auto & grabbable : m_activeGrabbables )
 		{
 			if ( isSameHand( grabber.hand, grabbable.hand ) )
 				continue;
+
+			if ( grabbable.globalGrabbableId == currentlyGrabbedGrabbableId )
+			{
+				grabbablesToSend.push_back( grabbable.globalGrabbableId );
+				continue;
+			}
 
 			for ( auto & handle : grabbable.handles )
 			{
@@ -85,6 +114,7 @@ void CCollisionTester::updateGrabberIntersections( aardvark::CAardvarkClient *cl
 				}
 			}
 		}
+
 
 		hooksToSend.clear();
 		for ( auto & hook : m_activeHooks)
@@ -114,4 +144,5 @@ void CCollisionTester::updateGrabberIntersections( aardvark::CAardvarkClient *cl
 		client->addRequestToTasks( std::move( req ) );
 	}
 }
+
 

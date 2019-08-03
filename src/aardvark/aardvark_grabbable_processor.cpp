@@ -4,22 +4,11 @@
 
 namespace aardvark
 {
-	static void ProtoToLocalEvent( AvGrabEvent::Reader inEvent, GrabEvent_t *outEvent )
-	{
-		outEvent->grabbableId = inEvent.getGrabbableId();
-		outEvent->grabberId = inEvent.getGrabberId();
-		outEvent->hookId = inEvent.getHookId();
-		outEvent->requestId = inEvent.getRequestId();
-		outEvent->allowed = inEvent.getAllowed();
-		outEvent->type = grabTypeFromProtoType( inEvent.getType() );
-	}
-
-
 	::kj::Promise<void> AvGrabbableProcessorImpl::grabEvent( GrabEventContext context )
 	{
 		uint32_t grabbableId = context.getParams().getGrabbableId();
 		GrabEvent_t evt;
-		ProtoToLocalEvent( context.getParams().getEvent(), &evt );
+		protoGrabEventToLocalEvent( context.getParams().getEvent(), &evt );
 		assert( evt.type != EGrabEventType::Unknown );
 
 		auto i = m_events.find( grabbableId );

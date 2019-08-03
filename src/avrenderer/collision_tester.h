@@ -9,6 +9,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include <vector>
+#include <unordered_map>
 #include <openvr.h>
 
 namespace aardvark
@@ -28,6 +29,9 @@ public:
 
 	void addHook_Sphere( uint64_t globalHookId, const glm::mat4 & universeFromHook,
 		float radius, EHand hand );
+
+	void startGrab( uint64_t globalGrabberId, uint64_t globalGrabbableId );
+	void endGrab( uint64_t globalGrabberId, uint64_t globalGrabbableId );
 
 	void reset();
 	void updateGrabberIntersections( aardvark::CAardvarkClient *client );
@@ -66,5 +70,6 @@ private:
 	};
 	std::vector<ActiveHook_t> m_activeHooks;
 
+	std::unordered_map<uint64_t, uint64_t> m_activeGrabs;
 
 };
