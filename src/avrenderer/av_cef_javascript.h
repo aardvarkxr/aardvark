@@ -45,6 +45,7 @@ public:
 	const std::string getInitialHook() const { return m_initialHook; }
 	void requestStartGadget( const CefString & uri, const CefString & initialHook, CefRefPtr<CefV8Value> callback );
 	void sceneFinished( uint64_t mainGrabbableId );
+	kj::Promise<CUriRequestHandler::Result_t> requestUri( const std::string & uri );
 
 	void runFrame();
 private:
@@ -70,6 +71,7 @@ private:
 		CefRefPtr< CefV8Value> callback;
 	};
 	std::map< int, StartGadgetCallback_t > m_startGadgetCallbacks;
+	bool m_needRunFrame = true;
 
 	// Include the default reference counting implementation.
 	IMPLEMENT_REFCOUNTING( CAardvarkRenderProcessHandler );

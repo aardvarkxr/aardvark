@@ -331,6 +331,20 @@ export interface AvStartGadgetCallback
 	(success: boolean, mainGrabbableGlobalId: string) : void;
 }
 
+export interface AvGadgetManifest
+{
+	name: string;
+	permissions: string[];
+	width: number;
+	height: number;
+	modelUri: string;
+}
+
+export interface AvGadgetManifestCallback
+{
+	(manifest: AvGadgetManifest) : void;
+}
+
 export interface Aardvark
 {
 	// requires scenegraph permissions
@@ -338,6 +352,7 @@ export interface Aardvark
 
 	// requires master permissions
 	startGadget( uri: string, initialHook: string, callback: AvStartGadgetCallback ): void;
+	getGadgetManifest( uri: string, callback: AvGadgetManifestCallback ): void;
 
 	// requires renderer permissions
 	renderer: AvRenderer;

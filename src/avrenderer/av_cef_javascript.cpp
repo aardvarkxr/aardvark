@@ -1003,6 +1003,81 @@ bool CAardvarkObject::init( CefRefPtr<CefV8Value> container )
 
 			m_handler->requestStartGadget( arguments[0]->GetStringValue(), arguments[1]->GetStringValue(), arguments[2] );
 		} );
+
+		RegisterFunction( container, "getGadgetManifest", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+		{
+			if ( arguments.size() != 2 )
+			{
+				exception = "Invalid arguments";
+				return;
+			}
+			if ( !arguments[0]->IsString() )
+			{
+				exception = "Invalid url argument";
+				return;
+			}
+			if ( !arguments[1]->IsFunction() )
+			{
+				exception = "Invalid callback argument";
+				return;
+			}
+
+			CefRefPtr<CefV8Value> callback = arguments[1];
+			CefRefPtr<CefV8Context> context = CefV8Context::GetCurrentContext();
+			auto promUriLoad = m_handler->requestUri( std::string( arguments[0]->GetStringValue() ) + "/gadget_manifest.json" )
+				.then( [ callback, context ]( CUriRequestHandler::Result_t result )
+			{
+				context->Enter();
+
+				CefRefPtr<CefV8Value> manifest;
+
+				bool success = false;
+				if ( result.success )
+				{
+					try
+					{
+						nlohmann::json j = nlohmann::json::parse( result.data.begin(), result.data.end() );
+						CAardvarkGadgetManifest gadgetManifest = j.get<CAardvarkGadgetManifest>();
+
+						manifest = CefV8Value::CreateObject( nullptr, nullptr );
+						manifest->SetValue( "name", CefV8Value::CreateString( gadgetManifest.m_name ),
+							V8_PROPERTY_ATTRIBUTE_NONE );
+						manifest->SetValue( "width", CefV8Value::CreateUInt( gadgetManifest.m_width ),
+							V8_PROPERTY_ATTRIBUTE_NONE );
+						manifest->SetValue( "height", CefV8Value::CreateUInt( gadgetManifest.m_height ),
+							V8_PROPERTY_ATTRIBUTE_NONE );
+						manifest->SetValue( "modelUri", CefV8Value::CreateString( gadgetManifest.m_modelUri ),
+							V8_PROPERTY_ATTRIBUTE_NONE );
+
+						CefRefPtr<CefV8Value> permissions = CefV8Value::CreateArray( (int)gadgetManifest.m_permissions.size() );
+						int index = 0;
+						for ( auto perm : gadgetManifest.m_permissions )
+						{
+							permissions->SetValue( index++, CefV8Value::CreateString( perm ) );
+						}
+						manifest->SetValue( "permissions", permissions, V8_PROPERTY_ATTRIBUTE_NONE );
+
+						success = true;
+					}
+					catch ( nlohmann::json::exception & )
+					{
+						// manifest parse failed. Return failure below
+						assert( false );
+					}
+				}
+
+				if ( !success )
+				{
+					manifest = CefV8Value::CreateNull();
+				}
+
+				callback->ExecuteFunction( nullptr, { manifest } );
+
+				context->Exit();
+			} );
+
+			m_handler->getClient()->addToTasks( std::move( promUriLoad ) );
+		} );
 	}
 
 	if ( hasPermission( "renderer" ) )
@@ -1048,6 +1123,13 @@ void CAardvarkRenderProcessHandler::OnContextCreated(
 	CefRefPtr<CefFrame> frame,
 	CefRefPtr<CefV8Context> context )
 {
+	if ( m_needRunFrame )
+	{
+		// first time setup tasks
+		CefPostDelayedTask( TID_RENDERER, base::Bind( &CAardvarkRenderProcessHandler::runFrame, this ), 0 );
+		m_needRunFrame = false;
+	}
+
 	if ( m_contexts.empty() )
 	{
 		if ( m_clientNeedsReset )
@@ -1056,8 +1138,6 @@ void CAardvarkRenderProcessHandler::OnContextCreated(
 			m_clientNeedsReset = false;
 		}
 
-		// first time setup tasks
-		CefPostDelayedTask( TID_RENDERER, base::Bind( &CAardvarkRenderProcessHandler::runFrame, this ), 0 );
 		m_client->Start();
 	}
 
@@ -1193,6 +1273,9 @@ void CAardvarkRenderProcessHandler::runFrame()
 
 	m_uriRequestHandler.doCefRequestWork();
 
+	// requests from javascript come in on the renderer thread, so process those too
+	m_uriRequestHandler.processResults();
+
 	int64_t frameDelay = 10;
 	if ( hasPermission( "renderer" ) )
 	{
@@ -1236,3 +1319,9 @@ void CAardvarkRenderProcessHandler::sceneFinished( uint64_t mainGrabbableId )
 
 	sendBrowserMessage( msg );
 }
+
+kj::Promise<CUriRequestHandler::Result_t> CAardvarkRenderProcessHandler::requestUri( const std::string & uri )
+{
+	return m_uriRequestHandler.requestUri( uri );
+}
+
