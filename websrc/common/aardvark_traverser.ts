@@ -559,7 +559,7 @@ export class AvDefaultTraverser
 			case AvGrabEventType.EndGrab:
 				console.log( "Traverser ending grab of " + grabEvent.grabbableId + " by " + grabEvent.grabberId );
 				Av().renderer.endGrab( grabEvent.grabberId, grabEvent.grabbableId );
-				if( grabEvent.hookId )
+				if( grabEvent.hookId && grabEvent.hookId != "0" )
 				{
 					// we're dropping onto a hook
 					this.m_nodeToNodeAnchors[ grabEvent.grabbableId ] = 
@@ -579,6 +579,9 @@ export class AvDefaultTraverser
 
 	getTransform( globalNodeId: string  ): PendingTransform
 	{
+		if( globalNodeId == "0" )
+			return null;
+
 		if( !this.m_universeFromNodeTransforms.hasOwnProperty( globalNodeId ) )
 		{
 			this.m_universeFromNodeTransforms[ globalNodeId ] = new PendingTransform();
