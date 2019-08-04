@@ -89,15 +89,15 @@ namespace aardvark
 
 	void AvServerImpl::sendFrameToListener( AvFrameListener::Client listener )
 	{
-		std::map<std::string, AvSharedTextureInfo::Reader> sharedTextureHandles;
 		AvVisuals_t visuals;
+		std::vector<CAardvarkGadget*> gadgetsWithTextures;
 		for ( auto gadget : m_vecGadgets )
 		{
 			gadget->gatherVisuals( visuals );
 
 			if ( gadget->hasSharedTextureInfo() )
 			{
-				sharedTextureHandles.insert_or_assign( gadget->getName(), gadget->getSharedTextureInfo() );
+				gadgetsWithTextures.push_back( gadget );
 			}
 		}
 
@@ -115,18 +115,14 @@ namespace aardvark
 				bldRoots[unIndex].setSourceId( visuals.vecSceneGraphs[unIndex].gadgetId );
 			}
 
-			auto bldTextures = bldFrame.initGadgetTextures( (uint32_t)sharedTextureHandles.size() );
+			auto bldTextures = bldFrame.initGadgetTextures( (uint32_t)gadgetsWithTextures.size() );
 			uint32_t unIndex = 0;
-			for ( auto handle : sharedTextureHandles )
+			for ( auto gadget : gadgetsWithTextures )
 			{
-				CAardvarkGadget *gadget = findGadgetByName( handle.first );
-				if ( gadget )
-				{
-					bldTextures[unIndex].setGadgetName( handle.first );
-					bldTextures[unIndex].setGadgetId( gadget->getId() );
-					bldTextures[unIndex].setSharedTextureInfo( handle.second );
-					unIndex++;
-				}
+				bldTextures[unIndex].setGadgetName( gadget->getName() );
+				bldTextures[unIndex].setGadgetId( gadget->getId() );
+				bldTextures[unIndex].setSharedTextureInfo( gadget->getSharedTextureInfo() );
+				unIndex++;
 			}
 		}
 
@@ -162,6 +158,7 @@ namespace aardvark
 
 	::kj::Promise<void> AvServerImpl::updateDxgiTextureForGadgets( uint32_t clientId, UpdateDxgiTextureForGadgetsContext context )
 	{
+		bool bFoundGadget = false;
 		if ( context.getParams().hasGadgetIds() )
 		{
 			for ( auto gadget : m_vecGadgets )
@@ -171,6 +168,7 @@ namespace aardvark
 				{
 					if ( gadgetId == gadget->getId() )
 					{
+						bFoundGadget = true;
 						gadget->setSharedTextureInfo( context.getParams().getSharedTextureInfo() );
 						break;
 					}
@@ -178,6 +176,11 @@ namespace aardvark
 			}
 
 			markFrameDirty();
+		}
+
+		if ( !bFoundGadget )
+		{
+			printf( "Failed to find gadget\n" );
 		}
 
 		return kj::READY_NOW;
