@@ -1146,6 +1146,8 @@ bool CAardvarkRenderProcessHandler::OnProcessMessageReceived( CefRefPtr<CefBrows
 					CefV8Value::CreateString( mainGrabbableId ),
 				} );
 			callback->second.context->Exit();
+
+			m_startGadgetCallbacks.erase( callback );
 		}
 	}
 	return false;
