@@ -356,20 +356,13 @@ bool CAardvarkCefHandler::OnProcessMessageReceived( CefRefPtr<CefBrowser> browse
 
 void CAardvarkCefHandler::updateSceneGraphTextures()
 {
-	if ( !m_sharedTexture )
+	if ( !m_sharedTexture || m_gadgets.empty() )
 	{
-		// if we don't have a shared texture yet, there's nothing to update
+		// if we don't have a shared texture or gadget yet, there's nothing to update
 		return;
 	}
 
-	if ( m_gadgets.empty() )
-	{
-		aardvark::avUpdateDxgiTextureForGadgets( &*m_client, nullptr, 0, m_gadgetManifest.m_width, m_gadgetManifest.m_height, m_sharedTexture, true );
-	}
-	else
-	{
-		aardvark::avUpdateDxgiTextureForGadgets( &*m_client, &m_gadgets[0], (uint32_t)m_gadgets.size(), m_gadgetManifest.m_width, m_gadgetManifest.m_height, m_sharedTexture, true );
-	}
+	aardvark::avUpdateDxgiTextureForGadgets( &*m_client, &m_gadgets[0], (uint32_t)m_gadgets.size(), m_gadgetManifest.m_width, m_gadgetManifest.m_height, m_sharedTexture, true );
 }
 
 void CAardvarkCefHandler::RunFrame()
