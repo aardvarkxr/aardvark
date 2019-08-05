@@ -25,12 +25,19 @@ figure out how to get command line options into the renderer. Maybe init it when
 
 * Fix dynamic reload of renderer tab. This should tear down the whole renderer and recreate it. Not having this is a pain when there are code changes on the Javascript side.
 
-Will also need a gadget that's a list of potential gadgets, each of which is grabbable.
+Will also need a gadget that's a list of potential gadgets, each of which is grabbable. - we have AvGadgetSeed now, which can be arranged in a list.
 
+working on animations and moving transform math to C++
+* I have a CTransform class that can be one of null (i.e. just use the parent), origin (set an origin path), matrix, or TRS.
+* Need to write tests for that an implement the manager for them.
+* Need to hook up animation:
+  * When a transform changes from one type to another it transitions immediately
+  * all other transitions take the transition time to happen (which default to 0/immediate.) This means other types are going to need to keep track of from and to values, as well as the current interpolated value. 
+  * If another new value is set while still transitioning, the interpolated value becomes the new start point.
+  * every frame the manager is called with the animation time, and it goes and visits all the transforms
+* Maybe use shared pointers for transforms for memory management? Javascript will hold some, C++ will hold some, etc.
+* The idea is that only actual changes to the scene graph actually require a new traversal. Frame-to-frame transform changes, including animations, can be handled by C++ without calling back into JS to re-traverse
 
-I'm sparning a gadget, but it's not attaching to itself to the grabber correctly. And I may be spawning more than one per grab.
-
-At least one of the new objects is also having trouble with its texture.
 
 
 ========= DEAL WITH THIS NEXT ===========
