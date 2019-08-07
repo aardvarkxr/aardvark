@@ -124,9 +124,9 @@ module.exports =
 		// Workaround for ws module trying to require devDependencies
 		externals: 
 		[ 
-			{
-				'express': {commonjs: 'express'}
-			},
+			// {
+			// 	'express': {commonjs: 'express'}
+			// },
 			'utf-8-validate', 
 			'bufferutil' 
 		],

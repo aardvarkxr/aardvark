@@ -1,32 +1,67 @@
 import * as express from 'express';
 import * as http from 'http';
 import * as WebSocket from 'ws';
-import { Address } from 'cluster';
+import bind from 'bind-decorator';
 
-const app = express();
 
-//initialize a simple http server
-const server = http.createServer(app);
+class CConnection
+{
+	private m_ws: WebSocket = null;
 
-//initialize the WebSocket server instance
-const wss = new WebSocket.Server({ server });
+	constructor( ws: WebSocket )
+	{
+		console.log( "new connection");
+		this.m_ws = ws;
+		ws.on( 'message', this.onMessage );
+		ws.send( "Hi there, I am a websocket server" );
+	}
 
-wss.on('connection', (ws: WebSocket) => {
+	@bind onMessage( message: string )
+	{
+		console.log( "received: ", message );
+		this.m_ws.send( `Hello, you sent -> ${ message }` );
+	}
 
-    //connection is up, let's add a simple simple event
-    ws.on('message', (message: string) => {
+	@bind onClose( code: number, reason: string )
+	{
+		console.log( `connection closed ${ reason }(${ code })` );
+	}
+}
 
-        //log the received message and send it back to the client
-        console.log('received: %s', message);
-        ws.send(`Hello, you sent -> ${message}`);
-    });
+class CServer
+{
+	private m_server = http.createServer( express() );
+	private m_anonymousConnections: CConnection[] = [];
+	private m_wss:WebSocket.Server = null;
 
-    //send immediatly a feedback to the incoming connection    
-    ws.send('Hi there, I am a WebSocket server');
-});
+	constructor( port: number )
+	{
+		this.m_wss = new WebSocket.Server( { server: this.m_server } );
+		this.m_server.listen( port, () => 
+		{
+			console.log(`Server started on port ${ port } :)`);
 
-//start our server
-server.listen(process.env.PORT || 8999, () => {
-	let port = typeof server.address() == "string" ? server.address() : ( server.address() as any as Address ).port;
-    console.log(`Server started on port ${ port } :)`);
-});
+			this.m_wss.on('connection', this.onConnection );
+		} );
+	}
+
+	@bind onConnection( ws: WebSocket )
+	{
+		let conn = new CConnection( ws );
+		ws.on( 'close', ( code: number, reason: string ) => { this.onClose( conn, code, reason ) } );
+		this.m_anonymousConnections.push( new CConnection( ws ) );	
+	}
+
+	private onClose( conn: CConnection, code: number, reason: string )
+	{
+		console.log( `connection closed ${ reason }(${ code })` );
+		let i = this.m_anonymousConnections.indexOf( conn );
+		if( i != -1 )
+		{
+			delete this.m_anonymousConnections[i];
+		}
+	}
+}
+
+
+let server = new CServer( Number( process.env.PORT ) || 8999 );
