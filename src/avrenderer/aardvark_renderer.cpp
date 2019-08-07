@@ -10,7 +10,7 @@
 #include <set>
 #include <algorithm>
 #include <filesystem>
-#include "ivrmanager.h"
+#include <aardvark/ivrmanager.h>
 
 #if defined(__ANDROID__)
 #define TINYGLTF_ANDROID_LOAD_FROM_ASSETS

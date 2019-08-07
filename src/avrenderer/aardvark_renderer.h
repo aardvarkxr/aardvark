@@ -22,7 +22,7 @@
 #include "av_cef_app.h"
 #include "av_cef_handler.h"
 #include "uri_request_handler.h"
-#include "irenderer.h"
+#include <aardvark/irenderer.h>
 
 #include <tools/capnprototools.h>
 

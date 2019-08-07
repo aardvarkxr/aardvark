@@ -16,6 +16,7 @@ add_library(aardvark STATIC
 	aardvark_panel_processor.h
 	aardvark_poker_processor.cpp
 	aardvark_poker_processor.h
+	aardvark_transform.cpp
 	aardvark_scene_graph.cpp
 	aardvark_client.cpp
 	framestructs.cpp
@@ -26,6 +27,9 @@ add_library(aardvark STATIC
 	${AV_SRC_PUBLIC}/aardvark/aardvark_gadget_manifest.h
 	${AV_SRC_PUBLIC}/aardvark/aardvark_server.h
 	${AV_SRC_PUBLIC}/aardvark/aardvark_scene_graph.h
+	${AV_SRC_PUBLIC}/aardvark/aardvark_transform.h
+	${AV_SRC_PUBLIC}/aardvark/irenderer.h
+	${AV_SRC_PUBLIC}/aardvark/ivrmanager.h
 	${CAPNP_SRCS}
 	${CAPNP_HDRS}
 	aardvark.capnp
@@ -41,4 +45,5 @@ target_link_directories( aardvark PUBLIC ${CAPNP_LIBRARIES} )
 target_include_directories( aardvark PUBLIC ${AV_SRC_PUBLIC} )
 target_include_directories( aardvark PRIVATE ${AV_SRC_THIRDPARTY} )
 target_include_directories( aardvark PUBLIC ${CMAKE_CURRENT_BINARY_DIR} )
+target_include_directories( aardvark PUBLIC ${AV_SRC_THIRDPARTY}/glm )
 

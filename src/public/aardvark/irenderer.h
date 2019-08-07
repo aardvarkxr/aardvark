@@ -7,6 +7,9 @@
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
+
+#include <string>
 
 namespace aardvark
 {
@@ -14,6 +17,22 @@ namespace aardvark
 }
 
 class IVrManager;
+
+class ITransform
+{
+public:
+	virtual ~ITransform() {}
+
+
+	virtual void setNullTransform( uint64_t parentId) = 0;
+	virtual void setOriginTransform( const std::string & originPath ) = 0;
+
+	virtual void setParentFromThisMatrix( const glm::mat4 & parentFromTransform ) = 0;
+	virtual void setParentFromThisTRS( const glm::vec3 & translation, const glm::vec3 & scale, const glm::quat & rot ) = 0;
+
+	virtual void setTransitionTime( float time ) = 0;
+};
+
 
 class IModelInstance
 {
