@@ -94,4 +94,43 @@ module.exports =
 	createConfig( 'test_panel', 'Test Panel', 'tsx' ),
 	createConfig( 'charm_bracelet', 'Charm Bracelet', 'tsx' ),
 	createConfig( 'test_gadget_launcher', 'Test Gadget Launcher', 'tsx' ),
+	{
+		target: "node",
+		entry: 
+		{
+			app: ["./server/server.ts" ]
+		},
+		output:
+		{
+			path: path.resolve( __dirname, '../data/server' ),
+			filename: "server_bundle.js"
+		},
+		resolve:
+		{
+			extensions: ['.ts', '.js' ]
+		},
+		module: 
+		{
+			rules:
+			[
+				{ 
+					test: /\.tsx?$/,
+					use: 'ts-loader',
+					exclude: /node_modules/
+				},
+			]
+		},
+
+		// Workaround for ws module trying to require devDependencies
+		externals: 
+		[ 
+			{
+				'express': {commonjs: 'express'}
+			},
+			'utf-8-validate', 
+			'bufferutil' 
+		],
+
+		mode: "development"
+	}
 ];
