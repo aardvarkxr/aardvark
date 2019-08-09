@@ -11,6 +11,22 @@
 			"sourceMaps": true,
 			"port": 8042,
 			"webRoot": "${workspaceFolder}"
+		},
+		{
+			"type": "chrome",
+			"request": "launch",
+			"name": "Start Monitor in Chrome",
+			"sourceMaps": true,
+			"port": 9222,
+			"webRoot": "${workspaceFolder}"
+		},
+		{
+			"type": "node",
+			"request": "attach",
+			"name": "Attach to node",
+			"sourceMaps": true,
+			"port": 9229,
+			"protocol": "auto"
 		}
 	]
 }

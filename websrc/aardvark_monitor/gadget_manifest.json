@@ -1,0 +1,6 @@
+{
+	"name" : "Test Panel",
+	"permissions" : [ "scenegraph" ],
+	"resolution": [ 1024, 1024 ],
+	"model" : "http://aardvark.install/models/Panel/panel.glb"
+}
