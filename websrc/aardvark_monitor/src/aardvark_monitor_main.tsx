@@ -1,7 +1,7 @@
 import * as React from 'react';
 import  * as ReactDOM from 'react-dom';
 import { CAardvarkEndpoint } from 'common/aardvark-react/aardvark_endpoint';
-import { EndpointType, MessageType, Endpoint, MsgNewEndpoint } from 'common/aardvark-react/aardvark_protocol';
+import { EndpointType, MessageType, Endpoint, MsgNewEndpoint, MsgLostEndpoint } from 'common/aardvark-react/aardvark_protocol';
 import bind from 'bind-decorator';
 
 interface AardvarkMonitorState
