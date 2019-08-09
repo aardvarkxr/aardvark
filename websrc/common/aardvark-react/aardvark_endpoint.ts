@@ -46,11 +46,11 @@ export class CAardvarkEndpoint
 
 		if( this.m_handlers[ env.type ] )
 		{
-			this.m_handlers[ env.type ]( env.type, env.payload, env.sender );
+			this.m_handlers[ env.type ]( env.type, env.payloadUnpacked, env.sender );
 		} 
 		else if( this.m_defaultHandler )
 		{
-			this.m_defaultHandler( env.type, env.payload, env.sender );
+			this.m_defaultHandler( env.type, env.payloadUnpacked, env.sender );
 		}
 		else
 		{
