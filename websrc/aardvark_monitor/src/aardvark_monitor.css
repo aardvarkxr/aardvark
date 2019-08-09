@@ -39,3 +39,19 @@ body, html
 {
 	background-color: blue;
 }
+
+.Gadget
+{
+	background-color: lightblue;
+	border-color: darkblue;
+	border-width: 0.2rem;
+	border-style: solid;
+}
+
+.Renderer
+{
+	background-color: lightpink;
+	border-color: red;
+	border-width: 0.2rem;
+	border-style: solid;
+}
