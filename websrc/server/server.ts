@@ -1,3 +1,4 @@
+import { MsgGetGadgetManifest, MsgGetGadgetManifestResponse } from './../common/aardvark-react/aardvark_protocol';
 import { MessageType, EndpointType, MsgSetEndpointType, Envelope, MsgNewEndpoint, MsgLostEndpoint, parseEnvelope, MsgError } from 'common/aardvark-react/aardvark_protocol';
 import { AvGadgetManifest } from 'common/aardvark';
 import * as express from 'express';
@@ -244,6 +245,11 @@ class CGadgetData
 	public getName() { return this.m_manifest.name; }
 }
 
+interface EnvelopeHandler
+{
+	(env: Envelope, m: any): void;
+}
+
 class CEndpoint
 {
 	private m_ws: WebSocket = null;
@@ -251,6 +257,7 @@ class CEndpoint
 	private m_type = EndpointType.Unknown;
 	private m_dispatcher: CDispatcher = null;
 	private m_gadgetData: CGadgetData = null;
+	private m_envelopeHandlers: { [ type:number]: EnvelopeHandler } = {}
 
 	constructor( ws: WebSocket, id: number, dispatcher: CDispatcher )
 	{
@@ -261,11 +268,33 @@ class CEndpoint
 
 		ws.on( 'message', this.onMessage );
 		ws.on( 'close', this.onClose );
+
+		this.registerEnvelopeHandler( MessageType.SetEndpointType, this.onSetEndpointType );
+		this.registerEnvelopeHandler( MessageType.GetGadgetManifest, this.onGetGadgetManifest );
 	}
 
 	public getId() { return this.m_id; }
 	public getType() { return this.m_type; }
 	public getGadgetData() { return this.m_gadgetData; }
+
+	private registerEnvelopeHandler( type: MessageType, handler: EnvelopeHandler )
+	{
+		this.m_envelopeHandlers[ type as number ] = handler;
+	}
+
+	private callEnvelopeHandler( env: Envelope ): boolean
+	{
+		let handler = this.m_envelopeHandlers[ env.type as number ];
+		if( handler )
+		{
+			handler( env, env.payloadUnpacked );
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
 
 	@bind onMessage( message: string )
 	{
@@ -277,60 +306,82 @@ class CEndpoint
 
 		if( this.m_type == EndpointType.Unknown )
 		{
-			if( env.type == MessageType.SetEndpointType )
-			{
-				let m = env.payloadUnpacked as MsgSetEndpointType;
-				switch( m.newEndpointType )
-				{
-					case EndpointType.Gadget:
-						if( !m.gadgetUri )
-						{
-							this.sendError( "SetEndpointType to gadget must provide URI",
-								MessageType.SetEndpointType );
-								return;
-						}
-						break;
-
-					case EndpointType.Monitor:
-					case EndpointType.Renderer:
-						break;
-
-					default:
-						this.sendError( "New endpoint type must be Gadget, Monitor, or Renderer", 
-							MessageType.SetEndpointType );
-						return;
-
-				}
-
-				console.log( `Setting endpoint ${ this.m_id } to ${ EndpointType[ m.newEndpointType ]}` );
-				this.m_type = m.newEndpointType;
-				this.m_dispatcher.setEndpointType( this );
-
-				if( this.getType() == EndpointType.Gadget )
-				{
-					this.m_gadgetData = new CGadgetData( this, m.gadgetUri );
-				}
-
-				this.m_dispatcher.sendToAllEndpointsOfType( EndpointType.Monitor,
-					this.m_dispatcher.buildNewEndpointMessage( this ) );
-			}
-			else
+			if( env.type != MessageType.SetEndpointType )
 			{
 				this.sendError( "SetEndpointType must be the first message from an endpoint" );
+				return;
 			}
 		}
 		else if( env.type == MessageType.SetEndpointType )
 		{
 			this.sendError( "SetEndpointType may only be sent once", MessageType.SetEndpointType );
+			return;
 		}
-		else
+
+		if( !this.callEnvelopeHandler( env ) )
 		{
-			switch( env.type )
-			{
-				default:
-					// forward the message
-			}
+			this.sendError( "Unsupported message", env.type );
 		}
+
+	}
+
+	@bind private onGetGadgetManifest( env: Envelope, m: MsgGetGadgetManifest )
+	{
+		getJSONFromUri( m.gadgetUri + "/gadget_manifest.json" )
+		.then( ( jsonManifest: any ) =>
+		{
+			let response: MsgGetGadgetManifestResponse =
+			{
+				manifest: jsonManifest as AvGadgetManifest,
+			}
+			this.sendMessage( MessageType.GetGadgetManifestResponse, response );
+		})
+		.catch( (reason:any ) =>
+		{
+			let response: MsgGetGadgetManifestResponse =
+			{
+				error: "Unable to load manifest " + reason,
+			}
+			this.sendMessage( MessageType.GetGadgetManifestResponse, response );
+		})
+
+	}
+
+	@bind private onSetEndpointType( env: Envelope, m: MsgSetEndpointType )
+	{
+		switch( m.newEndpointType )
+		{
+			case EndpointType.Gadget:
+				if( !m.gadgetUri )
+				{
+					this.sendError( "SetEndpointType to gadget must provide URI",
+						MessageType.SetEndpointType );
+						return;
+				}
+				break;
+
+			case EndpointType.Monitor:
+			case EndpointType.Renderer:
+				break;
+
+			default:
+				this.sendError( "New endpoint type must be Gadget, Monitor, or Renderer", 
+					MessageType.SetEndpointType );
+				return;
+
+		}
+
+		console.log( `Setting endpoint ${ this.m_id } to ${ EndpointType[ m.newEndpointType ]}` );
+		this.m_type = m.newEndpointType;
+		this.m_dispatcher.setEndpointType( this );
+
+		if( this.getType() == EndpointType.Gadget )
+		{
+			this.m_gadgetData = new CGadgetData( this, m.gadgetUri );
+		}
+
+		this.m_dispatcher.sendToAllEndpointsOfType( EndpointType.Monitor,
+			this.m_dispatcher.buildNewEndpointMessage( this ) );
 	}
 
 	public sendMessage( msgType: MessageType, msg: any )

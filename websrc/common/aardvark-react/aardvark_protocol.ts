@@ -1,3 +1,4 @@
+import { AvGadgetManifest } from './../aardvark';
 
 export enum MessageType
 {
@@ -5,6 +6,8 @@ export enum MessageType
 	// aren't required to have a sender.
 	SetEndpointType = 100,
 	Error = 101,
+	GetGadgetManifest = 102,
+	GetGadgetManifestResponse = 103,
 
 	// Monitor messages
 	// these are send to monitors to give them meta context
@@ -61,6 +64,17 @@ export interface MsgNewEndpoint
 export interface MsgLostEndpoint
 {
 	endpointId: number;
+}
+
+export interface MsgGetGadgetManifest
+{
+	gadgetUri: string;
+}
+
+export interface MsgGetGadgetManifestResponse
+{
+	error?: string;
+	manifest?: AvGadgetManifest;
 }
 
 export function parseEnvelope( envString: string, parsePayload: boolean = true ): Envelope

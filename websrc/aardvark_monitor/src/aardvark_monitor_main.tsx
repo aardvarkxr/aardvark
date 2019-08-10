@@ -3,17 +3,19 @@ import  * as ReactDOM from 'react-dom';
 import { CMonitorEndpoint } from 'common/aardvark-react/aardvark_endpoint';
 import { EndpointType, MessageType, Endpoint, MsgNewEndpoint, MsgLostEndpoint } from 'common/aardvark-react/aardvark_protocol';
 import bind from 'bind-decorator';
+import { AvGadgetManifest } from 'common/aardvark';
 
 
 interface GadgetMonitorProps
 {
 	gadgetId: number;
 	gadgetUri: string;
+	monitor: CMonitorEndpoint;
 }
 
 interface GadgetMonitorState
 {
-
+	manifest: AvGadgetManifest;
 }
 
 class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorState >
@@ -21,15 +23,21 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 	constructor( props: any )
 	{
 		super( props );
-		this.state = {};
+		this.state = { manifest: null};
+
+		this.props.monitor.getGadgetManifest( this.props.gadgetUri )
+		.then( ( manifest: AvGadgetManifest ) =>
+		{
+			this.setState( { manifest });
+		});
 	}
 
 	public render()
 	{
 		return <div className="Gadget">
 			Gadget { this.props.gadgetId } 
-			URI: { this.props.gadgetUri }
-			</div>
+			<div className="GadgetName">{ this.state.manifest ? this.state.manifest.name : "???" } <span className="GadgetUri">({ this.props.gadgetUri })</span></div>
+		</div>
 	}
 }
 
@@ -125,7 +133,10 @@ class AardvarkMonitor extends React.Component< {}, AardvarkMonitorState >
 			switch( ep.type )
 			{
 				case EndpointType.Gadget:
-					endpoints.push( <GadgetMonitor gadgetId={ ep.id } gadgetUri={ ep.gadgetUri } /> );
+					endpoints.push( <GadgetMonitor 
+						gadgetId={ ep.id } 
+						gadgetUri={ ep.gadgetUri } 
+						monitor={ this.m_endpoint } /> );
 					break;
 				case EndpointType.Renderer:
 					endpoints.push( <RendererMonitor rendererId={ ep.id } /> );

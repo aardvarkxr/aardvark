@@ -1,5 +1,6 @@
 import bind from 'bind-decorator';
-import { EndpointType, MessageType, Endpoint, Envelope, parseEnvelope, MsgSetEndpointType } from './aardvark_protocol';
+import { EndpointType, MessageType, Endpoint, Envelope, parseEnvelope, MsgSetEndpointType, MsgGetGadgetManifest, MsgGetGadgetManifestResponse } from './aardvark_protocol';
+import { AvGadgetManifest } from 'common/aardvark';
 
 export interface MessageHandler
 {
@@ -15,6 +16,7 @@ class CAardvarkEndpoint
 {
 	private m_ws = new WebSocket( "ws://localhost:8999" );
 	private m_handlers: { [ msgType: number ]: MessageHandler } = {};
+	private m_callbacks: { [ msgType: number ]: MessageHandler } = {};
 	private m_defaultHandler: MessageHandler = null;
 
 	constructor( openHandler: OpenHandler, defaultHandler: MessageHandler = null )
@@ -29,6 +31,11 @@ class CAardvarkEndpoint
 		this.m_handlers[ type ] = handler;
 	}
 
+	public waitForResponse( type: MessageType, callback: MessageHandler )
+	{
+		this.m_callbacks[ type ] = callback;
+	}
+
 	@bind onMessage( msgEvent: MessageEvent )
 	{
 		let env = parseEnvelope( msgEvent.data );
@@ -39,6 +46,11 @@ class CAardvarkEndpoint
 		{
 			this.m_handlers[ env.type ]( env.type, env.payloadUnpacked, env.sender );
 		} 
+		else if( this.m_callbacks[ env.type ] )
+		{
+			this.m_callbacks[ env.type]( env.type, env.payloadUnpacked, env.sender );
+			delete this.m_callbacks[ env.type ];
+		}
 		else if( this.m_defaultHandler )
 		{
 			this.m_defaultHandler( env.type, env.payloadUnpacked, env.sender );
@@ -62,6 +74,32 @@ class CAardvarkEndpoint
 		}
 
 		this.m_ws.send( JSON.stringify( env ) );
+	}
+
+	public getGadgetManifest( gadgetUri: string ): Promise<AvGadgetManifest>
+	{
+		return new Promise<AvGadgetManifest>( ( resolve, reject ) =>
+		{
+			let msgGetGadgetManifest: MsgGetGadgetManifest =
+			{
+				gadgetUri,
+			}
+	
+			this.sendMessage( [], MessageType.GetGadgetManifest, msgGetGadgetManifest );
+				
+			this.waitForResponse( MessageType.GetGadgetManifestResponse, 
+				( type:MessageType, m: MsgGetGadgetManifestResponse, sender: Endpoint ) =>
+				{
+					if( m.manifest )
+					{
+						resolve( m.manifest );
+					}
+					else
+					{
+						reject( m.error );
+					}
+				});
+		})
 	}
 }
 
