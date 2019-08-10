@@ -132,6 +132,15 @@ module.exports =
 			'bufferutil' 
 		],
 
-		mode: "development"
+		mode: "development",
+
+		resolve:
+		{
+			extensions: [ '.ts', '.tsx', '.js' ],
+			alias: 
+			{
+				"common" : path.resolve( __dirname, "./common" )
+			}
+		},	
 	}
 ];

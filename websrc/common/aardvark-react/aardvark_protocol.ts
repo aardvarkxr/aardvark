@@ -4,6 +4,7 @@ export enum MessageType
 	// initialization messages. These are the only messages that 
 	// aren't required to have a sender.
 	SetEndpointType = 100,
+	Error = 101,
 
 	// Monitor messages
 	// these are send to monitors to give them meta context
@@ -38,15 +39,23 @@ export interface Envelope
 	payloadUnpacked?: any;
 }
 
+export interface MsgError
+{
+	messageType?: MessageType;
+	error: string;
+}
+
 export interface MsgSetEndpointType
 {
 	newEndpointType: EndpointType;
+	gadgetUri?: string;
 }
 
 export interface MsgNewEndpoint
 {
 	newEndpointType: EndpointType;
 	endpointId: number;
+	gadgetUri?: string;
 }
 
 export interface MsgLostEndpoint

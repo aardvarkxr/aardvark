@@ -6,36 +6,27 @@ export interface MessageHandler
 	( type:MessageType, payload: any, sender: Endpoint ):void;
 }
 
+export interface OpenHandler
+{
+	():void;
+}
 
-export class CAardvarkEndpoint
+class CAardvarkEndpoint
 {
 	private m_ws = new WebSocket( "ws://localhost:8999" );
-	private m_type:EndpointType;
 	private m_handlers: { [ msgType: number ]: MessageHandler } = {};
 	private m_defaultHandler: MessageHandler = null;
 
-	constructor( type: EndpointType, defaultHandler: MessageHandler = null )
+	constructor( openHandler: OpenHandler, defaultHandler: MessageHandler = null )
 	{
-		this.m_type = type;
 		this.m_defaultHandler = defaultHandler;
-		this.m_ws.onopen = this.onOpen;
+		this.m_ws.onopen = openHandler;
 		this.m_ws.onmessage = this.onMessage;
 	}
 
 	public registerHandler( type: MessageType, handler: MessageHandler )
 	{
 		this.m_handlers[ type ] = handler;
-	}
-
-	@bind onOpen()
-	{
-		console.log( "Connected" );
-		let msgSetEndpointType: MsgSetEndpointType =
-		{
-			newEndpointType: this.m_type,
-		}
-
-		this.sendMessage( [], MessageType.SetEndpointType, msgSetEndpointType );
 	}
 
 	@bind onMessage( msgEvent: MessageEvent )
@@ -73,3 +64,51 @@ export class CAardvarkEndpoint
 		this.m_ws.send( JSON.stringify( env ) );
 	}
 }
+
+export class CMonitorEndpoint extends CAardvarkEndpoint
+{
+	constructor( defaultHandler: MessageHandler = null )
+	{
+		super( () => { this.onOpen() }, defaultHandler );
+	}
+
+	@bind onOpen()
+	{
+		console.log( "Connected" );
+		let msgSetEndpointType: MsgSetEndpointType =
+		{
+			newEndpointType: EndpointType.Monitor,
+		}
+
+		this.sendMessage( [], MessageType.SetEndpointType, msgSetEndpointType );
+	}
+
+
+}
+
+
+export class CGadgetEndpoint extends CAardvarkEndpoint
+{
+	private gadgetUri: string;
+
+	constructor( gadgetUri: string, defaultHandler: MessageHandler = null )
+	{
+		super( () => { this.onOpen() }, defaultHandler );
+		this.gadgetUri = gadgetUri;
+	}
+
+	@bind onOpen()
+	{
+		console.log( "Connected" );
+		let msgSetEndpointType: MsgSetEndpointType =
+		{
+			newEndpointType: EndpointType.Gadget,
+			gadgetUri: this.gadgetUri,
+		}
+
+		this.sendMessage( [], MessageType.SetEndpointType, msgSetEndpointType );
+	}
+
+
+}
+

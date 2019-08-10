@@ -1,6 +1,6 @@
 import * as React from 'react';
 import  * as ReactDOM from 'react-dom';
-import { CAardvarkEndpoint } from 'common/aardvark-react/aardvark_endpoint';
+import { CMonitorEndpoint } from 'common/aardvark-react/aardvark_endpoint';
 import { EndpointType, MessageType, Endpoint, MsgNewEndpoint, MsgLostEndpoint } from 'common/aardvark-react/aardvark_protocol';
 import bind from 'bind-decorator';
 
@@ -8,6 +8,7 @@ import bind from 'bind-decorator';
 interface GadgetMonitorProps
 {
 	gadgetId: number;
+	gadgetUri: string;
 }
 
 interface GadgetMonitorState
@@ -25,7 +26,10 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 
 	public render()
 	{
-		return <div className="Gadget">Gadget { this.props.gadgetId }</div>
+		return <div className="Gadget">
+			Gadget { this.props.gadgetId } 
+			URI: { this.props.gadgetUri }
+			</div>
 	}
 }
 
@@ -53,14 +57,21 @@ class RendererMonitor extends React.Component< RendererMonitorProps, RendererMon
 	}
 }
 
+interface EndpointData
+{
+	id: number;
+	type: EndpointType;
+	gadgetUri?: string;
+}
+
 interface AardvarkMonitorState
 {
-	endpoints: { [id: number] : Endpoint };
+	endpoints: { [id: number] : EndpointData };
 }
 
 class AardvarkMonitor extends React.Component< {}, AardvarkMonitorState >
 {
-	private m_endpoint: CAardvarkEndpoint;
+	private m_endpoint: CMonitorEndpoint;
 
 	constructor( props: any )
 	{
@@ -70,7 +81,7 @@ class AardvarkMonitor extends React.Component< {}, AardvarkMonitorState >
 			endpoints : {},
 		};
 
-		this.m_endpoint = new CAardvarkEndpoint( EndpointType.Monitor, this.onUnhandledMessage );
+		this.m_endpoint = new CMonitorEndpoint( this.onUnhandledMessage );
 		this.m_endpoint.registerHandler( MessageType.NewEndpoint, this.onNewEndpoint );
 		this.m_endpoint.registerHandler( MessageType.LostEndpoint, this.onLostEndpoint );
 	}
@@ -89,7 +100,8 @@ class AardvarkMonitor extends React.Component< {}, AardvarkMonitorState >
 			newList[ message.endpointId ] = 
 			{ 
 				type: message.newEndpointType,
-				endpointId: message.endpointId,
+				id: message.endpointId,
+				gadgetUri: message.gadgetUri,
 			}
 
 			this.setState( { endpoints: newList } );
@@ -113,10 +125,10 @@ class AardvarkMonitor extends React.Component< {}, AardvarkMonitorState >
 			switch( ep.type )
 			{
 				case EndpointType.Gadget:
-					endpoints.push( <GadgetMonitor gadgetId={ ep.endpointId } /> );
+					endpoints.push( <GadgetMonitor gadgetId={ ep.id } gadgetUri={ ep.gadgetUri } /> );
 					break;
 				case EndpointType.Renderer:
-					endpoints.push( <RendererMonitor rendererId={ ep.endpointId } /> );
+					endpoints.push( <RendererMonitor rendererId={ ep.id } /> );
 					break;
 			}
 		}

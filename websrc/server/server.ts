@@ -1,9 +1,74 @@
-import { MessageType, EndpointType, MsgSetEndpointType, Envelope, MsgNewEndpoint, MsgLostEndpoint, parseEnvelope } from './../common/aardvark-react/aardvark_protocol';
+import { MessageType, EndpointType, MsgSetEndpointType, Envelope, MsgNewEndpoint, MsgLostEndpoint, parseEnvelope, MsgError } from 'common/aardvark-react/aardvark_protocol';
+import { AvGadgetManifest } from 'common/aardvark';
 import * as express from 'express';
 import * as http from 'http';
 import * as WebSocket from 'ws';
 import bind from 'bind-decorator';
-import { json } from 'body-parser';
+import axios, { AxiosResponse } from 'axios';
+import * as fs from 'fs';
+import * as path from 'path';
+import { URL, pathToFileURL } from 'url';
+import * as fileUrl from 'file-url';
+
+let g_localInstallPathUri = fileUrl( path.resolve( process.cwd() ));
+console.log( "Data directory is", g_localInstallPathUri );
+
+function fixupUriForLocalInstall( originalUri: string ):URL
+{
+	let lowerUri = originalUri.toLowerCase();
+
+	let httpPrefix = "http://aardvark.install";
+	let httpsPrefix = "https://aardvark.install";
+
+	if ( lowerUri.indexOf( httpPrefix ) == 0 )
+	{
+		return new URL( g_localInstallPathUri + originalUri.slice( httpPrefix.length ) );
+	}
+	else
+	{
+		if ( lowerUri.indexOf( httpsPrefix ) == 0 )
+		{
+			return new URL( g_localInstallPathUri + originalUri.slice( httpsPrefix.length ) );
+		}
+	}
+
+	return new URL( originalUri );
+}
+
+function getJSONFromUri( uri: string ): Promise< any >
+{
+	let url = fixupUriForLocalInstall( uri );
+
+	return new Promise<any>( ( resolve, reject ) =>
+	{
+		if( url.protocol == "file:" )
+		{
+			fs.readFile( url, "utf8", (err: NodeJS.ErrnoException, data: string ) =>
+			{
+				if( err )
+				{
+					reject( err );
+				}
+				else
+				{
+					resolve( JSON.parse( data ) );
+				}
+			});
+		}
+		else
+		{
+			let promRequest = axios.get( url.toString() )
+			.then( (value: AxiosResponse ) =>
+			{
+				resolve( value.data );
+			} )
+			.catch( (reason: any ) =>
+			{
+				reject( reason );
+			});
+		}
+	} );
+}
 
 
 class CDispatcher
@@ -40,12 +105,17 @@ class CDispatcher
 		this.m_endpoints[ ep.getId() ] = ep;
 	}
 
-	public addEndpoint( ep: CEndpoint )
+	public setEndpointType( ep: CEndpoint )
 	{
 		let list = this.getListForType( ep.getType() );
 		if( list )
 		{
 			list.push( ep );
+		}
+
+		if( ep.getType() == EndpointType.Monitor )
+		{
+			this.sendStateToMonitor( ep );
 		}
 	}
 
@@ -58,6 +128,30 @@ class CDispatcher
 			if( i != -1 )
 			{
 				list.splice( i, 1 );
+			}
+		}
+	}
+
+	private sendStateToMonitor( targetEp: CEndpoint )
+	{
+		for( let epid in this.m_endpoints )
+		{
+			let ep = this.m_endpoints[ epid ];
+			switch( ep.getType() )
+			{
+				case EndpointType.Gadget:
+					targetEp.sendMessageString( 
+						this.buildPackedEnvelope( 
+							this.buildNewEndpointMessage( ep ) ) );
+
+					// we'll want to send the current scene graph here too
+					break;
+
+				case EndpointType.Renderer:
+					targetEp.sendMessageString( 
+						this.buildPackedEnvelope( 
+							this.buildNewEndpointMessage( ep ) ) );
+					break;
 			}
 		}
 	}
@@ -99,8 +193,56 @@ class CDispatcher
 			}
 		}
 	}
+
+	public buildNewEndpointMessage( ep: CEndpoint ): Envelope
+	{
+		let newEpMsg: MsgNewEndpoint =
+		{
+			newEndpointType: ep.getType(),
+			endpointId: ep.getId(),
+		}
+
+		if( ep.getGadgetData() )
+		{
+			newEpMsg.gadgetUri = ep.getGadgetData().getUri();
+		}
+
+		return (
+		{
+			sender: { type: EndpointType.Hub },
+			type: MessageType.NewEndpoint,
+			payloadUnpacked: newEpMsg,
+		} );
+	}
 }
 
+class CGadgetData
+{
+	private m_gadgetUri: string;
+	private m_ep: CEndpoint;
+	private m_manifest: AvGadgetManifest = null;
+
+	constructor( ep: CEndpoint, uri: string )
+	{
+		this.m_ep = ep;
+		this.m_gadgetUri = uri;
+
+		getJSONFromUri( this.m_gadgetUri + "/gadget_manifest.json")
+		.then( ( response: any ) => 
+		{
+			this.m_manifest = response as AvGadgetManifest;
+			console.log( `Gadget ${ this.m_ep.getId() } is ${ this.getName() }` );
+		})
+		.catch( (reason: any ) =>
+		{
+			console.log( `failed to load manifest from ${ this.m_gadgetUri }`, reason );
+			this.m_ep.close();
+		})
+	}
+
+	public getUri() { return this.m_gadgetUri; }
+	public getName() { return this.m_manifest.name; }
+}
 
 class CEndpoint
 {
@@ -108,6 +250,7 @@ class CEndpoint
 	private m_id: number;
 	private m_type = EndpointType.Unknown;
 	private m_dispatcher: CDispatcher = null;
+	private m_gadgetData: CGadgetData = null;
 
 	constructor( ws: WebSocket, id: number, dispatcher: CDispatcher )
 	{
@@ -122,6 +265,7 @@ class CEndpoint
 
 	public getId() { return this.m_id; }
 	public getType() { return this.m_type; }
+	public getGadgetData() { return this.m_gadgetData; }
 
 	@bind onMessage( message: string )
 	{
@@ -139,41 +283,45 @@ class CEndpoint
 				switch( m.newEndpointType )
 				{
 					case EndpointType.Gadget:
+						if( !m.gadgetUri )
+						{
+							this.sendError( "SetEndpointType to gadget must provide URI",
+								MessageType.SetEndpointType );
+								return;
+						}
+						break;
+
 					case EndpointType.Monitor:
 					case EndpointType.Renderer:
 						break;
 
 					default:
-						console.log( "New endpoint type must be Gadget, Monitor, or Renderer" );
+						this.sendError( "New endpoint type must be Gadget, Monitor, or Renderer", 
+							MessageType.SetEndpointType );
 						return;
 
 				}
 
 				console.log( `Setting endpoint ${ this.m_id } to ${ EndpointType[ m.newEndpointType ]}` );
 				this.m_type = m.newEndpointType;
-				this.m_dispatcher.addEndpoint( this );
+				this.m_dispatcher.setEndpointType( this );
 
-				let newEpMsg: MsgNewEndpoint =
+				if( this.getType() == EndpointType.Gadget )
 				{
-					newEndpointType: m.newEndpointType,
-					endpointId: this.m_id,
+					this.m_gadgetData = new CGadgetData( this, m.gadgetUri );
 				}
 
 				this.m_dispatcher.sendToAllEndpointsOfType( EndpointType.Monitor,
-					{
-						sender: { type: EndpointType.Hub },
-						type: MessageType.NewEndpoint,
-						payloadUnpacked: newEpMsg,
-					} );
+					this.m_dispatcher.buildNewEndpointMessage( this ) );
 			}
 			else
 			{
-				console.log( `endpoint ${ this.m_id } sent invalid message type ${ MessageType[ env.type ]}` );
+				this.sendError( "SetEndpointType must be the first message from an endpoint" );
 			}
 		}
 		else if( env.type == MessageType.SetEndpointType )
 		{
-			console.log( `endpoint ${ this.m_id } sent invalid message type ${ MessageType[ env.type ]}` );
+			this.sendError( "SetEndpointType may only be sent once", MessageType.SetEndpointType );
 		}
 		else
 		{
@@ -202,6 +350,27 @@ class CEndpoint
 		this.m_ws.send( msgString );
 	}
 
+	public getName()
+	{
+		return `#${ this.m_id } (${ EndpointType[ this.m_type ] })`;
+	}
+	public sendError( error: string, messageType?: MessageType )
+	{
+		let msg: MsgError =
+		{
+			error,
+			messageType,
+		};
+		this.sendMessage( MessageType.Error, msg );
+
+		console.log( `sending error to endpoint ${ this.getName() }: ${ error }` );
+	}
+
+	public close()
+	{
+		this.m_ws.close();
+	}
+
 	@bind onClose( code: number, reason: string )
 	{
 		console.log( `connection closed ${ reason }(${ code })` );
@@ -218,6 +387,8 @@ class CEndpoint
 				type: MessageType.LostEndpoint,
 				payloadUnpacked: lostEpMsg,
 			} );
+		
+		this.m_gadgetData = null;
 	}
 }
 
