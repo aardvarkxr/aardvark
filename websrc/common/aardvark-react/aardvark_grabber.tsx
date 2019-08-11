@@ -2,8 +2,9 @@ import * as React from 'react';
 
 import { AvGadget } from './aardvark_gadget';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
-import { AvSceneContext, AvNodeType, AvGrabEventType, AvGrabEvent } from 'common/aardvark';
+import { AvSceneContext, AvNodeType, AvGrabEventType, AvGrabEvent, EVolumeType } from 'common/aardvark';
 import bind from 'bind-decorator';
+import { EndpointAddr } from './aardvark_protocol';
 
 function assert( expr: boolean, msg?: string )
 {
@@ -40,17 +41,18 @@ interface AvGrabberProps extends AvBaseNodeProps
 export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 {
 	m_lastHighlight = GrabberHighlight.None;
-	m_lastGrabbable:string = null;
-	m_lastHook: string = null;
+	m_lastGrabbable:EndpointAddr = null;
+	m_lastHook: EndpointAddr = null;
 	m_grabRequestId = 1;
 	
-	public startNode( context:AvSceneContext )
+	public buildNode()
 	{
-		context.startNode( this.m_nodeId, "grabber" + this.m_nodeId, AvNodeType.Grabber );
-		context.setSphereVolume( this.props.radius );
-
 		AvGadget.instance().setGrabberProcessor( this.m_nodeId, this.onGrabberIntersections );
 		AvGadget.instance().setGrabEventProcessor( this.m_nodeId, this.onGrabEvent );
+
+		let node = this.createNodeObject( AvNodeType.Grabber, this.m_nodeId );
+		node.propVolume = { type: EVolumeType.Sphere, radius : this.props.radius };
+		return node;
 	}
 
 	@bind private onGrabEvent( evt: AvGrabEvent )
@@ -117,7 +119,7 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 		}
 	}
 
-	@bind private onGrabberIntersections( isPressed: boolean, grabbableIds: string[], hookIds: string[] )
+	@bind private onGrabberIntersections( isPressed: boolean, grabbableIds: EndpointAddr[], hookIds: EndpointAddr[] )
 	{
 		let prevHighlight = this.m_lastHighlight;
 		switch( this.m_lastHighlight )

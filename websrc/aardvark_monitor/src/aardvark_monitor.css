@@ -55,3 +55,25 @@ body, html
 	border-width: 0.2rem;
 	border-style: solid;
 }
+
+.AvNode
+{
+	margin-left: 1rem;
+}
+
+.AvNodeProperty
+{
+	margin-left: 0.5rem;
+}
+
+.AvNodePropertyName
+{
+	display: inline;
+}
+
+.AvNodePropertyValue
+{
+	display: inline;
+	margin-left: 0.5rem;
+}
+

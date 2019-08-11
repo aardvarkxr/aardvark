@@ -84,7 +84,7 @@ class TestPanel extends React.Component< {}, TestPanelState >
 
 		return (
 			<div className={ sDivClasses } >
-				<AvGadget name="Fnord the gadget">
+				<AvGadget gadgetUri="">
 					<AvGrabbable updateHighlight={ this.onHighlightGrabbable }
 						onGrabRequest={ this.onGrabRequest }>
 						<AvSphereHandle radius={0.1} />

@@ -13,12 +13,8 @@ export interface AvPanelProps extends AvBaseNodeProps
 
 export class AvPanel extends AvBaseNode< AvPanelProps, {} >
 {
-	public startNode( context:AvSceneContext )
+	public buildNode()
 	{
-		context.startNode( this.m_nodeId, "panel" + this.m_nodeId, AvNodeType.Panel );
-		context.setTextureSource( AvGadget.instance().getName() );
-		context.setInteractive( this.props.interactive );
-
 		if( this.props.customMouseHandler )
 		{
 			AvGadget.instance().setPanelHandler( this.m_nodeId, this.props.customMouseHandler );
@@ -27,6 +23,11 @@ export class AvPanel extends AvBaseNode< AvPanelProps, {} >
 		{
 			AvGadget.instance().enableDefaultPanelHandling( this.m_nodeId );
 		}
-	}
 
+		let node = this.createNodeObject( AvNodeType.Origin, this.m_nodeId );
+		node.propInteractive = this.props.interactive;
+
+		// TODO: Need to get DXGI info here and stuff it into a property
+		return node;
+	}
 }

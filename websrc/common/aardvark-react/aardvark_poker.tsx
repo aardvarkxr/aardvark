@@ -18,11 +18,10 @@ export class AvPoker extends AvBaseNode< AvPokerProps, {} >
 	m_lastY = 0;
 	m_lastHighlight = false;
 
-	public startNode( context:AvSceneContext )
+	public buildNode()
 	{
-		context.startNode( this.m_nodeId, "poker" + this.m_nodeId, AvNodeType.Poker );
-
 		AvGadget.instance().setPokerHandler( this.m_nodeId, this.proximityUpdate );
+		return this.createNodeObject( AvNodeType.Poker, this.m_nodeId );
 	}
 
 	private sendMouseLeave( panelId: string )

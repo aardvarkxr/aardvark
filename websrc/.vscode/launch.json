@@ -17,6 +17,7 @@
 			"request": "launch",
 			"name": "Start Monitor in Chrome",
 			"sourceMaps": true,
+			"url": "file:///E:/homedev/aardvark/data/gadgets/aardvark_monitor/index.html",
 			"port": 9222,
 			"webRoot": "${workspaceFolder}"
 		},

@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import { Av, AvSceneContext } from 'common/aardvark';
+import { Av, AvSceneContext, AvNode, AvNodeType } from 'common/aardvark';
 import { AvGadget } from './aardvark_gadget';
 
 declare global 
@@ -23,7 +23,7 @@ export interface AvBaseNodeProps
 export interface IAvBaseNode
 {
 	m_nodeId: number;
-	pushNode( context: AvSceneContext ): void;
+	buildNode(): AvNode;
 }
 
 
@@ -42,13 +42,18 @@ export abstract class AvBaseNode<TProps, TState> extends React.Component<TProps,
 		}
 	}
 
-	public pushNode( context: AvSceneContext ): void
+	public abstract buildNode( ): AvNode;
+
+	protected createNodeObject( nodeId: number, type: AvNodeType ): AvNode
 	{
-		this.startNode( context );
+		return (
+		{
+			type: type,
+			id: nodeId,
+			flags: 0,
+		} );
 	}
 
-	abstract startNode( context: AvSceneContext ): void;
-	
 	public baseNodeRender( node: IAvBaseNode, children: React.ReactNode )
 	{
 		return (

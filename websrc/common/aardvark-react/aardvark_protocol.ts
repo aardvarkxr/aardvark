@@ -1,4 +1,4 @@
-import { AvGadgetManifest } from './../aardvark';
+import { AvGadgetManifest, AvNode } from './../aardvark';
 
 export enum MessageType
 {
@@ -14,6 +14,10 @@ export enum MessageType
 	NewEndpoint = 200,
 	LostEndpoint = 201,
 
+	// Gadget messages
+	UpdateSceneGraph = 300,
+	
+
 }
 
 export enum EndpointType
@@ -26,18 +30,38 @@ export enum EndpointType
 	Monitor = 4,
 }
 
-export interface Endpoint
+export interface EndpointAddr
 {
 	type: EndpointType;
 	endpointId?: number;
 	nodeId?: number;
 }
 
+export function endpointAddrToString( epa: EndpointAddr ) : string
+{
+	return EndpointType[ epa.type ] 
+		+ ( epa.endpointId ? ":" + epa.endpointId : "" )
+		+ ( epa.nodeId ? ":" + epa.nodeId : "" );
+}
+
+export function endpointAddrIsEmpty( epa: EndpointAddr ): boolean
+{
+	return epa == null || epa.type == undefined || epa.type == EndpointType.Unknown;
+}
+
+export function endpointAddrsMatch( epa1: EndpointAddr, epa2: EndpointAddr ): boolean
+{
+	if( endpointAddrIsEmpty( epa1 ) )
+		return endpointAddrIsEmpty( epa2 );
+
+	return epa1.type == epa2.type && epa1.nodeId == epa2.nodeId && epa1.endpointId == epa2.endpointId;
+}
+
 export interface Envelope
 {
 	type: MessageType;
-	sender?: Endpoint;
-	targets?: Endpoint[]; 
+	sender?: EndpointAddr;
+	targets?: EndpointAddr[]; 
 	payload?: string;
 	payloadUnpacked?: any;
 }
@@ -75,6 +99,12 @@ export interface MsgGetGadgetManifestResponse
 {
 	error?: string;
 	manifest?: AvGadgetManifest;
+}
+
+
+export interface MsgUpdateSceneGraph
+{
+	root?: AvNode;
 }
 
 export function parseEnvelope( envString: string, parsePayload: boolean = true ): Envelope

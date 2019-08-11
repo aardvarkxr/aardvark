@@ -1,6 +1,6 @@
 import { AvGadget } from './aardvark_gadget';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
-import { AvSceneContext, AvNodeType, AvGrabEventType, AvGrabEvent } from 'common/aardvark';
+import { AvSceneContext, AvNodeType, AvGrabEventType, AvGrabEvent, EVolumeType } from 'common/aardvark';
 import bind from 'bind-decorator';
 
 
@@ -20,12 +20,13 @@ export class AvHook extends AvBaseNode< AvHookProps, {} >
 {
 	m_lastHighlight = HookHighlight.None;
 
-	public startNode( context:AvSceneContext )
+	public buildNode()
 	{
-		context.startCustomNode( this.m_nodeId, "hook" + this.m_nodeId, "Hook" );
-		context.setSphereVolume( this.props.radius );
-
 		AvGadget.instance().setGrabEventProcessor( this.m_nodeId, this.onGrabEvent );
+
+		let node = this.createNodeObject( AvNodeType.Hook, this.m_nodeId );
+		node.propVolume = { type: EVolumeType.Sphere, radius : this.props.radius };
+		return node;
 	}
 
 	@bind private onGrabEvent( evt: AvGrabEvent )

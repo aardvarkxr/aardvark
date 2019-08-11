@@ -1,6 +1,6 @@
-import { MsgGetGadgetManifest, MsgGetGadgetManifestResponse } from './../common/aardvark-react/aardvark_protocol';
+import { MsgGetGadgetManifest, MsgGetGadgetManifestResponse, MsgUpdateSceneGraph } from './../common/aardvark-react/aardvark_protocol';
 import { MessageType, EndpointType, MsgSetEndpointType, Envelope, MsgNewEndpoint, MsgLostEndpoint, parseEnvelope, MsgError } from 'common/aardvark-react/aardvark_protocol';
-import { AvGadgetManifest } from 'common/aardvark';
+import { AvGadgetManifest, AvNode } from 'common/aardvark';
 import * as express from 'express';
 import * as http from 'http';
 import * as WebSocket from 'ws';
@@ -145,7 +145,9 @@ class CDispatcher
 						this.buildPackedEnvelope( 
 							this.buildNewEndpointMessage( ep ) ) );
 
-					// we'll want to send the current scene graph here too
+					targetEp.sendMessageString(
+						this.buildPackedEnvelope( 
+							this.buildUpdateSceneGraphMessage( ep.getId(), ep.getGadgetData().getRoot() ) ) );
 					break;
 
 				case EndpointType.Renderer:
@@ -195,6 +197,28 @@ class CDispatcher
 		}
 	}
 
+	public updateGadgetSceneGraph( gadgetId: number, root: AvNode )
+	{
+		let env = this.buildUpdateSceneGraphMessage( gadgetId, root );
+		this.sendToAllEndpointsOfType( EndpointType.Monitor, env );
+		this.sendToAllEndpointsOfType( EndpointType.Renderer, env );
+	}
+
+	private buildUpdateSceneGraphMessage( gadgetId: number, root: AvNode ): Envelope
+	{
+		let msg: MsgUpdateSceneGraph = 
+		{
+			root,
+		};
+		return (
+		{
+			type: MessageType.UpdateSceneGraph,
+			sender: { type: EndpointType.Gadget, endpointId: gadgetId },
+			payloadUnpacked: msg,
+		} );
+	}
+
+
 	public buildNewEndpointMessage( ep: CEndpoint ): Envelope
 	{
 		let newEpMsg: MsgNewEndpoint =
@@ -222,11 +246,14 @@ class CGadgetData
 	private m_gadgetUri: string;
 	private m_ep: CEndpoint;
 	private m_manifest: AvGadgetManifest = null;
+	private m_root: AvNode = null;
+	private m_dispatcher: CDispatcher = null;
 
-	constructor( ep: CEndpoint, uri: string )
+	constructor( ep: CEndpoint, uri: string, dispatcher: CDispatcher )
 	{
 		this.m_ep = ep;
 		this.m_gadgetUri = uri;
+		this.m_dispatcher = dispatcher;
 
 		getJSONFromUri( this.m_gadgetUri + "/gadget_manifest.json")
 		.then( ( response: any ) => 
@@ -243,7 +270,15 @@ class CGadgetData
 
 	public getUri() { return this.m_gadgetUri; }
 	public getName() { return this.m_manifest.name; }
+	public getRoot() { return this.m_root; }
+
+	public updateSceneGraph( root: AvNode ) 
+	{
+		this.m_root = root;
+		this.m_dispatcher.updateGadgetSceneGraph( this.m_ep.getId(), this.m_root );
+	}
 }
+
 
 interface EnvelopeHandler
 {
@@ -271,6 +306,7 @@ class CEndpoint
 
 		this.registerEnvelopeHandler( MessageType.SetEndpointType, this.onSetEndpointType );
 		this.registerEnvelopeHandler( MessageType.GetGadgetManifest, this.onGetGadgetManifest );
+		this.registerEnvelopeHandler( MessageType.UpdateSceneGraph, this.onUpdateSceneGraph );
 	}
 
 	public getId() { return this.m_id; }
@@ -347,6 +383,18 @@ class CEndpoint
 
 	}
 
+	@bind private onUpdateSceneGraph( env: Envelope, m: MsgUpdateSceneGraph )
+	{
+		if( !this.m_gadgetData )
+		{
+			this.sendError( "Only valid from gadgets", MessageType.UpdateSceneGraph );
+			return;
+		}
+
+		this.m_gadgetData.updateSceneGraph( m.root );
+	}
+
+
 	@bind private onSetEndpointType( env: Envelope, m: MsgSetEndpointType )
 	{
 		switch( m.newEndpointType )
@@ -373,12 +421,13 @@ class CEndpoint
 
 		console.log( `Setting endpoint ${ this.m_id } to ${ EndpointType[ m.newEndpointType ]}` );
 		this.m_type = m.newEndpointType;
-		this.m_dispatcher.setEndpointType( this );
 
 		if( this.getType() == EndpointType.Gadget )
 		{
-			this.m_gadgetData = new CGadgetData( this, m.gadgetUri );
+			this.m_gadgetData = new CGadgetData( this, m.gadgetUri, this.m_dispatcher );
 		}
+
+		this.m_dispatcher.setEndpointType( this );
 
 		this.m_dispatcher.sendToAllEndpointsOfType( EndpointType.Monitor,
 			this.m_dispatcher.buildNewEndpointMessage( this ) );

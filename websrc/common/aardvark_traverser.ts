@@ -2,6 +2,7 @@ import { Av, AvGrabEventType } from 'common/aardvark';
 import { AvModelInstance, AvNode, AvNodeRoot, AvNodeType, AvVisualFrame, EHand, EVolumeType, AvGrabEvent } from './aardvark';
 import { mat4, vec3, quat, vec4 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
+import { EndpointAddr, endpointAddrToString, endpointAddrIsEmpty } from './aardvark-react/aardvark_protocol';
 
 interface NodeData
 {
@@ -108,7 +109,7 @@ class PendingTransform
 
 interface NodeToNodeAnchor_t
 {
-	parentGlobalId: string;
+	parentGlobalId: EndpointAddr;
 	parentFromNodeTransform: mat4;
 }
 
@@ -117,7 +118,7 @@ export class AvDefaultTraverser
 	private m_inFrameTraversal = false;
 	private m_handDeviceForNode: { [nodeGlobalId:string]:EHand } = {};
 	private m_currentHand = EHand.Invalid;
-	private m_currentGrabbableGlobalId:string = null;
+	private m_currentGrabbableGlobalId:EndpointAddr = null;
 	private m_universeFromNodeTransforms: { [ nodeGlobalId:string ]: PendingTransform } = {};
 	private m_nodeData: { [ nodeGlobalId:string ]: NodeData } = {};
 	private m_lastFrameUniverseFromNodeTransforms: { [ nodeGlobalId:string ]: mat4 } = {};
@@ -167,11 +168,12 @@ export class AvDefaultTraverser
 
 	getNodeData( node: AvNode ): NodeData
 	{
-		if( !this.m_nodeData.hasOwnProperty( node.globalId ) )
+		let nodeIdStr = endpointAddrToString( node.globalId );
+		if( !this.m_nodeData.hasOwnProperty( nodeIdStr ) )
 		{
-			this.m_nodeData[ node.globalId] = {};
+			this.m_nodeData[ nodeIdStr] = {};
 		}
-		return this.m_nodeData[ node.globalId];
+		return this.m_nodeData[ nodeIdStr ];
 	}
 
 	traverseSceneGraph( root: AvNodeRoot ): void
@@ -230,16 +232,8 @@ export class AvDefaultTraverser
 			this.traverseGrabber( node, defaultParent );
 			break;
 
-		case AvNodeType.Custom:
-			switch( node.propCustomNodeType )
-			{
-				case "Hook":
-					this.traverseHook( node, defaultParent );
-					break;
-
-				default:
-					throw "Invalid node type";
-			}
+		case AvNodeType.Hook:
+			this.traverseHook( node, defaultParent );
 			break;
 		
 		default:
@@ -252,7 +246,7 @@ export class AvDefaultTraverser
 			thisNodeTransform.update( defaultParent, mat4.identity );
 		}
 
-		this.m_handDeviceForNode[ node.globalId ] = this.m_currentHand;
+		this.m_handDeviceForNode[ endpointAddrToString( node.globalId ) ] = this.m_currentHand;
 
 		if( node.children )
 		{
@@ -434,9 +428,10 @@ export class AvDefaultTraverser
 	traverseGrabbable( node: AvNode, defaultParent: PendingTransform )
 	{
 		this.m_currentGrabbableGlobalId = node.globalId;
-		if( this.m_nodeToNodeAnchors.hasOwnProperty( node.globalId ) )
+		let nodeIdStr = endpointAddrToString( node.globalId );
+		if( this.m_nodeToNodeAnchors.hasOwnProperty( nodeIdStr ) )
 		{
-			let anchor = this.m_nodeToNodeAnchors[ node.globalId ];
+			let anchor = this.m_nodeToNodeAnchors[ nodeIdStr ];
 			let parentTransform = this.getTransform( anchor.parentGlobalId );
 			this.updateTransform( node.globalId, parentTransform, anchor.parentFromNodeTransform, null );
 		}
@@ -521,26 +516,28 @@ export class AvDefaultTraverser
 			case AvGrabEventType.StartGrab:
 				console.log( "Traverser starting grab of " + grabEvent.grabbableId + " by " + grabEvent.grabberId );
 
-				if( !this.m_lastFrameUniverseFromNodeTransforms.hasOwnProperty( grabEvent.grabberId ) )
+				let grabberIdStr = endpointAddrToString( grabEvent.grabberId );
+				let grabbableIdStr = endpointAddrToString( grabEvent.grabbableId );
+				if( !this.m_lastFrameUniverseFromNodeTransforms.hasOwnProperty( grabberIdStr ) )
 				{
 					throw "grabber wasn't rendered last frame";
 				}
 
 				let grabberFromGrabbable: mat4;
-				if( !this.m_lastFrameUniverseFromNodeTransforms.hasOwnProperty( grabEvent.grabbableId  ) 
+				if( !this.m_lastFrameUniverseFromNodeTransforms.hasOwnProperty( grabbableIdStr  ) 
 					|| grabEvent.useIdentityTransform )
 				{
 					grabberFromGrabbable = mat4.identity;
 				}
 				else
 				{
-					let universeFromGrabbable = this.m_lastFrameUniverseFromNodeTransforms[ grabEvent.grabbableId ];
-					let grabberFromUniverse = this.m_lastFrameUniverseFromNodeTransforms[ grabEvent.grabberId ].inverse();
+					let universeFromGrabbable = this.m_lastFrameUniverseFromNodeTransforms[ grabbableIdStr ];
+					let grabberFromUniverse = this.m_lastFrameUniverseFromNodeTransforms[ grabberIdStr ].inverse();
 		
 					grabberFromGrabbable = grabberFromUniverse.multiply( universeFromGrabbable );
 				}
 		
-				this.m_nodeToNodeAnchors[ grabEvent.grabbableId ] = 
+				this.m_nodeToNodeAnchors[ grabbableIdStr ] = 
 				{
 					parentGlobalId: grabEvent.grabberId,
 					parentFromNodeTransform: grabberFromGrabbable,
@@ -559,10 +556,10 @@ export class AvDefaultTraverser
 			case AvGrabEventType.EndGrab:
 				console.log( "Traverser ending grab of " + grabEvent.grabbableId + " by " + grabEvent.grabberId );
 				Av().renderer.endGrab( grabEvent.grabberId, grabEvent.grabbableId );
-				if( grabEvent.hookId && grabEvent.hookId != "0" )
+				if( endpointAddrIsEmpty( grabEvent.hookId ) )
 				{
 					// we're dropping onto a hook
-					this.m_nodeToNodeAnchors[ grabEvent.grabbableId ] = 
+					this.m_nodeToNodeAnchors[ endpointAddrToString( grabEvent.grabbableId ) ] = 
 					{
 						parentGlobalId: grabEvent.hookId,
 						parentFromNodeTransform: null,
@@ -571,25 +568,26 @@ export class AvDefaultTraverser
 				else
 				{
 					// we're dropping into open space
-					delete this.m_nodeToNodeAnchors[ grabEvent.grabbableId ];
+					delete this.m_nodeToNodeAnchors[ endpointAddrToString( grabEvent.grabbableId ) ];
 				}
 				break;
 		}
 	}
 
-	getTransform( globalNodeId: string  ): PendingTransform
+	getTransform( globalNodeId: EndpointAddr  ): PendingTransform
 	{
-		if( globalNodeId == "0" )
+		let idStr = endpointAddrToString( globalNodeId );
+		if( idStr == "0" )
 			return null;
 
-		if( !this.m_universeFromNodeTransforms.hasOwnProperty( globalNodeId ) )
+		if( !this.m_universeFromNodeTransforms.hasOwnProperty( idStr ) )
 		{
-			this.m_universeFromNodeTransforms[ globalNodeId ] = new PendingTransform();
+			this.m_universeFromNodeTransforms[ idStr ] = new PendingTransform();
 		}
-		return this.m_universeFromNodeTransforms[ globalNodeId ];
+		return this.m_universeFromNodeTransforms[ idStr ];
 	}
 
-	updateTransform( globalNodeId: string,
+	updateTransform( globalNodeId: EndpointAddr,
 		parent: PendingTransform, parentFromNode: mat4,
 		applyFunction: ( universeFromNode: mat4 ) => void )
 	{

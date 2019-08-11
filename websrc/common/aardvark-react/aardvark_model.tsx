@@ -10,9 +10,10 @@ interface AvModelProps extends AvBaseNodeProps
 
 export class AvModel extends AvBaseNode< AvModelProps, {} >
 {
-	public startNode( context:AvSceneContext )
+	public buildNode()
 	{
-		context.startNode( this.m_nodeId, "model" + this.m_nodeId, AvNodeType.Model );
-		context.setModelUri( this.props.uri );
+		let node = this.createNodeObject( AvNodeType.Model, this.m_nodeId );
+		node.propModelUri = this.props.uri;
+		return node;
 	}
 }

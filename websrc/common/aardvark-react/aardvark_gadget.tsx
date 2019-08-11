@@ -1,13 +1,15 @@
 import * as React from 'react';
 
 import { Av, AvPanelHandler, AvGadgetObj, AvSceneContext, AvPokerHandler, AvPanelMouseEventType, 
-	AvGrabEventProcessor, AvGrabberProcessor, AvGrabEventType, AvGrabEvent } from 'common/aardvark';
+	AvGrabEventProcessor, AvGrabberProcessor, AvGrabEventType, AvGrabEvent, AvGadgetManifest, AvNode, AvNodeType } from 'common/aardvark';
 import { IAvBaseNode } from './aardvark_base_node';
 import bind from 'bind-decorator';
+import { CGadgetEndpoint } from './gadget_endpoint';
+import { MessageType, MsgUpdateSceneGraph } from './aardvark_protocol';
 
 interface AvGadgetProps
 {
-	name: string;
+	gadgetUri?: string;
 }
 
 export class AvGadget extends React.Component< AvGadgetProps, {} >
@@ -19,14 +21,39 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 	m_gadget: AvGadgetObj = null;
 	m_nextFrameRequest: number = 0;
 	m_traversedNodes: {[nodeId:number]:IAvBaseNode } = {};
+	m_endpoint: CGadgetEndpoint = null;
+	m_manifest: AvGadgetManifest = null;
+	m_actualGadgetUri: string = null;
+
+	m_grabberProcessors: {[nodeId:number]: AvGrabberProcessor } = {};
+	m_grabEventProcessors: {[nodeId:number]: AvGrabEventProcessor } = {};
+	m_pokerProcessors: {[nodeId:number]: AvPokerHandler } = {};
 
 	constructor( props: any )
 	{
 		super( props );
 		AvGadget.s_instance = this;
-		this.m_gadget = Av().createGadget( this.props.name );
+
+		let gadgetUri = this.props.gadgetUri ? this.props.gadgetUri : window.location.href;
+		if( gadgetUri.lastIndexOf( ".html" ) == gadgetUri.length - 5 )
+		{
+			gadgetUri = gadgetUri.slice( 0, gadgetUri.lastIndexOf( "/" ) );
+			console.log( "Stripping gadget URI down to", gadgetUri );
+		}
+		this.m_actualGadgetUri = gadgetUri;
+
+		this.m_endpoint = new CGadgetEndpoint( this.m_actualGadgetUri, this.onEndpointOpen );
 	}
 
+	@bind public onEndpointOpen()
+	{
+		this.m_endpoint.getGadgetManifest( this.m_actualGadgetUri )
+		.then( ( manifest: AvGadgetManifest ) =>
+		{
+			this.m_manifest = manifest;
+			this.markDirty();
+		});
+	}
 	public static instance()
 	{
 		return AvGadget.s_instance;
@@ -34,7 +61,14 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 
 	public getName()
 	{
-		return this.props.name;
+		if( this.m_manifest )
+		{
+			return this.m_manifest.name;
+		}
+		else
+		{
+			return this.props.gadgetUri;
+		}
 	}
 
 	public register( node: IAvBaseNode )
@@ -53,25 +87,26 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 
 	public enableDefaultPanelHandling( nodeId: number )
 	{
-		this.m_gadget.enableDefaultPanelHandling( nodeId );
-		this.markDirty();
+		// TODO: Make mouse events work again
+		// this.m_gadget.enableDefaultPanelHandling( nodeId );
+		// this.markDirty();
 	}
 
 	public setPokerHandler( nodeId: number, handler: AvPokerHandler )
 	{
-		this.m_gadget.registerPokerHandler( nodeId, handler );
+		this.m_pokerProcessors[ nodeId ] = handler;
 		this.markDirty();
 	}
 
 	public setGrabEventProcessor( nodeId: number, processor: AvGrabEventProcessor )
 	{
-		this.m_gadget.registerGrabbableProcessor( nodeId, processor );
+		this.m_grabEventProcessors[ nodeId ] = processor;
 		this.markDirty();
 	}
 
 	public setGrabberProcessor( nodeId: number, processor: AvGrabberProcessor )
 	{
-		this.m_gadget.registerGrabberProcessor( nodeId, processor );
+		this.m_grabberProcessors[ nodeId ] = processor;
 		this.markDirty();
 	}
 
@@ -87,10 +122,10 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 		this.m_gadget.sendMouseEvent( pokerId, panelId, eventType, x, y );
 	}
 
-	private traverseNode( context: AvSceneContext, domNode: HTMLElement )
+	private traverseNode( domNode: HTMLElement ): AvNode[]
 	{
 		let lowerName = domNode.nodeName.toLowerCase();
-		let startedNode = false;
+		let node:AvNode = null;
 		switch( lowerName )
 		{
 			case "av-node":
@@ -98,46 +133,98 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 				if( attr )
 				{
 					let nodeId = parseInt( attr );
-					let node = this.m_registeredNodes[ nodeId ];
-					if( node )
+					let reactNode = this.m_registeredNodes[ nodeId ];
+					if( reactNode )
 					{
-						node.pushNode( context );
-						startedNode = true;
-						this.m_traversedNodes[nodeId] = node;
+						node = reactNode.buildNode();
+						this.m_traversedNodes[nodeId] = reactNode;
 					}
 				}
 				break;
 		}
 
+		let children: AvNode[] = [];
 		for( let n = 0; n < domNode.children.length; n++ )
 		{
 			let childDomNode = domNode.children.item( n );
 			if( childDomNode instanceof HTMLElement )
 			{
-				this.traverseNode( context, childDomNode as HTMLElement );
+				let descencents = this.traverseNode( childDomNode as HTMLElement );
+				if( descencents && descencents.length > 0 )
+				{
+					children = children.concat( descencents );
+				}
 			}
 		}
 
-		if( startedNode )
+		// figure out what to return
+		if( node )
 		{
-			context.finishNode();
+			// if we got a node from the DOM, return that
+			if( children.length > 0 )
+			{
+				node.children = children;
+			}
+
+			return [ node ];
+		}
+		else if( children.length > 0 )
+		{
+			// If we have children but no node, just return
+			// the children. This node is a no-op.
+			return children;
+		}
+		else
+		{
+			// otherwise, we've got nothing
+			return null;
 		}
 	}
 
 	@bind public updateSceneGraph()
 	{
-		let context = this.m_gadget.startSceneContext();
+		if( !this.m_manifest )
+		{
+			console.log( "Updating scene graph before manifest was loaded" );
+			return;
+		}
 
 		this.m_traversedNodes = {};
-		this.traverseNode( context, document.body );
+		let rootNodes = this.traverseNode( document.body );
 
-		context.finish();
+		let msg: MsgUpdateSceneGraph = {};
+		if( rootNodes && rootNodes.length > 0 )
+		{
+			if( rootNodes.length > 1 )
+			{
+				msg.root =
+				{
+					type: AvNodeType.Container,
+					id: 0,
+					flags: 0,
+					children: rootNodes,
+				};
+			}
+			else
+			{
+				msg.root = rootNodes[0];
+			}
+		}
+
+		this.m_endpoint.sendMessage( null, MessageType.UpdateSceneGraph, msg );
 
 		this.m_nextFrameRequest = 0;
 	}
 
 	public markDirty()
 	{
+		if( !this.m_manifest )
+		{
+			// If we don't have our manifest yet, we can't update the scene graph.
+			// We'll update automatically once that comes in.
+			return;
+		}
+
 		if( this.m_nextFrameRequest == 0 )
 		{
 			this.m_nextFrameRequest = window.requestAnimationFrame( this.updateSceneGraph );
@@ -146,7 +233,7 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 
 	public sendHapticEventFromPanel( panelId: number, amplitude: number, frequency: number, duration: number ): void
 	{
-		this.m_gadget.sendHapticEventFromPanel( panelId, amplitude, frequency, duration );
+//		this.m_gadget.sendHapticEventFromPanel( panelId, amplitude, frequency, duration );
 	}
 
 	public render()

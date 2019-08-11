@@ -4,11 +4,12 @@ import { AvGadget } from './aardvark_gadget';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 import { AvSceneContext, AvNodeType, AvGrabEvent, AvGrabEventType } from 'common/aardvark';
 import bind from 'bind-decorator';
+import { EndpointAddr } from './aardvark_protocol';
 
 export interface GrabResponse
 {
 	allowed: boolean;
-	proxyGrabbableGlobalId?: string;
+	proxyGrabbableGlobalId?: EndpointAddr;
 }
 
 export enum HighlightType
@@ -29,11 +30,10 @@ export class AvGrabbable extends AvBaseNode< AvGrabbableProps, {} >
 {
 	m_lastHighlight = HighlightType.None;
 
-	public startNode( context:AvSceneContext )
+	public buildNode()
 	{
-		context.startNode( this.m_nodeId, "grabbable" + this.m_nodeId, AvNodeType.Grabbable );
-
 		AvGadget.instance().setGrabEventProcessor( this.m_nodeId, this.onGrabEvent );
+		return this.createNodeObject( AvNodeType.Grabbable, this.m_nodeId );
 	}
 
 	@bind private onGrabEvent( evt: AvGrabEvent )

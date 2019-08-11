@@ -39,6 +39,15 @@ working on animations and moving transform math to C++
 * The idea is that only actual changes to the scene graph actually require a new traversal. Frame-to-frame transform changes, including animations, can be handled by C++ without calling back into JS to re-traverse
 
 
+Websocket conversion:
+* Scene graph updates are mostly working. Monitors receive them
+* Renderers aren't even started.
+* need grabber intersection plumbing
+* Need grab event plumbing
+* Need replacement textures for panels. Still need a C++ function to get that. Subscribe for updates maybe?
+* Need a C++ function to spoof mouse events for panels.
+
+
 
 ========= DEAL WITH THIS NEXT ===========
 

@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import { AvSceneContext, AvNodeType } from 'common/aardvark';
+import { AvSceneContext, AvNodeType, EVolumeType } from 'common/aardvark';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 
 interface AvSphereHandleProps extends AvBaseNodeProps
@@ -10,9 +10,10 @@ interface AvSphereHandleProps extends AvBaseNodeProps
 
 export class AvSphereHandle extends AvBaseNode< AvSphereHandleProps, {} > 
 {
-	public startNode( context:AvSceneContext )
+	public buildNode()
 	{
-		context.startNode( this.m_nodeId, "sphere" + this.m_nodeId, AvNodeType.Handle );
-		context.setSphereVolume( this.props.radius );
+		let node = this.createNodeObject( AvNodeType.Handle, this.m_nodeId );
+		node.propVolume = { type: EVolumeType.Sphere, radius : this.props.radius };
+		return node;
 	}
 }

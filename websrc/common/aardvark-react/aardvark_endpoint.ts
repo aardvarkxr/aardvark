@@ -1,10 +1,10 @@
 import bind from 'bind-decorator';
-import { EndpointType, MessageType, Endpoint, Envelope, parseEnvelope, MsgSetEndpointType, MsgGetGadgetManifest, MsgGetGadgetManifestResponse } from './aardvark_protocol';
+import { EndpointType, MessageType, EndpointAddr, Envelope, parseEnvelope, MsgSetEndpointType, MsgGetGadgetManifest, MsgGetGadgetManifestResponse } from './aardvark_protocol';
 import { AvGadgetManifest } from 'common/aardvark';
 
 export interface MessageHandler
 {
-	( type:MessageType, payload: any, sender: Endpoint ):void;
+	( type:MessageType, payload: any, sender: EndpointAddr ):void;
 }
 
 export interface OpenHandler
@@ -12,7 +12,7 @@ export interface OpenHandler
 	():void;
 }
 
-class CAardvarkEndpoint
+export class CAardvarkEndpoint
 {
 	private m_ws = new WebSocket( "ws://localhost:8999" );
 	private m_handlers: { [ msgType: number ]: MessageHandler } = {};
@@ -61,7 +61,7 @@ class CAardvarkEndpoint
 		}
 	}
 
-	public sendMessage( targets: Endpoint[], type: MessageType, msg: any )
+	public sendMessage( targets: EndpointAddr[], type: MessageType, msg: any )
 	{
 		let env: Envelope =
 		{
@@ -88,7 +88,7 @@ class CAardvarkEndpoint
 			this.sendMessage( [], MessageType.GetGadgetManifest, msgGetGadgetManifest );
 				
 			this.waitForResponse( MessageType.GetGadgetManifestResponse, 
-				( type:MessageType, m: MsgGetGadgetManifestResponse, sender: Endpoint ) =>
+				( type:MessageType, m: MsgGetGadgetManifestResponse, sender: EndpointAddr ) =>
 				{
 					if( m.manifest )
 					{
@@ -124,29 +124,4 @@ export class CMonitorEndpoint extends CAardvarkEndpoint
 
 }
 
-
-export class CGadgetEndpoint extends CAardvarkEndpoint
-{
-	private gadgetUri: string;
-
-	constructor( gadgetUri: string, defaultHandler: MessageHandler = null )
-	{
-		super( () => { this.onOpen() }, defaultHandler );
-		this.gadgetUri = gadgetUri;
-	}
-
-	@bind onOpen()
-	{
-		console.log( "Connected" );
-		let msgSetEndpointType: MsgSetEndpointType =
-		{
-			newEndpointType: EndpointType.Gadget,
-			gadgetUri: this.gadgetUri,
-		}
-
-		this.sendMessage( [], MessageType.SetEndpointType, msgSetEndpointType );
-	}
-
-
-}
 
