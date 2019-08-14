@@ -1,6 +1,6 @@
 import * as React from 'react';
 import  * as ReactDOM from 'react-dom';
-import { AvGadget } from 'common/aardvark-react/aardvark_gadget';
+import { AvGadget, parseURL } from 'common/aardvark-react/aardvark_gadget';
 import { AvOrigin } from 'common/aardvark-react/aardvark_origin';
 import { AvTransform } from 'common/aardvark-react/aardvark_transform';
 import { AvGrabber, GrabberHighlight } from 'common/aardvark-react/aardvark_grabber';
@@ -8,25 +8,6 @@ import bind from 'bind-decorator';
 import { AvModel } from 'common/aardvark-react/aardvark_model';
 import { AvPoker } from 'common/aardvark-react/aardvark_poker';
 
-
-function parseURL(url: string) 
-{
-    var parser = document.createElement('a'),
-        searchObject: {[ key: string ]: string } = {},
-        queries, split, i;
-
-	// Let the browser do the work
-	parser.href = url;
-	
-    // Convert query string to object
-    queries = parser.search.replace(/^\?/, '').split('&');
-    for( i = 0; i < queries.length; i++ ) {
-        split = queries[i].split('=');
-        searchObject[split[0]] = split[1];
-	}
-	
-	return searchObject;
-}
 
 interface DefaultHandState
 {
@@ -87,7 +68,7 @@ class DefaultHand extends React.Component< {}, DefaultHandState >
 		}
 
 		return (
-			<AvGadget name="Grabber">
+			<AvGadget>
 				<AvTransform uniformScale= { 0.01 } >
 					<AvModel uri={ modelUri }/>
 				</AvTransform>

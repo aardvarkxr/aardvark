@@ -52,7 +52,14 @@ function getJSONFromUri( uri: string ): Promise< any >
 				}
 				else
 				{
-					resolve( JSON.parse( data ) );
+					try
+					{
+						resolve( JSON.parse( data ) );
+					}
+					catch( e )
+					{
+						reject( e );
+					}
 				}
 			});
 		}
@@ -118,6 +125,24 @@ class CDispatcher
 		{
 			this.sendStateToMonitor( ep );
 		}
+		else if( ep.getType() == EndpointType.Renderer )
+		{
+			// tell the renderer about everybody's scene graphs
+			for( let epid in this.m_endpoints )
+			{
+				let existingEp = this.m_endpoints[ epid ];
+				if( existingEp.getType() == EndpointType.Gadget )
+				{
+					let gadgetData = existingEp.getGadgetData();
+					if( gadgetData )
+					{
+						ep.sendMessageString(
+							this.buildPackedEnvelope( 
+								this.buildUpdateSceneGraphMessage( existingEp.getId(), gadgetData.getRoot(), gadgetData.getHook() ) ) );
+					}
+				}
+			}
+		}
 	}
 
 	public removeEndpoint( ep: CEndpoint )
@@ -145,9 +170,13 @@ class CDispatcher
 						this.buildPackedEnvelope( 
 							this.buildNewEndpointMessage( ep ) ) );
 
-					targetEp.sendMessageString(
-						this.buildPackedEnvelope( 
-							this.buildUpdateSceneGraphMessage( ep.getId(), ep.getGadgetData().getRoot() ) ) );
+					let gadgetData = ep.getGadgetData();
+					if( gadgetData )
+					{
+						targetEp.sendMessageString(
+							this.buildPackedEnvelope( 
+								this.buildUpdateSceneGraphMessage( ep.getId(), gadgetData.getRoot(), gadgetData.getHook() ) ) );
+					}
 					break;
 
 				case EndpointType.Renderer:
@@ -197,18 +226,19 @@ class CDispatcher
 		}
 	}
 
-	public updateGadgetSceneGraph( gadgetId: number, root: AvNode )
+	public updateGadgetSceneGraph( gadgetId: number, root: AvNode, hook: string )
 	{
-		let env = this.buildUpdateSceneGraphMessage( gadgetId, root );
+		let env = this.buildUpdateSceneGraphMessage( gadgetId, root, hook );
 		this.sendToAllEndpointsOfType( EndpointType.Monitor, env );
 		this.sendToAllEndpointsOfType( EndpointType.Renderer, env );
 	}
 
-	private buildUpdateSceneGraphMessage( gadgetId: number, root: AvNode ): Envelope
+	private buildUpdateSceneGraphMessage( gadgetId: number, root: AvNode, hook: string ): Envelope
 	{
 		let msg: MsgUpdateSceneGraph = 
 		{
 			root,
+			hook,
 		};
 		return (
 		{
@@ -247,12 +277,14 @@ class CGadgetData
 	private m_ep: CEndpoint;
 	private m_manifest: AvGadgetManifest = null;
 	private m_root: AvNode = null;
+	private m_hook: string = null;
 	private m_dispatcher: CDispatcher = null;
 
-	constructor( ep: CEndpoint, uri: string, dispatcher: CDispatcher )
+	constructor( ep: CEndpoint, uri: string, initialHook: string, dispatcher: CDispatcher )
 	{
 		this.m_ep = ep;
 		this.m_gadgetUri = uri;
+		this.m_hook = initialHook;
 		this.m_dispatcher = dispatcher;
 
 		getJSONFromUri( this.m_gadgetUri + "/gadget_manifest.json")
@@ -271,11 +303,12 @@ class CGadgetData
 	public getUri() { return this.m_gadgetUri; }
 	public getName() { return this.m_manifest.name; }
 	public getRoot() { return this.m_root; }
+	public getHook() { return this.m_hook; }
 
 	public updateSceneGraph( root: AvNode ) 
 	{
 		this.m_root = root;
-		this.m_dispatcher.updateGadgetSceneGraph( this.m_ep.getId(), this.m_root );
+		this.m_dispatcher.updateGadgetSceneGraph( this.m_ep.getId(), this.m_root, this.m_hook );
 	}
 }
 
@@ -424,7 +457,8 @@ class CEndpoint
 
 		if( this.getType() == EndpointType.Gadget )
 		{
-			this.m_gadgetData = new CGadgetData( this, m.gadgetUri, this.m_dispatcher );
+			console.log( " initial hook is " + m.initialHook );
+			this.m_gadgetData = new CGadgetData( this, m.gadgetUri, m.initialHook, this.m_dispatcher );
 		}
 
 		this.m_dispatcher.setEndpointType( this );

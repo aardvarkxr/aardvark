@@ -11,6 +11,7 @@ interface GadgetMonitorProps
 	gadgetId: number;
 	gadgetUri: string;
 	gadgetRoot?: AvNode;
+	gadgetHook?: string;
 	monitor: CMonitorEndpoint;
 }
 
@@ -101,6 +102,7 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 		if( !node )
 			return null;
 
+		console.log( "rendering node", node );
 		let childElements: JSX.Element[] = [];
 		if( node.children )
 		{
@@ -131,7 +133,9 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 		return <div className="Gadget">
 			Gadget { this.props.gadgetId } 
 			<div className="GadgetName">{ this.state.manifest ? this.state.manifest.name : "???" } 
-				<span className="GadgetUri">({ this.props.gadgetUri })</span></div>
+				<span className="GadgetUri">({ this.props.gadgetUri })</span>
+				<span className="GadgetUri">({ this.props.gadgetHook })</span>
+			</div>
 			{ this.props.gadgetRoot && this.renderNode( this.props.gadgetRoot ) }
 
 		</div>
@@ -168,6 +172,7 @@ interface EndpointData
 	type: EndpointType;
 	gadgetUri?: string;
 	gadgetRoot?: AvNode;
+	gadgetHook?: string;
 }
 
 interface AardvarkMonitorState
@@ -219,6 +224,7 @@ class AardvarkMonitor extends React.Component< {}, AardvarkMonitorState >
 	{
 		let newList = Object.assign( {}, this.state.endpoints );
 		newList[ sender.endpointId ].gadgetRoot = message.root;
+		newList[ sender.endpointId ].gadgetHook = message.hook;
 		this.setState( { endpoints: newList } );
 	}
 
@@ -243,6 +249,7 @@ class AardvarkMonitor extends React.Component< {}, AardvarkMonitorState >
 						gadgetId={ ep.id } 
 						gadgetUri={ ep.gadgetUri } 
 						gadgetRoot={ ep.gadgetRoot }
+						gadgetHook={ ep.gadgetHook }
 						monitor={ this.m_endpoint } /> );
 					break;
 				case EndpointType.Renderer:

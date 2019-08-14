@@ -265,16 +265,16 @@ interface AvRenderer
 	registerHapticProcessor( hapticProcessor: AvHapticProcessor ) : void;
 	sendHapticEventForHand( hand: EHand, amplitude: number, frequency: number, duration: number ): void;
 
-	addActivePanel( panelGlobalId: EndpointAddr, nodeFromUniverse: number[], zScale: number, hand: EHand  ): void;
-	addActivePoker( pokerGlobalId: EndpointAddr, pokerInUniverse: number[], hand: EHand  ): void;
+	addActivePanel( panelGlobalId: string, nodeFromUniverse: number[], zScale: number, hand: EHand  ): void;
+	addActivePoker( pokerGlobalId: string, pokerInUniverse: number[], hand: EHand  ): void;
 
 	registerGrabEventProcessor( grabEventProcessor: AvGrabEventProcessor ): void;
-	addGrabbableHandle_Sphere( grabbableGlobalId: EndpointAddr, universeFromGrabbable: number[], radius: number, hand: EHand ): void;
-	addGrabber_Sphere( grabberGlobalId: EndpointAddr, universeFromGrabber: number[], radius: number, hand: EHand ): void;
-	addHook_Sphere( hookGlobalId: EndpointAddr, universeFromGrabber: number[], radius: number, hand: EHand  ): void;
+	addGrabbableHandle_Sphere( grabbableGlobalId: string, universeFromGrabbable: number[], radius: number, hand: EHand ): void;
+	addGrabber_Sphere( grabberGlobalId: string, universeFromGrabber: number[], radius: number, hand: EHand ): void;
+	addHook_Sphere( hookGlobalId: string, universeFromGrabber: number[], radius: number, hand: EHand  ): void;
 
-	startGrab( grabberGlobalId: EndpointAddr, grabbableGlobalId: EndpointAddr  ): void;
-	endGrab( grabberGlobalId: EndpointAddr, grabbableGlobalId: EndpointAddr  ): void;
+	startGrab( grabberGlobalId: string, grabbableGlobalId: string  ): void;
+	endGrab( grabberGlobalId: string, grabbableGlobalId: string  ): void;
 }
 
 export interface AvStartGadgetCallback

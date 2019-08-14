@@ -17,7 +17,7 @@ class TestGadgetLauncher extends React.Component< {}, {} >
 	{
 		return (
 			<div >
-				<AvGadget name="Test App Launcher">
+				<AvGadget>
 					<AvTransform translateX={0.5}>
 						<AvGadgetSeed uri="https://aardvark.install/gadgets/test_panel" />
 					</AvTransform>

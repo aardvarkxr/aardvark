@@ -34,18 +34,29 @@ export abstract class AvBaseNode<TProps, TState> extends React.Component<TProps,
 	constructor( props: any )
 	{
 		super( props );
-		AvGadget.instance().register( this );
-
-		if( props.onIdAssigned )
-		{
-			props.onIdAssigned( this.m_nodeId );
-		}
 	}
 
 	public abstract buildNode( ): AvNode;
 
-	protected createNodeObject( nodeId: number, type: AvNodeType ): AvNode
+	public componentWillMount()
 	{
+		AvGadget.instance().register( this );
+
+		let anyProps = this.props as any;
+		if( anyProps.onIdAssigned )
+		{
+			anyProps.onIdAssigned( this.m_nodeId );
+		}
+	}
+
+	public componentWillUnmount()
+	{
+		AvGadget.instance().unregister( this );
+	}
+
+	protected createNodeObject( type: AvNodeType, nodeId: number ): AvNode
+	{
+		console.log( `creating ${ AvNodeType[ type] } ${ nodeId }` );
 		return (
 		{
 			type: type,

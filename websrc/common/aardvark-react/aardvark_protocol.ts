@@ -76,6 +76,7 @@ export interface MsgSetEndpointType
 {
 	newEndpointType: EndpointType;
 	gadgetUri?: string;
+	initialHook?: string;
 }
 
 export interface MsgNewEndpoint
@@ -105,6 +106,7 @@ export interface MsgGetGadgetManifestResponse
 export interface MsgUpdateSceneGraph
 {
 	root?: AvNode;
+	hook?: string;
 }
 
 export function parseEnvelope( envString: string, parsePayload: boolean = true ): Envelope

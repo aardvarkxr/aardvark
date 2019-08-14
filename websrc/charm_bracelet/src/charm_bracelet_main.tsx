@@ -46,7 +46,7 @@ class CharmBracelet extends React.Component< {}, CharmBraceletState >
 
 		return (
 			<div className="FullPage" >
-				<AvGadget name="Charm Bracelet">
+				<AvGadget>
 					<AvTransform translateY={ -0.2 } translateZ = {0.2}>
 						<AvHook updateHighlight= { this.onHighlightHook } radius={ 0.1 } />
 						<AvTransform uniformScale={ 0.1 }>

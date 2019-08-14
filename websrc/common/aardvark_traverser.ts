@@ -1,8 +1,10 @@
+import { MsgUpdateSceneGraph, EndpointType } from 'common/aardvark-react/aardvark_protocol';
+import { CRendererEndpoint } from './aardvark-react/renderer_endpoint';
 import { Av, AvGrabEventType } from 'common/aardvark';
 import { AvModelInstance, AvNode, AvNodeRoot, AvNodeType, AvVisualFrame, EHand, EVolumeType, AvGrabEvent } from './aardvark';
 import { mat4, vec3, quat, vec4 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
-import { EndpointAddr, endpointAddrToString, endpointAddrIsEmpty } from './aardvark-react/aardvark_protocol';
+import { EndpointAddr, endpointAddrToString, endpointAddrIsEmpty, MessageType } from './aardvark-react/aardvark_protocol';
 
 interface NodeData
 {
@@ -122,10 +124,60 @@ export class AvDefaultTraverser
 	private m_universeFromNodeTransforms: { [ nodeGlobalId:string ]: PendingTransform } = {};
 	private m_nodeData: { [ nodeGlobalId:string ]: NodeData } = {};
 	private m_lastFrameUniverseFromNodeTransforms: { [ nodeGlobalId:string ]: mat4 } = {};
-	private m_roots: AvNodeRoot[] = [];
+	private m_roots: { [gadgetId:number] : AvNodeRoot } = {};
 	private m_currentRoot: AvNodeRoot = null;
 	private m_renderList: AvModelInstance[] = [];
 	private m_nodeToNodeAnchors: { [ nodeGlobalId: string ]: NodeToNodeAnchor_t } = {};
+	private m_endpoint: CRendererEndpoint = null;
+
+	constructor()
+	{
+		this.m_endpoint = new CRendererEndpoint( this.onEndpointOpen );
+		this.m_endpoint.registerHandler( MessageType.UpdateSceneGraph, this.onUpdateSceneGraph )
+	}
+
+	@bind onEndpointOpen()
+	{
+
+	}
+
+	@bind onUpdateSceneGraph( type:MessageType, payload: any, sender: EndpointAddr )
+	{
+		let m = payload as MsgUpdateSceneGraph;
+		if( !m.root )
+		{
+			// TODO: Clean up drags and such?
+			delete this.m_roots[ sender.endpointId ];
+		}
+		else
+		{
+			this.updateGlobalIds( m.root, sender.endpointId );
+			this.m_roots[ sender.endpointId ] =
+			{
+				gadgetId: sender.endpointId,
+				root: m.root,
+				hook: m.hook,
+			}
+		}
+	}
+
+	private updateGlobalIds( node: AvNode, gadgetId: number )
+	{
+		node.globalId =
+		{
+			type: EndpointType.Node,
+			endpointId: gadgetId,
+			nodeId: node.id,
+		}
+
+		if( node.children )
+		{
+			for( let child of node.children )
+			{
+				this.updateGlobalIds( child, gadgetId );
+			}
+		}
+	}
 
 	@bind
 	public traverse()
@@ -144,9 +196,9 @@ export class AvDefaultTraverser
 		this.m_universeFromNodeTransforms = {};
 		this.m_renderList = [];
 
-		for ( let root of this.m_roots )
+		for ( let gadgetId in this.m_roots )
 		{
-			this.traverseSceneGraph( root );
+			this.traverseSceneGraph( this.m_roots[ gadgetId ] );
 		}
 		this.m_currentRoot = null;
 	
@@ -180,13 +232,18 @@ export class AvDefaultTraverser
 	{
 		if( root.root )
 		{
+			// get the ID for node 0. We're going to use that as the parent of
+			// everything. 
+			let node0Id = Object.assign( {}, root.root.globalId );
+			node0Id.nodeId = 0;
+
 			this.m_currentRoot = root;
 			if( root.hook )
 			{
-				this.setHookOrigin( root.hook, root.root );
+				this.setHookOrigin( root.hook, node0Id );
 			}
 
-			this.traverseNode( root.root, null );
+			this.traverseNode( root.root, this.getTransform( node0Id ) );
 		}
 	}
 
@@ -267,16 +324,16 @@ export class AvDefaultTraverser
 
 	traverseOrigin( node: AvNode, defaultParent: PendingTransform )
 	{
-		this.setHookOrigin( node.propOrigin, node );
+		this.setHookOrigin( node.propOrigin, node.globalId );
 	}
 
 
-	setHookOrigin( origin: string, node: AvNode )
+	setHookOrigin( origin: string, globalId: EndpointAddr )
 	{
 		let universeFromOrigin = Av().renderer.getUniverseFromOriginTransform( origin );
 		if ( universeFromOrigin )
 		{
-			this.updateTransform( node.globalId, null, new mat4( universeFromOrigin ), null );
+			this.updateTransform( globalId, null, new mat4( universeFromOrigin ), null );
 
 			if ( origin == "/user/hand/left" )
 			{
@@ -381,16 +438,16 @@ export class AvDefaultTraverser
 
 		if ( nodeData.modelInstance )
 		{
-			try
-			{
-				nodeData.modelInstance.setOverrideTexture( this.m_currentRoot.gadgetId );
-			}
-			catch( e )
-			{
-				// just eat these and don't add the panel. Sometimes we find out about a panel 
-				// before we find out about its texture
-				return;
-			}
+			// try
+			// {
+			// 	nodeData.modelInstance.setOverrideTexture( this.m_currentRoot.gadgetId );
+			// }
+			// catch( e )
+			// {
+			// 	// just eat these and don't add the panel. Sometimes we find out about a panel 
+			// 	// before we find out about its texture
+			// 	return;
+			// }
 
 			let hand = this.m_currentHand;
 			this.updateTransform( node.globalId, defaultParent, mat4.identity,
@@ -399,17 +456,17 @@ export class AvDefaultTraverser
 				nodeData.modelInstance.setUniverseFromModelTransform( universeFromNode.all() );
 				this.m_renderList.push( nodeData.modelInstance );
 
-				if ( node.propInteractive )
-				{
-					let panelNormal = universeFromNode.multiplyVec4( new vec4( [ 0, 1, 0, 0 ] ) );
-					let zScale = panelNormal.length();
-					let nodeFromUniverse = new mat4( universeFromNode.all() ).inverse();
-					Av().renderer.addActivePanel(
-						node.globalId,
-						nodeFromUniverse.all(),
-						zScale, 
-						hand );
-				}
+				// if ( node.propInteractive )
+				// {
+				// 	let panelNormal = universeFromNode.multiplyVec4( new vec4( [ 0, 1, 0, 0 ] ) );
+				// 	let zScale = panelNormal.length();
+				// 	let nodeFromUniverse = new mat4( universeFromNode.all() ).inverse();
+				// 	Av().renderer.addActivePanel(
+				// 		endpointAddrToString( node.globalId ),
+				// 		nodeFromUniverse.all(),
+				// 		zScale, 
+				// 		hand );
+				// }
 			} );
 		}
 	}
@@ -421,7 +478,7 @@ export class AvDefaultTraverser
 			( universeFromNode: mat4 ) =>
 		{
 			let pokerInUniverse = universeFromNode.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) );
-			Av().renderer.addActivePoker( node.globalId, [ pokerInUniverse.x, pokerInUniverse.y, pokerInUniverse.z ], hand );
+			Av().renderer.addActivePoker( endpointAddrToString( node.globalId ), [ pokerInUniverse.x, pokerInUniverse.y, pokerInUniverse.z ], hand );
 		} );
 	}
 	
@@ -452,7 +509,7 @@ export class AvDefaultTraverser
 			switch( node.propVolume.type )
 			{
 				case EVolumeType.Sphere:
-					Av().renderer.addGrabbableHandle_Sphere( grabbableGlobalId, universeFromNode.all(), 
+					Av().renderer.addGrabbableHandle_Sphere( endpointAddrToString( grabbableGlobalId ), universeFromNode.all(), 
 						node.propVolume.radius, hand );
 					break;
 				default:
@@ -477,7 +534,8 @@ export class AvDefaultTraverser
 			switch( node.propVolume.type )
 			{
 				case EVolumeType.Sphere:
-					Av().renderer.addGrabber_Sphere( grabberGlobalId, nodeFromUniverse.all(), node.propVolume.radius, grabberHand );
+					Av().renderer.addGrabber_Sphere( endpointAddrToString( grabberGlobalId ), nodeFromUniverse.all(), 
+						node.propVolume.radius, grabberHand );
 					break;
 				default:
 					throw "unsupported volume type";
@@ -500,7 +558,7 @@ export class AvDefaultTraverser
 			switch( node.propVolume.type )
 			{
 				case EVolumeType.Sphere:
-					Av().renderer.addHook_Sphere( hookGlobalId, universeFromNode.all(), node.propVolume.radius, hand );
+					Av().renderer.addHook_Sphere( endpointAddrToString( hookGlobalId ), universeFromNode.all(), node.propVolume.radius, hand );
 					break;
 				default:
 					throw "unsupported volume type";
@@ -542,7 +600,7 @@ export class AvDefaultTraverser
 					parentGlobalId: grabEvent.grabberId,
 					parentFromNodeTransform: grabberFromGrabbable,
 				};
-				Av().renderer.startGrab( grabEvent.grabberId, grabEvent.grabbableId );
+				Av().renderer.startGrab( grabberIdStr, grabbableIdStr );
 
 				Av().sendGrabEvent( 
 					{
@@ -555,7 +613,7 @@ export class AvDefaultTraverser
 
 			case AvGrabEventType.EndGrab:
 				console.log( "Traverser ending grab of " + grabEvent.grabbableId + " by " + grabEvent.grabberId );
-				Av().renderer.endGrab( grabEvent.grabberId, grabEvent.grabbableId );
+				Av().renderer.endGrab( endpointAddrToString( grabEvent.grabberId ), endpointAddrToString( grabEvent.grabbableId ) );
 				if( endpointAddrIsEmpty( grabEvent.hookId ) )
 				{
 					// we're dropping onto a hook

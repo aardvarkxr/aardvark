@@ -1,6 +1,6 @@
 import { AvGadget } from './aardvark_gadget';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
-import { AvSceneContext, AvNodeType, AvGrabEventType, AvGrabEvent, EVolumeType } from 'common/aardvark';
+import { AvNodeType, AvGrabEventType, AvGrabEvent, EVolumeType } from 'common/aardvark';
 import bind from 'bind-decorator';
 
 

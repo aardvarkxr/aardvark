@@ -3,18 +3,14 @@ import { MsgSetEndpointType, MessageType, EndpointType } from './aardvark_protoc
 import bind from 'bind-decorator';
 
 
-export class CGadgetEndpoint extends CAardvarkEndpoint
+export class CRendererEndpoint extends CAardvarkEndpoint
 {
-	private m_gadgetUri: string;
-	private m_initialHook: string;
 	private m_openHandler: OpenHandler;
 
-	constructor( gadgetUri: string, initialHook: string, openHandler: OpenHandler, defaultHandler: MessageHandler = null )
+	constructor( openHandler: OpenHandler, defaultHandler: MessageHandler = null )
 	{
 		super( () => { this.onOpen() }, defaultHandler );
 		this.m_openHandler = openHandler;
-		this.m_gadgetUri = gadgetUri;
-		this.m_initialHook = initialHook;
 	}
 
 	@bind onOpen()
@@ -22,9 +18,7 @@ export class CGadgetEndpoint extends CAardvarkEndpoint
 		console.log( "Connected" );
 		let msgSetEndpointType: MsgSetEndpointType =
 		{
-			newEndpointType: EndpointType.Gadget,
-			gadgetUri: this.m_gadgetUri,
-			initialHook: this.m_initialHook,
+			newEndpointType: EndpointType.Renderer,
 		}
 
 		this.sendMessage( [], MessageType.SetEndpointType, msgSetEndpointType );
@@ -34,7 +28,5 @@ export class CGadgetEndpoint extends CAardvarkEndpoint
 			this.m_openHandler();
 		}
 	}
-
-
 }
 

@@ -24,7 +24,7 @@ export class AvPanel extends AvBaseNode< AvPanelProps, {} >
 			AvGadget.instance().enableDefaultPanelHandling( this.m_nodeId );
 		}
 
-		let node = this.createNodeObject( AvNodeType.Origin, this.m_nodeId );
+		let node = this.createNodeObject( AvNodeType.Panel, this.m_nodeId );
 		node.propInteractive = this.props.interactive;
 
 		// TODO: Need to get DXGI info here and stuff it into a property

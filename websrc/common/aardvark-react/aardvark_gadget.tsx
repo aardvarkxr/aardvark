@@ -12,6 +12,25 @@ interface AvGadgetProps
 	gadgetUri?: string;
 }
 
+export function parseURL(url: string) 
+{
+    var parser = document.createElement('a'),
+        searchObject: {[ key: string ]: string } = {},
+        queries, split, i;
+
+	// Let the browser do the work
+	parser.href = url;
+	
+    // Convert query string to object
+    queries = parser.search.replace(/^\?/, '').split('&');
+    for( i = 0; i < queries.length; i++ ) {
+        split = queries[i].split('=');
+        searchObject[split[0]] = split[1];
+	}
+	
+	return searchObject;
+}
+
 export class AvGadget extends React.Component< AvGadgetProps, {} >
 {
 	private static s_instance:AvGadget = null;
@@ -34,15 +53,28 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 		super( props );
 		AvGadget.s_instance = this;
 
-		let gadgetUri = this.props.gadgetUri ? this.props.gadgetUri : window.location.href;
-		if( gadgetUri.lastIndexOf( ".html" ) == gadgetUri.length - 5 )
+		if( this.props.gadgetUri )
 		{
-			gadgetUri = gadgetUri.slice( 0, gadgetUri.lastIndexOf( "/" ) );
-			console.log( "Stripping gadget URI down to", gadgetUri );
+			this.m_actualGadgetUri = this.props.gadgetUri;
 		}
-		this.m_actualGadgetUri = gadgetUri;
+		else
+		{
+			if( window.location.pathname.lastIndexOf( ".html" ) == window.location.pathname.length - 5 )
+			{
+				this.m_actualGadgetUri = 
+					window.location.origin
+					+ window.location.pathname.slice( 0, window.location.pathname.lastIndexOf( "/" ) );
+				console.log( "Stripping gadget URI down to", this.m_actualGadgetUri );
+			}
+			else
+			{
+				this.m_actualGadgetUri = window.location.origin;
+			}
+		}
 
-		this.m_endpoint = new CGadgetEndpoint( this.m_actualGadgetUri, this.onEndpointOpen );
+		let params = parseURL( window.location.href );
+
+		this.m_endpoint = new CGadgetEndpoint( this.m_actualGadgetUri, params["initialHook"], this.onEndpointOpen );
 	}
 
 	@bind public onEndpointOpen()
@@ -73,8 +105,20 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 
 	public register( node: IAvBaseNode )
 	{
+		console.log( "assigning id", this.m_nextNodeId );
 		node.m_nodeId = this.m_nextNodeId++;
 		this.m_registeredNodes[ node.m_nodeId ] = node;
+		this.markDirty();
+	}
+
+	public unregister( node: IAvBaseNode )
+	{
+		if( node.m_nodeId )
+		{
+			delete this.m_registeredNodes[ node.m_nodeId ];
+			node.m_nodeId = undefined;
+		}
+
 		this.markDirty();
 	}
 
@@ -227,7 +271,7 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 
 		if( this.m_nextFrameRequest == 0 )
 		{
-			this.m_nextFrameRequest = window.requestAnimationFrame( this.updateSceneGraph );
+			this.m_nextFrameRequest = window.setTimeout( this.updateSceneGraph, 1 );
 		}
 	}
 

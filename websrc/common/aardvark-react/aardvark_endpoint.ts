@@ -14,16 +14,25 @@ export interface OpenHandler
 
 export class CAardvarkEndpoint
 {
-	private m_ws = new WebSocket( "ws://localhost:8999" );
+	private m_ws:WebSocket = null;
 	private m_handlers: { [ msgType: number ]: MessageHandler } = {};
 	private m_callbacks: { [ msgType: number ]: MessageHandler } = {};
 	private m_defaultHandler: MessageHandler = null;
+	private m_realOpenHandler: OpenHandler = null;
 
 	constructor( openHandler: OpenHandler, defaultHandler: MessageHandler = null )
 	{
 		this.m_defaultHandler = defaultHandler;
-		this.m_ws.onopen = openHandler;
+		this.m_realOpenHandler = openHandler;
+		this.connectToServer();
+	}
+
+	@bind private connectToServer()
+	{
+		this.m_ws = new WebSocket( "ws://localhost:8999" );
+		this.m_ws.onopen = this.m_realOpenHandler;
 		this.m_ws.onmessage = this.onMessage;
+		this.m_ws.onclose = this.onClose;
 	}
 
 	public registerHandler( type: MessageType, handler: MessageHandler )
@@ -100,6 +109,13 @@ export class CAardvarkEndpoint
 					}
 				});
 		})
+	}
+
+	@bind onClose()
+	{
+		// The socket closed from the other end. Schedule a reconnect for when
+		// the server comes back up
+		window.setTimeout( this.connectToServer, 2000 );
 	}
 }
 

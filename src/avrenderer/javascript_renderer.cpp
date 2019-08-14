@@ -76,15 +76,16 @@ bool CJavascriptModelInstance::init( CefRefPtr<CefV8Value > container )
 			return;
 		}
 
-		uint32_t textureId = arguments[0]->GetUIntValue();
-		auto iTexture = m_textureInfo.find( textureId );
-		if ( iTexture == m_textureInfo.end() )
-		{
-			exception = "unknown texture " + std::to_string( textureId );
-			return;
-		}
+		// TODO: Hook this back up
+		//uint32_t textureId = arguments[0]->GetUIntValue();
+		//auto iTexture = m_textureInfo.find( textureId );
+		//if ( iTexture == m_textureInfo.end() )
+		//{
+		//	exception = "unknown texture " + std::to_string( textureId );
+		//	return;
+		//}
 
-		m_modelInstance->setOverrideTexture( iTexture->second );
+		//m_modelInstance->setOverrideTexture( iTexture->second );
 	} );
 	return true;
 }

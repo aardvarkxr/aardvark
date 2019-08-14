@@ -6,6 +6,7 @@ import { HighlightType, GrabResponse, AvGrabbable } from './aardvark_grabbable';
 import { AvTransform } from './aardvark_transform';
 import { AvSphereHandle } from './aardvark_handles';
 import { AvModel } from './aardvark_model';
+import { EndpointAddr } from './aardvark_protocol';
 
 
 interface AvGadgetSeedProps extends AvBaseNodeProps
@@ -49,7 +50,7 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 		return new Promise<GrabResponse>( ( resolve, reject ) =>
 		{
 			Av().startGadget( this.props.uri, "",
-			( success: boolean, mainGrabbableId: string ) =>
+			( success: boolean, mainGrabbableId: EndpointAddr ) =>
 			{
 				if( success )
 				{

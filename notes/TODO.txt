@@ -46,6 +46,7 @@ Websocket conversion:
 * Need grab event plumbing
 * Need replacement textures for panels. Still need a C++ function to get that. Subscribe for updates maybe?
 * Need a C++ function to spoof mouse events for panels.
+* Really need to convert monitors to using a store. Continuously updating the whole gadget list is dumb
 
 
 
