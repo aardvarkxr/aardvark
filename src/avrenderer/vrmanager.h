@@ -2,7 +2,7 @@
 
 #include <unordered_map>
 
-#include "ivrmanager.h"
+#include <aardvark/ivrmanager.h>
 
 class CVRManager : public IVrManager
 {

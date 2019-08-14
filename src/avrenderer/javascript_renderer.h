@@ -2,7 +2,7 @@
 
 #include "javascript_object.h"
 #include "aardvark.capnp.h"
-#include "irenderer.h"
+#include "aardvark/irenderer.h"
 #include <tools/capnprototools.h>
 #include "intersection_tester.h"
 #include "collision_tester.h"
