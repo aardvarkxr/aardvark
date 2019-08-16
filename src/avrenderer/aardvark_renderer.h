@@ -74,6 +74,7 @@ public:
 
 	void recordCommandBuffers( uint32_t cbIndex );
 	void renderSceneToTarget( uint32_t cbIndex, vks::RenderTarget target, uint32_t targetWidth, uint32_t targetHeight, EEye eEye );
+	void renderVarggles( uint32_t cbIndex, vks::RenderTarget target, uint32_t targetWidth, uint32_t targetHeight);
 
 	void renderScene( uint32_t cbIndex, VkRenderPass targetRenderPass, VkFramebuffer targetFrameBuffer, uint32_t targetWidth, uint32_t targetHeight, EEye eEye );
 
@@ -137,7 +138,7 @@ protected:
 		Buffer params;
 		Buffer leftEye;
 		Buffer rightEye;
-	};
+	} ;
 
 	struct UBOMatrices {
 		glm::mat4 matProjectionFromView;
@@ -162,13 +163,16 @@ protected:
 		VkPipeline skybox;
 		VkPipeline pbr;
 		VkPipeline pbrAlphaBlend;
+		VkPipeline varggles;
 	} pipelines;
 
 	struct DescriptorSets {
 		vks::CDescriptorSet *scene;
 		vks::CDescriptorSet *skybox;
 		vks::CDescriptorSet *eye[2];
+		vks::CDescriptorSet *varggles;
 	};
+
 	std::vector<DescriptorSets> descriptorSets;
 
 	std::vector<VkCommandBuffer> commandBuffers;
@@ -183,11 +187,15 @@ protected:
 	std::set< std::string > m_failedModelRequests;
 	vks::RenderTarget leftEyeRT;
 	vks::RenderTarget rightEyeRT;
+	vks::RenderTarget vargglesRT;
 
 	uint32_t eyeWidth = 0;
 	uint32_t eyeHeight = 0;
 	glm::mat4 m_matProjection[2];
 	glm::mat4 m_matEye[2];
+
+	uint32_t vargglesWidth = 4096;
+	uint32_t vargglesHeight = 4096;
 
 	const uint32_t renderAhead = 2;
 	uint32_t frameIndex = 0;
@@ -242,11 +250,18 @@ protected:
 		glm::vec4 uvScaleAndOffset;
 	};
 
+    struct PushConstBlockVarggles
+    {
+        float fov;
+		glm::mat4 inverseHorizontalLook;
+    };
+
 	std::map<std::string, std::string> environments;
 	std::string selectedEnvironment = "papermill";
 
 	int32_t debugViewInputs = 0;
 	int32_t debugViewEquation = 0;
+    float m_eyeFOV = 45.0f;
 
 	CUriRequestHandler m_uriRequests;
 

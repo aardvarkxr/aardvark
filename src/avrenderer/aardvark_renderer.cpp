@@ -38,15 +38,12 @@
 #pragma comment(lib, "cef_sandbox.lib")
 #endif
 
-
-
 #include <tools/pathtools.h>
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-
 
 using namespace aardvark;
 
@@ -87,7 +84,6 @@ void UpdateTransformable( std::shared_ptr<vkglTF::Transformable> pTransformable,
 	}
 }
 
-
 VulkanExample::VulkanExample()
 	: VulkanExampleBase()
 {
@@ -99,37 +95,38 @@ VulkanExample::VulkanExample()
 
 VulkanExample::~VulkanExample() noexcept
 {
-	vkDestroyPipeline( device, pipelines.skybox, nullptr );
-	vkDestroyPipeline( device, pipelines.pbr, nullptr );
-	vkDestroyPipeline( device, pipelines.pbrAlphaBlend, nullptr );
+    vkDestroyPipeline(device, pipelines.skybox, nullptr);
+    vkDestroyPipeline(device, pipelines.pbr, nullptr);
+    vkDestroyPipeline(device, pipelines.pbrAlphaBlend, nullptr);
+    vkDestroyPipeline(device, pipelines.varggles, nullptr);
 
-	vkDestroyPipelineLayout( device, pipelineLayout, nullptr );
+    vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
 
-	m_mapModels.clear();
+    m_mapModels.clear();
 
-	for ( auto buffer : uniformBuffers )
-	{
-		buffer.params.destroy();
-		buffer.scene.destroy();
-		buffer.skybox.destroy();
-		buffer.leftEye.destroy();
-		buffer.rightEye.destroy();
-	}
-	for ( auto fence : waitFences ) {
-		vkDestroyFence( device, fence, nullptr );
-	}
-	for ( auto semaphore : renderCompleteSemaphores ) {
-		vkDestroySemaphore( device, semaphore, nullptr );
-	}
-	for ( auto semaphore : presentCompleteSemaphores ) {
-		vkDestroySemaphore( device, semaphore, nullptr );
-	}
+    for (auto buffer : uniformBuffers)
+    {
+        buffer.params.destroy();
+        buffer.scene.destroy();
+        buffer.skybox.destroy();
+        buffer.leftEye.destroy();
+        buffer.rightEye.destroy();
+    }
+    for (auto fence : waitFences) {
+        vkDestroyFence(device, fence, nullptr);
+    }
+    for (auto semaphore : renderCompleteSemaphores) {
+        vkDestroySemaphore(device, semaphore, nullptr);
+    }
+    for (auto semaphore : presentCompleteSemaphores) {
+        vkDestroySemaphore(device, semaphore, nullptr);
+    }
 
-	textures.environmentCube.destroy();
-	textures.irradianceCube.destroy();
-	textures.prefilteredCube.destroy();
-	textures.lutBrdf.destroy();
-	textures.empty.destroy();
+    textures.environmentCube.destroy();
+    textures.irradianceCube.destroy();
+    textures.prefilteredCube.destroy();
+    textures.lutBrdf.destroy();
+    textures.empty.destroy();
 }
 
 void VulkanExample::renderNode( std::shared_ptr<vkglTF::Model> pModel, std::shared_ptr<vkglTF::Node> node, uint32_t cbIndex, vkglTF::Material::AlphaMode alphaMode, EEye eEye )
@@ -139,7 +136,7 @@ void VulkanExample::renderNode( std::shared_ptr<vkglTF::Model> pModel, std::shar
 		for ( auto primitive : node->mesh->primitives ) {
 			vkglTF::Material & primitiveMaterial = primitive->materialIndex >= pModel->materials.size()
 				? pModel->materials.back() : pModel->materials[primitive->materialIndex];
-
+			
 			if ( primitiveMaterial.alphaMode == alphaMode ) {
 
 				VkDescriptorSet descriptorSet;
@@ -242,8 +239,65 @@ void VulkanExample::recordCommandBuffers( uint32_t cbIndex )
 	renderScene( cbIndex, renderPass, frameBuffers[cbIndex], width, height, EEye::Mirror );
 	renderSceneToTarget( cbIndex, leftEyeRT, eyeWidth, eyeHeight, EEye::Left );
 	renderSceneToTarget( cbIndex, rightEyeRT, eyeWidth, eyeHeight, EEye::Right );
+	renderVarggles( cbIndex, vargglesRT, vargglesWidth, vargglesHeight);
 
 	VK_CHECK_RESULT( vkEndCommandBuffer( currentCB ) );
+}
+
+void VulkanExample::renderVarggles( uint32_t cbIndex, vks::RenderTarget target, uint32_t targetWidth, uint32_t targetHeight)
+{
+	VkCommandBuffer currentCB = commandBuffers[cbIndex];
+
+	VkClearValue clearValues[3];
+	if ( settings.multiSampling ) {
+		clearValues[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+		clearValues[1].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+		clearValues[2].depthStencil = { 1.0f, 0 };
+	}
+	else {
+		clearValues[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+		clearValues[1].depthStencil = { 1.0f, 0 };
+	}
+
+	VkRenderPassBeginInfo renderPassBeginInfo{};
+	renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+	renderPassBeginInfo.renderPass = target.renderPass;
+	renderPassBeginInfo.renderArea.offset.x = 0;
+	renderPassBeginInfo.renderArea.offset.y = 0;
+	renderPassBeginInfo.renderArea.extent.width = targetWidth;
+	renderPassBeginInfo.renderArea.extent.height = targetHeight;
+	renderPassBeginInfo.clearValueCount = settings.multiSampling ? 3 : 2;
+	renderPassBeginInfo.pClearValues = clearValues;
+	renderPassBeginInfo.framebuffer = target.frameBuffer;
+
+	vkCmdBeginRenderPass( currentCB, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE );
+
+	VkViewport viewport{};
+	viewport.width = (float)targetWidth;
+	viewport.height = (float)targetHeight;
+	viewport.minDepth = 0.0f;
+	viewport.maxDepth = 1.0f;
+	vkCmdSetViewport( currentCB, 0, 1, &viewport );
+
+	VkRect2D scissor{};
+	scissor.extent = { targetWidth, targetHeight };
+	vkCmdSetScissor( currentCB, 0, 1, &scissor );
+	vkCmdBindPipeline( currentCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines.varggles);
+
+	VkDescriptorSet descriptorSet = descriptorSets[cbIndex].varggles->set();
+	const std::vector<VkDescriptorSet> descriptorsets = { descriptorSet };
+	vkCmdBindDescriptorSets( commandBuffers[cbIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, static_cast<uint32_t>( descriptorsets.size() ), descriptorsets.data(), 0, NULL );
+
+	PushConstBlockVarggles pushConstVarggles{};
+	pushConstVarggles.fov = m_eyeFOV * (M_PI / 180.0f);
+	// TODO: Pluto - Get inverse horizontal look here
+	pushConstVarggles.inverseHorizontalLook = glm::mat4(); //glm::vec4(1, 1, 1, 1);
+	vkCmdPushConstants( commandBuffers[cbIndex], pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( PushConstBlockVarggles ), &pushConstVarggles);
+
+	// draw full screen tri
+	vkCmdDraw( commandBuffers[cbIndex], 3, 1, 0, 0 );
+
+	vkCmdEndRenderPass( currentCB );
 }
 
 void VulkanExample::renderSceneToTarget( uint32_t cbIndex, vks::RenderTarget target, uint32_t targetWidth, uint32_t targetHeight, EEye eEye )
@@ -282,10 +336,7 @@ void VulkanExample::renderScene( uint32_t cbIndex, VkRenderPass targetRenderPass
 	renderPassBeginInfo.renderArea.extent.height = targetHeight;
 	renderPassBeginInfo.clearValueCount = settings.multiSampling ? 3 : 2;
 	renderPassBeginInfo.pClearValues = clearValues;
-
-
 	renderPassBeginInfo.framebuffer = targetFrameBuffer;
-
 
 	vkCmdBeginRenderPass( currentCB, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE );
 
@@ -308,7 +359,6 @@ void VulkanExample::renderScene( uint32_t cbIndex, VkRenderPass targetRenderPass
 
 //		if( !bDebug )
 	vkCmdBindPipeline( currentCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines.pbr );
-
 
 	recordCommandsForModels( currentCB, cbIndex, vkglTF::Material::ALPHAMODE_OPAQUE, eEye );
 	recordCommandsForModels( currentCB, cbIndex, vkglTF::Material::ALPHAMODE_MASK, eEye );
@@ -337,7 +387,6 @@ void VulkanExample::recordCommandsForModels( VkCommandBuffer currentCB, uint32_t
 		}
 	}
 }
-
 
 void VulkanExample::loadEnvironment( std::string filename )
 {
@@ -525,6 +574,34 @@ void VulkanExample::setupDescriptors()
 			vkUpdateDescriptorSets( device, static_cast<uint32_t>( writeDescriptorSets.size() ), writeDescriptorSets.data(), 0, nullptr );
 		}, vks::EDescriptorLayout::Scene );
 	}
+
+	// Varggles (fixed set)
+	for ( auto i = 0; i < uniformBuffers.size(); i++ )
+	{
+		descriptorSets[i].varggles = m_descriptorManager->createDescriptorSet(
+			[this, i]( vks::VulkanDevice *vulkanDevice, vks::CDescriptorSet *desc )
+		{
+			std::array<VkWriteDescriptorSet, 2> writeDescriptorSets{};
+
+			writeDescriptorSets[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			writeDescriptorSets[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			writeDescriptorSets[0].descriptorCount = 1;
+			writeDescriptorSets[0].dstSet = desc->set();
+			writeDescriptorSets[0].dstBinding = 0;
+			writeDescriptorSets[0].pImageInfo = &textures.prefilteredCube.descriptor;
+			//writeDescriptorSets[0].pImageInfo = &leftEyeRT.color.descriptor;
+
+			writeDescriptorSets[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			writeDescriptorSets[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			writeDescriptorSets[1].descriptorCount = 1;
+			writeDescriptorSets[1].dstSet = desc->set();
+			writeDescriptorSets[1].dstBinding = 1;
+			writeDescriptorSets[1].pImageInfo = &textures.prefilteredCube.descriptor;
+			//writeDescriptorSets[1].pImageInfo = &rightEyeRT.color.descriptor;
+
+			vkUpdateDescriptorSets( device, static_cast<uint32_t>( writeDescriptorSets.size() ), writeDescriptorSets.data(), 0, nullptr );
+		}, vks::EDescriptorLayout::Varggles);
+	}
 }
 
 void VulkanExample::setupDescriptorSetsForModel( std::shared_ptr<vkglTF::Model> pModel )
@@ -648,6 +725,7 @@ void VulkanExample::preparePipelines()
 		m_descriptorManager->getLayout( vks::EDescriptorLayout::Scene ),
 		m_descriptorManager->getLayout( vks::EDescriptorLayout::Material ),
 		m_descriptorManager->getLayout( vks::EDescriptorLayout::Node ),
+		m_descriptorManager->getLayout( vks::EDescriptorLayout::Varggles ),
 	};
 
 	std::array<VkPushConstantRange, 2> arrayConstantRanges{};
@@ -733,7 +811,20 @@ void VulkanExample::preparePipelines()
 	blendAttachmentState.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
 	blendAttachmentState.alphaBlendOp = VK_BLEND_OP_ADD;
 	VK_CHECK_RESULT( vkCreateGraphicsPipelines( device, pipelineCache, 1, &pipelineCI, nullptr, &pipelines.pbrAlphaBlend ) );
+	for ( auto shaderStage : shaderStages ) {
+		vkDestroyShaderModule( device, shaderStage.module, nullptr );
+	}
 
+	// Varggles
+	shaderStages = {
+		loadShader(device, "varggles.vert.spv", VK_SHADER_STAGE_VERTEX_BIT),
+		loadShader(device, "varggles.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT)
+	};
+
+	rasterizationStateCI.cullMode = VK_CULL_MODE_NONE;
+	blendAttachmentState.blendEnable = VK_FALSE;
+	blendAttachmentState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+	VK_CHECK_RESULT(vkCreateGraphicsPipelines(device, pipelineCache, 1, &pipelineCI, nullptr, &pipelines.varggles));
 	for ( auto shaderStage : shaderStages ) {
 		vkDestroyShaderModule( device, shaderStage.module, nullptr );
 	}
@@ -1645,7 +1736,7 @@ void VulkanExample::prepare()
 
 	camera.type = Camera::CameraType::lookat;
 
-	camera.setPerspective( 45.0f, (float)width / (float)height, 0.1f, 256.0f );
+	camera.setPerspective( m_eyeFOV, (float)width / (float)height, 0.1f, 256.0f );
 	camera.rotationSpeed = 0.25f;
 	camera.movementSpeed = 0.1f;
 	camera.setPosition( { 0.0f, 0.0f, 1.0f } );
@@ -1685,6 +1776,7 @@ void VulkanExample::prepare()
 
 	leftEyeRT.init( swapChain.colorFormat, depthFormat, eyeWidth, eyeHeight, vulkanDevice, queue, settings.multiSampling );
 	rightEyeRT.init( swapChain.colorFormat, depthFormat, eyeWidth, eyeHeight, vulkanDevice, queue, settings.multiSampling );
+	vargglesRT.init(swapChain.colorFormat, depthFormat, vargglesWidth, vargglesHeight, vulkanDevice, queue, settings.multiSampling );
 
 	loadAssets();
 	generateBRDFLUT();
@@ -1703,7 +1795,6 @@ void VulkanExample::onWindowClose()
 		CAardvarkCefApp::instance()->CloseAllBrowsers( true );
 	}
 }
-
 
 std::shared_ptr<vkglTF::Model> VulkanExample::findOrLoadModel( std::string modelUri )
 {
@@ -1759,7 +1850,6 @@ std::shared_ptr<vkglTF::Model> VulkanExample::findOrLoadModel( std::string model
 	return nullptr;
 }
 
-
 //-----------------------------------------------------------------------------
 // Purpose: Gets a Matrix Projection Eye with respect to nEye.
 //-----------------------------------------------------------------------------
@@ -1777,7 +1867,6 @@ glm::mat4 VulkanExample::GetHMDMatrixProjectionEye( vr::Hmd_Eye nEye )
 		mat.m[0][3], mat.m[1][3], mat.m[2][3], mat.m[3][3]
 	);
 }
-
 
 //-----------------------------------------------------------------------------
 // Purpose: Gets an HMDMatrixPoseEye with respect to nEye.
@@ -1797,7 +1886,6 @@ glm::mat4 VulkanExample::GetHMDMatrixPoseEye( vr::Hmd_Eye nEye )
 
 	return glm::inverse( matrixObj );
 }
-
 
 void VulkanExample::render()
 {
@@ -1916,7 +2004,6 @@ void VulkanExample::processRenderList()
 	m_uriRequests.processResults();
 }
 
-
 void VulkanExample::submitEyeBuffers()
 {
 	// Submit to OpenVR
@@ -1944,9 +2031,7 @@ void VulkanExample::submitEyeBuffers()
 
 	vulkanData.m_nImage = (uint64_t)rightEyeRT.color.image;
 	vr::VRCompositor()->Submit( vr::Eye_Right, &texture, &bounds );
-
 }
-
 
 CVulkanRendererModelInstance::CVulkanRendererModelInstance( 
 	VulkanExample *renderer,
@@ -2005,8 +2090,6 @@ void CVulkanRendererModelInstance::setOverrideTexture( AvSharedTextureInfo::Read
 
 }
 
-
-
 void CVulkanRendererModelInstance::animate( float animationTimeElapsed )
 {
 	m_model->animate( animationTimeElapsed );
@@ -2016,7 +2099,6 @@ void CVulkanRendererModelInstance::animate( float animationTimeElapsed )
 		node->update();
 	}
 }
-
 
 std::unique_ptr<IModelInstance> VulkanExample::createModelInstance( const std::string & uri )
 {
@@ -2029,7 +2111,6 @@ std::unique_ptr<IModelInstance> VulkanExample::createModelInstance( const std::s
 	return std::make_unique<CVulkanRendererModelInstance>( this, uri, model );
 }
 
-
 void VulkanExample::resetRenderList()
 {
 	m_modelsToRender.clear();
@@ -2040,8 +2121,6 @@ void VulkanExample::addToRenderList( IModelInstance *modelInstance )
 	CVulkanRendererModelInstance *vulkanModelInstance = dynamic_cast<CVulkanRendererModelInstance *>( modelInstance );
 	m_modelsToRender.push_back( vulkanModelInstance );
 }
-
-
 
 void VulkanExample::runFrame( bool *shouldQuit, double frameTime )
 {

@@ -3,6 +3,7 @@
 // Supports both metallic roughness and specular glossiness inputs
 
 #version 450
+#extension GL_KHR_vulkan_glsl : enable
 
 layout (location = 0) in vec3 inWorldPos;
 layout (location = 1) in vec3 inNormal;
