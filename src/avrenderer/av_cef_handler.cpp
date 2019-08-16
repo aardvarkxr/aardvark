@@ -260,8 +260,14 @@ void CAardvarkCefHandler::OnAcceleratedPaint( CefRefPtr<CefBrowser> browser,
 	const RectList& dirtyRects,
 	void* shared_handle )
 {
-	m_sharedTexture = shared_handle;
-	updateSceneGraphTextures();
+	if ( m_sharedTexture != shared_handle )
+	{
+		m_sharedTexture = shared_handle;
+		if ( m_wantsTexture )
+		{
+			updateSceneGraphTextures();
+		}
+	}
 }
 
 
@@ -306,6 +312,14 @@ bool CAardvarkCefHandler::OnProcessMessageReceived( CefRefPtr<CefBrowser> browse
 
 			m_browserToNotifyWhenCreated->SendProcessMessage( PID_RENDERER, msg );
 			m_browserToNotifyWhenCreated = nullptr;
+		}
+	}
+	else if ( message->GetName() == "request_texture_info" )
+	{
+		m_wantsTexture = true;
+		if ( m_sharedTexture )
+		{
+			updateSceneGraphTextures();
 		}
 	}
 	else if ( message->GetName() == "mouse_event" )
@@ -356,14 +370,19 @@ bool CAardvarkCefHandler::OnProcessMessageReceived( CefRefPtr<CefBrowser> browse
 
 void CAardvarkCefHandler::updateSceneGraphTextures()
 {
-	if ( !m_sharedTexture || m_gadgets.empty() )
+	if ( !m_sharedTexture )
 	{
 		// if we don't have a shared texture or gadget yet, there's nothing to update
 		return;
 	}
 
-	aardvark::avUpdateDxgiTextureForGadgets( &*m_client, &m_gadgets[0], (uint32_t)m_gadgets.size(), m_gadgetManifest.m_width, m_gadgetManifest.m_height, m_sharedTexture, true );
+	CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "update_shared_texture" );
+	msg->GetArgumentList()->SetString( 0, std::to_string( (uint64_t)m_sharedTexture ) );
+	msg->GetArgumentList()->SetInt( 1, m_gadgetManifest.m_width );
+	msg->GetArgumentList()->SetInt( 2, m_gadgetManifest.m_height );
+	m_browser->SendProcessMessage( PID_RENDERER, msg );
 }
+
 
 void CAardvarkCefHandler::RunFrame()
 {

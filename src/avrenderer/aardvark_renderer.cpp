@@ -1963,23 +1963,24 @@ void CVulkanRendererModelInstance::setUniverseFromModel( const glm::mat4 & unive
 	m_modelParent.matParentFromNode = universeFromModel;
 }
 
-void CVulkanRendererModelInstance::setOverrideTexture( AvSharedTextureInfo::Reader texture )
+void CVulkanRendererModelInstance::setOverrideTexture( void *textureHandle, ETextureType type, ETextureFormat format,
+	uint32_t width, uint32_t height )
 {
-	void *pvNewDxgiHandle = reinterpret_cast<void*>( texture.getSharedTextureHandle() );
+	void *pvNewDxgiHandle = textureHandle;
 	VkFormat textureFormat = VK_FORMAT_R8G8B8A8_UINT;
 	VkFormat viewTextureFormat = VK_FORMAT_R8G8B8A8_UNORM;
-	switch ( texture.getFormat() )
+	switch ( format )
 	{
 	default:
 		assert( false );
 		break;
 
-	case AvSharedTextureInfo::Format::R8G8B8A8:
+	case ETextureFormat::R8G8B8A8:
 		textureFormat = VK_FORMAT_R8G8B8A8_UINT;
 		viewTextureFormat = VK_FORMAT_R8G8B8A8_UNORM;
 		break;
 
-	case AvSharedTextureInfo::Format::B8G8R8A8:
+	case ETextureFormat::B8G8R8A8:
 		textureFormat = VK_FORMAT_B8G8R8A8_UINT;
 		viewTextureFormat = VK_FORMAT_B8G8R8A8_UNORM;
 		break;
@@ -1990,7 +1991,7 @@ void CVulkanRendererModelInstance::setOverrideTexture( AvSharedTextureInfo::Read
 		m_overrideTexture = std::make_shared<vks::Texture2D>();
 		m_overrideTexture->loadFromDxgiSharedHandle( pvNewDxgiHandle,
 			textureFormat, viewTextureFormat,
-			texture.getWidth(), texture.getHeight(),
+			width, height,
 			m_renderer->vulkanDevice, m_renderer->queue );
 
 		for ( auto & material : m_model->materials )

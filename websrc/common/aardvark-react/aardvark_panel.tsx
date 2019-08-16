@@ -2,7 +2,7 @@ import * as React from 'react';
 
 import { AvGadget } from './aardvark_gadget';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
-import { AvSceneContext, AvNodeType, AvPanelMouseEvent, AvPanelMouseEventType, AvPanelHandler } from 'common/aardvark';
+import { AvSceneContext, AvNodeType, AvPanelMouseEvent, AvPanelMouseEventType, AvPanelHandler, Av, AvSharedTextureInfo } from 'common/aardvark';
 import bind from 'bind-decorator';
 
 export interface AvPanelProps extends AvBaseNodeProps
@@ -13,6 +13,21 @@ export interface AvPanelProps extends AvBaseNodeProps
 
 export class AvPanel extends AvBaseNode< AvPanelProps, {} >
 {
+	private m_sharedTextureInfo: AvSharedTextureInfo = null;
+
+	constructor( props: any )
+	{
+		super( props );
+
+		Av().subscribeToBrowserTexture( this.onUpdateBrowserTexture );
+	}
+
+	@bind onUpdateBrowserTexture( info: AvSharedTextureInfo )
+	{
+		this.m_sharedTextureInfo = info;
+		AvGadget.instance().markDirty();
+	}
+
 	public buildNode()
 	{
 		if( this.props.customMouseHandler )
@@ -26,8 +41,7 @@ export class AvPanel extends AvBaseNode< AvPanelProps, {} >
 
 		let node = this.createNodeObject( AvNodeType.Panel, this.m_nodeId );
 		node.propInteractive = this.props.interactive;
-
-		// TODO: Need to get DXGI info here and stuff it into a property
+		node.propSharedTexture = this.m_sharedTextureInfo;
 		return node;
 	}
 }

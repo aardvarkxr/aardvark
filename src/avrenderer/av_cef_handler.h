@@ -161,6 +161,7 @@ private:
 	std::string m_gadgetUri;
 	std::string m_initialHook;
 	bool m_wantsToQuit = false;
+	bool m_wantsTexture = false;
 
 	CUriRequestHandler m_uriRequestHandler;
 

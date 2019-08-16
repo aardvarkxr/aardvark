@@ -93,7 +93,7 @@ class PendingTransform
 		this.m_parentFromNode = parentFromNode ? parentFromNode : mat4.identity;
 		this.m_applyFunction = updateCallback;
 
-//		this.checkForLoops();
+		this.checkForLoops();
 	}
 
 	private checkForLoops()
@@ -234,16 +234,30 @@ export class AvDefaultTraverser
 		{
 			// get the ID for node 0. We're going to use that as the parent of
 			// everything. 
-			let node0Id = Object.assign( {}, root.root.globalId );
-			node0Id.nodeId = 0;
+			let rootNode: AvNode;
+			if( root.root.id == 0 )
+			{
+				rootNode = root.root;
+			}
+			else
+			{
+				rootNode = 
+				{
+					type: AvNodeType.Container,
+					id: 0,
+					flags: 0,
+					globalId: { type: EndpointType.Node, endpointId: root.root.globalId.endpointId, nodeId: 0 },
+					children: [ root.root ],
+				}
+			}
 
 			this.m_currentRoot = root;
 			if( root.hook )
 			{
-				this.setHookOrigin( root.hook, node0Id );
+				this.setHookOrigin( root.hook, rootNode );
 			}
 
-			this.traverseNode( root.root, this.getTransform( node0Id ) );
+			this.traverseNode( rootNode, null );
 		}
 	}
 
@@ -324,16 +338,16 @@ export class AvDefaultTraverser
 
 	traverseOrigin( node: AvNode, defaultParent: PendingTransform )
 	{
-		this.setHookOrigin( node.propOrigin, node.globalId );
+		this.setHookOrigin( node.propOrigin, node );
 	}
 
 
-	setHookOrigin( origin: string, globalId: EndpointAddr )
+	setHookOrigin( origin: string, node: AvNode )
 	{
 		let universeFromOrigin = Av().renderer.getUniverseFromOriginTransform( origin );
 		if ( universeFromOrigin )
 		{
-			this.updateTransform( globalId, null, new mat4( universeFromOrigin ), null );
+			this.updateTransform( node.globalId, null, new mat4( universeFromOrigin ), null );
 
 			if ( origin == "/user/hand/left" )
 			{
@@ -423,31 +437,36 @@ export class AvDefaultTraverser
 	{
 		let nodeData = this.getNodeData( node );
 
-		//auto iSharedTexture = m_sharedTextureInfo.find( m_pCurrentRoot->gadgetId );
+		// if we don't have shared texture info for this panel yet, there's
+		// nothing to do here
+		if( !node.propSharedTexture )
+			return;
+
+		let textureInfo = node.propSharedTexture;
 
 		if ( !nodeData.modelInstance )
 		{
 			let sPanelModelUri = "https://aardvark.install/models/panel/panel.glb";
-			// if ( iSharedTexture->second.getInvertY() )
-			// {
+			if( textureInfo.invertY )
+			{
 				sPanelModelUri = "https://aardvark.install/models/panel/panel_inverted.glb";
-			// }
+			}
 
 			nodeData.modelInstance = Av().renderer.createModelInstance( sPanelModelUri );
 		}
 
 		if ( nodeData.modelInstance )
 		{
-			// try
-			// {
-			// 	nodeData.modelInstance.setOverrideTexture( this.m_currentRoot.gadgetId );
-			// }
-			// catch( e )
-			// {
-			// 	// just eat these and don't add the panel. Sometimes we find out about a panel 
-			// 	// before we find out about its texture
-			// 	return;
-			// }
+			try
+			{
+				nodeData.modelInstance.setOverrideTexture( textureInfo );
+			}
+			catch( e )
+			{
+				// just eat these and don't add the panel. Sometimes we find out about a panel 
+				// before we find out about its texture
+				return;
+			}
 
 			let hand = this.m_currentHand;
 			this.updateTransform( node.globalId, defaultParent, mat4.identity,
@@ -456,17 +475,17 @@ export class AvDefaultTraverser
 				nodeData.modelInstance.setUniverseFromModelTransform( universeFromNode.all() );
 				this.m_renderList.push( nodeData.modelInstance );
 
-				// if ( node.propInteractive )
-				// {
-				// 	let panelNormal = universeFromNode.multiplyVec4( new vec4( [ 0, 1, 0, 0 ] ) );
-				// 	let zScale = panelNormal.length();
-				// 	let nodeFromUniverse = new mat4( universeFromNode.all() ).inverse();
-				// 	Av().renderer.addActivePanel(
-				// 		endpointAddrToString( node.globalId ),
-				// 		nodeFromUniverse.all(),
-				// 		zScale, 
-				// 		hand );
-				// }
+				if ( node.propInteractive )
+				{
+					let panelNormal = universeFromNode.multiplyVec4( new vec4( [ 0, 1, 0, 0 ] ) );
+					let zScale = panelNormal.length();
+					let nodeFromUniverse = new mat4( universeFromNode.all() ).inverse();
+					Av().renderer.addActivePanel(
+						endpointAddrToString( node.globalId ),
+						nodeFromUniverse.all(),
+						zScale, 
+						hand );
+				}
 			} );
 		}
 	}

@@ -911,10 +911,14 @@ public:
 	bool hasPermission( const std::string & permission );
 	void runFrame();
 
+	void msgUpdateTextureInfo( CefRefPtr< CefProcessMessage > msg );
+
 private:
 	CAardvarkRenderProcessHandler *m_handler = nullptr;
 	std::list<JsObjectPtr<CAardvarkGadgetObject>> m_gadgets;
 	JsObjectPtr< CJavascriptRenderer > m_renderer;
+	CefRefPtr<CefV8Value> m_textureInfoCallback;
+	CefRefPtr<CefV8Context> m_textureInfoContext;
 };
 
 CAardvarkObject::CAardvarkObject( CAardvarkRenderProcessHandler *renderProcessHandler )
@@ -973,6 +977,25 @@ bool CAardvarkObject::init( CefRefPtr<CefV8Value> container )
 				m_gadgets.push_back( std::move( gadget ) );
 				m_handler->updateGadgetNamesForBrowser();
 			}
+		} );
+
+		RegisterFunction( container, "subscribeToBrowserTexture", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+		{
+			if ( arguments.size() != 1 )
+			{
+				exception = "Invalid arguments";
+				return;
+			}
+			if ( !arguments[0]->IsFunction() )
+			{
+				exception = "Invalid callback argument";
+				return;
+			}
+
+			m_textureInfoCallback = arguments[0];
+			m_textureInfoContext = CefV8Context::GetCurrentContext();
+
+			m_handler->requestTextureInfo();
 		} );
 	}
 
@@ -1105,6 +1128,34 @@ bool CAardvarkObject::init( CefRefPtr<CefV8Value> container )
 
 }
 
+void CAardvarkObject::msgUpdateTextureInfo( CefRefPtr< CefProcessMessage > msg )
+{
+	if ( !m_textureInfoContext || !m_textureInfoCallback )
+	{
+		return;
+	}
+
+	m_textureInfoContext->Enter();
+
+	CefRefPtr<CefV8Value> textureInfo = CefV8Value::CreateObject( nullptr, nullptr );
+	textureInfo->SetValue( "type", CefV8Value::CreateInt( (int)ETextureType::D3D11Texture2D ),
+		V8_PROPERTY_ATTRIBUTE_NONE );
+	textureInfo->SetValue( "format", CefV8Value::CreateInt( (int)ETextureFormat::B8G8R8A8 ),
+		V8_PROPERTY_ATTRIBUTE_NONE );
+	textureInfo->SetValue( "invertY", CefV8Value::CreateBool( true ),
+		V8_PROPERTY_ATTRIBUTE_NONE );
+	textureInfo->SetValue( "dxgiHandle", CefV8Value::CreateString( msg->GetArgumentList()->GetString( 0 ) ),
+		V8_PROPERTY_ATTRIBUTE_NONE );
+	textureInfo->SetValue( "width", CefV8Value::CreateInt( msg->GetArgumentList()->GetInt( 1 ) ),
+		V8_PROPERTY_ATTRIBUTE_NONE );
+	textureInfo->SetValue( "height", CefV8Value::CreateInt( msg->GetArgumentList()->GetInt( 2 ) ),
+		V8_PROPERTY_ATTRIBUTE_NONE );
+
+	m_textureInfoCallback->ExecuteFunction( nullptr, { textureInfo } );
+	m_textureInfoContext->Exit();
+}
+
+
 CAardvarkObject::~CAardvarkObject()
 {
 	m_gadgets.clear();
@@ -1230,6 +1281,13 @@ bool CAardvarkRenderProcessHandler::OnProcessMessageReceived( CefRefPtr<CefBrows
 			m_startGadgetCallbacks.erase( callback );
 		}
 	}
+	else if ( messageName == "update_shared_texture" )
+	{
+		for ( auto context : m_contexts )
+		{
+			context.aardvarkObject->msgUpdateTextureInfo( message );
+		}
+	}
 	return false;
 }
 
@@ -1323,5 +1381,12 @@ void CAardvarkRenderProcessHandler::sceneFinished( uint64_t mainGrabbableId )
 kj::Promise<CUriRequestHandler::Result_t> CAardvarkRenderProcessHandler::requestUri( const std::string & uri )
 {
 	return m_uriRequestHandler.requestUri( uri );
+}
+
+
+void CAardvarkRenderProcessHandler::requestTextureInfo()
+{
+	CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "request_texture_info" );
+	sendBrowserMessage( msg );
 }
 

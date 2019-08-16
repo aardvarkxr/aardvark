@@ -41,7 +41,8 @@ public:
 
 	CVulkanRendererModelInstance( VulkanExample *renderer, const std::string & uri, std::shared_ptr< vkglTF::Model > model );
 	virtual void setUniverseFromModel( const glm::mat4 & universeFromModel ) override;
-	virtual void setOverrideTexture( AvSharedTextureInfo::Reader ) override;
+	virtual void setOverrideTexture( void *textureHandle, ETextureType type, ETextureFormat format,
+		uint32_t width, uint32_t height ) override;
 
 	void animate( float animationTimeElapsed );
 protected:

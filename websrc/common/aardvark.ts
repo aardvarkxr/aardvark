@@ -209,6 +209,7 @@ export interface AvNode
 	propVolume?: AvVolume;
 	propInteractive?: boolean;
 	propCustomNodeType?: string;
+	propSharedTexture?: AvSharedTextureInfo;
 }
 
 
@@ -242,7 +243,7 @@ export interface AvHapticProcessor
 export interface AvModelInstance
 {
 	setUniverseFromModelTransform( universeFromModel: number[] ): void;
-	setOverrideTexture( textureId: number ): void;
+	setOverrideTexture( textureInfo: AvSharedTextureInfo ): void;
 }
 
 export enum EHand
@@ -296,10 +297,38 @@ export interface AvGadgetManifestCallback
 	(manifest: AvGadgetManifest) : void;
 }
 
+enum ETextureType
+{
+	Invalid = 0,
+	D3D11Texture2D = 1,
+}
+
+enum ETextureFormat
+{
+	R8G8B8A8 = 1,
+	B8G8R8A8 = 2,
+}
+
+export interface AvSharedTextureInfo
+{
+	dxgiHandle?: string;
+	type: ETextureType;
+	format: ETextureFormat;
+	invertY?: boolean;
+	width: number;
+	height: number;
+}
+
+export interface AvBrowserTextureCallback
+{
+	( textureInfo: AvSharedTextureInfo ): void;
+}
+
 export interface Aardvark
 {
 	// requires scenegraph permissions
 	createGadget: Av_CreateGadget;
+	subscribeToBrowserTexture( callback: AvBrowserTextureCallback ): void;
 
 	// requires master permissions
 	startGadget( uri: string, initialHook: string, callback: AvStartGadgetCallback ): void;

@@ -70,22 +70,20 @@ bool CJavascriptModelInstance::init( CefRefPtr<CefV8Value > container )
 			return;
 		}
 
-		if ( !arguments[0]->IsUInt() )
+		if ( !arguments[0]->IsObject() )
 		{
-			exception = "argument must an unsigned int";
+			exception = "argument must a AvSharedTextureInfo object";
 			return;
 		}
 
-		// TODO: Hook this back up
-		//uint32_t textureId = arguments[0]->GetUIntValue();
-		//auto iTexture = m_textureInfo.find( textureId );
-		//if ( iTexture == m_textureInfo.end() )
-		//{
-		//	exception = "unknown texture " + std::to_string( textureId );
-		//	return;
-		//}
+		ETextureType type = (ETextureType)arguments[0]->GetValue( "type" )->GetIntValue();
+		ETextureFormat format = (ETextureFormat)arguments[0]->GetValue( "format" )->GetIntValue();
+		uint32_t width = arguments[0]->GetValue( "width" )->GetUIntValue();
+		uint32_t height = arguments[0]->GetValue( "height" )->GetUIntValue();
+		void *sharedTextureHandle = reinterpret_cast<void*>(
+			std::strtoull( std::string( arguments[0]->GetValue( "dxgiHandle" )->GetStringValue() ).c_str(), nullptr, 0 ) );
 
-		//m_modelInstance->setOverrideTexture( iTexture->second );
+		m_modelInstance->setOverrideTexture( sharedTextureHandle, type, format, width, height );
 	} );
 	return true;
 }

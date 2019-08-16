@@ -46,6 +46,7 @@ public:
 	void requestStartGadget( const CefString & uri, const CefString & initialHook, CefRefPtr<CefV8Value> callback );
 	void sceneFinished( uint64_t mainGrabbableId );
 	kj::Promise<CUriRequestHandler::Result_t> requestUri( const std::string & uri );
+	void requestTextureInfo();
 
 	void runFrame();
 private:

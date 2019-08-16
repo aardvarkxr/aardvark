@@ -122,6 +122,7 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 			{ node.propModelUri && <div className="AvNodeProperty">model: {node.propModelUri }</div> }
 			{ node.propVolume && <div className="AvNodeProperty">volume: radius={node.propVolume.radius }</div> }
 			{ node.propInteractive && <div className="AvNodeProperty">Interactive</div> }
+			{ node.propSharedTexture && <div className="AvNodeProperty">{ JSON.stringify( node.propSharedTexture ) }</div> }
 			{ this.renderTransform( node.propTransform ) }
 			{ childElements }
 		</div>
