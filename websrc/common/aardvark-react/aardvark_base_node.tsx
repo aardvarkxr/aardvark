@@ -56,7 +56,7 @@ export abstract class AvBaseNode<TProps, TState> extends React.Component<TProps,
 
 	protected createNodeObject( type: AvNodeType, nodeId: number ): AvNode
 	{
-		console.log( `creating ${ AvNodeType[ type] } ${ nodeId }` );
+		//console.log( `creating ${ AvNodeType[ type] } ${ nodeId }` );
 		return (
 		{
 			type: type,
