@@ -45,6 +45,11 @@ Websocket conversion:
 * Need a C++ function to spoof mouse events for panels.
 * Really need to convert monitors to using a store. Continuously updating the whole gadget list is dumb
 
+grab events are in, but are being really flickery. Maybe events are spamming to everybody and the left hand is turning off
+ grabbing as soon as it starts.
+
+Maybe do the monitor store conversion and then add event logging to that?
+
 ========= DEAL WITH THIS NEXT ===========
 
 
