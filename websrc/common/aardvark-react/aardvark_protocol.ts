@@ -1,4 +1,4 @@
-import { AvGadgetManifest, AvNode } from './../aardvark';
+import { AvGadgetManifest, AvNode, AvGrabEvent } from './../aardvark';
 
 export enum MessageType
 {
@@ -16,6 +16,8 @@ export enum MessageType
 
 	// Gadget messages
 	UpdateSceneGraph = 300,
+	GrabEvent = 301,
+	GrabberState = 302,
 	
 
 }
@@ -61,7 +63,7 @@ export interface Envelope
 {
 	type: MessageType;
 	sender?: EndpointAddr;
-	targets?: EndpointAddr[]; 
+	target?: EndpointAddr; 
 	payload?: string;
 	payloadUnpacked?: any;
 }
@@ -107,6 +109,19 @@ export interface MsgUpdateSceneGraph
 {
 	root?: AvNode;
 	hook?: string;
+}
+
+export interface MsgGrabberState
+{
+	grabberId: EndpointAddr;
+	isPressed: boolean;
+	grabbables?: EndpointAddr[];
+	hooks?: EndpointAddr[];
+}
+
+export interface MsgGrabEvent
+{
+	event: AvGrabEvent;
 }
 
 export function parseEnvelope( envString: string, parsePayload: boolean = true ): Envelope

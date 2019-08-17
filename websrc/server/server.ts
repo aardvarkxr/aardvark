@@ -1,4 +1,4 @@
-import { MsgGetGadgetManifest, MsgGetGadgetManifestResponse, MsgUpdateSceneGraph } from './../common/aardvark-react/aardvark_protocol';
+import { MsgGetGadgetManifest, MsgGetGadgetManifestResponse, MsgUpdateSceneGraph, MsgGrabberState, EndpointAddr, endpointAddrToString, MsgGrabEvent, endpointAddrsMatch } from './../common/aardvark-react/aardvark_protocol';
 import { MessageType, EndpointType, MsgSetEndpointType, Envelope, MsgNewEndpoint, MsgLostEndpoint, parseEnvelope, MsgError } from 'common/aardvark-react/aardvark_protocol';
 import { AvGadgetManifest, AvNode } from 'common/aardvark';
 import * as express from 'express';
@@ -10,6 +10,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { URL, pathToFileURL } from 'url';
 import * as fileUrl from 'file-url';
+import { ENFILE } from 'constants';
 
 let g_localInstallPathUri = fileUrl( path.resolve( process.cwd() ));
 console.log( "Data directory is", g_localInstallPathUri );
@@ -200,7 +201,7 @@ class CDispatcher
 			{
 				type: env.type,
 				sender: env.sender,
-				targets: env.targets,
+				target: env.target,
 			}
 
 			if( env.payloadUnpacked )
@@ -269,6 +270,19 @@ class CDispatcher
 			payloadUnpacked: newEpMsg,
 		} );
 	}
+
+	public forwardToEndpoint( epa: EndpointAddr, env: Envelope )
+	{
+		let ep = this.m_endpoints[ epa.endpointId ];
+		if( !ep )
+		{
+			console.log( "Sending message to unknown endpoint " + endpointAddrToString( epa ) );
+			return;
+		}
+
+		ep.sendMessage( env.type, env.payloadUnpacked, epa, env.sender );
+	}
+
 }
 
 class CGadgetData
@@ -340,6 +354,8 @@ class CEndpoint
 		this.registerEnvelopeHandler( MessageType.SetEndpointType, this.onSetEndpointType );
 		this.registerEnvelopeHandler( MessageType.GetGadgetManifest, this.onGetGadgetManifest );
 		this.registerEnvelopeHandler( MessageType.UpdateSceneGraph, this.onUpdateSceneGraph );
+		this.registerEnvelopeHandler( MessageType.GrabberState, this.onGrabberState );
+		this.registerEnvelopeHandler( MessageType.GrabEvent, this.onGrabEvent );
 	}
 
 	public getId() { return this.m_id; }
@@ -372,6 +388,8 @@ class CEndpoint
 		{
 			return;
 		}
+
+		env.sender = { type: this.m_type, endpointId: this.m_id };
 
 		if( this.m_type == EndpointType.Unknown )
 		{
@@ -467,13 +485,36 @@ class CEndpoint
 			this.m_dispatcher.buildNewEndpointMessage( this ) );
 	}
 
-	public sendMessage( msgType: MessageType, msg: any )
+	@bind private onGrabberState( env: Envelope, m: MsgGrabberState )
+	{
+		this.m_dispatcher.forwardToEndpoint( m.grabberId, env );
+		this.m_dispatcher.sendToAllEndpointsOfType( EndpointType.Monitor, env );
+	}
+
+	@bind private onGrabEvent( env: Envelope, m: MsgGrabEvent )
+	{
+		if( m.event.grabberId && !endpointAddrsMatch( m.event.grabberId, env.sender ) )
+		{
+			this.m_dispatcher.forwardToEndpoint( m.event.grabberId, env );
+		}
+		if( m.event.grabbableId && !endpointAddrsMatch( m.event.grabbableId, env.sender ) )
+		{
+			this.m_dispatcher.forwardToEndpoint( m.event.grabbableId, env );
+		}
+		if( m.event.hookId && !endpointAddrsMatch( m.event.hookId, env.sender ) )
+		{
+			this.m_dispatcher.forwardToEndpoint( m.event.hookId, env );
+		}
+		this.m_dispatcher.sendToAllEndpointsOfType( EndpointType.Monitor, env );
+	}
+
+	public sendMessage( type: MessageType, msg: any, target: EndpointAddr = undefined, sender:EndpointAddr = undefined  )
 	{
 		let env: Envelope =
 		{
-			type: msgType,
-			sender: { type: EndpointType.Hub, endpointId: 0 },
-			targets: [ { type: this.m_type, endpointId: this.m_id } ],
+			type,
+			sender: sender ? sender : { type: EndpointType.Hub, endpointId: 0 },
+			target,
 			payload: JSON.stringify( msg ),
 		}
 		this.sendMessageString( JSON.stringify( env ) )

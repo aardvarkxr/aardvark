@@ -27,7 +27,7 @@ export class CGadgetEndpoint extends CAardvarkEndpoint
 			initialHook: this.m_initialHook,
 		}
 
-		this.sendMessage( [], MessageType.SetEndpointType, msgSetEndpointType );
+		this.sendMessage( MessageType.SetEndpointType, msgSetEndpointType );
 
 		if( this.m_openHandler )
 		{

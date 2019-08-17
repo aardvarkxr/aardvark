@@ -1,10 +1,10 @@
 import bind from 'bind-decorator';
-import { EndpointType, MessageType, EndpointAddr, Envelope, parseEnvelope, MsgSetEndpointType, MsgGetGadgetManifest, MsgGetGadgetManifestResponse } from './aardvark_protocol';
-import { AvGadgetManifest } from 'common/aardvark';
+import { EndpointType, MessageType, EndpointAddr, Envelope, parseEnvelope, MsgSetEndpointType, MsgGetGadgetManifest, MsgGetGadgetManifestResponse, MsgGrabEvent } from './aardvark_protocol';
+import { AvGadgetManifest, AvGrabEvent } from 'common/aardvark';
 
 export interface MessageHandler
 {
-	( type:MessageType, payload: any, sender: EndpointAddr ):void;
+	( type:MessageType, payload: any, sender: EndpointAddr, target: EndpointAddr ):void;
 }
 
 export interface OpenHandler
@@ -53,16 +53,16 @@ export class CAardvarkEndpoint
 
 		if( this.m_handlers[ env.type ] )
 		{
-			this.m_handlers[ env.type ]( env.type, env.payloadUnpacked, env.sender );
+			this.m_handlers[ env.type ]( env.type, env.payloadUnpacked, env.sender, env.target );
 		} 
 		else if( this.m_callbacks[ env.type ] )
 		{
-			this.m_callbacks[ env.type]( env.type, env.payloadUnpacked, env.sender );
+			this.m_callbacks[ env.type]( env.type, env.payloadUnpacked, env.sender, env.target );
 			delete this.m_callbacks[ env.type ];
 		}
 		else if( this.m_defaultHandler )
 		{
-			this.m_defaultHandler( env.type, env.payloadUnpacked, env.sender );
+			this.m_defaultHandler( env.type, env.payloadUnpacked, env.sender, env.target );
 		}
 		else
 		{
@@ -70,12 +70,11 @@ export class CAardvarkEndpoint
 		}
 	}
 
-	public sendMessage( targets: EndpointAddr[], type: MessageType, msg: any )
+	public sendMessage( type: MessageType, msg: any )
 	{
 		let env: Envelope =
 		{
 			type,
-			targets,
 		};
 		if( msg != undefined )
 		{
@@ -83,6 +82,16 @@ export class CAardvarkEndpoint
 		}
 
 		this.m_ws.send( JSON.stringify( env ) );
+	}
+
+	public sendGrabEvent( event: AvGrabEvent )
+	{
+		let msg: MsgGrabEvent =
+		{
+			event,
+		};
+
+		this.sendMessage( MessageType.GrabEvent, msg );
 	}
 
 	public getGadgetManifest( gadgetUri: string ): Promise<AvGadgetManifest>
@@ -94,7 +103,7 @@ export class CAardvarkEndpoint
 				gadgetUri,
 			}
 	
-			this.sendMessage( [], MessageType.GetGadgetManifest, msgGetGadgetManifest );
+			this.sendMessage( MessageType.GetGadgetManifest, msgGetGadgetManifest );
 				
 			this.waitForResponse( MessageType.GetGadgetManifestResponse, 
 				( type:MessageType, m: MsgGetGadgetManifestResponse, sender: EndpointAddr ) =>
@@ -134,7 +143,7 @@ export class CMonitorEndpoint extends CAardvarkEndpoint
 			newEndpointType: EndpointType.Monitor,
 		}
 
-		this.sendMessage( [], MessageType.SetEndpointType, msgSetEndpointType );
+		this.sendMessage( MessageType.SetEndpointType, msgSetEndpointType );
 	}
 
 

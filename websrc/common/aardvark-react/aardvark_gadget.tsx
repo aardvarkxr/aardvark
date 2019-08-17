@@ -5,7 +5,7 @@ import { Av, AvPanelHandler, AvGadgetObj, AvSceneContext, AvPokerHandler, AvPane
 import { IAvBaseNode } from './aardvark_base_node';
 import bind from 'bind-decorator';
 import { CGadgetEndpoint } from './gadget_endpoint';
-import { MessageType, MsgUpdateSceneGraph } from './aardvark_protocol';
+import { MessageType, MsgUpdateSceneGraph, EndpointAddr, MsgGrabberState, MsgGrabEvent } from './aardvark_protocol';
 
 interface AvGadgetProps
 {
@@ -37,7 +37,6 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 
 	m_nextNodeId = 1;
 	m_registeredNodes: {[nodeId:number]:IAvBaseNode } = {};
-	m_gadget: AvGadgetObj = null;
 	m_nextFrameRequest: number = 0;
 	m_traversedNodes: {[nodeId:number]:IAvBaseNode } = {};
 	m_endpoint: CGadgetEndpoint = null;
@@ -85,7 +84,11 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 			this.m_manifest = manifest;
 			this.markDirty();
 		});
+
+		this.m_endpoint.registerHandler( MessageType.GrabberState, this.onGrabberState );
+		this.m_endpoint.registerHandler( MessageType.GrabEvent, this.onGrabEvent );
 	}
+
 	public static instance()
 	{
 		return AvGadget.s_instance;
@@ -124,7 +127,7 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 
 	public setPanelHandler( nodeId: number, handler: AvPanelHandler )
 	{
-		this.m_gadget.registerPanelHandler( nodeId, handler );
+//		this.m_gadget.registerPanelHandler( nodeId, handler );
 		this.markDirty();
 	}
 
@@ -154,16 +157,35 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 		this.markDirty();
 	}
 
+	@bind onGrabberState( type:MessageType, m: MsgGrabberState, sender: EndpointAddr, target: EndpointAddr ):void
+	{
+		let processor = this.m_grabberProcessors[ target.nodeId ];
+		if( processor )
+		{
+			processor( m.isPressed, m.grabbables != undefined ? m.grabbables : [], 
+				m.hooks != undefined ? m.hooks : [] );
+		}
+	}
+
+	@bind onGrabEvent( type:MessageType, m: MsgGrabEvent, sender: EndpointAddr, target: EndpointAddr ):void
+	{
+		let processor = this.m_grabEventProcessors[ target.nodeId ];
+		if( processor )
+		{
+			processor( m.event );
+		}
+	}
+
 	public sendGrabEvent( event: AvGrabEvent )
 	{
-		this.m_gadget.sendGrabEvent( event );
+		this.m_endpoint.sendGrabEvent( event );
 	}
 
 
 	public sendMouseEvent( pokerId: number, panelId: string, 
 		eventType:AvPanelMouseEventType, x: number, y: number )
 	{
-		this.m_gadget.sendMouseEvent( pokerId, panelId, eventType, x, y );
+//		this.m_gadget.sendMouseEvent( pokerId, panelId, eventType, x, y );
 	}
 
 	private traverseNode( domNode: HTMLElement ): AvNode[]
@@ -255,7 +277,7 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 			}
 		}
 
-		this.m_endpoint.sendMessage( null, MessageType.UpdateSceneGraph, msg );
+		this.m_endpoint.sendMessage( MessageType.UpdateSceneGraph, msg );
 
 		this.m_nextFrameRequest = 0;
 	}

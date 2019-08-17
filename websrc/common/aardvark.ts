@@ -1,4 +1,4 @@
-import { EndpointAddr } from './aardvark-react/aardvark_protocol';
+import { EndpointAddr, MsgGrabberState } from './aardvark-react/aardvark_protocol';
 
 export interface PokerProximity
 {
@@ -269,13 +269,14 @@ interface AvRenderer
 	addActivePanel( panelGlobalId: string, nodeFromUniverse: number[], zScale: number, hand: EHand  ): void;
 	addActivePoker( pokerGlobalId: string, pokerInUniverse: number[], hand: EHand  ): void;
 
+	updateGrabberIntersections(): MsgGrabberState[];
 	registerGrabEventProcessor( grabEventProcessor: AvGrabEventProcessor ): void;
-	addGrabbableHandle_Sphere( grabbableGlobalId: string, universeFromGrabbable: number[], radius: number, hand: EHand ): void;
-	addGrabber_Sphere( grabberGlobalId: string, universeFromGrabber: number[], radius: number, hand: EHand ): void;
-	addHook_Sphere( hookGlobalId: string, universeFromGrabber: number[], radius: number, hand: EHand  ): void;
+	addGrabbableHandle_Sphere( grabbableGlobalId: EndpointAddr, universeFromGrabbable: number[], radius: number, hand: EHand ): void;
+	addGrabber_Sphere( grabberGlobalId: EndpointAddr, universeFromGrabber: number[], radius: number, hand: EHand ): void;
+	addHook_Sphere( hookGlobalId: EndpointAddr, universeFromGrabber: number[], radius: number, hand: EHand  ): void;
 
-	startGrab( grabberGlobalId: string, grabbableGlobalId: string  ): void;
-	endGrab( grabberGlobalId: string, grabbableGlobalId: string  ): void;
+	startGrab( grabberGlobalId: EndpointAddr, grabbableGlobalId: EndpointAddr  ): void;
+	endGrab( grabberGlobalId: EndpointAddr, grabbableGlobalId: EndpointAddr  ): void;
 }
 
 export interface AvStartGadgetCallback
@@ -336,7 +337,6 @@ export interface Aardvark
 
 	// requires renderer permissions
 	renderer: AvRenderer;
-	sendGrabEvent( event: AvGrabEvent ): void;
 }
 
 declare global

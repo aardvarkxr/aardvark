@@ -3,6 +3,9 @@
 #include "aardvark_renderer.h"
 #include "vrmanager.h"
 
+using aardvark::EEndpointType;
+using aardvark::EndpointAddr_t;
+
 extern void protoEventFromCefEvent( CefRefPtr<CefV8Value> cefEvent, AvGrabEvent::Builder &bldEvent );
 extern CefRefPtr<CefV8Value> grabEventToCefEvent( const aardvark::GrabEvent_t & grabEvent );
 
@@ -119,7 +122,6 @@ void CJavascriptRenderer::runFrame()
 		m_jsTraverser->ExecuteFunction( nullptr, CefV8ValueList{} );
 
 		m_intersections.updatePokerProximity( m_handler->getClient() );
-		m_collisions.updateGrabberIntersections( m_handler->getClient() );
 	}
 
 
@@ -139,6 +141,73 @@ void CJavascriptRenderer::runFrame()
 		CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "quit" );
 		m_handler->sendBrowserMessage( msg );
 	}
+}
+
+bool endpointAddrFromJs( CefRefPtr< CefV8Value > obj, EndpointAddr_t *addr )
+{
+	if ( !obj || !obj->IsObject() || !addr )
+		return false;
+
+	addr->type = EEndpointType::Unknown;
+
+	if ( obj->HasValue( "type" ) )
+	{
+		CefRefPtr<CefV8Value> type = obj->GetValue( "type" );
+		if ( type->IsInt() )
+		{
+			addr->type = (EEndpointType)type->GetIntValue();
+		}
+	}
+
+	if ( obj->HasValue( "endpointId" ) )
+	{
+		CefRefPtr<CefV8Value> v = obj->GetValue( "endpointId" );
+		if ( v->IsUInt() )
+		{
+			addr->endpointId= v->GetUIntValue();
+		}
+	}
+
+	if ( obj->HasValue( "nodeId" ) )
+	{
+		CefRefPtr<CefV8Value> v = obj->GetValue( "nodeId" );
+		if ( v->IsUInt() )
+		{
+			addr->nodeId = v->GetUIntValue();
+		}
+	}
+
+	return addr->type != EEndpointType::Unknown;
+}
+
+CefRefPtr<CefV8Value> endpointAddrToJs( const EndpointAddr_t & addr )
+{
+	CefRefPtr<CefV8Value> out = CefV8Value::CreateObject( nullptr, nullptr );
+	out->SetValue( "type", CefV8Value::CreateInt( (int)addr.type ), V8_PROPERTY_ATTRIBUTE_NONE );
+	if ( addr.type != EEndpointType::Hub )
+	{
+		out->SetValue( "endpointId", CefV8Value::CreateUInt( addr.endpointId ), V8_PROPERTY_ATTRIBUTE_NONE );
+	}
+	if ( addr.type == EEndpointType::Node )
+	{
+		out->SetValue( "nodeId", CefV8Value::CreateUInt( addr.nodeId ), V8_PROPERTY_ATTRIBUTE_NONE );
+	}
+	return out;
+}
+
+CefRefPtr<CefV8Value> endpointAddrVectorToJs( const std::vector<EndpointAddr_t> & addrs )
+{
+	if ( addrs.empty() )
+	{
+		return CefV8Value::CreateNull();
+	}
+
+	CefRefPtr<CefV8Value> out = CefV8Value::CreateArray( (int)addrs.size() );
+	for ( int i = 0; i < addrs.size(); i++ )
+	{
+		out->SetValue( i, endpointAddrToJs( addrs[i] ) );
+	}
+	return out;
 }
 
 
@@ -278,6 +347,35 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 		m_jsGrabEventProcessor = arguments[0];
 	} );
 
+	RegisterFunction( container, "updateGrabberIntersections", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 0 )
+		{
+			exception = "Invalid arguments";
+			return;
+		}
+
+		std::vector<GrabberCollisionState_t> res = m_collisions.updateGrabberIntersections();
+		retval = CefV8Value::CreateArray( (int)res.size() );
+		for ( size_t unIndex = 0; unIndex < res.size(); unIndex++ )
+		{
+			const GrabberCollisionState_t & grabberState = res[unIndex];
+			CefRefPtr<CefV8Value> out = CefV8Value::CreateObject( nullptr, nullptr );
+			out->SetValue( "grabberId", endpointAddrToJs( grabberState.grabberGlobalId ), V8_PROPERTY_ATTRIBUTE_NONE );
+			out->SetValue( "isPressed", CefV8Value::CreateBool( grabberState.isPressed ), V8_PROPERTY_ATTRIBUTE_NONE );
+			if ( !grabberState.grabbables.empty() )
+			{
+				out->SetValue( "grabbables", endpointAddrVectorToJs( grabberState.grabbables ), V8_PROPERTY_ATTRIBUTE_NONE );
+			}
+			if ( !grabberState.hooks.empty() )
+			{
+				out->SetValue( "hooks", endpointAddrVectorToJs( grabberState.hooks ), V8_PROPERTY_ATTRIBUTE_NONE );
+			}
+			retval->SetValue( (int)unIndex, out );
+		}
+	} );
+
+
 	RegisterFunction( container, "addGrabbableHandle_Sphere", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
 		if ( arguments.size() != 4 )
@@ -286,9 +384,10 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 			return;
 		}
 
-		if ( !arguments[0]->IsString() )
+		EndpointAddr_t nodeId;
+		if ( !endpointAddrFromJs( arguments[0], &nodeId ) )
 		{
-			exception = "argument must be a string";
+			exception = "argument must be an endpoint address";
 			return;
 		}
 
@@ -300,7 +399,7 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 		}
 
 		m_collisions.addGrabbableHandle_Sphere(
-			std::strtoull( std::string( arguments[0]->GetStringValue() ).c_str(), nullptr, 0 ),
+			nodeId,
 			grabberFromUniverse,
 			arguments[2]->GetDoubleValue(),
 			(EHand )arguments[3]->GetIntValue()
@@ -315,9 +414,10 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 			return;
 		}
 
-		if ( !arguments[0]->IsString() )
+		EndpointAddr_t grabberGlobalId;
+		if ( !endpointAddrFromJs( arguments[0], &grabberGlobalId ) )
 		{
-			exception = "argument must be a string";
+			exception = "argument must be an endpoint address";
 			return;
 		}
 
@@ -340,7 +440,7 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 		EHand hand = (EHand)arguments[3]->GetIntValue();
 
 		m_collisions.addGrabber_Sphere(
-			std::strtoull( std::string( arguments[0]->GetStringValue() ).c_str(), nullptr, 0 ),
+			grabberGlobalId,
 			universeFromHandle,
 			arguments[2]->GetDoubleValue(),
 			hand,
@@ -355,9 +455,10 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 			return;
 		}
 
-		if ( !arguments[0]->IsString() )
+		EndpointAddr_t hookGlobalId;
+		if ( !endpointAddrFromJs( arguments[0], &hookGlobalId ) )
 		{
-			exception = "argument must be a string";
+			exception = "argument must be an endpoint address";
 			return;
 		}
 
@@ -378,7 +479,7 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 		}
 
 		m_collisions.addHook_Sphere(
-			std::strtoull( std::string( arguments[0]->GetStringValue() ).c_str(), nullptr, 0 ),
+			hookGlobalId,
 			universeFromHandle,
 			arguments[2]->GetDoubleValue(),
 			(EHand)arguments[3]->GetIntValue() );
@@ -529,20 +630,21 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 			return;
 		}
 
-		if ( !arguments[0]->IsString() )
+		EndpointAddr_t grabberGlobalId;
+		if ( !endpointAddrFromJs( arguments[0], &grabberGlobalId ) )
 		{
-			exception = "first argument must be a grabber global ID";
-			return;
-		}
-		if ( !arguments[1]->IsString() )
-		{
-			exception = "second argument must be a grabbable global ID";
+			exception = "first argument must be an endpoint address";
 			return;
 		}
 
-		m_collisions.startGrab(
-			std::strtoull( std::string( arguments[0]->GetStringValue() ).c_str(), nullptr, 0 ),
-			std::strtoull( std::string( arguments[1]->GetStringValue() ).c_str(), nullptr, 0 ) );
+		EndpointAddr_t grabbableGlobalId;
+		if ( !endpointAddrFromJs( arguments[0], &grabbableGlobalId ) )
+		{
+			exception = "second argument must be an endpoint address";
+			return;
+		}
+
+		m_collisions.startGrab( grabberGlobalId, grabbableGlobalId );
 	} );
 
 	RegisterFunction( container, "endGrab", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
@@ -553,20 +655,21 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 			return;
 		}
 
-		if ( !arguments[0]->IsString() )
+		EndpointAddr_t grabberGlobalId;
+		if ( !endpointAddrFromJs( arguments[0], &grabberGlobalId ) )
 		{
-			exception = "first argument must be a grabber global ID";
-			return;
-		}
-		if ( !arguments[1]->IsString() )
-		{
-			exception = "second argument must be a grabbable global ID";
+			exception = "first argument must be an endpoint address";
 			return;
 		}
 
-		m_collisions.endGrab(
-			std::strtoull( std::string( arguments[0]->GetStringValue() ).c_str(), nullptr, 0 ),
-			std::strtoull( std::string( arguments[1]->GetStringValue() ).c_str(), nullptr, 0 ) );
+		EndpointAddr_t grabbableGlobalId;
+		if ( !endpointAddrFromJs( arguments[0], &grabbableGlobalId ) )
+		{
+			exception = "second argument must be an endpoint address";
+			return;
+		}
+
+		m_collisions.endGrab( grabberGlobalId, grabbableGlobalId );
 	} );
 
 

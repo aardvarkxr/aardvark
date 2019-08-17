@@ -11,35 +11,44 @@
 #include <vector>
 #include <unordered_map>
 #include <openvr.h>
+#include <aardvark/aardvark_scene_graph.h>
 
 namespace aardvark
 {
 	class CAardvarkClient;
 }
 
+struct GrabberCollisionState_t
+{
+	aardvark::EndpointAddr_t grabberGlobalId;
+	bool isPressed;
+	std::vector<aardvark::EndpointAddr_t> grabbables;
+	std::vector<aardvark::EndpointAddr_t> hooks;
+};
+
 class CCollisionTester
 {
 public:
 	CCollisionTester( );
 
-	void addGrabber_Sphere( uint64_t globalGrabberId, const glm::mat4 & grabberFromUniverse,
+	void addGrabber_Sphere( const aardvark::EndpointAddr_t & globalGrabberId, const glm::mat4 & grabberFromUniverse,
 		float radius, EHand hand, bool isPressed );
-	void addGrabbableHandle_Sphere( uint64_t globalGrabbableId, const glm::mat4 & universeFromHandle,
+	void addGrabbableHandle_Sphere( const aardvark::EndpointAddr_t & globalGrabbableId, const glm::mat4 & universeFromHandle,
 		float radius, EHand hand );
 
-	void addHook_Sphere( uint64_t globalHookId, const glm::mat4 & universeFromHook,
+	void addHook_Sphere( const aardvark::EndpointAddr_t & globalHookId, const glm::mat4 & universeFromHook,
 		float radius, EHand hand );
 
-	void startGrab( uint64_t globalGrabberId, uint64_t globalGrabbableId );
-	void endGrab( uint64_t globalGrabberId, uint64_t globalGrabbableId );
+	void startGrab( const aardvark::EndpointAddr_t & globalGrabberId, const aardvark::EndpointAddr_t & globalGrabbableId );
+	void endGrab( const aardvark::EndpointAddr_t & globalGrabberId, const aardvark::EndpointAddr_t & globalGrabbableId );
 
 	void reset();
-	void updateGrabberIntersections( aardvark::CAardvarkClient *client );
+	std::vector< GrabberCollisionState_t > updateGrabberIntersections();
 
 private:
 	struct ActiveGrabber_t
 	{
-		uint64_t globalGrabberId;
+		aardvark::EndpointAddr_t globalGrabberId;
 		EHand hand;
 		bool isPressed;
 		glm::mat4 matGrabberFromUniverse;
@@ -55,7 +64,7 @@ private:
 
 	struct ActiveGrabbable_t
 	{
-		uint64_t globalGrabbableId;
+		aardvark::EndpointAddr_t globalGrabbableId;
 		EHand hand;
 		std::vector<Handle_t> handles;
 	};
@@ -63,13 +72,13 @@ private:
 
 	struct ActiveHook_t
 	{
-		uint64_t globalHookId;
+		aardvark::EndpointAddr_t globalHookId;
 		EHand hand;
 		glm::mat4 universeFromHook;
 		float radius;
 	};
 	std::vector<ActiveHook_t> m_activeHooks;
 
-	std::unordered_map<uint64_t, uint64_t> m_activeGrabs;
+	std::unordered_map<aardvark::EndpointAddr_t, aardvark::EndpointAddr_t> m_activeGrabs;
 
 };

@@ -7,13 +7,13 @@ CCollisionTester::CCollisionTester()
 {
 }
 
-void CCollisionTester::addGrabber_Sphere( uint64_t globalGrabberId, const glm::mat4 & grabberFromUniverse,
+void CCollisionTester::addGrabber_Sphere( const aardvark::EndpointAddr_t & globalGrabberId, const glm::mat4 & grabberFromUniverse,
 	float radius, EHand hand, bool isPressed )
 {
 	m_activeGrabbers.push_back( { globalGrabberId, hand, isPressed, grabberFromUniverse, radius } );
 }
 
-void CCollisionTester::addGrabbableHandle_Sphere( uint64_t globalGrabbableId, const glm::mat4 & universeFromHandle,
+void CCollisionTester::addGrabbableHandle_Sphere( const aardvark::EndpointAddr_t & globalGrabbableId, const glm::mat4 & universeFromHandle,
 	float radius, EHand hand )
 {
 	for ( auto & grabbable : m_activeGrabbables )
@@ -35,7 +35,7 @@ void CCollisionTester::addGrabbableHandle_Sphere( uint64_t globalGrabbableId, co
 		} );
 }
 
-void CCollisionTester::addHook_Sphere( uint64_t globalHookId, const glm::mat4 & universeFromHook,
+void CCollisionTester::addHook_Sphere( const aardvark::EndpointAddr_t & globalHookId, const glm::mat4 & universeFromHook,
 	float radius, EHand hand )
 {
 	m_activeHooks.push_back( { globalHookId, hand, universeFromHook, radius } );
@@ -59,13 +59,13 @@ bool SpheresIntersect( const glm::mat4 & grabberFromUniverse, float grabberRadiu
 }
 
 
-void CCollisionTester::startGrab( uint64_t globalGrabberId, uint64_t globalGrabbableId )
+void CCollisionTester::startGrab( const aardvark::EndpointAddr_t & globalGrabberId, const aardvark::EndpointAddr_t & globalGrabbableId )
 {
 	m_activeGrabs.insert_or_assign( globalGrabberId, globalGrabbableId );
 }
 
 
-void CCollisionTester::endGrab( uint64_t globalGrabberId, uint64_t globalGrabbableId )
+void CCollisionTester::endGrab( const aardvark::EndpointAddr_t & globalGrabberId, const aardvark::EndpointAddr_t & globalGrabbableId )
 {
 	auto i = m_activeGrabs.find( globalGrabberId );
 	if ( m_activeGrabs.end() != i && i->second == globalGrabbableId )
@@ -75,24 +75,22 @@ void CCollisionTester::endGrab( uint64_t globalGrabberId, uint64_t globalGrabbab
 }
 
 
-void CCollisionTester::updateGrabberIntersections( aardvark::CAardvarkClient *client )
+std::vector<GrabberCollisionState_t> CCollisionTester::updateGrabberIntersections()
 {
-	std::vector<uint64_t> grabbablesToSend;
-	std::vector<uint64_t> hooksToSend;
+	std::vector<GrabberCollisionState_t> results;
 	for ( auto & grabber : m_activeGrabbers )
 	{
-		auto req = client->Server().pushGrabIntersectionsRequest();
-		req.setGrabberId( grabber.globalGrabberId );
-		req.setIsGrabPressed( grabber.isPressed );
+		GrabberCollisionState_t grabberState;
+		grabberState.grabberGlobalId = grabber.globalGrabberId;
+		grabberState.isPressed = grabber.isPressed;
 
-		uint64_t currentlyGrabbedGrabbableId = 0;
+		aardvark::EndpointAddr_t currentlyGrabbedGrabbableId = { aardvark::EEndpointType::Unknown, 0, 0 };
 		auto activeGrab = m_activeGrabs.find( grabber.globalGrabberId );
 		if ( activeGrab != m_activeGrabs.end() )
 		{
 			currentlyGrabbedGrabbableId = activeGrab->second;
 		}
 
-		grabbablesToSend.clear();
 		for ( auto & grabbable : m_activeGrabbables )
 		{
 			if ( isSameHand( grabber.hand, grabbable.hand ) )
@@ -100,7 +98,7 @@ void CCollisionTester::updateGrabberIntersections( aardvark::CAardvarkClient *cl
 
 			if ( grabbable.globalGrabbableId == currentlyGrabbedGrabbableId )
 			{
-				grabbablesToSend.push_back( grabbable.globalGrabbableId );
+				grabberState.grabbables.push_back( grabbable.globalGrabbableId );
 				continue;
 			}
 
@@ -109,14 +107,12 @@ void CCollisionTester::updateGrabberIntersections( aardvark::CAardvarkClient *cl
 				if ( SpheresIntersect( grabber.matGrabberFromUniverse, grabber.radius,
 					handle.universeFromHandle, handle.radius ) )
 				{
-					grabbablesToSend.push_back( grabbable.globalGrabbableId );
+					grabberState.grabbables.push_back( grabbable.globalGrabbableId );
 					break;
 				}
 			}
 		}
 
-
-		hooksToSend.clear();
 		for ( auto & hook : m_activeHooks)
 		{
 			if ( isSameHand( grabber.hand, hook.hand ) )
@@ -125,24 +121,15 @@ void CCollisionTester::updateGrabberIntersections( aardvark::CAardvarkClient *cl
 			if ( SpheresIntersect( grabber.matGrabberFromUniverse, grabber.radius,
 				hook.universeFromHook, hook.radius ) )
 			{
-				hooksToSend.push_back( hook.globalHookId );
+				grabberState.hooks.push_back( hook.globalHookId );
 				break;
 			}
 		}
 
-		auto intersections = req.initIntersections( (int)grabbablesToSend.size() );
-		for( int n = 0; n < grabbablesToSend.size(); n++ )
-		{
-			intersections.set( n, grabbablesToSend[n] );
-		}
-		auto hooks = req.initHooks( (int)hooksToSend.size() );
-		for ( int n = 0; n < hooksToSend.size(); n++ )
-		{
-			hooks.set( n, hooksToSend[n] );
-		}
-
-		client->addRequestToTasks( std::move( req ) );
+		results.push_back( std::move( grabberState ) );
 	}
+
+	return results;
 }
 
 

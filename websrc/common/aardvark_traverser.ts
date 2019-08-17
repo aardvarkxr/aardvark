@@ -213,9 +213,19 @@ export class AvDefaultTraverser
 		this.m_inFrameTraversal = false;
 	
 		// m_intersections.updatePokerProximity( m_client );
-		// m_collisions.updateGrabberIntersections( m_client );
 
 		Av().renderer.renderList( this.m_renderList );
+
+		this.updateGrabberIntersections();
+	}
+
+	private updateGrabberIntersections()
+	{
+		let states = Av().renderer.updateGrabberIntersections();
+		for( let state of states )
+		{
+			this.m_endpoint.sendMessage( MessageType.GrabberState, state );
+		}
 	}
 
 	getNodeData( node: AvNode ): NodeData
@@ -528,7 +538,7 @@ export class AvDefaultTraverser
 			switch( node.propVolume.type )
 			{
 				case EVolumeType.Sphere:
-					Av().renderer.addGrabbableHandle_Sphere( endpointAddrToString( grabbableGlobalId ), universeFromNode.all(), 
+					Av().renderer.addGrabbableHandle_Sphere( grabbableGlobalId, universeFromNode.all(), 
 						node.propVolume.radius, hand );
 					break;
 				default:
@@ -553,7 +563,7 @@ export class AvDefaultTraverser
 			switch( node.propVolume.type )
 			{
 				case EVolumeType.Sphere:
-					Av().renderer.addGrabber_Sphere( endpointAddrToString( grabberGlobalId ), nodeFromUniverse.all(), 
+					Av().renderer.addGrabber_Sphere( grabberGlobalId, nodeFromUniverse.all(), 
 						node.propVolume.radius, grabberHand );
 					break;
 				default:
@@ -577,7 +587,7 @@ export class AvDefaultTraverser
 			switch( node.propVolume.type )
 			{
 				case EVolumeType.Sphere:
-					Av().renderer.addHook_Sphere( endpointAddrToString( hookGlobalId ), universeFromNode.all(), node.propVolume.radius, hand );
+					Av().renderer.addHook_Sphere( hookGlobalId, universeFromNode.all(), node.propVolume.radius, hand );
 					break;
 				default:
 					throw "unsupported volume type";
@@ -619,9 +629,9 @@ export class AvDefaultTraverser
 					parentGlobalId: grabEvent.grabberId,
 					parentFromNodeTransform: grabberFromGrabbable,
 				};
-				Av().renderer.startGrab( grabberIdStr, grabbableIdStr );
+				Av().renderer.startGrab( grabEvent.grabberId, grabEvent.grabbableId );
 
-				Av().sendGrabEvent( 
+				this.m_endpoint.sendGrabEvent( 
 					{
 						type: AvGrabEventType.GrabStarted,
 						grabberId: grabEvent.grabberId,
@@ -632,7 +642,7 @@ export class AvDefaultTraverser
 
 			case AvGrabEventType.EndGrab:
 				console.log( "Traverser ending grab of " + grabEvent.grabbableId + " by " + grabEvent.grabberId );
-				Av().renderer.endGrab( endpointAddrToString( grabEvent.grabberId ), endpointAddrToString( grabEvent.grabbableId ) );
+				Av().renderer.endGrab( grabEvent.grabberId, grabEvent.grabbableId );
 				if( endpointAddrIsEmpty( grabEvent.hookId ) )
 				{
 					// we're dropping onto a hook

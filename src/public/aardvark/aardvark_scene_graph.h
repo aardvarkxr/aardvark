@@ -157,4 +157,39 @@ namespace aardvark
 	EGrabEventType grabTypeFromProtoType( AvGrabEvent::Type type );
 	void protoGrabEventToLocalEvent( AvGrabEvent::Reader inEvent, GrabEvent_t *outEvent );
 
+	enum class EEndpointType
+	{
+		Unknown = -1,
+		Hub = 0,
+		Gadget = 1,
+		Node = 2,
+		Renderer = 3,
+		Monitor = 4,
+	};
+
+	struct EndpointAddr_t
+	{
+		EEndpointType type;
+		uint32_t endpointId;
+		uint32_t nodeId;
+	};
+
+	inline bool operator==( const EndpointAddr_t & lhs, const EndpointAddr_t & rhs )
+	{
+		return lhs.type == rhs.type && lhs.endpointId == rhs.endpointId
+			&& lhs.nodeId == rhs.nodeId;
+	}
+}
+
+namespace std
+{
+	template<> struct hash<aardvark::EndpointAddr_t>
+	{
+		typedef aardvark::EndpointAddr_t argument_type;
+		typedef std::size_t result_type;
+		result_type operator()( argument_type const& s ) const noexcept
+		{
+			return ( (size_t)s.type << 50 ) ^ ( (size_t)s.endpointId << 32 ) ^ (size_t)s.nodeId;
+		}
+	};
 }

@@ -21,7 +21,7 @@ export class CRendererEndpoint extends CAardvarkEndpoint
 			newEndpointType: EndpointType.Renderer,
 		}
 
-		this.sendMessage( [], MessageType.SetEndpointType, msgSetEndpointType );
+		this.sendMessage( MessageType.SetEndpointType, msgSetEndpointType );
 
 		if( this.m_openHandler )
 		{
