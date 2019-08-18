@@ -1,26 +1,33 @@
 import * as React from 'react';
 import  * as ReactDOM from 'react-dom';
 import { CMonitorEndpoint } from 'common/aardvark-react/aardvark_endpoint';
-import { EndpointType, MessageType, EndpointAddr, MsgNewEndpoint, MsgLostEndpoint, MsgUpdateSceneGraph } from 'common/aardvark-react/aardvark_protocol';
+import { EndpointType, MessageType, EndpointAddr, MsgNewEndpoint, MsgLostEndpoint, MsgUpdateSceneGraph, MsgGrabberState, endpointAddrToString, MsgGrabEvent } from 'common/aardvark-react/aardvark_protocol';
 import bind from 'bind-decorator';
-import { AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, AvVector, AvQuaternion } from 'common/aardvark';
-import { observable, ObservableMap, action, observe } from 'mobx';
+import { AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, AvVector, AvQuaternion, AvGrabEvent, AvGrabEventType } from 'common/aardvark';
+import { observable, ObservableMap, action, observe, computed } from 'mobx';
 import { observer } from 'mobx-react';
 
 interface EndpointData
 {
 	id: number;
 	type: EndpointType;
+}
+
+interface GadgetData extends EndpointData
+{
 	gadgetUri?: string;
 	gadgetRoot?: AvNode;
 	gadgetHook?: string;
+	grabberIsPressed?: boolean;
+	grabbables?: EndpointAddr[];
+	hooks?: EndpointAddr[];
 }
-
 
 class CMonitorStore
 {
 	private m_connection: CMonitorEndpoint;
 	@observable m_endpoints: ObservableMap<number, EndpointData>;
+	m_grabEvents = observable.array<AvGrabEvent>();
 
 	constructor()
 	{
@@ -30,12 +37,14 @@ class CMonitorStore
 		this.m_connection.registerHandler( MessageType.NewEndpoint, this.onNewEndpoint );
 		this.m_connection.registerHandler( MessageType.LostEndpoint, this.onLostEndpoint );
 		this.m_connection.registerHandler( MessageType.UpdateSceneGraph, this.onUpdateSceneGraph );
+		this.m_connection.registerHandler( MessageType.GrabberState, this.onGrabberState );
+		this.m_connection.registerHandler( MessageType.GrabEvent, this.onGrabEvent );
 
 	}
 
 	public getConnection() { return this.m_connection; }
 
-	public getEndpointData( epid: number )
+	public getEndpointData( epid: number ): EndpointData
 	{
 		if( this.m_endpoints.has( epid ) )
 		{
@@ -47,6 +56,15 @@ class CMonitorStore
 		}
 	}
 
+	public getGadgetData( epid: number ): GadgetData
+	{
+		let data = this.getEndpointData( epid );
+		if( data && data.type == EndpointType.Gadget )
+			return data as GadgetData;
+		else
+			return null;
+	}
+
 	@bind onUnhandledMessage( type: MessageType, message: any, sender: EndpointAddr )
 	{
 		console.log( "received unhandled message", type, message, sender );
@@ -55,25 +73,49 @@ class CMonitorStore
 	@bind @action onNewEndpoint( type: MessageType, message: MsgNewEndpoint, sender: EndpointAddr )
 	{
 		console.log( "New endpoint!", message );
-		if( message.newEndpointType != EndpointType.Monitor )
+		let data: EndpointData;
+		switch( message.newEndpointType )
 		{
-			this.m_endpoints.set( message.endpointId,
-				{ 
+			case EndpointType.Gadget:
+				let gadgetData: GadgetData = 
+				{
 					type: message.newEndpointType,
 					id: message.endpointId,
 					gadgetUri: message.gadgetUri,
-				} );
+				}
+				data = gadgetData;
+				break;
+
+			case EndpointType.Renderer:
+				data = 
+				{
+					type: message.newEndpointType,
+					id: message.endpointId,
+				}
+				break;
+		}
+
+		if( data )
+		{
+			this.m_endpoints.set( message.endpointId, data );
 		}
 	}
 
 	@bind @action onUpdateSceneGraph( type: MessageType, message: MsgUpdateSceneGraph, sender: EndpointAddr )
 	{
-		if( this.m_endpoints.has( sender.endpointId ) )
+		if( !this.m_endpoints.has( sender.endpointId ) )
+			return;
+
+		let epData = this.m_endpoints.get( sender.endpointId );
+		if( !epData || epData.type != EndpointType.Gadget )
 		{
-			let endpointData = this.m_endpoints.get( sender.endpointId );
-			endpointData.gadgetHook = message.hook;
-			endpointData.gadgetRoot = message.root;
+			console.log( "UpdateSceneGraph for invalid endpoint", epData );
+			return;
 		}
+
+		let gadgetData = epData as GadgetData;
+		gadgetData.gadgetHook = message.hook;
+		gadgetData.gadgetRoot = message.root;
 	}
 
 	@bind @action onLostEndpoint( type: MessageType, message: MsgLostEndpoint, sender: EndpointAddr )
@@ -82,7 +124,28 @@ class CMonitorStore
 		this.m_endpoints.delete( message.endpointId );
 	}
 
+	@bind @action onGrabberState( type: MessageType, message: MsgGrabberState, sender: EndpointAddr )
+	{
+		let gadgetData = this.getGadgetData( message.grabberId.endpointId );
+		if( !gadgetData )
+			return;
+
+		gadgetData.grabberIsPressed = message.isPressed;
+		gadgetData.grabbables = message.grabbables;
+		gadgetData.hooks = message.hooks;
+	}
+
+	@bind @action onGrabEvent( type: MessageType, message: MsgGrabEvent, sender: EndpointAddr )
+	{
+		this.m_grabEvents.push( message.event );
+	}
+
+	@computed get recentGrabEvents()
+	{
+		return this.m_grabEvents.slice( -10 );
+	}
 }
+
 interface GadgetMonitorProps
 {
 	gadgetId: number;
@@ -101,7 +164,7 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 		super( props );
 		this.state = { manifest: null};
 
-		let gadgetData = MonitorStore.getEndpointData( this.props.gadgetId );
+		let gadgetData = MonitorStore.getGadgetData( this.props.gadgetId );
 		MonitorStore.getConnection().getGadgetManifest( gadgetData.gadgetUri )
 		.then( ( manifest: AvGadgetManifest ) =>
 		{
@@ -203,10 +266,47 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 		</div>
 	}
 
+	private renderGrabberState()
+	{
+		let gadgetData = MonitorStore.getGadgetData( this.props.gadgetId );
+		if( !gadgetData || 
+			!gadgetData.grabberIsPressed && !gadgetData.hooks && !gadgetData.grabbables )
+			return;
+
+		let grabbables: string = "";
+		if( gadgetData.grabbables )
+		{
+			for( let grabbable of gadgetData.grabbables)
+			{
+				if( grabbables.length > 0 )
+				{
+					grabbables += ", ";
+				}
+				grabbables += endpointAddrToString( grabbable );
+			}
+		}
+		let hooks: string = "";
+		if( gadgetData.hooks )
+		{
+			for( let hook of gadgetData.hooks )
+			{
+				if( hooks.length > 0 )
+				{
+					hooks += ", ";
+				}
+				hooks += endpointAddrToString( hook );
+			}
+		}
+		return ( <div>{ gadgetData.grabberIsPressed ? "PRESSED" : "UNPRESSED" }
+			<div>Grabbables: { grabbables }</div>
+			<div>Hooks: { hooks }</div>
+		</div> );
+	}
+
 
 	public render()
 	{
-		let gadgetData = MonitorStore.getEndpointData( this.props.gadgetId );
+		let gadgetData = MonitorStore.getGadgetData( this.props.gadgetId );
 		return <div className="Gadget">
 			Gadget { this.props.gadgetId } 
 			<div className="GadgetName">{ this.state.manifest ? this.state.manifest.name : "???" } 
@@ -214,6 +314,7 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 				<span className="GadgetUri">({ gadgetData.gadgetHook })</span>
 			</div>
 			{ gadgetData.gadgetRoot && this.renderNode( gadgetData.gadgetRoot ) }
+			{ this.renderGrabberState() }
 
 		</div>
 	}
@@ -241,6 +342,40 @@ class RendererMonitor extends React.Component< RendererMonitorProps, RendererMon
 	public render()
 	{
 		return <div className="Renderer">Renderer { this.props.rendererId }</div>
+	}
+}
+
+interface GrabEventProps
+{
+	event: AvGrabEvent;
+}
+
+
+class GrabEventMonitor extends React.Component< GrabEventProps, {} >
+{
+	constructor( props: any )
+	{
+		super( props );
+	}
+
+	private renderAddr( label: string, epa: EndpointAddr )
+	{
+		return <div className="GrabEventField">
+			{ label } :
+			{ epa && endpointAddrToString( epa ) }
+		</div>
+	}
+
+
+	public render()
+	{
+		return ( <div className="GrabEvent">
+			{ AvGrabEventType[ this.props.event.type ] }
+			Sender: { this.props.event.senderId }
+			{ this.renderAddr( "Grabber", this.props.event.grabberId ) }
+			{ this.renderAddr( "Grabbable", this.props.event.grabbableId ) }
+			{ this.renderAddr( "Hook", this.props.event.hookId ) }
+		</div> );
 	}
 }
 
@@ -276,13 +411,23 @@ class AardvarkMonitor extends React.Component< {}, AardvarkMonitorState >
 			}
 		}
 
-		if( endpoints.length == 0 )
+		let events: JSX.Element[] = [];
+		let eventKey = 0;
+		for( let event of MonitorStore.recentGrabEvents )
+		{
+			events.push( <GrabEventMonitor event = {event } key={ eventKey++ }/>)
+		}
+
+		if( endpoints.length == 0 && events.length == 0)
 		{
 			return <div>Nothing connected yet.</div>;
 		}
 		else
 		{
-			return <div>{ endpoints }</div>;
+			return <div>
+				{ endpoints }
+				{ events }
+			</div>;
 		}
 	}
 }

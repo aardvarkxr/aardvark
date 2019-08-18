@@ -79,3 +79,15 @@ body, html
 	margin-left: 0.5rem;
 }
 
+
+.GrabEvent
+{
+	background-color: aquamarine;
+	padding: 0.5rem;
+}
+
+.GrabEventField
+{
+	margin-left: 1rem;
+}
+
