@@ -76,12 +76,14 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 							{
 								type: AvGrabEventType.LeaveRange,
 								senderId: this.m_nodeId,
+								grabberId: this.endpointAddr(),
 								grabbableId: this.m_lastGrabbable
 							});
 						AvGadget.instance().sendGrabEvent( 
 							{
 								type: AvGrabEventType.EnterRange,
 								senderId: this.m_nodeId,
+								grabberId: this.endpointAddr(),
 								grabbableId: evt.grabbableId,
 							});
 						this.m_lastGrabbable = evt.grabbableId;
@@ -92,6 +94,7 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 						{
 							type: AvGrabEventType.StartGrab,
 							senderId: this.m_nodeId,
+							grabberId: this.endpointAddr(),
 							grabbableId: this.m_lastGrabbable,
 							useIdentityTransform,
 						});
@@ -138,6 +141,7 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 					{
 						type: AvGrabEventType.EnterRange,
 						senderId: this.m_nodeId,
+						grabberId: this.endpointAddr(),
 						grabbableId: this.m_lastGrabbable
 					});
 
@@ -152,6 +156,7 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 						{
 							type: AvGrabEventType.LeaveRange,
 							senderId: this.m_nodeId,
+							grabberId: this.endpointAddr(),
 							grabbableId: this.m_lastGrabbable
 						});
 					this.m_lastGrabbable = null;
@@ -172,6 +177,7 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 					{
 						type: AvGrabEventType.RequestGrab,
 						senderId: this.m_nodeId,
+						grabberId: this.endpointAddr(),
 						grabbableId: this.m_lastGrabbable,
 						requestId: this.m_grabRequestId,
 					});
@@ -204,6 +210,7 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 						{
 							type: AvGrabEventType.EndGrab,
 							senderId: this.m_nodeId,
+							grabberId: this.endpointAddr(),
 							grabbableId: this.m_lastGrabbable
 						});
 					this.m_lastHighlight = GrabberHighlight.InRange;
@@ -219,6 +226,7 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 						{
 							type: AvGrabEventType.EnterHookRange,
 							senderId: this.m_nodeId,
+							grabberId: this.endpointAddr(),
 							grabbableId: this.m_lastGrabbable,
 							hookId: this.m_lastHook,
 						});
@@ -233,6 +241,7 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 						{
 							type: AvGrabEventType.EndGrab,
 							senderId: this.m_nodeId,
+							grabberId: this.endpointAddr(),
 							grabbableId: this.m_lastGrabbable
 						});
 					this.m_lastHighlight = GrabberHighlight.InRange;
@@ -250,6 +259,7 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 						{
 							type: AvGrabEventType.LeaveHookRange,
 							senderId: this.m_nodeId,
+							grabberId: this.endpointAddr(),
 							grabbableId: this.m_lastGrabbable,
 							hookId: this.m_lastHook,
 						});
@@ -265,6 +275,7 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 						{
 							type: AvGrabEventType.LeaveHookRange,
 							senderId: this.m_nodeId,
+							grabberId: this.endpointAddr(),
 							grabbableId: this.m_lastGrabbable,
 							hookId: this.m_lastHook,
 						});
@@ -272,6 +283,7 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 						{
 							type: AvGrabEventType.EndGrab,
 							senderId: this.m_nodeId,
+							grabberId: this.endpointAddr(),
 							grabbableId: this.m_lastGrabbable,
 							hookId: this.m_lastHook,
 						});

@@ -1,4 +1,4 @@
-import { MsgUpdateSceneGraph, EndpointType } from 'common/aardvark-react/aardvark_protocol';
+import { MsgUpdateSceneGraph, EndpointType, MsgGrabEvent } from 'common/aardvark-react/aardvark_protocol';
 import { CRendererEndpoint } from './aardvark-react/renderer_endpoint';
 import { Av, AvGrabEventType } from 'common/aardvark';
 import { AvModelInstance, AvNode, AvNodeRoot, AvNodeType, AvVisualFrame, EHand, EVolumeType, AvGrabEvent } from './aardvark';
@@ -134,6 +134,11 @@ export class AvDefaultTraverser
 	{
 		this.m_endpoint = new CRendererEndpoint( this.onEndpointOpen );
 		this.m_endpoint.registerHandler( MessageType.UpdateSceneGraph, this.onUpdateSceneGraph )
+		this.m_endpoint.registerHandler( MessageType.GrabEvent, 
+			( type: MessageType, m: MsgGrabEvent ) =>
+			{
+				this.grabEvent( m.event );
+			} );
 	}
 
 	@bind onEndpointOpen()

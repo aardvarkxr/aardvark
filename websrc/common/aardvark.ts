@@ -328,11 +328,11 @@ export interface AvBrowserTextureCallback
 export interface Aardvark
 {
 	// requires scenegraph permissions
-	createGadget: Av_CreateGadget;
+//	createGadget: Av_CreateGadget;
 	subscribeToBrowserTexture( callback: AvBrowserTextureCallback ): void;
 
 	// requires master permissions
-	startGadget( uri: string, initialHook: string, callback: AvStartGadgetCallback ): void;
+	startGadget( uri: string, initialHook: string, epToNotify: EndpointAddr ): void;
 	getGadgetManifest( uri: string, callback: AvGadgetManifestCallback ): void;
 
 	// requires renderer permissions

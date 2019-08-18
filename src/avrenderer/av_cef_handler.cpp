@@ -64,11 +64,11 @@ bool CStartGadgetRequestClient::GetAuthCredentials( bool isProxy,
 	return false;  // Not handled.
 }
 
-CAardvarkCefHandler::CAardvarkCefHandler( IApplication *application, const std::string & gadgetUri, const std::string & initialHook, int requestId, CefRefPtr<CefBrowser> browserToNotifyWhenCreated )
+CAardvarkCefHandler::CAardvarkCefHandler( IApplication *application, const std::string & gadgetUri, 
+	const std::string & initialHook, const aardvark::EndpointAddr_t & epToNotify )
     : m_useViews( false ), m_isClosing(false) 
 {
-	m_startRequestId = requestId;
-	m_browserToNotifyWhenCreated = browserToNotifyWhenCreated;
+	m_epToNotify = epToNotify;
 
 	m_application = application;
 	m_client = std::make_unique<aardvark::CAardvarkClient>();
@@ -139,6 +139,11 @@ void CAardvarkCefHandler::onGadgetManifestReceived( bool success, const std::str
 	browser_settings.windowless_frame_rate = 90;
 
 	std::string fullUri = m_gadgetUri + "/index.html?initialHook=" + m_initialHook;
+
+	if ( this->m_epToNotify.type != aardvark::EEndpointType::Unknown )
+	{
+		fullUri += "&epToNotify=" + aardvark::endpointAddrToString( this->m_epToNotify );
+	}
 
 	// Create the first browser window.
 	CefBrowserHost::CreateBrowser( window_info, this, fullUri, browser_settings,
@@ -294,25 +299,12 @@ bool CAardvarkCefHandler::OnProcessMessageReceived( CefRefPtr<CefBrowser> browse
 	{
 		std::string uri( message->GetArgumentList()->GetString( 0 ) );
 		std::string initialHook( message->GetArgumentList()->GetString( 1 ) );
-		int requestId = message->GetArgumentList()->GetInt( 2 );
+		aardvark::EndpointAddr_t epToNotify;
+		epToNotify.type = ( aardvark::EEndpointType )message->GetArgumentList()->GetInt( 2 );
+		epToNotify.endpointId = ( uint32_t )message->GetArgumentList()->GetInt( 3 );
+		epToNotify.nodeId = ( uint32_t )message->GetArgumentList()->GetInt( 4 );
 
-		CAardvarkCefApp::instance()->startGadget( uri, initialHook, requestId, browser );
-	}
-	else if ( message->GetName() == "scene_finished" )
-	{
-		std::string mainGrabbableId( message->GetArgumentList()->GetString( 0 ) );
-
-		if ( m_browserToNotifyWhenCreated )
-		{
-			CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "gadget_started" );
-
-			msg->GetArgumentList()->SetInt( 0, m_startRequestId );
-			msg->GetArgumentList()->SetBool( 1, true );
-			msg->GetArgumentList()->SetString( 2, mainGrabbableId );
-
-			m_browserToNotifyWhenCreated->SendProcessMessage( PID_RENDERER, msg );
-			m_browserToNotifyWhenCreated = nullptr;
-		}
+		CAardvarkCefApp::instance()->startGadget( uri, initialHook, epToNotify );
 	}
 	else if ( message->GetName() == "request_texture_info" )
 	{

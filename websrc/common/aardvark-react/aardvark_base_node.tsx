@@ -2,6 +2,7 @@ import * as React from 'react';
 
 import { Av, AvSceneContext, AvNode, AvNodeType } from 'common/aardvark';
 import { AvGadget } from './aardvark_gadget';
+import { EndpointAddr, EndpointType } from './aardvark_protocol';
 
 declare global 
 {
@@ -77,6 +78,15 @@ export abstract class AvBaseNode<TProps, TState> extends React.Component<TProps,
 	public componentDidUpdate()
 	{
 		AvGadget.instance().markDirty();
+	}
+
+	public endpointAddr(): EndpointAddr
+	{
+		return {
+			type: EndpointType.Node,
+			endpointId: AvGadget.instance().getEndpointId(),
+			nodeId: this.m_nodeId,
+		}
 	}
 
 	public render()

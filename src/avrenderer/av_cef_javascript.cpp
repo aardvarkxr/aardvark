@@ -945,6 +945,8 @@ void CAardvarkObject::runFrame()
 }
 
 
+extern bool endpointAddrFromJs( CefRefPtr< CefV8Value > obj, aardvark::EndpointAddr_t *addr );
+
 bool CAardvarkObject::init( CefRefPtr<CefV8Value> container )
 {
 	if ( hasPermission( "scenegraph" ) )
@@ -1018,13 +1020,13 @@ bool CAardvarkObject::init( CefRefPtr<CefV8Value> container )
 				exception = "Invalid hook argument";
 				return;
 			}
-			if ( !arguments[2]->IsFunction() && !arguments[2]->IsNull() )
+			aardvark::EndpointAddr_t epToNotify;
+			if ( !endpointAddrFromJs( arguments[2], &epToNotify ) )
 			{
-				exception = "Invalid callback argument";
-				return;
+				epToNotify.type = aardvark::EEndpointType::Unknown;
 			}
 
-			m_handler->requestStartGadget( arguments[0]->GetStringValue(), arguments[1]->GetStringValue(), arguments[2] );
+			m_handler->requestStartGadget( arguments[0]->GetStringValue(), arguments[1]->GetStringValue(), epToNotify );
 		} );
 
 		RegisterFunction( container, "getGadgetManifest", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
@@ -1261,26 +1263,6 @@ bool CAardvarkRenderProcessHandler::OnProcessMessageReceived( CefRefPtr<CefBrows
 			return false;
 		}
 	}
-	else if ( messageName == "gadget_started" )
-	{
-		int gadgetStartRequestId = message->GetArgumentList()->GetInt( 0 );
-		auto callback = m_startGadgetCallbacks.find( gadgetStartRequestId );
-		if ( callback != m_startGadgetCallbacks.end() )
-		{
-			bool success = message->GetArgumentList()->GetBool( 1 );
-			CefString mainGrabbableId = message->GetArgumentList()->GetString( 2 );
-
-			callback->second.context->Enter();
-			callback->second.callback->ExecuteFunction( nullptr,
-				{
-					CefV8Value::CreateBool( success ),
-					CefV8Value::CreateString( mainGrabbableId ),
-				} );
-			callback->second.context->Exit();
-
-			m_startGadgetCallbacks.erase( callback );
-		}
-	}
 	else if ( messageName == "update_shared_texture" )
 	{
 		for ( auto context : m_contexts )
@@ -1349,21 +1331,16 @@ void CAardvarkRenderProcessHandler::sendBrowserMessage( CefRefPtr< CefProcessMes
 }
 
 
-void CAardvarkRenderProcessHandler::requestStartGadget( const CefString & uri, const CefString & initialHook, CefRefPtr<CefV8Value> callback )
+void CAardvarkRenderProcessHandler::requestStartGadget( const CefString & uri, const CefString & initialHook, 
+	const aardvark::EndpointAddr_t & epToNotify )
 {
-	int requestId = 0;
-	if ( callback->IsFunction() )
-	{
-		requestId = this->m_nextGadgetRequestId++;
-		StartGadgetCallback_t cb = { CefV8Context::GetCurrentContext(), callback };
-		m_startGadgetCallbacks.insert_or_assign( requestId, cb );
-	}
-
 	CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "start_gadget" );
 
 	msg->GetArgumentList()->SetString( 0, uri );
 	msg->GetArgumentList()->SetString( 1, initialHook );
-	msg->GetArgumentList()->SetInt( 2, requestId );
+	msg->GetArgumentList()->SetInt( 2, (int)epToNotify.type );
+	msg->GetArgumentList()->SetInt( 3, (int)epToNotify.endpointId);
+	msg->GetArgumentList()->SetInt( 4, (int)epToNotify.nodeId );
 
 	sendBrowserMessage( msg );
 }

@@ -92,16 +92,17 @@ void CAardvarkCefApp::OnContextInitialized()
 	const bool use_views = false;
 #endif
 
-	startGadget( "http://aardvark.install/gadgets/aardvark_master", "", 0, nullptr );
+	startGadget( "http://aardvark.install/gadgets/aardvark_master", "", aardvark::EndpointAddr_t() );
 }
 
 
-void CAardvarkCefApp::startGadget( const std::string & uri, const std::string & initialHook, int requestId, CefRefPtr<CefBrowser> browserToNotifyWhenCreated )
+void CAardvarkCefApp::startGadget( const std::string & uri, const std::string & initialHook, 
+	const aardvark::EndpointAddr_t & epToNotify )
 {
 	CEF_REQUIRE_UI_THREAD();
 
 	// CAardvarkCefHandler implements browser-level callbacks.
-	CefRefPtr<CAardvarkCefHandler> handler( new CAardvarkCefHandler( this, uri, initialHook, requestId, browserToNotifyWhenCreated ) );
+	CefRefPtr<CAardvarkCefHandler> handler( new CAardvarkCefHandler( this, uri, initialHook, epToNotify ) );
 	m_browsers.push_back( handler );
 	handler->start();
 }

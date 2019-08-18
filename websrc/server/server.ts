@@ -1,4 +1,4 @@
-import { MsgGetGadgetManifest, MsgGetGadgetManifestResponse, MsgUpdateSceneGraph, EndpointAddr, endpointAddrToString, MsgGrabEvent, endpointAddrsMatch, MsgGrabberState } from './../common/aardvark-react/aardvark_protocol';
+import { MsgGetGadgetManifest, MsgGetGadgetManifestResponse, MsgUpdateSceneGraph, EndpointAddr, endpointAddrToString, MsgGrabEvent, endpointAddrsMatch, MsgGrabberState, MsgGadgetStarted, MsgSetEndpointTypeResponse } from './../common/aardvark-react/aardvark_protocol';
 import { MessageType, EndpointType, MsgSetEndpointType, Envelope, MsgNewEndpoint, MsgLostEndpoint, parseEnvelope, MsgError } from 'common/aardvark-react/aardvark_protocol';
 import { AvGadgetManifest, AvNode } from 'common/aardvark';
 import * as express from 'express';
@@ -11,6 +11,7 @@ import * as path from 'path';
 import { URL, pathToFileURL } from 'url';
 import * as fileUrl from 'file-url';
 import { ENFILE } from 'constants';
+import { threadId } from 'worker_threads';
 
 let g_localInstallPathUri = fileUrl( path.resolve( process.cwd() ));
 console.log( "Data directory is", g_localInstallPathUri );
@@ -272,6 +273,12 @@ class CDispatcher
 
 	public forwardToEndpoint( epa: EndpointAddr, env: Envelope )
 	{
+		if( endpointAddrsMatch( epa, env.sender ) )
+		{
+			// don't forward messages back to whomever just sent them
+			return;
+		}
+
 		let ep = this.m_endpoints[ epa.endpointId ];
 		if( !ep )
 		{
@@ -355,6 +362,7 @@ class CEndpoint
 		this.registerEnvelopeHandler( MessageType.UpdateSceneGraph, this.onUpdateSceneGraph );
 		this.registerEnvelopeHandler( MessageType.GrabberState, this.onGrabberState );
 		this.registerEnvelopeHandler( MessageType.GrabEvent, this.onGrabEvent );
+		this.registerEnvelopeHandler( MessageType.GadgetStarted, this.onGadgetStarted );
 	}
 
 	public getId() { return this.m_id; }
@@ -478,6 +486,12 @@ class CEndpoint
 			this.m_gadgetData = new CGadgetData( this, m.gadgetUri, m.initialHook, this.m_dispatcher );
 		}
 
+		let msgResponse: MsgSetEndpointTypeResponse =
+		{
+			endpointId: this.m_id
+		}
+		this.sendMessage( MessageType.SetEndpointTypeResponse, msgResponse );
+		
 		this.m_dispatcher.setEndpointType( this );
 
 		this.m_dispatcher.sendToAllEndpointsOfType( EndpointType.Monitor,
@@ -492,19 +506,35 @@ class CEndpoint
 
 	@bind private onGrabEvent( env: Envelope, m: MsgGrabEvent )
 	{
-		if( m.event.grabberId && !endpointAddrsMatch( m.event.grabberId, env.sender ) )
+		if( m.event.grabberId )
 		{
 			this.m_dispatcher.forwardToEndpoint( m.event.grabberId, env );
 		}
-		if( m.event.grabbableId && !endpointAddrsMatch( m.event.grabbableId, env.sender ) )
+		if( m.event.grabbableId )
 		{
 			this.m_dispatcher.forwardToEndpoint( m.event.grabbableId, env );
 		}
-		if( m.event.hookId && !endpointAddrsMatch( m.event.hookId, env.sender ) )
+		if( m.event.hookId )
 		{
 			this.m_dispatcher.forwardToEndpoint( m.event.hookId, env );
 		}
+		if( env.sender.type != EndpointType.Renderer )
+		{
+			this.m_dispatcher.sendToAllEndpointsOfType( EndpointType.Renderer, env );
+		}
 		this.m_dispatcher.sendToAllEndpointsOfType( EndpointType.Monitor, env );
+	}
+
+	@bind private onGadgetStarted( env:Envelope, m: MsgGadgetStarted )
+	{
+		m.mainGrabbableGlobalId = 
+		{ 
+			type: EndpointType.Node, 
+			endpointId: this.m_id,
+			nodeId: m.mainGrabbable,
+		};
+
+		this.m_dispatcher.forwardToEndpoint( m.epToNotify, env );
 	}
 
 	public sendMessage( type: MessageType, msg: any, target: EndpointAddr = undefined, sender:EndpointAddr = undefined  )

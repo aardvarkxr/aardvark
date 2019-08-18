@@ -1,5 +1,5 @@
 import bind from 'bind-decorator';
-import { EndpointType, MessageType, EndpointAddr, Envelope, parseEnvelope, MsgSetEndpointType, MsgGetGadgetManifest, MsgGetGadgetManifestResponse, MsgGrabEvent } from './aardvark_protocol';
+import { EndpointType, MessageType, EndpointAddr, Envelope, parseEnvelope, MsgSetEndpointType, MsgGetGadgetManifest, MsgGetGadgetManifestResponse, MsgGrabEvent, MsgSetEndpointTypeResponse } from './aardvark_protocol';
 import { AvGadgetManifest, AvGrabEvent } from 'common/aardvark';
 
 export interface MessageHandler
@@ -19,13 +19,19 @@ export class CAardvarkEndpoint
 	private m_callbacks: { [ msgType: number ]: MessageHandler } = {};
 	private m_defaultHandler: MessageHandler = null;
 	private m_realOpenHandler: OpenHandler = null;
+	private m_handshakeComplete: OpenHandler = null;
+	private m_endpointId: number = null;
 
-	constructor( openHandler: OpenHandler, defaultHandler: MessageHandler = null )
+	constructor( openHandler: OpenHandler, handshakeComplete: OpenHandler, defaultHandler: MessageHandler = null )
 	{
 		this.m_defaultHandler = defaultHandler;
 		this.m_realOpenHandler = openHandler;
+		this.m_handshakeComplete = handshakeComplete;
 		this.connectToServer();
+		this.registerHandler( MessageType.SetEndpointTypeResponse, this.onSetEndpointTypeResponse );
 	}
+
+	public getEndpointId() { return this.m_endpointId; }
 
 	@bind private connectToServer()
 	{
@@ -67,6 +73,15 @@ export class CAardvarkEndpoint
 		else
 		{
 			console.log( "Unhandled message", env );
+		}
+	}
+
+	@bind public onSetEndpointTypeResponse( type: MessageType, m: MsgSetEndpointTypeResponse )
+	{
+		this.m_endpointId = m.endpointId;
+		if( this.m_handshakeComplete )
+		{
+			this.m_handshakeComplete();
 		}
 	}
 
@@ -132,7 +147,7 @@ export class CMonitorEndpoint extends CAardvarkEndpoint
 {
 	constructor( defaultHandler: MessageHandler = null )
 	{
-		super( () => { this.onOpen() }, defaultHandler );
+		super( () => { this.onOpen() }, null, defaultHandler );
 	}
 
 	@bind onOpen()

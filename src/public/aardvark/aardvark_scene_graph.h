@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <string>
 #include "aardvark.capnp.h"
 #include "aardvark_client.h"
 
@@ -169,9 +170,9 @@ namespace aardvark
 
 	struct EndpointAddr_t
 	{
-		EEndpointType type;
-		uint32_t endpointId;
-		uint32_t nodeId;
+		EEndpointType type = EEndpointType::Unknown;
+		uint32_t endpointId = 0;
+		uint32_t nodeId = 0;
 	};
 
 	inline bool operator==( const EndpointAddr_t & lhs, const EndpointAddr_t & rhs )
@@ -179,6 +180,9 @@ namespace aardvark
 		return lhs.type == rhs.type && lhs.endpointId == rhs.endpointId
 			&& lhs.nodeId == rhs.nodeId;
 	}
+
+	std::string endpointAddrToString( const EndpointAddr_t & epa );
+
 }
 
 namespace std

@@ -7,6 +7,7 @@
 #include <set>
 
 #include <aardvark/aardvark_gadget_manifest.h>
+#include <aardvark/aardvark_scene_graph.h>
 
 #include "uri_request_handler.h"
 #include "javascript_object.h"
@@ -43,7 +44,7 @@ public:
 	void updateGadgetNamesForBrowser();
 	bool hasPermission( const std::string & permission );
 	const std::string getInitialHook() const { return m_initialHook; }
-	void requestStartGadget( const CefString & uri, const CefString & initialHook, CefRefPtr<CefV8Value> callback );
+	void requestStartGadget( const CefString & uri, const CefString & initialHook, const aardvark::EndpointAddr_t & epToNotify );
 	void sceneFinished( uint64_t mainGrabbableId );
 	kj::Promise<CUriRequestHandler::Result_t> requestUri( const std::string & uri );
 	void requestTextureInfo();
@@ -65,13 +66,6 @@ private:
 	std::string m_initialHook;
 	CAardvarkGadgetManifest m_gadgetManifest;
 	CUriRequestHandler m_uriRequestHandler;
-	int m_nextGadgetRequestId = 1;
-	struct StartGadgetCallback_t
-	{
-		CefRefPtr<CefV8Context> context;
-		CefRefPtr< CefV8Value> callback;
-	};
-	std::map< int, StartGadgetCallback_t > m_startGadgetCallbacks;
 	bool m_needRunFrame = true;
 
 	// Include the default reference counting implementation.

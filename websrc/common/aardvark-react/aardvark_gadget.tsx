@@ -1,11 +1,11 @@
 import * as React from 'react';
 
 import { Av, AvPanelHandler, AvGadgetObj, AvSceneContext, AvPokerHandler, AvPanelMouseEventType, 
-	AvGrabEventProcessor, AvGrabberProcessor, AvGrabEventType, AvGrabEvent, AvGadgetManifest, AvNode, AvNodeType } from 'common/aardvark';
+	AvGrabEventProcessor, AvGrabberProcessor, AvGrabEventType, AvGrabEvent, AvGadgetManifest, AvNode, AvNodeType, AvStartGadgetCallback } from 'common/aardvark';
 import { IAvBaseNode } from './aardvark_base_node';
 import bind from 'bind-decorator';
 import { CGadgetEndpoint } from './gadget_endpoint';
-import { MessageType, MsgUpdateSceneGraph, EndpointAddr, MsgGrabberState, MsgGrabEvent } from './aardvark_protocol';
+import { MessageType, MsgUpdateSceneGraph, EndpointAddr, MsgGrabberState, MsgGrabEvent, stringToEndpointAddr, MsgGadgetStarted, EndpointType, endpointAddrToString } from './aardvark_protocol';
 
 interface AvGadgetProps
 {
@@ -42,10 +42,14 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 	m_endpoint: CGadgetEndpoint = null;
 	m_manifest: AvGadgetManifest = null;
 	m_actualGadgetUri: string = null;
+	private m_epToNotify: EndpointAddr = null;
+	private m_firstSceneGraph: boolean = true;
+	private m_mainGrabbable: AvNode = null;
 
 	m_grabberProcessors: {[nodeId:number]: AvGrabberProcessor } = {};
 	m_grabEventProcessors: {[nodeId:number]: AvGrabEventProcessor } = {};
 	m_pokerProcessors: {[nodeId:number]: AvPokerHandler } = {};
+	m_startGadgetCallbacks: {[nodeId:number]: AvStartGadgetCallback } = {};
 
 	constructor( props: any )
 	{
@@ -73,6 +77,12 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 
 		let params = parseURL( window.location.href );
 
+		if( params[ "epToNotify"] )
+		{
+			this.m_epToNotify = stringToEndpointAddr( params[ "epToNotify"] );
+			console.log( "This gadget wants to notify " + endpointAddrToString(this.m_epToNotify ) );
+		}
+
 		this.m_endpoint = new CGadgetEndpoint( this.m_actualGadgetUri, params["initialHook"], this.onEndpointOpen );
 	}
 
@@ -87,6 +97,7 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 
 		this.m_endpoint.registerHandler( MessageType.GrabberState, this.onGrabberState );
 		this.m_endpoint.registerHandler( MessageType.GrabEvent, this.onGrabEvent );
+		this.m_endpoint.registerHandler( MessageType.GadgetStarted, this.onGadgetStarted );
 	}
 
 	public static instance()
@@ -157,6 +168,11 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 		this.markDirty();
 	}
 
+	public getEndpointId() : number
+	{
+		return this.m_endpoint.getEndpointId();
+	}
+	
 	@bind onGrabberState( type:MessageType, m: MsgGrabberState, sender: EndpointAddr, target: EndpointAddr ):void
 	{
 		let processor = this.m_grabberProcessors[ target.nodeId ];
@@ -173,6 +189,16 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 		if( processor )
 		{
 			processor( m.event );
+		}
+	}
+
+	@bind onGadgetStarted( type:MessageType, m: MsgGadgetStarted, sender: EndpointAddr, target: EndpointAddr ):void
+	{
+		let processor = this.m_startGadgetCallbacks[ target.nodeId ];
+		if( processor )
+		{
+			processor( true, m.mainGrabbableGlobalId );
+			delete this.m_startGadgetCallbacks[ target.nodeId ];
 		}
 	}
 
@@ -203,6 +229,10 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 					if( reactNode )
 					{
 						node = reactNode.buildNode();
+						if( node.type == AvNodeType.Grabbable && !this.m_mainGrabbable )
+						{
+							this.m_mainGrabbable = node;
+						}
 						this.m_traversedNodes[nodeId] = reactNode;
 					}
 				}
@@ -255,6 +285,7 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 			return;
 		}
 
+		this.m_mainGrabbable = null;
 		this.m_traversedNodes = {};
 		let rootNodes = this.traverseNode( document.body );
 
@@ -279,6 +310,24 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 
 		this.m_endpoint.sendMessage( MessageType.UpdateSceneGraph, msg );
 
+		if( this.m_firstSceneGraph )
+		{
+			this.m_firstSceneGraph = false;
+			if( this.m_epToNotify )
+			{
+				let msgStarted: MsgGadgetStarted = 
+				{
+					epToNotify: this.m_epToNotify,
+				}
+
+				if( this.m_mainGrabbable )
+				{
+					msgStarted.mainGrabbable = this.m_mainGrabbable.id;
+				}
+
+				this.m_endpoint.sendMessage( MessageType.GadgetStarted, msgStarted );
+			}
+		}
 		this.m_nextFrameRequest = 0;
 	}
 
@@ -301,6 +350,24 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 	{
 //		this.m_gadget.sendHapticEventFromPanel( panelId, amplitude, frequency, duration );
 	}
+
+	public startGadget( uri: string, initialHook: string, callback: AvStartGadgetCallback )
+	{
+		let epToNotify: EndpointAddr = null;
+		if( callback )
+		{
+			let notifyNodeId = this.m_nextNodeId++;
+			this.m_startGadgetCallbacks[ notifyNodeId ] = callback;
+
+			epToNotify = 
+			{
+				type: EndpointType.Node,
+				endpointId: this.m_endpoint.getEndpointId(),
+				nodeId: notifyNodeId,
+			}
+		}
+		Av().startGadget( uri, initialHook, epToNotify );
+	} 
 
 	public render()
 	{

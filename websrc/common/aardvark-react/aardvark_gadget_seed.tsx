@@ -7,6 +7,7 @@ import { AvTransform } from './aardvark_transform';
 import { AvSphereHandle } from './aardvark_handles';
 import { AvModel } from './aardvark_model';
 import { EndpointAddr } from './aardvark_protocol';
+import { AvGadget } from './aardvark_gadget';
 
 
 interface AvGadgetSeedProps extends AvBaseNodeProps
@@ -49,23 +50,23 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 	{
 		return new Promise<GrabResponse>( ( resolve, reject ) =>
 		{
-			Av().startGadget( this.props.uri, "",
-			( success: boolean, mainGrabbableId: EndpointAddr ) =>
-			{
-				if( success )
+			AvGadget.instance().startGadget( this.props.uri, "", 
+				( success: boolean, mainGrabbableId: EndpointAddr ):void =>
 				{
-					let response: GrabResponse =
+					if( success )
 					{
-						allowed: true,
-						proxyGrabbableGlobalId: mainGrabbableId,
-					};
-					resolve( response );
-				}
-				else
-				{
-					reject( "startGadget failed");
-				}
-			});
+						let response: GrabResponse =
+						{
+							allowed: true,
+							proxyGrabbableGlobalId: mainGrabbableId,
+						};
+						resolve( response );
+					}
+					else
+					{
+						reject( "startGadget failed");
+					}
+				});
 		} );
 	}
 

@@ -5,12 +5,9 @@ import bind from 'bind-decorator';
 
 export class CRendererEndpoint extends CAardvarkEndpoint
 {
-	private m_openHandler: OpenHandler;
-
 	constructor( openHandler: OpenHandler, defaultHandler: MessageHandler = null )
 	{
-		super( () => { this.onOpen() }, defaultHandler );
-		this.m_openHandler = openHandler;
+		super( () => { this.onOpen() }, openHandler, defaultHandler );
 	}
 
 	@bind onOpen()
@@ -22,11 +19,6 @@ export class CRendererEndpoint extends CAardvarkEndpoint
 		}
 
 		this.sendMessage( MessageType.SetEndpointType, msgSetEndpointType );
-
-		if( this.m_openHandler )
-		{
-			this.m_openHandler();
-		}
 	}
 }
 

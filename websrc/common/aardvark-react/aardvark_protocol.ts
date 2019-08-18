@@ -5,10 +5,11 @@ export enum MessageType
 	// initialization messages. These are the only messages that 
 	// aren't required to have a sender.
 	SetEndpointType = 100,
-	Error = 101,
-	GetGadgetManifest = 102,
-	GetGadgetManifestResponse = 103,
-
+	SetEndpointTypeResponse = 101,
+	Error = 102,
+	GetGadgetManifest = 103,
+	GetGadgetManifestResponse = 104,
+	
 	// Monitor messages
 	// these are send to monitors to give them meta context
 	NewEndpoint = 200,
@@ -18,8 +19,7 @@ export enum MessageType
 	UpdateSceneGraph = 300,
 	GrabEvent = 301,
 	GrabberState = 302,
-	
-
+	GadgetStarted = 303,	
 }
 
 export enum EndpointType
@@ -39,11 +39,56 @@ export interface EndpointAddr
 	nodeId?: number;
 }
 
+function endpointTypeFromCharacter( c: string ): EndpointType
+{
+	switch( c )
+	{
+		case "H": return EndpointType.Hub;
+		case "G": return EndpointType.Gadget;
+		case "N": return EndpointType.Node;
+		case "M": return EndpointType.Monitor;
+		case "R": return EndpointType.Renderer;
+		default: return EndpointType.Unknown;
+	}
+}
+
+function endpointCharacterFromType( ept: EndpointType ): string
+{
+	switch( ept )
+	{
+		case EndpointType.Hub: return "H";
+		case EndpointType.Gadget: return "G";
+		case EndpointType.Node: return "N";
+		case EndpointType.Monitor: return "M";
+		case EndpointType.Renderer: return "R";
+		case EndpointType.Unknown: return "U";
+		default: return "?";
+	}
+}
+
 export function endpointAddrToString( epa: EndpointAddr ) : string
 {
-	return EndpointType[ epa.type ] 
-		+ ( epa.endpointId ? ":" + epa.endpointId : "" )
-		+ ( epa.nodeId ? ":" + epa.nodeId : "" );
+	return endpointCharacterFromType( epa.type )
+		+ ":" + ( epa.endpointId ? epa.endpointId : 0 )
+		+ ":" + ( epa.nodeId ? epa.nodeId : 0 );
+}
+
+
+export function stringToEndpointAddr( epaStr: string ) : EndpointAddr
+{
+	let re = new RegExp( "^(.):([0-9]+):([0-9]+)$" );
+	let match = re.exec( epaStr );
+	if( !match )
+	{
+		console.log( `endpoint string ${ epaStr } failed to parse` );
+		return null;
+	}
+	return (
+		{ 
+			type: endpointTypeFromCharacter( match[1] ),
+			endpointId: parseInt( match[2] ),
+			nodeId: parseInt( match[3] ),
+		} );
 }
 
 export function endpointAddrIsEmpty( epa: EndpointAddr ): boolean
@@ -91,6 +136,11 @@ export interface MsgSetEndpointType
 	newEndpointType: EndpointType;
 	gadgetUri?: string;
 	initialHook?: string;
+}
+
+export interface MsgSetEndpointTypeResponse
+{
+	endpointId: number;
 }
 
 export interface MsgNewEndpoint
@@ -152,5 +202,12 @@ export function parseEnvelope( envString: string, parsePayload: boolean = true )
 		console.log( "failed to parse envelope", envString, e );
 		return null;
 	}
+}
+
+export interface MsgGadgetStarted
+{
+	epToNotify: EndpointAddr;
+	mainGrabbable?: number;
+	mainGrabbableGlobalId?: EndpointAddr;
 }
 

@@ -10,6 +10,7 @@
 
 #include <aardvark/aardvark_client.h>
 #include <aardvark/aardvark_gadget_manifest.h>
+#include <aardvark/aardvark_scene_graph.h>
 
 #include "uri_request_handler.h"
 
@@ -66,7 +67,7 @@ class CAardvarkCefHandler : public CefClient,
 					  public CefRenderHandler
 {
 public:
-	explicit CAardvarkCefHandler( IApplication *application, const std::string & gadgetUri, const std::string & initialHook, int requestId, CefRefPtr<CefBrowser> browserToNotifyWhenCreated );
+	explicit CAardvarkCefHandler( IApplication *application, const std::string & gadgetUri, const std::string & initialHook, const aardvark::EndpointAddr_t & epToNotify );
 	~CAardvarkCefHandler();
 
 	// CefClient methods:
@@ -160,13 +161,11 @@ private:
 	CefRefPtr<CefURLRequest> m_manifestRequest;
 	std::string m_gadgetUri;
 	std::string m_initialHook;
+	aardvark::EndpointAddr_t m_epToNotify;
 	bool m_wantsToQuit = false;
 	bool m_wantsTexture = false;
 
 	CUriRequestHandler m_uriRequestHandler;
-
-	int m_startRequestId = 0;
-	CefRefPtr<CefBrowser> m_browserToNotifyWhenCreated;
 
 	// Include the default reference counting implementation.
 	IMPLEMENT_REFCOUNTING(CAardvarkCefHandler);
