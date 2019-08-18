@@ -1,4 +1,4 @@
-import { MsgGetGadgetManifest, MsgGetGadgetManifestResponse, MsgUpdateSceneGraph, MsgGrabberState, EndpointAddr, endpointAddrToString, MsgGrabEvent, endpointAddrsMatch } from './../common/aardvark-react/aardvark_protocol';
+import { MsgGetGadgetManifest, MsgGetGadgetManifestResponse, MsgUpdateSceneGraph, EndpointAddr, endpointAddrToString, MsgGrabEvent, endpointAddrsMatch, MsgGrabberState } from './../common/aardvark-react/aardvark_protocol';
 import { MessageType, EndpointType, MsgSetEndpointType, Envelope, MsgNewEndpoint, MsgLostEndpoint, parseEnvelope, MsgError } from 'common/aardvark-react/aardvark_protocol';
 import { AvGadgetManifest, AvNode } from 'common/aardvark';
 import * as express from 'express';
@@ -39,44 +39,43 @@ function fixupUriForLocalInstall( originalUri: string ):URL
 
 function getJSONFromUri( uri: string ): Promise< any >
 {
-	let url = fixupUriForLocalInstall( uri );
-
 	return new Promise<any>( ( resolve, reject ) =>
 	{
-		if( url.protocol == "file:" )
+		try
 		{
-			fs.readFile( url, "utf8", (err: NodeJS.ErrnoException, data: string ) =>
+			let url = fixupUriForLocalInstall( uri );
+			if( url.protocol == "file:" )
 			{
-				if( err )
+				fs.readFile( url, "utf8", (err: NodeJS.ErrnoException, data: string ) =>
 				{
-					reject( err );
-				}
-				else
-				{
-					try
+					if( err )
+					{
+						reject( err );
+					}
+					else
 					{
 						resolve( JSON.parse( data ) );
 					}
-					catch( e )
-					{
-						reject( e );
-					}
-				}
-			});
+				});
+			}
+			else
+			{
+				let promRequest = axios.get( url.toString() )
+				.then( (value: AxiosResponse ) =>
+				{
+					resolve( value.data );
+				} )
+				.catch( (reason: any ) =>
+				{
+					reject( reason );
+				});
+			}
 		}
-		else
+		catch( e )
 		{
-			let promRequest = axios.get( url.toString() )
-			.then( (value: AxiosResponse ) =>
-			{
-				resolve( value.data );
-			} )
-			.catch( (reason: any ) =>
-			{
-				reject( reason );
-			});
+			reject( e );
 		}
-	} );
+} );
 }
 
 
@@ -554,6 +553,12 @@ class CEndpoint
 		let lostEpMsg: MsgLostEndpoint =
 		{
 			endpointId: this.m_id,
+		}
+
+		if( this.m_type == EndpointType.Gadget && this.m_gadgetData && this.m_gadgetData.getRoot() )
+		{
+			// Let renderers know that this gadget is no more.
+			this.m_dispatcher.updateGadgetSceneGraph( this.m_id, null, null );
 		}
 
 		this.m_dispatcher.sendToAllEndpointsOfType( EndpointType.Monitor,
