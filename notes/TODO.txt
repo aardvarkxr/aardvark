@@ -40,14 +40,8 @@ working on animations and moving transform math to C++
 
 
 Websocket conversion:
-* need grabber intersection plumbing
-* Need grab event plumbing
 * Need a C++ function to spoof mouse events for panels.
-
-grab events are in, but are being really flickery. Maybe events are spamming to everybody and the left hand is turning off
- grabbing as soon as it starts.
-
-Maybe do the monitor store conversion and then add event logging to that?
+* Dropping on hooks is not working. Highlighting hooks is, so I'm not sure what's up with that.
 
 ========= DEAL WITH THIS NEXT ===========
 
