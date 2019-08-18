@@ -4,7 +4,7 @@ import { AvGadget } from './aardvark_gadget';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 import { AvSceneContext, AvNodeType, AvGrabEventType, AvGrabEvent, EVolumeType } from 'common/aardvark';
 import bind from 'bind-decorator';
-import { EndpointAddr } from './aardvark_protocol';
+import { EndpointAddr, indexOfEndpointAddrs } from './aardvark_protocol';
 
 function assert( expr: boolean, msg?: string )
 {
@@ -145,7 +145,7 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 
 			case GrabberHighlight.InRange:
 				assert( this.m_lastGrabbable != null );
-				if( -1 == grabbableIds.indexOf( this.m_lastGrabbable ) )
+				if( -1 == indexOfEndpointAddrs( grabbableIds, this.m_lastGrabbable ) )
 				{
 					// stop being in range.
 					AvGadget.instance().sendGrabEvent( 
@@ -196,7 +196,7 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 				break;
 				
 			case GrabberHighlight.Grabbed:
-				if( -1 == grabbableIds.indexOf( this.m_lastGrabbable ) )
+				if( -1 == indexOfEndpointAddrs( grabbableIds, this.m_lastGrabbable ) )
 				{
 					// cancel grabbing
 					console.log( "Ending grab of " + this.m_lastGrabbable + " because it wasn't in the grabbable list")
@@ -241,7 +241,8 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 				break;
 
 			case GrabberHighlight.NearHook:
-				if( -1 == hookIds.indexOf( this.m_lastHook ) || -1 == grabbableIds.indexOf( this.m_lastGrabbable ) )
+				if( -1 == indexOfEndpointAddrs( hookIds, this.m_lastHook ) 
+					|| -1 == indexOfEndpointAddrs( grabbableIds, this.m_lastGrabbable ) )
 				{
 					// losing our hook or grabbable both kick us back to Grabbed. The next update will change our
 					// phase from there. 

@@ -59,6 +59,18 @@ export function endpointAddrsMatch( epa1: EndpointAddr, epa2: EndpointAddr ): bo
 	return epa1.type == epa2.type && epa1.nodeId == epa2.nodeId && epa1.endpointId == epa2.endpointId;
 }
 
+export function indexOfEndpointAddrs( epaArray: EndpointAddr[], epa: EndpointAddr ): number
+{
+	for( let i = 0; i < epaArray.length; i++ )
+	{
+		if( endpointAddrsMatch( epaArray[i], epa ) )
+		{
+			return i;
+		}
+	}
+	return -1;
+}
+
 export interface Envelope
 {
 	type: MessageType;
