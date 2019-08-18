@@ -4,15 +4,88 @@ import { CMonitorEndpoint } from 'common/aardvark-react/aardvark_endpoint';
 import { EndpointType, MessageType, EndpointAddr, MsgNewEndpoint, MsgLostEndpoint, MsgUpdateSceneGraph } from 'common/aardvark-react/aardvark_protocol';
 import bind from 'bind-decorator';
 import { AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, AvVector, AvQuaternion } from 'common/aardvark';
+import { observable, ObservableMap, action, observe } from 'mobx';
+import { observer } from 'mobx-react';
+
+interface EndpointData
+{
+	id: number;
+	type: EndpointType;
+	gadgetUri?: string;
+	gadgetRoot?: AvNode;
+	gadgetHook?: string;
+}
 
 
+class CMonitorStore
+{
+	private m_connection: CMonitorEndpoint;
+	@observable m_endpoints: ObservableMap<number, EndpointData>;
+
+	constructor()
+	{
+		this.m_endpoints = new ObservableMap<number, EndpointData>();
+
+		this.m_connection = new CMonitorEndpoint( this.onUnhandledMessage );
+		this.m_connection.registerHandler( MessageType.NewEndpoint, this.onNewEndpoint );
+		this.m_connection.registerHandler( MessageType.LostEndpoint, this.onLostEndpoint );
+		this.m_connection.registerHandler( MessageType.UpdateSceneGraph, this.onUpdateSceneGraph );
+
+	}
+
+	public getConnection() { return this.m_connection; }
+
+	public getEndpointData( epid: number )
+	{
+		if( this.m_endpoints.has( epid ) )
+		{
+			return this.m_endpoints.get( epid );
+		}
+		else
+		{
+			return null;
+		}
+	}
+
+	@bind onUnhandledMessage( type: MessageType, message: any, sender: EndpointAddr )
+	{
+		console.log( "received unhandled message", type, message, sender );
+	}
+
+	@bind @action onNewEndpoint( type: MessageType, message: MsgNewEndpoint, sender: EndpointAddr )
+	{
+		console.log( "New endpoint!", message );
+		if( message.newEndpointType != EndpointType.Monitor )
+		{
+			this.m_endpoints.set( message.endpointId,
+				{ 
+					type: message.newEndpointType,
+					id: message.endpointId,
+					gadgetUri: message.gadgetUri,
+				} );
+		}
+	}
+
+	@bind @action onUpdateSceneGraph( type: MessageType, message: MsgUpdateSceneGraph, sender: EndpointAddr )
+	{
+		if( this.m_endpoints.has( sender.endpointId ) )
+		{
+			let endpointData = this.m_endpoints.get( sender.endpointId );
+			endpointData.gadgetHook = message.hook;
+			endpointData.gadgetRoot = message.root;
+		}
+	}
+
+	@bind @action onLostEndpoint( type: MessageType, message: MsgLostEndpoint, sender: EndpointAddr )
+	{
+		console.log( "Lost endpoint!", message );
+		this.m_endpoints.delete( message.endpointId );
+	}
+
+}
 interface GadgetMonitorProps
 {
 	gadgetId: number;
-	gadgetUri: string;
-	gadgetRoot?: AvNode;
-	gadgetHook?: string;
-	monitor: CMonitorEndpoint;
 }
 
 interface GadgetMonitorState
@@ -20,6 +93,7 @@ interface GadgetMonitorState
 	manifest: AvGadgetManifest;
 }
 
+@observer
 class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorState >
 {
 	constructor( props: any )
@@ -27,7 +101,8 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 		super( props );
 		this.state = { manifest: null};
 
-		this.props.monitor.getGadgetManifest( this.props.gadgetUri )
+		let gadgetData = MonitorStore.getEndpointData( this.props.gadgetId );
+		MonitorStore.getConnection().getGadgetManifest( gadgetData.gadgetUri )
 		.then( ( manifest: AvGadgetManifest ) =>
 		{
 			this.setState( { manifest });
@@ -131,13 +206,14 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 
 	public render()
 	{
+		let gadgetData = MonitorStore.getEndpointData( this.props.gadgetId );
 		return <div className="Gadget">
 			Gadget { this.props.gadgetId } 
 			<div className="GadgetName">{ this.state.manifest ? this.state.manifest.name : "???" } 
-				<span className="GadgetUri">({ this.props.gadgetUri })</span>
-				<span className="GadgetUri">({ this.props.gadgetHook })</span>
+				<span className="GadgetUri">({ gadgetData.gadgetUri })</span>
+				<span className="GadgetUri">({ gadgetData.gadgetHook })</span>
 			</div>
-			{ this.props.gadgetRoot && this.renderNode( this.props.gadgetRoot ) }
+			{ gadgetData.gadgetRoot && this.renderNode( gadgetData.gadgetRoot ) }
 
 		</div>
 	}
@@ -153,6 +229,7 @@ interface RendererMonitorState
 
 }
 
+@observer
 class RendererMonitor extends React.Component< RendererMonitorProps, RendererMonitorState >
 {
 	constructor( props: any )
@@ -167,94 +244,34 @@ class RendererMonitor extends React.Component< RendererMonitorProps, RendererMon
 	}
 }
 
-interface EndpointData
-{
-	id: number;
-	type: EndpointType;
-	gadgetUri?: string;
-	gadgetRoot?: AvNode;
-	gadgetHook?: string;
-}
-
 interface AardvarkMonitorState
 {
-	endpoints: { [id: number] : EndpointData };
 }
 
+@observer
 class AardvarkMonitor extends React.Component< {}, AardvarkMonitorState >
 {
-	private m_endpoint: CMonitorEndpoint;
 
 	constructor( props: any )
 	{
 		super( props );
-		this.state = 
-		{ 
-			endpoints : {},
-		};
-
-		this.m_endpoint = new CMonitorEndpoint( this.onUnhandledMessage );
-		this.m_endpoint.registerHandler( MessageType.NewEndpoint, this.onNewEndpoint );
-		this.m_endpoint.registerHandler( MessageType.LostEndpoint, this.onLostEndpoint );
-		this.m_endpoint.registerHandler( MessageType.UpdateSceneGraph, this.onUpdateSceneGraph );
-	}
-
-	@bind onUnhandledMessage( type: MessageType, message: any, sender: EndpointAddr )
-	{
-		console.log( "received unhandled message", type, message, sender );
-	}
-
-	@bind onNewEndpoint( type: MessageType, message: MsgNewEndpoint, sender: EndpointAddr )
-	{
-		console.log( "New endpoint!", message );
-		if( message.newEndpointType != EndpointType.Monitor )
-		{
-			let newList = Object.assign( {}, this.state.endpoints );
-			newList[ message.endpointId ] = 
-			{ 
-				type: message.newEndpointType,
-				id: message.endpointId,
-				gadgetUri: message.gadgetUri,
-			}
-
-			this.setState( { endpoints: newList } );
-		}
-	}
-
-	@bind onUpdateSceneGraph( type: MessageType, message: MsgUpdateSceneGraph, sender: EndpointAddr )
-	{
-		let newList = Object.assign( {}, this.state.endpoints );
-		newList[ sender.endpointId ].gadgetRoot = message.root;
-		newList[ sender.endpointId ].gadgetHook = message.hook;
-		this.setState( { endpoints: newList } );
-	}
-
-	@bind onLostEndpoint( type: MessageType, message: MsgLostEndpoint, sender: EndpointAddr )
-	{
-		console.log( "Lost endpoint!", message );
-		let newList = Object.assign( {}, this.state.endpoints );
-		delete newList[ message.endpointId ];
-		this.setState( { endpoints: newList } );
 	}
 
 	public render()
 	{
 		let endpoints: JSX.Element[] = [];
-		for( let epid in this.state.endpoints )
+		for( let epid of MonitorStore.m_endpoints.keys() )
 		{
-			let ep = this.state.endpoints[ epid ];
+			let ep = MonitorStore.m_endpoints.get( epid );
 			switch( ep.type )
 			{
 				case EndpointType.Gadget:
 					endpoints.push( <GadgetMonitor key={ epid }
-						gadgetId={ ep.id } 
-						gadgetUri={ ep.gadgetUri } 
-						gadgetRoot={ ep.gadgetRoot }
-						gadgetHook={ ep.gadgetHook }
-						monitor={ this.m_endpoint } /> );
+						gadgetId={ epid } 
+						/> );
 					break;
 				case EndpointType.Renderer:
-					endpoints.push( <RendererMonitor  key={ epid } rendererId={ ep.id } /> );
+					endpoints.push( <RendererMonitor  key={ epid } rendererId={ epid } /> );
 					break;
 			}
 		}
@@ -270,4 +287,5 @@ class AardvarkMonitor extends React.Component< {}, AardvarkMonitorState >
 	}
 }
 
+let MonitorStore = new CMonitorStore();
 ReactDOM.render( <AardvarkMonitor/>, document.getElementById( "root" ) );
