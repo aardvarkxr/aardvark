@@ -648,7 +648,7 @@ export class AvDefaultTraverser
 			case AvGrabEventType.EndGrab:
 				console.log( "Traverser ending grab of " + grabEvent.grabbableId + " by " + grabEvent.grabberId );
 				Av().renderer.endGrab( grabEvent.grabberId, grabEvent.grabbableId );
-				if( endpointAddrIsEmpty( grabEvent.hookId ) )
+				if( !endpointAddrIsEmpty( grabEvent.hookId ) )
 				{
 					// we're dropping onto a hook
 					this.m_nodeToNodeAnchors[ endpointAddrToString( grabEvent.grabbableId ) ] = 
