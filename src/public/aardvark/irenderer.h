@@ -68,7 +68,7 @@ class IRenderer
 public:
 	virtual ~IRenderer() {}
 
-	virtual void init( HINSTANCE hInstance, IVrManager *vrManager, aardvark::CAardvarkClient *client ) = 0;
+	virtual void init( HINSTANCE hInstance, IVrManager *vrManager ) = 0;
 	virtual void runFrame( bool *shouldQuit, double frameTime ) = 0;
 
 	virtual std::unique_ptr<IModelInstance> createModelInstance( const std::string & uri ) = 0;

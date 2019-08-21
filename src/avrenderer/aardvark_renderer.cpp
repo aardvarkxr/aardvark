@@ -1727,8 +1727,7 @@ std::shared_ptr<vkglTF::Model> VulkanExample::findOrLoadModel( std::string model
 
 	m_modelRequestsInProgress.insert( modelUri );
 
-	auto promUriLoad = m_uriRequests.requestUri( modelUri )
-		.then( [this, modelUri]( CUriRequestHandler::Result_t result )
+	m_uriRequests.requestUri( modelUri, [this, modelUri]( CUriRequestHandler::Result_t result )
 	{
 		m_modelRequestsInProgress.erase( modelUri );
 		if ( !result.success )
@@ -1752,9 +1751,6 @@ std::shared_ptr<vkglTF::Model> VulkanExample::findOrLoadModel( std::string model
 			}
 		}
 	} );
-
-		
-	m_pClient->addToTasks( std::move( promUriLoad ) );
 
 	return nullptr;
 }
@@ -2051,10 +2047,9 @@ void VulkanExample::runFrame( bool *shouldQuit, double frameTime )
 	updateFrameTime( frameTime );
 }
 
-void VulkanExample::init( HINSTANCE hInstance, IVrManager *vrManager, aardvark::CAardvarkClient *client )
+void VulkanExample::init( HINSTANCE hInstance, IVrManager *vrManager )
 {
 	m_vrManager = vrManager;
-	m_pClient = client;
 
 	initVulkan();
 	setupWindow( hInstance );

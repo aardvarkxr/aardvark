@@ -957,8 +957,8 @@ bool CAardvarkObject::init( CefRefPtr<CefV8Value> container )
 
 			CefRefPtr<CefV8Value> callback = arguments[1];
 			CefRefPtr<CefV8Context> context = CefV8Context::GetCurrentContext();
-			auto promUriLoad = m_handler->requestUri( std::string( arguments[0]->GetStringValue() ) + "/gadget_manifest.json" )
-				.then( [ callback, context ]( CUriRequestHandler::Result_t result )
+			m_handler->requestUri( std::string( arguments[0]->GetStringValue() ) + "/gadget_manifest.json",
+				[ callback, context ]( CUriRequestHandler::Result_t & result )
 			{
 				context->Enter();
 
@@ -1008,8 +1008,6 @@ bool CAardvarkObject::init( CefRefPtr<CefV8Value> container )
 
 				context->Exit();
 			} );
-
-			m_handler->getClient()->addToTasks( std::move( promUriLoad ) );
 		} );
 	}
 
@@ -1263,9 +1261,10 @@ void CAardvarkRenderProcessHandler::sceneFinished( uint64_t mainGrabbableId )
 	sendBrowserMessage( msg );
 }
 
-kj::Promise<CUriRequestHandler::Result_t> CAardvarkRenderProcessHandler::requestUri( const std::string & uri )
+void CAardvarkRenderProcessHandler::requestUri( const std::string & uri, 
+	std::function<void( CUriRequestHandler::Result_t & result ) > callback )
 {
-	return m_uriRequestHandler.requestUri( uri );
+	m_uriRequestHandler.requestUri( uri, callback );
 }
 
 

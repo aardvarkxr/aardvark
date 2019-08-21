@@ -46,7 +46,7 @@ public:
 	const std::string getInitialHook() const { return m_initialHook; }
 	void requestStartGadget( const CefString & uri, const CefString & initialHook, const aardvark::EndpointAddr_t & epToNotify );
 	void sceneFinished( uint64_t mainGrabbableId );
-	kj::Promise<CUriRequestHandler::Result_t> requestUri( const std::string & uri );
+	void requestUri( const std::string & uri, std::function<void( CUriRequestHandler::Result_t & result ) > callback );
 	void requestTextureInfo();
 
 	void runFrame();

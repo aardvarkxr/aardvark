@@ -222,7 +222,7 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 	reqListen.send().wait( m_handler->getClient()->WaitScope() );
 
 	m_vrManager->init();
-	m_renderer->init( nullptr, m_vrManager.get(), m_handler->getClient() );
+	m_renderer->init( nullptr, m_vrManager.get() );
 
 	RegisterFunction( container, "registerSceneProcessor", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
