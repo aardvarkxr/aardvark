@@ -16,7 +16,6 @@
 #define STBI_MSC_SECURE_CRT
 #include "tiny_gltf.h"
 
-#include <aardvark/aardvark_server.h>
 #include "av_cef_app.h"
 
 #include <chrono>
@@ -56,10 +55,6 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 		return exit_code;
 	}
 
-	// if we're the main process we need to start the Aardvark server
-	aardvark::CServerThread serverThread;
-	serverThread.Start();
-
 	// Specify CEF global settings here.
 	CefSettings settings;
 
@@ -80,8 +75,6 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 
 	// Shut down CEF.
 	CefShutdown();
-
-	serverThread.Join();
 
 	return 0;
 }
