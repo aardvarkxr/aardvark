@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import { Av, AvSceneContext, AvNode, AvNodeType } from 'common/aardvark';
+import { AvNode, AvNodeType } from 'common/aardvark';
 import { AvGadget } from './aardvark_gadget';
 import { EndpointAddr, EndpointType } from './aardvark_protocol';
 

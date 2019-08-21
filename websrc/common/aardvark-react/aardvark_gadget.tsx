@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import { Av, AvPanelHandler, AvGadgetObj, AvSceneContext, AvPokerHandler, AvPanelMouseEventType, 
+import { Av, AvPanelHandler, AvPokerHandler, AvPanelMouseEventType, 
 	AvGrabEventProcessor, AvGrabberProcessor, AvGrabEventType, AvGrabEvent, AvGadgetManifest, AvNode, AvNodeType, AvStartGadgetCallback, AvPanelMouseEvent } from 'common/aardvark';
 import { IAvBaseNode } from './aardvark_base_node';
 import bind from 'bind-decorator';

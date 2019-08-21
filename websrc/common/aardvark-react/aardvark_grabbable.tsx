@@ -2,7 +2,7 @@ import * as React from 'react';
 
 import { AvGadget } from './aardvark_gadget';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
-import { AvSceneContext, AvNodeType, AvGrabEvent, AvGrabEventType } from 'common/aardvark';
+import { AvNodeType, AvGrabEvent, AvGrabEventType } from 'common/aardvark';
 import bind from 'bind-decorator';
 import { EndpointAddr } from './aardvark_protocol';
 

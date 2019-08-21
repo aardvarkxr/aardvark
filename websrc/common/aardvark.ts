@@ -24,46 +24,10 @@ export enum AvNodeType
 	Hook = 9,
 }
 
-interface AvSceneContext_SetTextureSource
-{
-	(textureSource:string):void;
-}
-
-export interface AvSceneContext
-{
-	//finish: AvSceneContext_Finish;
-	// startNode: AvSceneContext_StartNode;
-	// finishNode: AvSceneContext_FinishNode;
-	// setOriginPath: AvSceneContext_SetOriginPath;
-	// setTranslation: AvSceneContext_SetTranslation;
-	// setScale: AvSceneContext_SetScale;
-	// setUniformScale: AvSceneContext_SetUniformScale;
-	// setRotationEulerDegrees: AvSceneContext_SetRotationEulerDegrees;
-	// setModelUri: AvSceneContext_SetModelUri;
-	setTextureSource: AvSceneContext_SetTextureSource;
-	//setInteractive: AvSceneContext_SetInteractive;
-	//setSphereVolume( radius: number ): void;
-	//startCustomNode( nodeId: number, name: string, customNodeType: string ): void;
-}
-
-interface AvGadget_GetName
-{
-	():string;
-}
-
-interface AvGadget_StartSceneContext
-{
-	():AvSceneContext;
-}
 
 export interface AvPokerHandler
 {
 	( proximity: PokerProximity[] ): void;
-}
-
-interface AvGadget_RegisterPokerHandler
-{
-	( nodeId:number, handlerFunction: AvPokerHandler ): void;
 }
 
 export enum AvPanelMouseEventType
@@ -88,11 +52,6 @@ export interface AvPanelMouseEvent
 export interface AvPanelHandler
 {
 	( event: AvPanelMouseEvent ): void;
-}
-
-interface AvGadget_RegisterPanelHandler
-{
-	( nodeId:number, handlerFunction: AvPanelHandler ): void;
 }
 
 export enum AvGrabEventType
@@ -130,25 +89,6 @@ export interface AvGrabEventProcessor
 export interface AvGrabberProcessor
 {
 	( isPressed: boolean, grabbableIds: EndpointAddr[], hookIds: EndpointAddr[] ): void;
-}
-
-export interface AvGadgetObj
-{
-	getName: AvGadget_GetName;
-	startSceneContext: AvGadget_StartSceneContext;
-	registerPokerHandler: AvGadget_RegisterPokerHandler;
-	registerPanelHandler: AvGadget_RegisterPanelHandler;
-	enableDefaultPanelHandling( panelId: number ): void;
-	sendHapticEventFromPanel( panelId: number, amplitude: number, frequency: number, duration: number ): void;
-	//sendMouseEvent: AvGadget_SendMouseEvent;
-	registerGrabbableProcessor( nodeId: number, processor: AvGrabEventProcessor ): void;
-	registerGrabberProcessor( nodeId: number, processor: AvGrabberProcessor ): void;
-	sendGrabEvent( event: AvGrabEvent ): void;
-}
-
-interface Av_CreateGadget
-{
-	(gadgetName:string):AvGadgetObj;
 }
 
 
@@ -251,11 +191,9 @@ export enum EHand
 
 interface AvRenderer
 {
-	registerSceneProcessor( sceneProcessor: AvTraversalFrameProcessor ): void;
 	registerTraverser( traverser: AvTraversalRenderer ): void;
 	renderList( renderList: AvModelInstance[] ): void,
 	createModelInstance( uri: string): AvModelInstance;
-	addToRenderList( modelInstance: AvModelInstance ): void;
 	getUniverseFromOriginTransform( origin: string ): number[];
 
 	registerHapticProcessor( hapticProcessor: AvHapticProcessor ) : void;
