@@ -1,9 +1,7 @@
 #pragma once
 
 #include "javascript_object.h"
-#include "aardvark.capnp.h"
 #include "aardvark/irenderer.h"
-#include <tools/capnprototools.h>
 #include "intersection_tester.h"
 #include "collision_tester.h"
 
@@ -26,8 +24,7 @@ class CJavascriptModelInstance : public CJavascriptObjectWithFunctions
 {
 	friend class CJavascriptRenderer;
 public:
-	CJavascriptModelInstance( std::unique_ptr<IModelInstance> modelInstance,
-		std::unordered_map< uint32_t, tools::OwnCapnp< AvSharedTextureInfo > > &textureInfo );
+	CJavascriptModelInstance( std::unique_ptr<IModelInstance> modelInstance );
 	virtual bool init( CefRefPtr<CefV8Value > container ) override;
 
 	IModelInstance *getModelInstance() { return m_modelInstance.get(); }
@@ -35,7 +32,6 @@ public:
 protected:
 
 	std::unique_ptr<IModelInstance> m_modelInstance;
-	std::unordered_map< uint32_t, tools::OwnCapnp< AvSharedTextureInfo > > & m_textureInfo;
 };
 
 class CJavascriptRenderer : public CJavascriptObjectWithFunctions
@@ -56,10 +52,8 @@ public:
 		const std::unordered_map<uint32_t, uint32_t> & nodeIdToNodeIndex, uint32_t nodeIndex );
 
 protected:
-	kj::Own< AvFrameListenerImpl > m_frameListener;
 	std::unique_ptr<IRenderer> m_renderer;
 	std::unique_ptr<IVrManager> m_vrManager;
-	std::unordered_map<uint32_t, tools::OwnCapnp< AvSharedTextureInfo > > m_textureInfo;
 
 	CefRefPtr< CefV8Value > m_jsSceneProcessor;
 	CefRefPtr< CefV8Value > m_jsTraverser;

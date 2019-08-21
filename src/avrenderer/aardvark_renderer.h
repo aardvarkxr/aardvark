@@ -24,10 +24,6 @@
 #include "uri_request_handler.h"
 #include <aardvark/irenderer.h>
 
-#include <tools/capnprototools.h>
-
-#include <aardvark/aardvark_server.h>
-#include <aardvark/aardvark_client.h>
 #include <aardvark/aardvark_scene_graph.h>
 
 

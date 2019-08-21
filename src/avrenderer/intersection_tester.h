@@ -10,11 +10,6 @@
 
 #include <vector>
 
-namespace aardvark
-{
-	class CAardvarkClient;
-}
-
 struct PokerState_t
 {
 	aardvark::EndpointAddr_t pokerId;

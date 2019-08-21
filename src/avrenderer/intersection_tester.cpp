@@ -1,8 +1,6 @@
 
 #include "intersection_tester.h"
 
-#include <aardvark/aardvark_client.h>
-
 CIntersectionTester::CIntersectionTester()
 {
 }

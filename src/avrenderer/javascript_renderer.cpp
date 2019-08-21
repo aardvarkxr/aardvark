@@ -9,9 +9,7 @@ using aardvark::EndpointAddr_t;
 extern void protoEventFromCefEvent( CefRefPtr<CefV8Value> cefEvent, AvGrabEvent::Builder &bldEvent );
 extern CefRefPtr<CefV8Value> grabEventToCefEvent( const aardvark::GrabEvent_t & grabEvent );
 
-CJavascriptModelInstance::CJavascriptModelInstance( std::unique_ptr<IModelInstance> modelInstance, 
-	std::unordered_map< uint32_t, tools::OwnCapnp< AvSharedTextureInfo > > &textureInfo )
-	: m_textureInfo( textureInfo )
+CJavascriptModelInstance::CJavascriptModelInstance( std::unique_ptr<IModelInstance> modelInstance )
 {
 	m_modelInstance = std::move( modelInstance );
 }
@@ -212,15 +210,6 @@ CefRefPtr<CefV8Value> endpointAddrVectorToJs( const std::vector<EndpointAddr_t> 
 
 bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 {
-	m_frameListener = kj::heap<AvFrameListenerImpl>();
-	m_frameListener->m_renderer = this;
-	m_frameListener->m_context = CefV8Context::GetCurrentContext();
-
-	auto reqListen = m_handler->getClient()->Server().listenForFramesRequest();
-	AvFrameListener::Client listenerClient = std::move( m_frameListener );
-	reqListen.setListener( listenerClient );
-	reqListen.send().wait( m_handler->getClient()->WaitScope() );
-
 	m_vrManager->init();
 	m_renderer->init( nullptr, m_vrManager.get() );
 
@@ -574,8 +563,7 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 		{
 			JsObjectPtr<CJavascriptModelInstance> newModelInstance =
 				CJavascriptObjectWithFunctions::create<CJavascriptModelInstance>(
-					std::move( modelInstance ),
-					m_textureInfo );
+					std::move( modelInstance ) );
 			retval = newModelInstance.object;
 		}
 	} );
@@ -896,73 +884,4 @@ CefRefPtr<CefV8Value> CJavascriptRenderer::frameToJsObject( AvVisualFrame::Reade
 	return jsFrame;
 }
 
-
-::kj::Promise<void> AvFrameListenerImpl::newFrame( NewFrameContext context )
-{
-	m_renderer->m_textureInfo.clear();
-	if ( m_renderer->m_jsSceneProcessor )
-	{
-		auto frame = context.getParams().getFrame();
-		if ( frame.hasGadgetTextures() )
-		{
-			for ( auto & texture : frame.getGadgetTextures() )
-			{
-				m_renderer->m_textureInfo.insert_or_assign( texture.getGadgetId(),
-					tools::newOwnCapnp( texture.getSharedTextureInfo() ) );
-			}
-		}
-
-		m_context->Enter();
-
-		CefRefPtr< CefV8Value > jsFrame = m_renderer->frameToJsObject( context.getParams().getFrame() );
-		m_renderer->m_jsSceneProcessor->ExecuteFunction( nullptr, CefV8ValueList{ jsFrame } );
-
-		m_context->Exit();
-	}
-	return kj::READY_NOW;
-}
-
-::kj::Promise<void> AvFrameListenerImpl::sendHapticEvent( SendHapticEventContext context )
-{
-	if ( m_renderer->m_jsHapticProcessor )
-	{
-		m_context->Enter();
-
-		m_renderer->m_jsHapticProcessor->ExecuteFunction( nullptr, CefV8ValueList
-			{
-				CefV8Value::CreateString( std::to_string( context.getParams().getTargetGlobalId() ) ),
-				CefV8Value::CreateDouble( context.getParams().getAmplitude() ),
-				CefV8Value::CreateDouble( context.getParams().getFrequency() ),
-				CefV8Value::CreateDouble( context.getParams().getDuration() ),
-			} );
-
-		m_context->Exit();
-	}
-	return kj::READY_NOW;
-}
-
-
-::kj::Promise<void> AvFrameListenerImpl::grabEvent( GrabEventContext context )
-{
-	if ( m_renderer->m_jsGrabEventProcessor )
-	{
-		auto grabEvent = context.getParams().getEvent();
-
-		m_context->Enter();
-
-		aardvark::GrabEvent_t localGrabEvent;
-		aardvark::protoGrabEventToLocalEvent( context.getParams().getEvent(), &localGrabEvent );
-
-		CefRefPtr< CefV8Value > evt = grabEventToCefEvent( localGrabEvent );
-
-		m_renderer->m_jsGrabEventProcessor->ExecuteFunction( nullptr, CefV8ValueList
-			{
-				evt,
-			} );
-
-		m_context->Exit();
-	}
-
-	return kj::READY_NOW;
-}
 

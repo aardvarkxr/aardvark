@@ -1,6 +1,5 @@
 #pragma once
 
-#include "aardvark.capnp.h"
 #include <aardvark/ivrmanager.h>
 
 #define GLM_FORCE_RADIANS
@@ -12,11 +11,6 @@
 #include <unordered_map>
 #include <openvr.h>
 #include <aardvark/aardvark_scene_graph.h>
-
-namespace aardvark
-{
-	class CAardvarkClient;
-}
 
 struct GrabberCollisionState_t
 {

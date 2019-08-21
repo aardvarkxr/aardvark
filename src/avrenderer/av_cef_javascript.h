@@ -12,11 +12,6 @@
 #include "uri_request_handler.h"
 #include "javascript_object.h"
 
-namespace aardvark
-{
-	class CAardvarkClient;
-};
-
 
 class CAardvarkObject;
 
@@ -38,14 +33,11 @@ public:
 	virtual void OnBrowserDestroyed( CefRefPtr<CefBrowser> browser ) override;
 
 
-	aardvark::CAardvarkClient *getClient() { return &*m_client; }
 	void sendBrowserMessage( CefRefPtr< CefProcessMessage > msg );
 
-	void updateGadgetNamesForBrowser();
 	bool hasPermission( const std::string & permission );
 	const std::string getInitialHook() const { return m_initialHook; }
 	void requestStartGadget( const CefString & uri, const CefString & initialHook, const aardvark::EndpointAddr_t & epToNotify );
-	void sceneFinished( uint64_t mainGrabbableId );
 	void requestUri( const std::string & uri, std::function<void( CUriRequestHandler::Result_t & result ) > callback );
 	void requestTextureInfo();
 
@@ -60,8 +52,6 @@ private:
 	};
 	std::vector< PerContextInfo_t > m_contexts;
 
-	bool m_clientNeedsReset = false;
-	std::unique_ptr<aardvark::CAardvarkClient> m_client;
 	std::string m_gadgetUri;
 	std::string m_initialHook;
 	CAardvarkGadgetManifest m_gadgetManifest;
