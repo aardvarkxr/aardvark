@@ -50,44 +50,6 @@
 
 using namespace aardvark;
 
-void UpdateTransformable( std::shared_ptr<vkglTF::Transformable> pTransformable, AvTransform::Reader & transform )
-{
-	if ( transform.hasPosition() )
-	{
-		pTransformable->translation.x = transform.getPosition().getX();
-		pTransformable->translation.y = transform.getPosition().getY();
-		pTransformable->translation.z = transform.getPosition().getZ();
-	}
-	else
-	{
-		pTransformable->translation = glm::vec3( 0.f );
-	}
-
-	if ( transform.hasScale() )
-	{
-		pTransformable->scale.x = transform.getScale().getX();
-		pTransformable->scale.y = transform.getScale().getY();
-		pTransformable->scale.z = transform.getScale().getZ();
-	}
-	else
-	{
-		pTransformable->scale = glm::vec3( 1.f );
-	}
-
-	if ( transform.hasRotation() )
-	{
-		pTransformable->rotation.x = transform.getRotation().getX();
-		pTransformable->rotation.y = transform.getRotation().getY();
-		pTransformable->rotation.z = transform.getRotation().getZ();
-		pTransformable->rotation.w = transform.getRotation().getW();
-	}
-	else
-	{
-		pTransformable->rotation = glm::quat();
-	}
-}
-
-
 VulkanExample::VulkanExample()
 	: VulkanExampleBase()
 {

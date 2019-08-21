@@ -6,7 +6,6 @@
 using aardvark::EEndpointType;
 using aardvark::EndpointAddr_t;
 
-extern void protoEventFromCefEvent( CefRefPtr<CefV8Value> cefEvent, AvGrabEvent::Builder &bldEvent );
 extern CefRefPtr<CefV8Value> grabEventToCefEvent( const aardvark::GrabEvent_t & grabEvent );
 
 CJavascriptModelInstance::CJavascriptModelInstance( std::unique_ptr<IModelInstance> modelInstance )
@@ -213,23 +212,6 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 	m_vrManager->init();
 	m_renderer->init( nullptr, m_vrManager.get() );
 
-	RegisterFunction( container, "registerSceneProcessor", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
-	{
-		if ( arguments.size() != 1 )
-		{
-			exception = "Invalid arguments";
-			return;
-		}
-
-		if ( !arguments[0]->IsFunction() )
-		{
-			exception = "argument must be a function";
-			return;
-		}
-
-		m_jsSceneProcessor = arguments[0];
-	} );
-
 	RegisterFunction( container, "registerTraverser", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
 		if ( arguments.size() != 1 )
@@ -317,23 +299,6 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 			arguments[3]->GetDoubleValue() );
 	} );
 
-
-	RegisterFunction( container, "registerGrabEventProcessor", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
-	{
-		if ( arguments.size() != 1 )
-		{
-			exception = "Invalid arguments";
-			return;
-		}
-
-		if ( !arguments[0]->IsFunction() )
-		{
-			exception = "argument must be a function";
-			return;
-		}
-
-		m_jsGrabEventProcessor = arguments[0];
-	} );
 
 	RegisterFunction( container, "updateGrabberIntersections", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
@@ -701,187 +666,6 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 CJavascriptRenderer::~CJavascriptRenderer() noexcept
 {
 	m_renderer = nullptr;
-}
-
-
-CefRefPtr< CefV8Value > protoVectorToJsVector( AvVector::Reader & vector )
-{
-	CefRefPtr<CefV8Value> jsVector = CefV8Value::CreateObject( nullptr, nullptr );
-	jsVector->SetValue( "x",
-		CefV8Value::CreateDouble( vector.getX() ), V8_PROPERTY_ATTRIBUTE_NONE );
-	jsVector->SetValue( "y",
-		CefV8Value::CreateDouble( vector.getY() ), V8_PROPERTY_ATTRIBUTE_NONE );
-	jsVector->SetValue( "z",
-		CefV8Value::CreateDouble( vector.getZ() ), V8_PROPERTY_ATTRIBUTE_NONE );
-	return jsVector;
-}
-
-CefRefPtr< CefV8Value > protoQuatToJsQuat( AvQuaternion::Reader & quat )
-{
-	CefRefPtr<CefV8Value> jsVector = CefV8Value::CreateObject( nullptr, nullptr );
-	jsVector->SetValue( "x",
-		CefV8Value::CreateDouble( quat.getX() ), V8_PROPERTY_ATTRIBUTE_NONE );
-	jsVector->SetValue( "y",
-		CefV8Value::CreateDouble( quat.getY() ), V8_PROPERTY_ATTRIBUTE_NONE );
-	jsVector->SetValue( "z",
-		CefV8Value::CreateDouble( quat.getZ() ), V8_PROPERTY_ATTRIBUTE_NONE );
-	jsVector->SetValue( "w",
-		CefV8Value::CreateDouble( quat.getW() ), V8_PROPERTY_ATTRIBUTE_NONE );
-	return jsVector;
-}
-
-CefRefPtr< CefV8Value> protoTransformToJsTransform( AvTransform::Reader & transform )
-{
-	CefRefPtr<CefV8Value> jsTransform = CefV8Value::CreateObject( nullptr, nullptr );
-	if ( transform.hasPosition() )
-	{
-		jsTransform->SetValue( "position", 
-			protoVectorToJsVector( transform.getPosition() ), V8_PROPERTY_ATTRIBUTE_NONE );
-	}
-	if ( transform.hasScale() )
-	{
-		jsTransform->SetValue( "scale",
-			protoVectorToJsVector( transform.getScale() ), V8_PROPERTY_ATTRIBUTE_NONE );
-	}
-	if ( transform.hasRotation() )
-	{
-		jsTransform->SetValue( "rotation",
-			protoQuatToJsQuat( transform.getRotation() ), V8_PROPERTY_ATTRIBUTE_NONE );
-	}
-
-	return jsTransform;
-}
-
-enum class EVolumeType
-{
-	Invalid = -1,
-
-	Sphere = 0,
-};
-
-EVolumeType protoVolumeTypeToEnum( AvVolume::Type protoType )
-{
-	switch ( protoType )
-	{
-	case AvVolume::Type::SPHERE:
-		return EVolumeType::Sphere;
-
-	default:
-		return EVolumeType::Invalid;
-	}
-}
-
-
-CefRefPtr< CefV8Value> protoVolumeToJsVolume( AvVolume::Reader & volume )
-{
-	CefRefPtr<CefV8Value> jsVolume = CefV8Value::CreateObject( nullptr, nullptr );
-	jsVolume->SetValue( "type", 
-		CefV8Value::CreateInt( (int)protoVolumeTypeToEnum( volume.getType() ) ), V8_PROPERTY_ATTRIBUTE_NONE );
-	jsVolume->SetValue( "radius", CefV8Value::CreateDouble( volume.getRadius() ), V8_PROPERTY_ATTRIBUTE_NONE );
-	return jsVolume;
-}
-
-
-
-CefRefPtr<CefV8Value> CJavascriptRenderer::nodeToJsObject( AvNodeRoot::Reader & nodeRoot, 
-	const std::unordered_map<uint32_t, uint32_t> & nodeIdToNodeIndex, uint32_t nodeIndex )
-{
-	if ( !nodeRoot.hasNodes() || nodeRoot.getNodes().size() <= nodeIndex )
-		return nullptr;
-
-	auto node = nodeRoot.getNodes()[ nodeIndex ].getNode();
-	CefRefPtr<CefV8Value> jsNode = CefV8Value::CreateObject( nullptr, nullptr );
-
-	aardvark::EAvSceneGraphNodeType nodeType = aardvark::ApiTypeFromProtoType( node.getType() );
-	if ( nodeType == aardvark::EAvSceneGraphNodeType::Invalid )
-		return nullptr;
-
-	uint64_t globalId = (uint64_t)nodeRoot.getSourceId() << 32 | node.getId();
-
-	jsNode->SetValue( "type", CefV8Value::CreateInt( (int)nodeType ), V8_PROPERTY_ATTRIBUTE_NONE );
-	jsNode->SetValue( "id", CefV8Value::CreateUInt( node.getId() ), V8_PROPERTY_ATTRIBUTE_NONE );
-	jsNode->SetValue( "globalId", 
-		CefV8Value::CreateString( std::to_string( globalId ) ), V8_PROPERTY_ATTRIBUTE_NONE );
-	jsNode->SetValue( "flags", CefV8Value::CreateUInt( node.getFlags() ), V8_PROPERTY_ATTRIBUTE_NONE );
-
-	if ( node.hasPropOrigin() )
-	{
-		jsNode->SetValue( "propOrigin", 
-			CefV8Value::CreateString( node.getPropOrigin() ), V8_PROPERTY_ATTRIBUTE_NONE );
-	}
-	if ( node.hasPropTransform() )
-	{
-		jsNode->SetValue( "propTransform",
-			protoTransformToJsTransform( node.getPropTransform() ), V8_PROPERTY_ATTRIBUTE_NONE );
-	}
-	if ( node.hasPropModelUri() )
-	{
-		jsNode->SetValue( "propModelUri", 
-			CefV8Value::CreateString( node.getPropModelUri() ), V8_PROPERTY_ATTRIBUTE_NONE );
-	}
-	if ( node.hasPropVolume() )
-	{
-		jsNode->SetValue( "propVolume", protoVolumeToJsVolume( node.getPropVolume() ), V8_PROPERTY_ATTRIBUTE_NONE );
-	}
-	jsNode->SetValue( "propInteractive",
-		CefV8Value::CreateBool( node.getPropInteractive() ), V8_PROPERTY_ATTRIBUTE_NONE );
-
-	if ( node.hasPropCustomNodeType() )
-	{
-		jsNode->SetValue( "propCustomNodeType",
-			CefV8Value::CreateString( node.getPropCustomNodeType() ), V8_PROPERTY_ATTRIBUTE_NONE );
-	}
-
-	if ( node.hasChildren() && node.getChildren().size() > 0 )
-	{
-		CefRefPtr<CefV8Value> children = CefV8Value::CreateArray( node.getChildren().size() );
-		for ( uint32_t child = 0; child < node.getChildren().size(); child++ )
-		{
-			auto nodeIndex = nodeIdToNodeIndex.find( node.getChildren()[child] );
-			if ( nodeIndex != nodeIdToNodeIndex.end() )
-			{
-				children->SetValue( child, nodeToJsObject( nodeRoot, nodeIdToNodeIndex, nodeIndex->second ) );
-			}
-		}
-		jsNode->SetValue( "children", children, V8_PROPERTY_ATTRIBUTE_NONE );
-	}
-
-	return jsNode;
-}
-
-CefRefPtr<CefV8Value> CJavascriptRenderer::nodeRootToJsObject( AvNodeRoot::Reader & nodeRoot )
-{
-	std::unordered_map<uint32_t, uint32_t> nodeIdToNodeIndex;
-	for ( uint32_t n = 0; n < nodeRoot.getNodes().size(); n++ )
-	{
-		auto & node = nodeRoot.getNodes()[n].getNode();
-		nodeIdToNodeIndex.insert_or_assign( node.getId(), n );
-	}
-
-	CefRefPtr<CefV8Value> jsNodeRoot = CefV8Value::CreateObject( nullptr, nullptr );
-	jsNodeRoot->SetValue( "gadgetId", CefV8Value::CreateUInt( nodeRoot.getSourceId() ), V8_PROPERTY_ATTRIBUTE_NONE );
-	if ( nodeRoot.hasHook() && nodeRoot.getHook().size() > 0 )
-	{
-		jsNodeRoot->SetValue( "hook", CefV8Value::CreateString( nodeRoot.getHook() ), V8_PROPERTY_ATTRIBUTE_NONE );
-	}
-
-	jsNodeRoot->SetValue( "root", nodeToJsObject( nodeRoot, nodeIdToNodeIndex, 0 ), V8_PROPERTY_ATTRIBUTE_NONE );
-	return jsNodeRoot;
-}
-
-CefRefPtr<CefV8Value> CJavascriptRenderer::frameToJsObject( AvVisualFrame::Reader & frame )
-{
-	CefRefPtr<CefV8Value> jsFrame = CefV8Value::CreateObject( nullptr,nullptr );
-	jsFrame->SetValue( "id", CefV8Value::CreateString( std::to_string( frame.getId() ) ), V8_PROPERTY_ATTRIBUTE_NONE );
-
-	CefRefPtr<CefV8Value> roots = CefV8Value::CreateArray( frame.getRoots().size() );
-	for ( uint32_t unRoot = 0; unRoot < frame.getRoots().size(); unRoot++ )
-	{
-		roots->SetValue( unRoot, nodeRootToJsObject( frame.getRoots()[unRoot] ) );
-	}
-	jsFrame->SetValue( "nodeRoots", roots, V8_PROPERTY_ATTRIBUTE_NONE );
-
-	return jsFrame;
 }
 
 

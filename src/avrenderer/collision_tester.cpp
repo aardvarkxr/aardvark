@@ -1,8 +1,6 @@
 
 #include "collision_tester.h"
 
-#include <aardvark/aardvark_client.h>
-
 CCollisionTester::CCollisionTester()
 {
 }

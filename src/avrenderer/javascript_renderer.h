@@ -8,17 +8,6 @@
 class CAardvarkRenderProcessHandler;
 class CJavascriptRenderer;
 
-class AvFrameListenerImpl : public AvFrameListener::Server
-{
-public:
-	virtual ::kj::Promise<void> newFrame( NewFrameContext context ) override;
-	virtual ::kj::Promise<void> sendHapticEvent( SendHapticEventContext context ) override;
-	virtual ::kj::Promise<void> grabEvent( GrabEventContext context ) override;
-
-	CJavascriptRenderer *m_renderer = nullptr;
-	CefRefPtr< CefV8Context > m_context;
-};
-
 
 class CJavascriptModelInstance : public CJavascriptObjectWithFunctions
 {
@@ -36,7 +25,6 @@ protected:
 
 class CJavascriptRenderer : public CJavascriptObjectWithFunctions
 {
-	friend AvFrameListenerImpl;
 public:
 	CJavascriptRenderer( CAardvarkRenderProcessHandler *pRenderProcessHandler );
 	virtual ~CJavascriptRenderer() noexcept;
@@ -46,19 +34,13 @@ public:
 	bool hasPermission( const std::string & permission );
 	void runFrame();
 
-	CefRefPtr<CefV8Value> frameToJsObject( AvVisualFrame::Reader & frame );
-	CefRefPtr<CefV8Value> nodeRootToJsObject( AvNodeRoot::Reader & nodeRoot );
-	CefRefPtr<CefV8Value> nodeToJsObject( AvNodeRoot::Reader & nodeRoot, 
-		const std::unordered_map<uint32_t, uint32_t> & nodeIdToNodeIndex, uint32_t nodeIndex );
 
 protected:
 	std::unique_ptr<IRenderer> m_renderer;
 	std::unique_ptr<IVrManager> m_vrManager;
 
-	CefRefPtr< CefV8Value > m_jsSceneProcessor;
 	CefRefPtr< CefV8Value > m_jsTraverser;
 	CefRefPtr< CefV8Value > m_jsHapticProcessor;
-	CefRefPtr< CefV8Value > m_jsGrabEventProcessor;
 	CIntersectionTester m_intersections;
 	CCollisionTester m_collisions;
 

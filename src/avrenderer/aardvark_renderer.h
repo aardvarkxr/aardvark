@@ -16,8 +16,6 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "aardvark.capnp.h"
-
 #include "include/cef_sandbox_win.h"
 #include "av_cef_app.h"
 #include "av_cef_handler.h"
@@ -52,7 +50,7 @@ protected:
 };
 
 
-class VulkanExample : public VulkanExampleBase, public AvFrameListener::Server, public IRenderer
+class VulkanExample : public VulkanExampleBase, public IRenderer
 {
 	friend class CSceneListener;
 	friend CVulkanRendererModelInstance;

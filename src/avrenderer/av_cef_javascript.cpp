@@ -13,9 +13,7 @@
 #include "javascript_object.h"
 #include "javascript_renderer.h"
 
-using aardvark::AvSceneContext;
 using aardvark::EAvSceneGraphResult;
-using aardvark::EAvSceneGraphNodeType;
 
 
 
