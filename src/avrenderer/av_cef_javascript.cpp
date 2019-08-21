@@ -753,124 +753,6 @@ CefRefPtr<CefV8Value> grabEventToCefEvent( const aardvark::GrabEvent_t & grabEve
 
 void CAardvarkGadgetObject::runFrame()
 {
-	for( auto iHandler : m_pokerProcessors )
-	{
-		aardvark::PokerProximity_t pokerProximity[100];
-		uint32_t usedCount;
-		aardvark::EAvSceneGraphResult result = aardvark::avGetNextPokerProximity( 
-			m_handler->getClient(), iHandler.first, pokerProximity, 100, &usedCount );
-		assert( result != EAvSceneGraphResult::InsufficientBufferSize );
-		if ( result == EAvSceneGraphResult::Success )
-		{
-			CefRefPtr< CefV8Value > list = CefV8Value::CreateArray( (int)usedCount );
-			for ( uint32_t n = 0; n < usedCount; n++ )
-			{
-				CefRefPtr< CefV8Value > prox = CefV8Value::CreateObject( nullptr, nullptr );
-				prox->SetValue( CefString( "panelId" ),
-					CefV8Value::CreateString( std::to_string( pokerProximity[n].panelId ) ), 
-					V8_PROPERTY_ATTRIBUTE_NONE );
-				prox->SetValue( CefString( "x" ),
-					CefV8Value::CreateDouble( pokerProximity[n].x ),
-					V8_PROPERTY_ATTRIBUTE_NONE );
-				prox->SetValue( CefString( "y" ),
-					CefV8Value::CreateDouble( pokerProximity[n].y ),
-					V8_PROPERTY_ATTRIBUTE_NONE );
-				prox->SetValue( CefString( "distance" ),
-					CefV8Value::CreateDouble( pokerProximity[n].distance ),
-					V8_PROPERTY_ATTRIBUTE_NONE );
-
-				list->SetValue( n, prox );
-			}
-
-			iHandler.second->ExecuteFunction( nullptr, CefV8ValueList{ list } );
-		}
-	}
-
-	for ( auto iHandler : m_panelProcessors )
-	{
-		aardvark::PanelMouseEvent_t panelMouseEvent;
-		uint32_t unLimit = 0;
-		while ( ++unLimit < 100 && EAvSceneGraphResult::Success == aardvark::avGetNextMouseEvent(
-			m_handler->getClient(), iHandler.first, &panelMouseEvent ) )
-		{
-			CefRefPtr< CefV8Value > evt = CefV8Value::CreateObject( nullptr, nullptr );
-			evt->SetValue( CefString( "panelId" ),
-				CefV8Value::CreateString( std::to_string( panelMouseEvent.panelId ) ),
-				V8_PROPERTY_ATTRIBUTE_NONE );
-			evt->SetValue( CefString( "pokerId" ),
-				CefV8Value::CreateString( std::to_string( panelMouseEvent.pokerId ) ),
-				V8_PROPERTY_ATTRIBUTE_NONE );
-			evt->SetValue( CefString( "x" ),
-				CefV8Value::CreateDouble( panelMouseEvent.x ),
-				V8_PROPERTY_ATTRIBUTE_NONE );
-			evt->SetValue( CefString( "y" ),
-				CefV8Value::CreateDouble( panelMouseEvent.y ),
-				V8_PROPERTY_ATTRIBUTE_NONE );
-			evt->SetValue( CefString( "type" ),
-				CefV8Value::CreateInt( (int)panelMouseEvent.type ),
-				V8_PROPERTY_ATTRIBUTE_NONE );
-
-			iHandler.second->ExecuteFunction( nullptr, CefV8ValueList{ evt } );
-		}
-	}
-
-	for ( uint32_t panelId : m_defaultPanels )
-	{
-		aardvark::PanelMouseEvent_t panelMouseEvent;
-		uint32_t unLimit = 0;
-		while ( ++unLimit < 100 && EAvSceneGraphResult::Success == aardvark::avGetNextMouseEvent(
-			m_handler->getClient(), panelId, &panelMouseEvent ) )
-		{
-			CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "mouse_event" );
-			msg->GetArgumentList()->SetInt( 0, (int)panelMouseEvent.type );
-			msg->GetArgumentList()->SetDouble( 1, panelMouseEvent.x );
-			msg->GetArgumentList()->SetDouble( 2, panelMouseEvent.y );
-
-			m_handler->sendBrowserMessage( msg );
-		}
-	}
-
-	for ( auto iHandler : m_grabberProcessors )
-	{
-		uint64_t grabbableIntersections[100];
-		uint64_t hookIntersections[100];
-		bool isGrabberPressed = false;
-		uint32_t usedCount;
-		uint32_t usedHookCount;
-		aardvark::EAvSceneGraphResult result = aardvark::avGetNextGrabberIntersection(
-			m_handler->getClient(), iHandler.first, &isGrabberPressed, grabbableIntersections, 100, &usedCount,
-			hookIntersections, 100, &usedHookCount );
-		assert( result != EAvSceneGraphResult::InsufficientBufferSize );
-		if ( result == EAvSceneGraphResult::Success )
-		{
-			CefRefPtr< CefV8Value > list = CefV8Value::CreateArray( (int)usedCount );
-			for ( uint32_t n = 0; n < usedCount; n++ )
-			{
-				list->SetValue( n, CefV8Value::CreateString( std::to_string( grabbableIntersections[ n ] ) ) );
-			}
-
-			CefRefPtr< CefV8Value > hookList = CefV8Value::CreateArray( (int)usedHookCount );
-			for ( uint32_t n = 0; n < usedHookCount; n++ )
-			{
-				hookList->SetValue( n, CefV8Value::CreateString( std::to_string( hookIntersections[n] ) ) );
-			}
-
-			iHandler.second->ExecuteFunction( nullptr, 
-				CefV8ValueList{ CefV8Value::CreateBool( isGrabberPressed ), list, hookList } );
-		}
-	}
-
-	for ( auto iHandler : m_grabbableProcessors )
-	{
-		aardvark::GrabEvent_t grabEvent;
-		uint32_t unLimit = 0;
-		while ( ++unLimit < 100 && EAvSceneGraphResult::Success == aardvark::avGetNextGrabEvent(
-			m_handler->getClient(), iHandler.first, &grabEvent) )
-		{
-			CefRefPtr< CefV8Value > evt = grabEventToCefEvent( grabEvent );
-			iHandler.second->ExecuteFunction( nullptr, CefV8ValueList{ evt } );
-		}
-	}
 }
 
 
@@ -998,6 +880,32 @@ bool CAardvarkObject::init( CefRefPtr<CefV8Value> container )
 			m_textureInfoContext = CefV8Context::GetCurrentContext();
 
 			m_handler->requestTextureInfo();
+		} );
+
+		RegisterFunction( container, "spoofMouseEvent", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+		{
+			if ( arguments.size() != 3 )
+			{
+				exception = "argument count must be three";
+				return;
+			}
+			if ( !arguments[0]->IsInt() )
+			{
+				exception = "first argument must be a message type";
+				return;
+			}
+			if ( !arguments[1]->IsDouble() || !arguments[2]->IsDouble() )
+			{
+				exception = "second and third arguments must be a x, y coordinates as doubles";
+				return;
+			}
+
+			CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "mouse_event" );
+			msg->GetArgumentList()->SetInt( 0, (int)arguments[0]->GetIntValue() );
+			msg->GetArgumentList()->SetDouble( 1, arguments[1]->GetDoubleValue() );
+			msg->GetArgumentList()->SetDouble( 2, arguments[2]->GetDoubleValue() );
+
+			m_handler->sendBrowserMessage( msg );
 		} );
 	}
 

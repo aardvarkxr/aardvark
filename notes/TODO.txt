@@ -39,10 +39,6 @@ working on animations and moving transform math to C++
 * The idea is that only actual changes to the scene graph actually require a new traversal. Frame-to-frame transform changes, including animations, can be handled by C++ without calling back into JS to re-traverse
 
 
-Websocket conversion:
-* Need a C++ function to spoof mouse events for panels.
-* Dropping on hooks is not working. Highlighting hooks is, so I'm not sure what's up with that.
-
 ========= DEAL WITH THIS NEXT ===========
 
 

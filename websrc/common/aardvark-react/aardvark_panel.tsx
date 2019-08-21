@@ -28,6 +28,11 @@ export class AvPanel extends AvBaseNode< AvPanelProps, {} >
 		AvGadget.instance().markDirty();
 	}
 
+	@bind onDefaultMouseEvent( event: AvPanelMouseEvent )
+	{
+		Av().spoofMouseEvent( event.type, event.x, event.y );
+	}
+
 	public buildNode()
 	{
 		if( this.props.customMouseHandler )
@@ -36,7 +41,7 @@ export class AvPanel extends AvBaseNode< AvPanelProps, {} >
 		}
 		else
 		{
-			AvGadget.instance().enableDefaultPanelHandling( this.m_nodeId );
+			AvGadget.instance().setPanelHandler( this.m_nodeId, this.onDefaultMouseEvent );
 		}
 
 		let node = this.createNodeObject( AvNodeType.Panel, this.m_nodeId );

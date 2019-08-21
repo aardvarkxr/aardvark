@@ -4,6 +4,7 @@ import { AvGadget } from './aardvark_gadget';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 import { AvSceneContext, AvNodeType, AvPanelMouseEvent, AvPanelMouseEventType, PokerProximity } from 'common/aardvark';
 import bind from 'bind-decorator';
+import { EndpointAddr, endpointAddrsMatch } from './aardvark_protocol';
 
 interface AvPokerProps extends AvBaseNodeProps
 {
@@ -12,7 +13,7 @@ interface AvPokerProps extends AvBaseNodeProps
 
 export class AvPoker extends AvBaseNode< AvPokerProps, {} >
 {
-	m_lastActivePanel:string = null;
+	m_lastActivePanel:EndpointAddr = null;
 	m_mouseDown: boolean = false;
 	m_lastX = 0;
 	m_lastY = 0;
@@ -24,28 +25,28 @@ export class AvPoker extends AvBaseNode< AvPokerProps, {} >
 		return this.createNodeObject( AvNodeType.Poker, this.m_nodeId );
 	}
 
-	private sendMouseLeave( panelId: string )
+	private sendMouseLeave( panelId: EndpointAddr )
 	{
-		AvGadget.instance().sendMouseEvent( this.m_nodeId, panelId, AvPanelMouseEventType.Leave, 0, 0 );
+		AvGadget.instance().sendMouseEvent( this.endpointAddr(), panelId, AvPanelMouseEventType.Leave, 0, 0 );
 	}
-	private sendMouseEnter( panelId: string, x: number, y: number )
+	private sendMouseEnter( panelId: EndpointAddr, x: number, y: number )
 	{
-		AvGadget.instance().sendMouseEvent( this.m_nodeId, panelId, AvPanelMouseEventType.Enter, x, y );
-	}
-
-	private sendMouseMove( panelId: string, x: number, y: number )
-	{
-		AvGadget.instance().sendMouseEvent( this.m_nodeId, panelId, AvPanelMouseEventType.Move, x, y );
+		AvGadget.instance().sendMouseEvent( this.endpointAddr(), panelId, AvPanelMouseEventType.Enter, x, y );
 	}
 
-	private sendMouseDown( panelId: string, x: number, y: number )
+	private sendMouseMove( panelId: EndpointAddr, x: number, y: number )
 	{
-		AvGadget.instance().sendMouseEvent( this.m_nodeId, panelId, AvPanelMouseEventType.Down, x, y );
+		AvGadget.instance().sendMouseEvent( this.endpointAddr(), panelId, AvPanelMouseEventType.Move, x, y );
 	}
 
-	private sendMouseUp( panelId: string, x: number, y: number )
+	private sendMouseDown( panelId: EndpointAddr, x: number, y: number )
 	{
-		AvGadget.instance().sendMouseEvent( this.m_nodeId, panelId, AvPanelMouseEventType.Up, x, y );
+		AvGadget.instance().sendMouseEvent( this.endpointAddr(), panelId, AvPanelMouseEventType.Down, x, y );
+	}
+
+	private sendMouseUp( panelId: EndpointAddr, x: number, y: number )
+	{
+		AvGadget.instance().sendMouseEvent( this.endpointAddr(), panelId, AvPanelMouseEventType.Up, x, y );
 	}
 
 	@bind private proximityUpdate( proxArray: PokerProximity[] )
@@ -58,7 +59,7 @@ export class AvPoker extends AvBaseNode< AvPokerProps, {} >
 			// find the active panel from last frame
 			for( let prox of proxArray )
 			{
-				if( prox.panelId == this.m_lastActivePanel )
+				if( endpointAddrsMatch( prox.panelId, this.m_lastActivePanel ) )
 				{
 					activePanelProx = prox;
 					break;

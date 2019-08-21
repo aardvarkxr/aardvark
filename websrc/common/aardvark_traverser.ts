@@ -194,8 +194,6 @@ export class AvDefaultTraverser
 
 		this.m_inFrameTraversal = true;
 		this.m_handDeviceForNode = {};
-		//m_intersections.reset();
-		//m_collisions.reset();
 		this.m_currentHand = EHand.Invalid;
 		this.m_currentGrabbableGlobalId = null;
 		this.m_universeFromNodeTransforms = {};
@@ -217,11 +215,10 @@ export class AvDefaultTraverser
 	
 		this.m_inFrameTraversal = false;
 	
-		// m_intersections.updatePokerProximity( m_client );
-
 		Av().renderer.renderList( this.m_renderList );
 
 		this.updateGrabberIntersections();
+		this.updatePokerProximity();
 	}
 
 	private updateGrabberIntersections()
@@ -232,6 +229,16 @@ export class AvDefaultTraverser
 			this.m_endpoint.sendMessage( MessageType.GrabberState, state );
 		}
 	}
+
+	private updatePokerProximity()
+	{
+		let proximities = Av().renderer.updatePokerProximity();
+		for( let proximity of proximities )
+		{
+			this.m_endpoint.sendMessage( MessageType.PokerProximity, proximity );
+		}
+	}
+
 
 	getNodeData( node: AvNode ): NodeData
 	{
@@ -496,7 +503,7 @@ export class AvDefaultTraverser
 					let zScale = panelNormal.length();
 					let nodeFromUniverse = new mat4( universeFromNode.all() ).inverse();
 					Av().renderer.addActivePanel(
-						endpointAddrToString( node.globalId ),
+						node.globalId,
 						nodeFromUniverse.all(),
 						zScale, 
 						hand );
@@ -512,7 +519,7 @@ export class AvDefaultTraverser
 			( universeFromNode: mat4 ) =>
 		{
 			let pokerInUniverse = universeFromNode.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) );
-			Av().renderer.addActivePoker( endpointAddrToString( node.globalId ), [ pokerInUniverse.x, pokerInUniverse.y, pokerInUniverse.z ], hand );
+			Av().renderer.addActivePoker( node.globalId, [ pokerInUniverse.x, pokerInUniverse.y, pokerInUniverse.z ], hand );
 		} );
 	}
 	

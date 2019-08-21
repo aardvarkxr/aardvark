@@ -1,11 +1,11 @@
 import * as React from 'react';
 
 import { Av, AvPanelHandler, AvGadgetObj, AvSceneContext, AvPokerHandler, AvPanelMouseEventType, 
-	AvGrabEventProcessor, AvGrabberProcessor, AvGrabEventType, AvGrabEvent, AvGadgetManifest, AvNode, AvNodeType, AvStartGadgetCallback } from 'common/aardvark';
+	AvGrabEventProcessor, AvGrabberProcessor, AvGrabEventType, AvGrabEvent, AvGadgetManifest, AvNode, AvNodeType, AvStartGadgetCallback, AvPanelMouseEvent } from 'common/aardvark';
 import { IAvBaseNode } from './aardvark_base_node';
 import bind from 'bind-decorator';
 import { CGadgetEndpoint } from './gadget_endpoint';
-import { MessageType, MsgUpdateSceneGraph, EndpointAddr, MsgGrabberState, MsgGrabEvent, stringToEndpointAddr, MsgGadgetStarted, EndpointType, endpointAddrToString } from './aardvark_protocol';
+import { MessageType, MsgUpdateSceneGraph, EndpointAddr, MsgGrabberState, MsgGrabEvent, stringToEndpointAddr, MsgGadgetStarted, EndpointType, endpointAddrToString, MsgPokerProximity, MsgMouseEvent } from './aardvark_protocol';
 
 interface AvGadgetProps
 {
@@ -49,6 +49,7 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 	m_grabberProcessors: {[nodeId:number]: AvGrabberProcessor } = {};
 	m_grabEventProcessors: {[nodeId:number]: AvGrabEventProcessor } = {};
 	m_pokerProcessors: {[nodeId:number]: AvPokerHandler } = {};
+	m_panelProcessors: {[nodeId:number]: AvPanelHandler } = {};
 	m_startGadgetCallbacks: {[nodeId:number]: AvStartGadgetCallback } = {};
 
 	constructor( props: any )
@@ -98,6 +99,8 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 		this.m_endpoint.registerHandler( MessageType.GrabberState, this.onGrabberState );
 		this.m_endpoint.registerHandler( MessageType.GrabEvent, this.onGrabEvent );
 		this.m_endpoint.registerHandler( MessageType.GadgetStarted, this.onGadgetStarted );
+		this.m_endpoint.registerHandler( MessageType.PokerProximity, this.onPokerProximity );
+		this.m_endpoint.registerHandler( MessageType.MouseEvent, this.onMouseEvent );
 	}
 
 	public static instance()
@@ -138,16 +141,8 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 
 	public setPanelHandler( nodeId: number, handler: AvPanelHandler )
 	{
-//		this.m_gadget.registerPanelHandler( nodeId, handler );
+		this.m_panelProcessors[ nodeId ] = handler;
 		this.markDirty();
-	}
-
-
-	public enableDefaultPanelHandling( nodeId: number )
-	{
-		// TODO: Make mouse events work again
-		// this.m_gadget.enableDefaultPanelHandling( nodeId );
-		// this.markDirty();
 	}
 
 	public setPokerHandler( nodeId: number, handler: AvPokerHandler )
@@ -172,7 +167,7 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 	{
 		return this.m_endpoint.getEndpointId();
 	}
-	
+
 	@bind onGrabberState( type:MessageType, m: MsgGrabberState, sender: EndpointAddr, target: EndpointAddr ):void
 	{
 		let processor = this.m_grabberProcessors[ target.nodeId ];
@@ -208,10 +203,42 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 	}
 
 
-	public sendMouseEvent( pokerId: number, panelId: string, 
+	@bind private onPokerProximity( type:MessageType, m: MsgPokerProximity, sender: EndpointAddr, target: EndpointAddr )
+	{
+		let processor = this.m_pokerProcessors[ target.nodeId ];
+		if( processor )
+		{
+			processor( m.panels );
+		}
+	}
+
+	public sendMouseEvent( pokerId: EndpointAddr, panelId: EndpointAddr, 
 		eventType:AvPanelMouseEventType, x: number, y: number )
 	{
-//		this.m_gadget.sendMouseEvent( pokerId, panelId, eventType, x, y );
+		let evt: AvPanelMouseEvent = 
+		{
+			type: eventType,
+			panelId,
+			pokerId,
+			x,
+			y,
+		};
+
+		let msg: MsgMouseEvent =
+		{
+			event: evt,
+		}
+
+		this.m_endpoint.sendMessage( MessageType.MouseEvent, msg );
+	}
+
+	@bind private onMouseEvent( type:MessageType, m: MsgMouseEvent, sender: EndpointAddr, target: EndpointAddr )
+	{
+		let processor = this.m_panelProcessors[ target.nodeId ];
+		if( processor )
+		{
+			processor( m.event );
+		}
 	}
 
 	private traverseNode( domNode: HTMLElement ): AvNode[]

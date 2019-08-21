@@ -22,6 +22,30 @@ namespace aardvark
 		InsufficientBufferSize = 9,
 	};
 
+	enum class EEndpointType
+	{
+		Unknown = -1,
+		Hub = 0,
+		Gadget = 1,
+		Node = 2,
+		Renderer = 3,
+		Monitor = 4,
+	};
+
+	struct EndpointAddr_t
+	{
+		EEndpointType type = EEndpointType::Unknown;
+		uint32_t endpointId = 0;
+		uint32_t nodeId = 0;
+	};
+
+	inline bool operator==( const EndpointAddr_t & lhs, const EndpointAddr_t & rhs )
+	{
+		return lhs.type == rhs.type && lhs.endpointId == rhs.endpointId
+			&& lhs.nodeId == rhs.nodeId;
+	}
+
+	std::string endpointAddrToString( const EndpointAddr_t & epa );
 	enum class EAvSceneGraphNodeType
 	{
 		Invalid = -1,
@@ -80,12 +104,13 @@ namespace aardvark
 	// valid for poker nodes
 	struct PokerProximity_t
 	{
-		uint64_t panelId; // used for uniquely identifying panels and generating mouse events
+		EndpointAddr_t panelId; // used for uniquely identifying panels and generating mouse events
 		float x, y; // 0..1 from upper left of panel
 		float distance; // distance from the panel in meters
 	};
 	EAvSceneGraphResult avGetNextPokerProximity( aardvark::CAardvarkClient *pClient, uint32_t pokerNodeId, PokerProximity_t *pokerProximities, uint32_t pokerProximityCount, uint32_t *usedPokerProximityCount );
 
+	// THIS ENUM MUST BE KEPT IN SYNC WITH AvPanelMouseEventType in aardvark.ts
 	enum class EPanelMouseEventType
 	{
 		Unknown = 0,
@@ -158,30 +183,6 @@ namespace aardvark
 	EGrabEventType grabTypeFromProtoType( AvGrabEvent::Type type );
 	void protoGrabEventToLocalEvent( AvGrabEvent::Reader inEvent, GrabEvent_t *outEvent );
 
-	enum class EEndpointType
-	{
-		Unknown = -1,
-		Hub = 0,
-		Gadget = 1,
-		Node = 2,
-		Renderer = 3,
-		Monitor = 4,
-	};
-
-	struct EndpointAddr_t
-	{
-		EEndpointType type = EEndpointType::Unknown;
-		uint32_t endpointId = 0;
-		uint32_t nodeId = 0;
-	};
-
-	inline bool operator==( const EndpointAddr_t & lhs, const EndpointAddr_t & rhs )
-	{
-		return lhs.type == rhs.type && lhs.endpointId == rhs.endpointId
-			&& lhs.nodeId == rhs.nodeId;
-	}
-
-	std::string endpointAddrToString( const EndpointAddr_t & epa );
 
 }
 

@@ -1,4 +1,5 @@
-import { AvGadgetManifest, AvNode, AvGrabEvent } from './../aardvark';
+import { AvPanelMouseEvent } from 'common/aardvark';
+import { AvGadgetManifest, AvNode, AvGrabEvent, PokerProximity } from './../aardvark';
 
 export enum MessageType
 {
@@ -20,6 +21,9 @@ export enum MessageType
 	GrabEvent = 301,
 	GrabberState = 302,
 	GadgetStarted = 303,	
+	PokerProximity = 304,
+	MouseEvent = 305,
+
 }
 
 export enum EndpointType
@@ -211,3 +215,14 @@ export interface MsgGadgetStarted
 	mainGrabbableGlobalId?: EndpointAddr;
 }
 
+
+export interface MsgPokerProximity
+{
+	pokerId: EndpointAddr;
+	panels: PokerProximity[];
+}
+
+export interface MsgMouseEvent
+{
+	event: AvPanelMouseEvent;
+}

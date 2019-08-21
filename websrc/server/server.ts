@@ -1,4 +1,4 @@
-import { MsgGetGadgetManifest, MsgGetGadgetManifestResponse, MsgUpdateSceneGraph, EndpointAddr, endpointAddrToString, MsgGrabEvent, endpointAddrsMatch, MsgGrabberState, MsgGadgetStarted, MsgSetEndpointTypeResponse } from './../common/aardvark-react/aardvark_protocol';
+import { MsgGetGadgetManifest, MsgGetGadgetManifestResponse, MsgUpdateSceneGraph, EndpointAddr, endpointAddrToString, MsgGrabEvent, endpointAddrsMatch, MsgGrabberState, MsgGadgetStarted, MsgSetEndpointTypeResponse, MsgPokerProximity, MsgMouseEvent } from './../common/aardvark-react/aardvark_protocol';
 import { MessageType, EndpointType, MsgSetEndpointType, Envelope, MsgNewEndpoint, MsgLostEndpoint, parseEnvelope, MsgError } from 'common/aardvark-react/aardvark_protocol';
 import { AvGadgetManifest, AvNode } from 'common/aardvark';
 import * as express from 'express';
@@ -363,6 +363,8 @@ class CEndpoint
 		this.registerEnvelopeHandler( MessageType.GrabberState, this.onGrabberState );
 		this.registerEnvelopeHandler( MessageType.GrabEvent, this.onGrabEvent );
 		this.registerEnvelopeHandler( MessageType.GadgetStarted, this.onGadgetStarted );
+		this.registerEnvelopeHandler( MessageType.PokerProximity, this.onPokerProximity );
+		this.registerEnvelopeHandler( MessageType.MouseEvent, this.onMouseEvent );
 	}
 
 	public getId() { return this.m_id; }
@@ -501,6 +503,18 @@ class CEndpoint
 	@bind private onGrabberState( env: Envelope, m: MsgGrabberState )
 	{
 		this.m_dispatcher.forwardToEndpoint( m.grabberId, env );
+		this.m_dispatcher.sendToAllEndpointsOfType( EndpointType.Monitor, env );
+	}
+
+	@bind private onPokerProximity( env: Envelope, m: MsgPokerProximity )
+	{
+		this.m_dispatcher.forwardToEndpoint( m.pokerId, env );
+		this.m_dispatcher.sendToAllEndpointsOfType( EndpointType.Monitor, env );
+	}
+
+	@bind private onMouseEvent( env: Envelope, m: MsgMouseEvent )
+	{
+		this.m_dispatcher.forwardToEndpoint( m.event.panelId, env );
 		this.m_dispatcher.sendToAllEndpointsOfType( EndpointType.Monitor, env );
 	}
 

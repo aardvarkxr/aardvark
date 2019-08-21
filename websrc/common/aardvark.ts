@@ -1,8 +1,8 @@
-import { EndpointAddr, MsgGrabberState } from './aardvark-react/aardvark_protocol';
+import { EndpointAddr, MsgGrabberState, MsgPokerProximity } from './aardvark-react/aardvark_protocol';
 
 export interface PokerProximity
 {
-	panelId: string;
+	panelId: EndpointAddr;
 	x: number;
 	y: number;
 	distance: number;
@@ -79,15 +79,10 @@ export enum AvPanelMouseEventType
 export interface AvPanelMouseEvent
 {
 	type: AvPanelMouseEventType;
-	panelId: string;
-	pokerId: string;
+	panelId: EndpointAddr;
+	pokerId: EndpointAddr;
 	x: number;
 	y: number;
-}
-
-interface AvGadget_SendMouseEvent
-{
-	(pokerId: number, panelId:string, type: AvPanelMouseEventType, x:number, y:number ): void;
 }
 
 export interface AvPanelHandler
@@ -145,7 +140,7 @@ export interface AvGadgetObj
 	registerPanelHandler: AvGadget_RegisterPanelHandler;
 	enableDefaultPanelHandling( panelId: number ): void;
 	sendHapticEventFromPanel( panelId: number, amplitude: number, frequency: number, duration: number ): void;
-	sendMouseEvent: AvGadget_SendMouseEvent;
+	//sendMouseEvent: AvGadget_SendMouseEvent;
 	registerGrabbableProcessor( nodeId: number, processor: AvGrabEventProcessor ): void;
 	registerGrabberProcessor( nodeId: number, processor: AvGrabberProcessor ): void;
 	sendGrabEvent( event: AvGrabEvent ): void;
@@ -266,9 +261,10 @@ interface AvRenderer
 	registerHapticProcessor( hapticProcessor: AvHapticProcessor ) : void;
 	sendHapticEventForHand( hand: EHand, amplitude: number, frequency: number, duration: number ): void;
 
-	addActivePanel( panelGlobalId: string, nodeFromUniverse: number[], zScale: number, hand: EHand  ): void;
-	addActivePoker( pokerGlobalId: string, pokerInUniverse: number[], hand: EHand  ): void;
-
+	updatePokerProximity(): MsgPokerProximity[];
+	addActivePanel( panelGlobalId: EndpointAddr, nodeFromUniverse: number[], zScale: number, hand: EHand  ): void;
+	addActivePoker( pokerGlobalId: EndpointAddr, pokerInUniverse: number[], hand: EHand  ): void;
+	
 	updateGrabberIntersections(): MsgGrabberState[];
 	registerGrabEventProcessor( grabEventProcessor: AvGrabEventProcessor ): void;
 	addGrabbableHandle_Sphere( grabbableGlobalId: EndpointAddr, universeFromGrabbable: number[], radius: number, hand: EHand ): void;
@@ -328,8 +324,8 @@ export interface AvBrowserTextureCallback
 export interface Aardvark
 {
 	// requires scenegraph permissions
-//	createGadget: Av_CreateGadget;
 	subscribeToBrowserTexture( callback: AvBrowserTextureCallback ): void;
+	spoofMouseEvent( type:AvPanelMouseEventType, x: number, y: number ): void;
 
 	// requires master permissions
 	startGadget( uri: string, initialHook: string, epToNotify: EndpointAddr ): void;
