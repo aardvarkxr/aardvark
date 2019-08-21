@@ -71,8 +71,6 @@ CAardvarkCefHandler::CAardvarkCefHandler( IApplication *application, const std::
 	m_epToNotify = epToNotify;
 
 	m_application = application;
-	m_client = std::make_unique<aardvark::CAardvarkClient>();
-	m_client->Start();
 
 	m_gadgetUri = tools::filterUriForInstall( gadgetUri );
 	m_initialHook = initialHook;
@@ -200,9 +198,6 @@ bool CAardvarkCefHandler::DoClose(CefRefPtr<CefBrowser> browser)
 
 	// Set a flag to indicate that the window close should be allowed.
 	m_isClosing = true;
-
-	m_client->Stop();
-	m_client = nullptr;
 
 	m_application->browserClosed( this );
 
@@ -378,9 +373,8 @@ void CAardvarkCefHandler::updateSceneGraphTextures()
 
 void CAardvarkCefHandler::RunFrame()
 {
-	if ( m_client )
+	if ( !m_isClosing )
 	{
-		m_client->WaitScope().poll();
 		CefPostDelayedTask( TID_UI, base::Bind( &CAardvarkCefHandler::RunFrame, this ), 11 );
 	}
 

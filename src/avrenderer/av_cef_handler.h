@@ -8,7 +8,6 @@
 #include "include/cef_client.h"
 #include <include/cef_urlrequest.h>
 
-#include <aardvark/aardvark_client.h>
 #include <aardvark/aardvark_gadget_manifest.h>
 #include <aardvark/aardvark_scene_graph.h>
 
@@ -154,8 +153,6 @@ private:
 	void *m_sharedTexture = nullptr;
 
 	void updateSceneGraphTextures();
-
-	std::unique_ptr< aardvark::CAardvarkClient > m_client;
 
 	CefRefPtr<CStartGadgetRequestClient> m_manifestRequestClient;
 	CefRefPtr<CefURLRequest> m_manifestRequest;
