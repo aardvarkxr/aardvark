@@ -1,7 +1,6 @@
 cmake_minimum_required ( VERSION 3.14)
 
 add_library(tools STATIC
-	${AV_SRC_PUBLIC}/tools/capnprototools.h
 	filetools.cpp
 	${AV_SRC_PUBLIC}/tools/filetools.h
 	pathtools.cpp
