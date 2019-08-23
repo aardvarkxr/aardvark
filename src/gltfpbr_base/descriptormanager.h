@@ -66,6 +66,4 @@ namespace vks
 		FnUpdateDescriptor m_fnUpdate;
 		VkDescriptorSet m_descriptorSet;
 	};
-
-
 }

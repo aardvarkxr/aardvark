@@ -239,7 +239,7 @@ void VulkanExample::recordCommandBuffers( uint32_t cbIndex )
 	renderScene( cbIndex, renderPass, frameBuffers[cbIndex], width, height, EEye::Mirror );
 	renderSceneToTarget( cbIndex, leftEyeRT, eyeWidth, eyeHeight, EEye::Left );
 	renderSceneToTarget( cbIndex, rightEyeRT, eyeWidth, eyeHeight, EEye::Right );
-	renderVarggles( cbIndex, vargglesRT, vargglesWidth, vargglesHeight);
+	//renderVarggles( cbIndex, vargglesRT, vargglesWidth, vargglesHeight);
 
 	VK_CHECK_RESULT( vkEndCommandBuffer( currentCB ) );
 }
@@ -248,14 +248,19 @@ void VulkanExample::renderVarggles( uint32_t cbIndex, vks::RenderTarget target, 
 {
 	VkCommandBuffer currentCB = commandBuffers[cbIndex];
 
+	leftEyeRT.transitionColorLayout( currentCB, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+	rightEyeRT.transitionColorLayout( currentCB, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+	target.transitionColorLayout( currentCB, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
+
 	VkClearValue clearValues[3];
 	if ( settings.multiSampling ) {
-		clearValues[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
-		clearValues[1].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+		clearValues[0].color = { { 0.0f, 0.0f, 0.0f, 0.0f } };
+		clearValues[1].color = { { 0.0f, 0.0f, 0.0f, 0.0f } };
 		clearValues[2].depthStencil = { 1.0f, 0 };
 	}
 	else {
-		clearValues[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+		clearValues[0].color = { { 0.0f, 0.0f, 0.0f, 0.0f } };
 		clearValues[1].depthStencil = { 1.0f, 0 };
 	}
 
@@ -269,12 +274,11 @@ void VulkanExample::renderVarggles( uint32_t cbIndex, vks::RenderTarget target, 
 	renderPassBeginInfo.clearValueCount = settings.multiSampling ? 3 : 2;
 	renderPassBeginInfo.pClearValues = clearValues;
 	renderPassBeginInfo.framebuffer = target.frameBuffer;
-
 	vkCmdBeginRenderPass( currentCB, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE );
 
 	VkViewport viewport{};
-	viewport.width = (float)targetWidth;
-	viewport.height = (float)targetHeight;
+	viewport.width = static_cast<float>(targetWidth);
+	viewport.height = static_cast<float>(targetHeight);
 	viewport.minDepth = 0.0f;
 	viewport.maxDepth = 1.0f;
 	vkCmdSetViewport( currentCB, 0, 1, &viewport );
@@ -282,22 +286,25 @@ void VulkanExample::renderVarggles( uint32_t cbIndex, vks::RenderTarget target, 
 	VkRect2D scissor{};
 	scissor.extent = { targetWidth, targetHeight };
 	vkCmdSetScissor( currentCB, 0, 1, &scissor );
-	vkCmdBindPipeline( currentCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines.varggles);
+	vkCmdBindPipeline( currentCB, VK_PIPELINE_BIND_POINT_GRAPHICS, m_vargglesVulkanBindings.pipeline);
 
-	VkDescriptorSet descriptorSet = descriptorSets[cbIndex].varggles->set();
+	VkDescriptorSet descriptorSet = m_vargglesVulkanBindings.descriptorsets[cbIndex];
 	const std::vector<VkDescriptorSet> descriptorsets = { descriptorSet };
-	vkCmdBindDescriptorSets( commandBuffers[cbIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, static_cast<uint32_t>( descriptorsets.size() ), descriptorsets.data(), 0, NULL );
+	vkCmdBindDescriptorSets( commandBuffers[cbIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, m_vargglesVulkanBindings.pipelinelayout, 0, static_cast<uint32_t>( descriptorsets.size() ), descriptorsets.data(), 0, NULL );
 
 	PushConstBlockVarggles pushConstVarggles{};
 	pushConstVarggles.fov = m_eyeFOV * (M_PI / 180.0f);
 	// TODO: Pluto - Get inverse horizontal look here
 	pushConstVarggles.inverseHorizontalLook = glm::mat4(); //glm::vec4(1, 1, 1, 1);
-	vkCmdPushConstants( commandBuffers[cbIndex], pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( PushConstBlockVarggles ), &pushConstVarggles);
+	vkCmdPushConstants( commandBuffers[cbIndex], m_vargglesVulkanBindings.pipelinelayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( PushConstBlockVarggles ), &pushConstVarggles);
 
-	// draw full screen tri
 	vkCmdDraw( commandBuffers[cbIndex], 3, 1, 0, 0 );
 
 	vkCmdEndRenderPass( currentCB );
+
+	target.transitionColorLayout( currentCB, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL );
+	leftEyeRT.transitionColorLayout( currentCB, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL );
+	rightEyeRT.transitionColorLayout( currentCB, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL );
 }
 
 void VulkanExample::renderSceneToTarget( uint32_t cbIndex, vks::RenderTarget target, uint32_t targetWidth, uint32_t targetHeight, EEye eEye )
@@ -825,6 +832,228 @@ void VulkanExample::preparePipelines()
 	blendAttachmentState.blendEnable = VK_FALSE;
 	blendAttachmentState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 	VK_CHECK_RESULT(vkCreateGraphicsPipelines(device, pipelineCache, 1, &pipelineCI, nullptr, &pipelines.varggles));
+	for ( auto shaderStage : shaderStages ) {
+		vkDestroyShaderModule( device, shaderStage.module, nullptr );
+	}
+}
+
+void VulkanExample::prepareVarggles()
+{
+	// create left / right eye render target color image samplers
+	VkSamplerCreateInfo samplerCI{};
+	samplerCI.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+	samplerCI.magFilter = VK_FILTER_LINEAR;
+	samplerCI.minFilter = VK_FILTER_LINEAR;
+	samplerCI.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	samplerCI.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	samplerCI.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	samplerCI.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	samplerCI.minLod = 0.0f;
+	samplerCI.maxLod = 0.0f;
+	samplerCI.maxAnisotropy = 1.0f;
+	// TODO: Whiteborder
+	samplerCI.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+	VK_CHECK_RESULT( vkCreateSampler( device, &samplerCI, nullptr, &leftEyeRT.color.sampler ) );
+	VK_CHECK_RESULT( vkCreateSampler( device, &samplerCI, nullptr, &rightEyeRT.color.sampler ) );
+	leftEyeRT.color.updateDescriptor();
+	rightEyeRT.color.updateDescriptor();
+
+	VkAttachmentDescription attDesc{};
+	// TODO: grab this from the color texture
+	attDesc.format = swapChain.colorFormat;
+	attDesc.samples = VK_SAMPLE_COUNT_1_BIT;
+	attDesc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	attDesc.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	attDesc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	attDesc.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	attDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	attDesc.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	std::vector<VkAttachmentReference> attachments = {
+		{ 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL },
+		{ 1, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }
+	};
+
+	VkSubpassDescription subpassDescription{};
+	subpassDescription.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+	subpassDescription.colorAttachmentCount = static_cast<uint32_t>(attachments.size());
+	subpassDescription.pColorAttachments = attachments.data();
+
+	// Use subpass dependencies for layout transitions
+	std::array<VkSubpassDependency, 2> dependencies;
+	dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+	dependencies[0].dstSubpass = 0;
+	dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+	dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	dependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+	dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+	dependencies[1].srcSubpass = 0;
+	dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+	dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	dependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+	dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+	dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+	// Renderpass
+	VkRenderPassCreateInfo renderPassCI{};
+	renderPassCI.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+	renderPassCI.attachmentCount = 2;
+	renderPassCI.pAttachments = &attDesc;
+	renderPassCI.subpassCount = 1;
+	renderPassCI.pSubpasses = &subpassDescription;
+	renderPassCI.dependencyCount = 2;
+	renderPassCI.pDependencies = dependencies.data();
+	VK_CHECK_RESULT( vkCreateRenderPass( device, &renderPassCI, nullptr, &m_vargglesVulkanBindings.renderpass ) );
+
+	// Descriptors
+	std::vector<VkDescriptorSetLayoutBinding> setLayoutBindings = {
+		{ 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
+		{ 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr }
+	};
+	VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCI{};
+	descriptorSetLayoutCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	descriptorSetLayoutCI.pBindings = setLayoutBindings.data();
+	descriptorSetLayoutCI.bindingCount = static_cast<uint32_t>( setLayoutBindings.size() );
+	VK_CHECK_RESULT( vkCreateDescriptorSetLayout( device, &descriptorSetLayoutCI, nullptr, &m_vargglesVulkanBindings.descriptorsetlayout) );
+
+	// Descriptor Pool
+	VkDescriptorPoolSize poolSize = { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2 };
+	VkDescriptorPoolCreateInfo descriptorPoolCI{};
+	descriptorPoolCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	descriptorPoolCI.poolSizeCount = 1;
+	descriptorPoolCI.pPoolSizes = &poolSize;
+	descriptorPoolCI.maxSets = static_cast<uint32_t>(m_vargglesVulkanBindings.descriptorsets.size());
+	VK_CHECK_RESULT( vkCreateDescriptorPool( device, &descriptorPoolCI, nullptr, &m_vargglesVulkanBindings.descriptorpool ) );
+
+	// Descriptor sets
+	VkDescriptorSetAllocateInfo descriptorSetAllocInfo{};
+	descriptorSetAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	descriptorSetAllocInfo.descriptorPool = m_vargglesVulkanBindings.descriptorpool;
+	descriptorSetAllocInfo.pSetLayouts = &m_vargglesVulkanBindings.descriptorsetlayout;
+	descriptorSetAllocInfo.descriptorSetCount = 1;
+
+	std::array<VkWriteDescriptorSet, 2> writeDescriptorSets{};
+	for(auto& descriptorSet : m_vargglesVulkanBindings.descriptorsets)
+	{ 
+		VK_CHECK_RESULT( vkAllocateDescriptorSets( device, &descriptorSetAllocInfo, &descriptorSet ) );
+
+		writeDescriptorSets[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writeDescriptorSets[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		writeDescriptorSets[0].descriptorCount = 1;
+		writeDescriptorSets[0].dstSet = descriptorSet;
+		writeDescriptorSets[0].dstBinding = 0;
+		writeDescriptorSets[0].pImageInfo = &leftEyeRT.color.descriptor;
+
+		writeDescriptorSets[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writeDescriptorSets[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		writeDescriptorSets[1].descriptorCount = 1;
+		writeDescriptorSets[1].dstSet = descriptorSet;
+		writeDescriptorSets[1].dstBinding = 1;
+		writeDescriptorSets[1].pImageInfo = &rightEyeRT.color.descriptor;
+
+		vkUpdateDescriptorSets( device, static_cast<uint32_t>( writeDescriptorSets.size() ), writeDescriptorSets.data(), 0, NULL );
+	}
+
+	// Pipeline layout
+	VkPushConstantRange pushConstantRange{};
+	pushConstantRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	pushConstantRange.size = sizeof(PushConstBlockVarggles);
+
+	VkPipelineLayoutCreateInfo pipelineLayoutCI{};
+	pipelineLayoutCI.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+	pipelineLayoutCI.setLayoutCount = 1;
+	pipelineLayoutCI.pSetLayouts = &m_vargglesVulkanBindings.descriptorsetlayout;
+	pipelineLayoutCI.pushConstantRangeCount = 1;
+	pipelineLayoutCI.pPushConstantRanges = &pushConstantRange;
+	VK_CHECK_RESULT( vkCreatePipelineLayout( device, &pipelineLayoutCI, nullptr, &m_vargglesVulkanBindings.pipelinelayout ) );
+
+	// Pipeline
+	VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateCI{};
+	inputAssemblyStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+	inputAssemblyStateCI.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+
+	VkPipelineRasterizationStateCreateInfo rasterizationStateCI{};
+	rasterizationStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+	rasterizationStateCI.polygonMode = VK_POLYGON_MODE_FILL;
+	rasterizationStateCI.cullMode = VK_CULL_MODE_NONE;
+	rasterizationStateCI.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+	rasterizationStateCI.lineWidth = 1.0f;
+
+	VkPipelineColorBlendAttachmentState blendAttachmentState{};
+	blendAttachmentState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+	blendAttachmentState.blendEnable = VK_FALSE;
+
+	VkPipelineColorBlendStateCreateInfo colorBlendStateCI{};
+	colorBlendStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+	colorBlendStateCI.attachmentCount = 1;
+	colorBlendStateCI.pAttachments = &blendAttachmentState;
+
+	VkPipelineDepthStencilStateCreateInfo depthStencilStateCI{};
+	depthStencilStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+	depthStencilStateCI.depthTestEnable = VK_FALSE;
+	depthStencilStateCI.depthWriteEnable = VK_FALSE;
+	depthStencilStateCI.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+	depthStencilStateCI.front = depthStencilStateCI.back;
+	depthStencilStateCI.back.compareOp = VK_COMPARE_OP_ALWAYS;
+
+	VkPipelineViewportStateCreateInfo viewportStateCI{};
+	viewportStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+	viewportStateCI.viewportCount = 1;
+	viewportStateCI.scissorCount = 1;
+
+	VkPipelineMultisampleStateCreateInfo multisampleStateCI{};
+	multisampleStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+
+	if ( settings.multiSampling ) {
+		multisampleStateCI.rasterizationSamples = settings.sampleCount;
+	}
+
+	std::vector<VkDynamicState> dynamicStateEnables = {
+		VK_DYNAMIC_STATE_VIEWPORT,
+		VK_DYNAMIC_STATE_SCISSOR
+	};
+	VkPipelineDynamicStateCreateInfo dynamicStateCI{};
+	dynamicStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+	dynamicStateCI.pDynamicStates = dynamicStateEnables.data();
+	dynamicStateCI.dynamicStateCount = static_cast<uint32_t>( dynamicStateEnables.size() );
+
+	// Vertex input state
+	/*
+	VkVertexInputBindingDescription vertexInputBinding = { 0, 0, VK_VERTEX_INPUT_RATE_VERTEX };
+	VkVertexInputAttributeDescription vertexInputAttribute = { 0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0 };
+	*/
+
+	VkPipelineVertexInputStateCreateInfo vertexInputStateCI{};
+	vertexInputStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+	vertexInputStateCI.vertexBindingDescriptionCount = 0;
+	vertexInputStateCI.pVertexBindingDescriptions = nullptr;// &vertexInputBinding;
+	vertexInputStateCI.vertexAttributeDescriptionCount = 0;
+	vertexInputStateCI.pVertexAttributeDescriptions = nullptr;// &vertexInputAttribute;
+
+	std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages;
+
+	VkGraphicsPipelineCreateInfo pipelineCI{};
+	pipelineCI.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+	pipelineCI.layout = m_vargglesVulkanBindings.pipelinelayout;
+	pipelineCI.renderPass = m_vargglesVulkanBindings.renderpass;
+	pipelineCI.pInputAssemblyState = &inputAssemblyStateCI;
+	pipelineCI.pVertexInputState = &vertexInputStateCI;
+	pipelineCI.pRasterizationState = &rasterizationStateCI;
+	pipelineCI.pColorBlendState = &colorBlendStateCI;
+	pipelineCI.pMultisampleState = &multisampleStateCI;
+	pipelineCI.pViewportState = &viewportStateCI;
+	pipelineCI.pDepthStencilState = &depthStencilStateCI;
+	pipelineCI.pDynamicState = &dynamicStateCI;
+	pipelineCI.stageCount = 2;
+	pipelineCI.pStages = shaderStages.data();
+	pipelineCI.renderPass = m_vargglesVulkanBindings.renderpass;
+
+	shaderStages[0] = loadShader( device, "varggles.vert.spv", VK_SHADER_STAGE_VERTEX_BIT );
+	shaderStages[0] = loadShader( device, "varggles.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT );
+
+	VK_CHECK_RESULT( vkCreateGraphicsPipelines( device, pipelineCache, 1, &pipelineCI, nullptr, &m_vargglesVulkanBindings.pipeline ) );
+
 	for ( auto shaderStage : shaderStages ) {
 		vkDestroyShaderModule( device, shaderStage.module, nullptr );
 	}
@@ -1748,6 +1977,7 @@ void VulkanExample::prepare()
 	commandBuffers.resize( swapChain.imageCount );
 	uniformBuffers.resize( swapChain.imageCount );
 	descriptorSets.resize( swapChain.imageCount );
+	m_vargglesVulkanBindings.descriptorsets.resize(swapChain.imageCount);
 	// Command buffer execution fences
 	for ( auto &waitFence : waitFences ) {
 		VkFenceCreateInfo fenceCI{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, nullptr, VK_FENCE_CREATE_SIGNALED_BIT };
@@ -1776,7 +2006,7 @@ void VulkanExample::prepare()
 
 	leftEyeRT.init( swapChain.colorFormat, depthFormat, eyeWidth, eyeHeight, vulkanDevice, queue, settings.multiSampling );
 	rightEyeRT.init( swapChain.colorFormat, depthFormat, eyeWidth, eyeHeight, vulkanDevice, queue, settings.multiSampling );
-	vargglesRT.init(swapChain.colorFormat, depthFormat, vargglesWidth, vargglesHeight, vulkanDevice, queue, settings.multiSampling );
+	vargglesRT.init( swapChain.colorFormat, depthFormat, vargglesWidth, vargglesHeight, vulkanDevice, queue, settings.multiSampling );
 
 	loadAssets();
 	generateBRDFLUT();
@@ -1784,6 +2014,7 @@ void VulkanExample::prepare()
 	prepareUniformBuffers();
 	setupDescriptors();
 	preparePipelines();
+	prepareVarggles();
 
 	prepared = true;
 }

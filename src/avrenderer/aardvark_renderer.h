@@ -88,6 +88,7 @@ public:
 	void setupDescriptors();
 	void setupDescriptorSetsForModel( std::shared_ptr<vkglTF::Model> pModel );
 	void preparePipelines();
+	void prepareVarggles();
 	void generateBRDFLUT();
 	void generateCubemaps();
 	void prepareUniformBuffers();
@@ -255,6 +256,17 @@ protected:
         float fov;
 		glm::mat4 inverseHorizontalLook;
     };
+
+	struct VargglesVulkanBindings {
+		VkRenderPass renderpass;
+		VkDescriptorPool descriptorpool;
+		std::vector<VkDescriptorSet> descriptorsets;
+		VkDescriptorSetLayout descriptorsetlayout;
+		VkPipeline pipeline;
+		VkPipelineLayout pipelinelayout;
+	};
+
+	VargglesVulkanBindings m_vargglesVulkanBindings;
 
 	std::map<std::string, std::string> environments;
 	std::string selectedEnvironment = "papermill";
