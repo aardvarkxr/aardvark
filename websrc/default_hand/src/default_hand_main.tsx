@@ -7,6 +7,7 @@ import { AvGrabber, GrabberHighlight } from 'common/aardvark-react/aardvark_grab
 import bind from 'bind-decorator';
 import { AvModel } from 'common/aardvark-react/aardvark_model';
 import { AvPoker } from 'common/aardvark-react/aardvark_poker';
+import { AvStandardHook } from 'common/aardvark-react/aardvark_standard_hook';
 
 
 interface DefaultHandState
@@ -76,6 +77,7 @@ class DefaultHand extends React.Component< {}, DefaultHandState >
 				<AvPoker updateHighlight = { this.updatePokerHighlight } />
 				<AvGrabber updateHighlight = { this.updateGrabberHighlight }
 					radius={0.1} />
+				<AvStandardHook/>
 			</AvGadget>
 		);
 	}

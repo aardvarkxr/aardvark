@@ -1,6 +1,7 @@
-import { MsgGetGadgetManifest, MsgGetGadgetManifestResponse, MsgUpdateSceneGraph, EndpointAddr, endpointAddrToString, MsgGrabEvent, endpointAddrsMatch, MsgGrabberState, MsgGadgetStarted, MsgSetEndpointTypeResponse, MsgPokerProximity, MsgMouseEvent, MsgNodeHaptic } from './../common/aardvark-react/aardvark_protocol';
+import { AvGrabEvent } from './../common/aardvark';
+import { MsgGetGadgetManifest, MsgGetGadgetManifestResponse, MsgUpdateSceneGraph, EndpointAddr, endpointAddrToString, MsgGrabEvent, endpointAddrsMatch, MsgGrabberState, MsgGadgetStarted, MsgSetEndpointTypeResponse, MsgPokerProximity, MsgMouseEvent, MsgNodeHaptic } from 'common/aardvark-react/aardvark_protocol';
 import { MessageType, EndpointType, MsgSetEndpointType, Envelope, MsgNewEndpoint, MsgLostEndpoint, parseEnvelope, MsgError } from 'common/aardvark-react/aardvark_protocol';
-import { AvGadgetManifest, AvNode } from 'common/aardvark';
+import { AvGadgetManifest, AvNode, AvNodeType, AvGrabEventType } from 'common/aardvark';
 import * as express from 'express';
 import * as http from 'http';
 import * as WebSocket from 'ws';
@@ -289,6 +290,21 @@ class CDispatcher
 		ep.sendMessage( env.type, env.payloadUnpacked, epa, env.sender );
 	}
 
+	public forwardToHookNodes( env: Envelope )
+	{
+		for( let gadget of this.m_gadgets )
+		{
+			let hookNodes = gadget.getGadgetData().getHookNodes();
+			if( !hookNodes )
+				continue;
+			
+			for( let hookNode of hookNodes )
+			{
+				this.forwardToEndpoint( hookNode, env );
+			}
+		}
+	}
+
 }
 
 class CGadgetData
@@ -299,6 +315,7 @@ class CGadgetData
 	private m_root: AvNode = null;
 	private m_hook: string = null;
 	private m_dispatcher: CDispatcher = null;
+	private m_hookNodes:EndpointAddr[] = [];
 
 	constructor( ep: CEndpoint, uri: string, initialHook: string, dispatcher: CDispatcher )
 	{
@@ -324,12 +341,39 @@ class CGadgetData
 	public getName() { return this.m_manifest.name; }
 	public getRoot() { return this.m_root; }
 	public getHook() { return this.m_hook; }
+	public getHookNodes() { return this.m_hookNodes; }
 
 	public updateSceneGraph( root: AvNode ) 
 	{
 		this.m_root = root;
 		this.m_dispatcher.updateGadgetSceneGraph( this.m_ep.getId(), this.m_root, this.m_hook );
+
+		this.m_hookNodes = [];
+		this.updateHookNodeList( root );
 	}
+
+	private updateHookNodeList( node: AvNode )
+	{
+		if( node.type == AvNodeType.Hook )
+		{
+			this.m_hookNodes.push(
+				{
+					endpointId: this.m_ep.getId(),
+					type: EndpointType.Node,
+					nodeId: node.id,
+				}
+			)
+		}
+
+		if( node.children )
+		{
+			for( let child of node.children )
+			{
+				this.updateHookNodeList( child );
+			}
+		}
+	}
+
 }
 
 
@@ -539,6 +583,13 @@ class CEndpoint
 		{
 			this.m_dispatcher.forwardToEndpoint( m.event.hookId, env );
 		}
+
+		if( m.event.type == AvGrabEventType.StartGrab || m.event.type == AvGrabEventType.EndGrab )
+		{
+			// start and end grab events also go to all hooks so they can highlight
+			this.m_dispatcher.forwardToHookNodes( env );
+		}
+		
 		if( env.sender.type != EndpointType.Renderer )
 		{
 			this.m_dispatcher.sendToAllEndpointsOfType( EndpointType.Renderer, env );

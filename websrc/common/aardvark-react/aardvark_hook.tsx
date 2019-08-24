@@ -7,6 +7,7 @@ import bind from 'bind-decorator';
 export enum HookHighlight
 {
 	None,
+	GrabInProgress,
 	InRange,
 }
 
@@ -35,12 +36,23 @@ export class AvHook extends AvBaseNode< AvHookProps, {} >
 	
 		switch( evt.type )
 		{
+			case AvGrabEventType.StartGrab:
+				if( evt.grabberId.endpointId != AvGadget.instance().getEndpointId() )
+				{
+					newHighlight = HookHighlight.GrabInProgress;
+				}
+				break;
+
+			case AvGrabEventType.EndGrab:
+				newHighlight = HookHighlight.None;
+				break;
+
 			case AvGrabEventType.EnterHookRange:
 				newHighlight = HookHighlight.InRange;
 				break;
 
 			case AvGrabEventType.LeaveHookRange:
-				newHighlight = HookHighlight.None;
+				newHighlight = HookHighlight.GrabInProgress;
 				break;
 		}
 
