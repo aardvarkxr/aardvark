@@ -76,7 +76,7 @@ class DefaultHand extends React.Component< {}, DefaultHandState >
 
 				<AvPoker updateHighlight = { this.updatePokerHighlight } />
 				<AvGrabber updateHighlight = { this.updateGrabberHighlight }
-					radius={0.1} />
+					radius={0.001} />
 				<AvStandardHook/>
 			</AvGadget>
 		);

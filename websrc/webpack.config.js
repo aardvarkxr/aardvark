@@ -95,6 +95,7 @@ module.exports =
 	createConfig( 'test_panel', 'Test Panel', 'tsx' ),
 	createConfig( 'charm_bracelet', 'Charm Bracelet', 'tsx' ),
 	createConfig( 'test_gadget_launcher', 'Test Gadget Launcher', 'tsx' ),
+	createConfig( 'control_panel', 'Control Panel', 'tsx' ),
 	{
 		target: "node",
 		entry: 
