@@ -1,5 +1,7 @@
 ========= DEAL WITH THIS NEXT ===========
 
+* Rotation isn't working in transforms. It stuffs the matrix full of NaNs.
+
 * Fix dynamic reload of renderer tab. This should tear down the whole renderer and recreate it. Not having this is a pain when there are code changes on the Javascript side.
 
 
