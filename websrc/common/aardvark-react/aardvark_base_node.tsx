@@ -18,19 +18,21 @@ declare global
 
 export interface AvBaseNodeProps
 {
-	onIdAssigned?: ( id: number ) => void;
+	onIdAssigned?: ( addr: EndpointAddr ) => void;
 }
 
 export interface IAvBaseNode
 {
 	m_nodeId: number;
 	buildNode(): AvNode;
+	createNodeForNode(): AvNode;
 }
 
 
 export abstract class AvBaseNode<TProps, TState> extends React.Component<TProps, TState> implements IAvBaseNode
 {
 	public m_nodeId: number;
+	private m_firstUpdate = true;
 
 	constructor( props: any )
 	{
@@ -39,6 +41,24 @@ export abstract class AvBaseNode<TProps, TState> extends React.Component<TProps,
 
 	public abstract buildNode( ): AvNode;
 
+	public createNodeForNode(): AvNode
+	{
+		if( this.m_firstUpdate )
+		{
+			this.m_firstUpdate = false;
+
+			let baseProps = this.props as AvBaseNodeProps;
+			if( baseProps && baseProps.onIdAssigned )
+			{
+				baseProps.onIdAssigned( this.endpointAddr() );
+			}
+	
+		}
+
+		return this.buildNode();
+	}
+
+
 	public componentWillMount()
 	{
 		AvGadget.instance().register( this );
@@ -46,13 +66,14 @@ export abstract class AvBaseNode<TProps, TState> extends React.Component<TProps,
 		let anyProps = this.props as any;
 		if( anyProps.onIdAssigned )
 		{
-			anyProps.onIdAssigned( this.m_nodeId );
+			anyProps.onIdAssigned( this.endpointAddr() );
 		}
 	}
 
 	public componentWillUnmount()
 	{
 		AvGadget.instance().unregister( this );
+		this.m_firstUpdate = true;
 	}
 
 	protected createNodeObject( type: AvNodeType, nodeId: number ): AvNode

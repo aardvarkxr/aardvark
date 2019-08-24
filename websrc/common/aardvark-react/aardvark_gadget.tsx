@@ -5,7 +5,7 @@ import { Av, AvPanelHandler, AvPokerHandler, AvPanelMouseEventType,
 import { IAvBaseNode } from './aardvark_base_node';
 import bind from 'bind-decorator';
 import { CGadgetEndpoint } from './gadget_endpoint';
-import { MessageType, MsgUpdateSceneGraph, EndpointAddr, MsgGrabberState, MsgGrabEvent, stringToEndpointAddr, MsgGadgetStarted, EndpointType, endpointAddrToString, MsgPokerProximity, MsgMouseEvent } from './aardvark_protocol';
+import { MessageType, MsgUpdateSceneGraph, EndpointAddr, MsgGrabberState, MsgGrabEvent, stringToEndpointAddr, MsgGadgetStarted, EndpointType, endpointAddrToString, MsgPokerProximity, MsgMouseEvent, MsgNodeHaptic } from './aardvark_protocol';
 
 interface AvGadgetProps
 {
@@ -255,7 +255,7 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 					let reactNode = this.m_registeredNodes[ nodeId ];
 					if( reactNode )
 					{
-						node = reactNode.buildNode();
+						node = reactNode.createNodeForNode();
 						if( node.type == AvNodeType.Grabbable && !this.m_mainGrabbable )
 						{
 							this.m_mainGrabbable = node;
@@ -373,9 +373,16 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 		}
 	}
 
-	public sendHapticEventFromPanel( panelId: number, amplitude: number, frequency: number, duration: number ): void
+	public sendHapticEvent( nodeId: EndpointAddr, amplitude: number, frequency: number, duration: number ): void
 	{
-//		this.m_gadget.sendHapticEventFromPanel( panelId, amplitude, frequency, duration );
+		let msg: MsgNodeHaptic =
+		{
+			nodeId,
+			amplitude,
+			frequency,
+			duration,
+		}
+		this.m_endpoint.sendMessage( MessageType.NodeHaptic, msg );
 	}
 
 	public startGadget( uri: string, initialHook: string, callback: AvStartGadgetCallback )

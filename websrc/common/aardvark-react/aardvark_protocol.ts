@@ -23,7 +23,7 @@ export enum MessageType
 	GadgetStarted = 303,	
 	PokerProximity = 304,
 	MouseEvent = 305,
-
+	NodeHaptic = 306,
 }
 
 export enum EndpointType
@@ -225,4 +225,12 @@ export interface MsgPokerProximity
 export interface MsgMouseEvent
 {
 	event: AvPanelMouseEvent;
+}
+
+export interface MsgNodeHaptic
+{
+	nodeId: EndpointAddr;
+	amplitude: number;
+	frequency: number;
+	duration: number;
 }

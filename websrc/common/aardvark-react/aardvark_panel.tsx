@@ -4,6 +4,7 @@ import { AvGadget } from './aardvark_gadget';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 import { AvNodeType, AvPanelMouseEvent, AvPanelMouseEventType, AvPanelHandler, Av, AvSharedTextureInfo } from 'common/aardvark';
 import bind from 'bind-decorator';
+import { EndpointAddr } from './aardvark_protocol';
 
 export interface AvPanelProps extends AvBaseNodeProps
 {
@@ -30,6 +31,24 @@ export class AvPanel extends AvBaseNode< AvPanelProps, {} >
 
 	@bind onDefaultMouseEvent( event: AvPanelMouseEvent )
 	{
+		let hapticAmplitude = 0;
+		switch( event.type )
+		{
+			case AvPanelMouseEventType.Enter:
+			case AvPanelMouseEventType.Leave:
+				hapticAmplitude = 0.05;
+				break;
+
+			case AvPanelMouseEventType.Down:
+				hapticAmplitude = 1;
+				break;
+		}
+
+		if( hapticAmplitude > 0 )
+		{
+			AvGadget.instance().sendHapticEvent( event.pokerId, hapticAmplitude, 1, 0 );
+		}
+
 		Av().spoofMouseEvent( event.type, event.x, event.y );
 	}
 

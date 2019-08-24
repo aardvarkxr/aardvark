@@ -4,7 +4,7 @@ import { Av, AvGrabEventType } from 'common/aardvark';
 import { AvModelInstance, AvNode, AvNodeRoot, AvNodeType, AvVisualFrame, EHand, EVolumeType, AvGrabEvent } from './aardvark';
 import { mat4, vec3, quat, vec4 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
-import { EndpointAddr, endpointAddrToString, endpointAddrIsEmpty, MessageType } from './aardvark-react/aardvark_protocol';
+import { EndpointAddr, endpointAddrToString, endpointAddrIsEmpty, MessageType, MsgNodeHaptic } from './aardvark-react/aardvark_protocol';
 
 interface NodeData
 {
@@ -139,6 +139,7 @@ export class AvDefaultTraverser
 			{
 				this.grabEvent( m.event );
 			} );
+		this.m_endpoint.registerHandler( MessageType.NodeHaptic, this.onNodeHaptic );
 	}
 
 	@bind onEndpointOpen()
@@ -697,13 +698,12 @@ export class AvDefaultTraverser
 
 	
 	@bind
-	public sendHapticEventForNode( targetGlobalNodeId: string, amplitude: number, frequency: number, duration: number )
+	public onNodeHaptic( messageType: MessageType, m: MsgNodeHaptic  )
 	{
-		let hapticHand = this.m_handDeviceForNode[ targetGlobalNodeId ];
+		let hapticHand = this.m_handDeviceForNode[ endpointAddrToString( m.nodeId ) ];
 		if( hapticHand )
 		{
-			Av().renderer.sendHapticEventForHand( hapticHand, amplitude, frequency, duration );
-
+			Av().renderer.sendHapticEventForHand( hapticHand, m.amplitude, m.frequency, m.duration );
 		}
 	}
 

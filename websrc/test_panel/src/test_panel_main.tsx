@@ -9,6 +9,7 @@ import bind from 'bind-decorator';
 import { AvGrabbable, HighlightType, GrabResponse } from 'common/aardvark-react/aardvark_grabbable';
 import { AvSphereHandle } from 'common/aardvark-react/aardvark_handles';
 import { AvGrabEvent } from 'common/aardvark';
+import { EndpointAddr } from 'common/aardvark-react/aardvark_protocol';
 
 
 interface TestPanelState
@@ -19,7 +20,7 @@ interface TestPanelState
 
 class TestPanel extends React.Component< {}, TestPanelState >
 {
-	private m_panelId:number = 0;
+	private m_panelId: EndpointAddr;
 
 	constructor( props: any )
 	{
@@ -33,13 +34,7 @@ class TestPanel extends React.Component< {}, TestPanelState >
 
 	@bind public incrementCount()
 	{
-		AvGadget.instance().sendHapticEventFromPanel( 1234, 1, 1, 0 );
 		this.setState( { count: this.state.count + 1 } );
-	}
-
-	@bind onMouseEnterOrLeave()
-	{
-		AvGadget.instance().sendHapticEventFromPanel( 1234, 0.05, 1, 0 );
 	}
 
 	@bind public onHighlightGrabbable( highlight: HighlightType )
@@ -91,14 +86,12 @@ class TestPanel extends React.Component< {}, TestPanelState >
 						
 						<AvTransform uniformScale={ scale }>
 							<AvPanel interactive={true}
-								onIdAssigned={ (id:number) => { this.m_panelId = id } }/>
+								onIdAssigned={ (id: EndpointAddr) => { this.m_panelId = id } }/>
 						</AvTransform>
 					</AvGrabbable>
 				</AvGadget>
 				<div className="Label">Count: { this.state.count }</div>
-				<div className="Button" onMouseDown={ this.incrementCount }
-					onMouseEnter={ this.onMouseEnterOrLeave } 
-					onMouseLeave={ this.onMouseEnterOrLeave }>
+				<div className="Button" onMouseDown={ this.incrementCount }>
 					Click Me!
 					</div> 
 			</div>
