@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import { AvSceneContext, AvNodeType, EVolumeType } from 'common/aardvark';
+import { AvNodeType, EVolumeType } from 'common/aardvark';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 
 interface AvSphereHandleProps extends AvBaseNodeProps
