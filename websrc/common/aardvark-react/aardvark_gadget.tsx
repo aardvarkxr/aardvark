@@ -122,7 +122,7 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 
 	public register( node: IAvBaseNode )
 	{
-		console.log( "assigning id", this.m_nextNodeId );
+		//console.log( "assigning id", this.m_nextNodeId );
 		node.m_nodeId = this.m_nextNodeId++;
 		this.m_registeredNodes[ node.m_nodeId ] = node;
 		this.markDirty();
