@@ -47,9 +47,8 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 	private renderGadgetSeedList()
 	{
 		return <div className="GadgetSeedContainer">
-			{ this.renderGadgetSeed( "https://aardvark.install/gadgets/charm_bracelet") }
 			{ this.renderGadgetSeed( "https://aardvark.install/gadgets/test_panel") }
-			{ this.renderGadgetSeed( "https://aardvark.install/gadgets/test_gadget_launcher") }
+			{ this.renderGadgetSeed( "https://aardvark.install/gadgets/charm_bracelet") }
 		</div>;
 	}
 

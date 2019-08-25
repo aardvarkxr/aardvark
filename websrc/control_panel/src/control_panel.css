@@ -50,7 +50,6 @@ body, html
 
 .GadgetSeed
 {
-	flex-direction: column;
-	height: 10rem;
-	width: 10rem;
+	height: 30%;
+	width: 30%;
 }
