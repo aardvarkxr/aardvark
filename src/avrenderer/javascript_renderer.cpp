@@ -625,7 +625,7 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 		}
 
 		EndpointAddr_t grabbableGlobalId;
-		if ( !endpointAddrFromJs( arguments[0], &grabbableGlobalId ) )
+		if ( !endpointAddrFromJs( arguments[1], &grabbableGlobalId ) )
 		{
 			exception = "second argument must be an endpoint address";
 			return;
@@ -650,7 +650,7 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 		}
 
 		EndpointAddr_t grabbableGlobalId;
-		if ( !endpointAddrFromJs( arguments[0], &grabbableGlobalId ) )
+		if ( !endpointAddrFromJs( arguments[1], &grabbableGlobalId ) )
 		{
 			exception = "second argument must be an endpoint address";
 			return;
