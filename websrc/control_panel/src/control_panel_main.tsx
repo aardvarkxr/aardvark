@@ -7,6 +7,9 @@ import { AvPanel } from 'common/aardvark-react/aardvark_panel';
 import bind from 'bind-decorator';
 import { EndpointAddr } from 'common/aardvark-react/aardvark_protocol';
 import { AvGrabButton } from 'common/aardvark-react/aardvark_grab_button';
+import { AvPanelAnchor } from 'common/aardvark-react/aardvark_panelanchor';
+import { AvModel } from 'common/aardvark-react/aardvark_model';
+import { AvGadgetSeed } from 'common/aardvark-react/aardvark_gadget_seed';
 
 
 interface ControlPanelState
@@ -32,6 +35,24 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		this.setState( { active: !this.state.active } );
 	}
 
+	private renderGadgetSeed( uri: string )
+	{
+		return <div className="GadgetSeed">
+			<AvPanelAnchor>
+				<AvGadgetSeed uri={ uri } />
+			</AvPanelAnchor>
+		</div>;
+	}
+
+	private renderGadgetSeedList()
+	{
+		return <div className="GadgetSeedContainer">
+			{ this.renderGadgetSeed( "https://aardvark.install/gadgets/charm_bracelet") }
+			{ this.renderGadgetSeed( "https://aardvark.install/gadgets/test_panel") }
+			{ this.renderGadgetSeed( "https://aardvark.install/gadgets/test_gadget_launcher") }
+		</div>;
+	}
+
 	public renderPanel()
 	{
 		if( !this.state.active )
@@ -43,9 +64,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 						<AvPanel interactive={true}>
 							<div className="FullPage" >
 								<h1>This is the control panel</h1>
-								<div className="Button">
-									Click Me!
-								</div> 
+								{ this.renderGadgetSeedList() }
 							</div>;
 						</AvPanel>
 					</AvTransform>

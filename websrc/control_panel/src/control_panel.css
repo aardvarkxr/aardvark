@@ -1,6 +1,6 @@
 body, html
 {
-	background-color: lightskyblue;
+	background-color: transparent;
 	height: 100%;
 }
 
@@ -38,4 +38,19 @@ body, html
 .GrabbedHighlight
 {
 	background-color: blue;
+}
+
+.GadgetSeedContainer
+{
+	background-color: transparent;
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+}
+
+.GadgetSeed
+{
+	flex-direction: column;
+	height: 10rem;
+	width: 10rem;
 }

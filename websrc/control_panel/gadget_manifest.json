@@ -1,6 +1,6 @@
 {
 	"name" : "Control Panel",
-	"permissions" : [ "scenegraph" ],
+	"permissions" : [ "scenegraph", "master" ],
 	"resolution": [ 1024, 1024 ],
 	"model" : "http://aardvark.install/models/Panel/panel.glb"
 }
