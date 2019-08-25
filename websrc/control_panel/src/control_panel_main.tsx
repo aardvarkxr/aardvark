@@ -37,15 +37,19 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		if( !this.state.active )
 			return null;
 
-		return <AvTransform translateZ={-0.1} translateY={0.5} >
-				<AvPanel interactive={true}>
-					<div className="FullPage" >
-						<h1>This is the control panel</h1>
-						<div className="Button">
-							Click Me!
-						</div> 
-					</div>;
-				</AvPanel>
+		return <AvTransform rotateX={ 45 } translateZ={ -0.1 }>
+				<AvTransform uniformScale={0.25}>
+					<AvTransform translateZ={ -0.55 }>
+						<AvPanel interactive={true}>
+							<div className="FullPage" >
+								<h1>This is the control panel</h1>
+								<div className="Button">
+									Click Me!
+								</div> 
+							</div>;
+						</AvPanel>
+					</AvTransform>
+				</AvTransform>
 			</AvTransform>;
 	}
 
@@ -54,7 +58,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 	{
 		return (
 			<AvGadget gadgetUri="">
-				<AvTransform translateZ={-0.1} >
+				<AvTransform translateZ={-0.1} rotateX={ 45 }>
 					<AvGrabButton modelUri="https://aardvark.install/models/gear.glb" 
 						onTrigger={ this.onActivateControlPanel } />
 				</AvTransform>;
