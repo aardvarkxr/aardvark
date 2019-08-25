@@ -91,3 +91,15 @@ body, html
 	margin-left: 1rem;
 }
 
+.MonitorContainer
+{
+	display: flex;
+	flex-direction: row;
+}
+
+.EndpointList,
+.EventList
+{
+	width: 50%;
+	flex-direction: column;
+}

@@ -424,9 +424,9 @@ class AardvarkMonitor extends React.Component< {}, AardvarkMonitorState >
 		}
 		else
 		{
-			return <div>
-				{ endpoints }
-				{ events }
+			return <div className="MonitorContainer">
+				<div className="EndpointList">{ endpoints }</div>
+				<div className="EventList">{ events }</div>
 			</div>;
 		}
 	}
