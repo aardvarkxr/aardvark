@@ -70,7 +70,7 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 				{
 					// switch to the grabbable specified by the response
 					let useIdentityTransform = false;
-					if( endpointAddrsMatch( evt.grabbableId, this.m_lastGrabbable ) )
+					if( !endpointAddrsMatch( evt.grabbableId, this.m_lastGrabbable ) )
 					{
 						AvGadget.instance().sendGrabEvent( 
 							{
