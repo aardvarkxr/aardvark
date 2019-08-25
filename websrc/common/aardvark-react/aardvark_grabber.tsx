@@ -4,7 +4,7 @@ import { AvGadget } from './aardvark_gadget';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 import { AvNodeType, AvGrabEventType, AvGrabEvent, EVolumeType } from 'common/aardvark';
 import bind from 'bind-decorator';
-import { EndpointAddr, indexOfEndpointAddrs } from './aardvark_protocol';
+import { EndpointAddr, indexOfEndpointAddrs, endpointAddrsMatch } from './aardvark_protocol';
 
 function assert( expr: boolean, msg?: string )
 {
@@ -70,7 +70,7 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 				{
 					// switch to the grabbable specified by the response
 					let useIdentityTransform = false;
-					if( evt.grabbableId != this.m_lastGrabbable )
+					if( endpointAddrsMatch( evt.grabbableId, this.m_lastGrabbable ) )
 					{
 						AvGadget.instance().sendGrabEvent( 
 							{
