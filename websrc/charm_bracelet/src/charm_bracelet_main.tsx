@@ -3,14 +3,16 @@ import  * as ReactDOM from 'react-dom';
 
 import { AvGadget } from 'common/aardvark-react/aardvark_gadget';
 import { AvTransform } from 'common/aardvark-react/aardvark_transform';
-import { AvPanel } from 'common/aardvark-react/aardvark_panel';
 import bind from 'bind-decorator';
-import { HookHighlight, AvHook } from 'common/aardvark-react/aardvark_hook';
+import { AvGrabbable, HighlightType } from 'common/aardvark-react/aardvark_grabbable';
+import { AvStandardHook } from 'common/aardvark-react/aardvark_standard_hook';
+import { AvSphereHandle } from 'common/aardvark-react/aardvark_handles';
+import { AvModel } from 'common/aardvark-react/aardvark_model';
 
 
 interface CharmBraceletState
 {
-	hookHighlight: HookHighlight;
+	highlight: HighlightType;
 }
 
 class CharmBracelet extends React.Component< {}, CharmBraceletState >
@@ -20,41 +22,29 @@ class CharmBracelet extends React.Component< {}, CharmBraceletState >
 		super( props );
 		this.state = 
 		{ 
-			hookHighlight: HookHighlight.None,
+			highlight: HighlightType.None,
 		};
 	}
 
-	@bind public onHighlightHook( highlight: HookHighlight )
+	@bind onGrabbableHighlight( newHighlight: HighlightType )
 	{
-		this.setState( { hookHighlight: highlight } );
+		this.setState( { highlight: newHighlight } );
 	}
 
 	public render()
 	{
-		let sDivClasses:string;
-		switch( this.state.hookHighlight )
-		{
-			default:
-			case HookHighlight.None:
-				sDivClasses = "FullPage HookCircle NoHighlight";
-				break;
-
-			case HookHighlight.InRange:
-				sDivClasses = "FullPage HookCircle InRangeHighlight";
-				break;
-		}
-
+		let grabbedMode = this.state.highlight == HighlightType.Grabbed;
 		return (
 			<div className="FullPage" >
 				<AvGadget>
-					<AvTransform translateY={ -0.2 } translateZ = {0.2}>
-						<AvHook updateHighlight= { this.onHighlightHook } radius={ 0.1 } />
-						<AvTransform uniformScale={ 0.1 }>
-							<AvPanel interactive={false} />
+					<AvGrabbable updateHighlight={ this.onGrabbableHighlight }>
+						<AvSphereHandle radius={0.1} />
+						<AvTransform translateY={ -0.2 } translateZ = {0.2}>
+							<AvStandardHook />
 						</AvTransform>
-					</AvTransform>
+						{ grabbedMode && <AvModel uri="http://aardvark.install/models/bracelet.glb" /> }
+					</AvGrabbable>
 				</AvGadget>
-				<div className={sDivClasses}><div className="PlusSign">+</div></div>
 			</div>
 		)
 	}
