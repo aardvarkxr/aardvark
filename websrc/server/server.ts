@@ -158,6 +158,7 @@ class CDispatcher
 				list.splice( i, 1 );
 			}
 		}
+		delete this.m_endpoints[ ep.getId() ];
 	}
 
 	private sendStateToMonitor( targetEp: CEndpoint )
@@ -604,12 +605,15 @@ class CEndpoint
 
 	@bind private onGadgetStarted( env:Envelope, m: MsgGadgetStarted )
 	{
-		m.mainGrabbableGlobalId = 
-		{ 
-			type: EndpointType.Node, 
-			endpointId: this.m_id,
-			nodeId: m.mainGrabbable,
-		};
+		if( m.mainGrabbable )
+		{
+			m.mainGrabbableGlobalId = 
+			{ 
+				type: EndpointType.Node, 
+				endpointId: this.m_id,
+				nodeId: m.mainGrabbable,
+			};
+		}
 
 		this.m_dispatcher.forwardToEndpoint( m.epToNotify, env );
 	}
