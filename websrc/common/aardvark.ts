@@ -224,7 +224,7 @@ export interface AvGadgetManifest
 	permissions: string[];
 	width: number;
 	height: number;
-	modelUri: string;
+	model: string;
 }
 
 export interface AvGadgetManifestCallback

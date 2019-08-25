@@ -1,6 +1,7 @@
 import bind from 'bind-decorator';
 import { EndpointType, MessageType, EndpointAddr, Envelope, parseEnvelope, MsgSetEndpointType, MsgGetGadgetManifest, MsgGetGadgetManifestResponse, MsgGrabEvent, MsgSetEndpointTypeResponse } from './aardvark_protocol';
 import { AvGadgetManifest, AvGrabEvent } from 'common/aardvark';
+import { object } from 'prop-types';
 
 export interface MessageHandler
 {
@@ -12,6 +13,12 @@ export interface OpenHandler
 	():void;
 }
 
+interface PendingGadgetManifestLoad
+{
+	resolve ( manifest: AvGadgetManifest ): void;
+	reject ( reason: any ): void;
+}
+
 export class CAardvarkEndpoint
 {
 	private m_ws:WebSocket = null;
@@ -21,6 +28,7 @@ export class CAardvarkEndpoint
 	private m_realOpenHandler: OpenHandler = null;
 	private m_handshakeComplete: OpenHandler = null;
 	private m_endpointId: number = null;
+	private m_pendingManifestLoads: { [gadgetUri: string ]: PendingGadgetManifestLoad[] } = {};
 
 	constructor( openHandler: OpenHandler, handshakeComplete: OpenHandler, defaultHandler: MessageHandler = null )
 	{
@@ -29,6 +37,7 @@ export class CAardvarkEndpoint
 		this.m_handshakeComplete = handshakeComplete;
 		this.connectToServer();
 		this.registerHandler( MessageType.SetEndpointTypeResponse, this.onSetEndpointTypeResponse );
+		this.registerHandler( MessageType.GetGadgetManifestResponse, this.onGetGadgetManifestResponse );
 	}
 
 	public getEndpointId() { return this.m_endpointId; }
@@ -118,21 +127,36 @@ export class CAardvarkEndpoint
 				gadgetUri,
 			}
 	
+			if( !this.m_pendingManifestLoads.hasOwnProperty( gadgetUri ) )
+			{
+				this.m_pendingManifestLoads[ gadgetUri ] = [];
+			}
+
+			this.m_pendingManifestLoads[ gadgetUri ].push( { resolve, reject } );
+
 			this.sendMessage( MessageType.GetGadgetManifest, msgGetGadgetManifest );
-				
-			this.waitForResponse( MessageType.GetGadgetManifestResponse, 
-				( type:MessageType, m: MsgGetGadgetManifestResponse, sender: EndpointAddr ) =>
+		} );
+	}
+
+	@bind private onGetGadgetManifestResponse( type: MessageType, m: MsgGetGadgetManifestResponse )
+	{
+		let pendingRequests = this.m_pendingManifestLoads[ m.gadgetUri ];
+		if( pendingRequests )
+		{
+			for( let req of pendingRequests )
+			{
+				if( m.manifest )
 				{
-					if( m.manifest )
-					{
-						resolve( m.manifest );
-					}
-					else
-					{
-						reject( m.error );
-					}
-				});
-		})
+					req.resolve( m.manifest );
+				}
+				else
+				{
+					req.reject( m.error );
+				}
+			}
+
+			delete this.m_pendingManifestLoads[ m.gadgetUri ];
+		}
 	}
 
 	@bind onClose()

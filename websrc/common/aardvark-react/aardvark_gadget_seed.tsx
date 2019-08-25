@@ -30,20 +30,12 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 
 		this.state = { grabbableHighlight: HighlightType.None };
 
-		Av().getGadgetManifest( this.props.uri, this.onManifestLoaded );
-	}
-
-	@bind public onManifestLoaded( manifest: AvGadgetManifest )
-	{
-		if( manifest == null )
-		{
-			console.log( "failed to load gadget manifest " + this.props.uri );
-		}
-		else
+		AvGadget.instance().loadManifest( this.props.uri )
+		.then( ( manifest: AvGadgetManifest ) =>
 		{
 			this.m_manifest = manifest;
 			this.forceUpdate();
-		}
+		})
 	}
 
 	@bind public onGrabRequest( grabRequest: AvGrabEvent ): Promise< GrabResponse >
@@ -102,7 +94,7 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 				<AvSphereHandle radius={0.1} />
 				
 				<AvTransform uniformScale={ scale }>
-					<AvModel uri= { this.m_manifest.modelUri }/>
+					<AvModel uri= { this.m_manifest.model }/>
 				</AvTransform>
 			</AvGrabbable>
 		);

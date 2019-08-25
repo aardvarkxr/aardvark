@@ -120,6 +120,11 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 		}
 	}
 
+	public loadManifest( gadgetUri: string ) : Promise<AvGadgetManifest>
+	{
+		return this.m_endpoint.getGadgetManifest( gadgetUri );
+	}
+	
 	public register( node: IAvBaseNode )
 	{
 		//console.log( "assigning id", this.m_nextNodeId );

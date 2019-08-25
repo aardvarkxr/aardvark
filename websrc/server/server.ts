@@ -354,6 +354,9 @@ class CGadgetData
 
 	private updateHookNodeList( node: AvNode )
 	{
+		if( !node )
+			return;
+
 		if( node.type == AvNodeType.Hook )
 		{
 			this.m_hookNodes.push(
@@ -474,6 +477,7 @@ class CEndpoint
 			let response: MsgGetGadgetManifestResponse =
 			{
 				manifest: jsonManifest as AvGadgetManifest,
+				gadgetUri: m.gadgetUri,
 			}
 			this.sendMessage( MessageType.GetGadgetManifestResponse, response );
 		})
@@ -482,6 +486,7 @@ class CEndpoint
 			let response: MsgGetGadgetManifestResponse =
 			{
 				error: "Unable to load manifest " + reason,
+				gadgetUri: m.gadgetUri,
 			}
 			this.sendMessage( MessageType.GetGadgetManifestResponse, response );
 		})
@@ -589,7 +594,7 @@ class CEndpoint
 			// start and end grab events also go to all hooks so they can highlight
 			this.m_dispatcher.forwardToHookNodes( env );
 		}
-		
+
 		if( env.sender.type != EndpointType.Renderer )
 		{
 			this.m_dispatcher.sendToAllEndpointsOfType( EndpointType.Renderer, env );

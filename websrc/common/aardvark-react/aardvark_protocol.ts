@@ -168,6 +168,7 @@ export interface MsgGetGadgetManifestResponse
 {
 	error?: string;
 	manifest?: AvGadgetManifest;
+	gadgetUri?: string;
 }
 
 
