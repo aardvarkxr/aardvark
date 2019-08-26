@@ -7,7 +7,6 @@
 * Fix dynamic reload of renderer tab. This should tear down the whole renderer and recreate it. Not having this is a pain when there are code changes on the Javascript side.
 
 * Need a way to keep a node alive, but hide it. Charm bracelet needs this when it's being dragged.
-* Need to not let a hook keep being dropped on. Maybe they need an occupied flag?
 * Probably need to make things on hooks not trivially grabbable. Maybe a global mode? Maybe a timer or something like that?
 * panel textures appear to be wrapping instead of clamping. Seeing a little of the scrollbar on the left edge of the control panel.
 * need to fix the super-dark lighting
