@@ -224,7 +224,7 @@ export class AvDefaultTraverser
 
 	private updateGrabberIntersections()
 	{
-		console.log( "updating grabber intersections" );
+		//console.log( "updating grabber intersections" );
 		let states = Av().renderer.updateGrabberIntersections();
 		for( let state of states )
 		{

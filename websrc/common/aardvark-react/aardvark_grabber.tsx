@@ -42,6 +42,7 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 {
 	m_lastHighlight = GrabberHighlight.None;
 	m_lastGrabbable:EndpointAddr = null;
+	m_grabStartTime: DOMHighResTimeStamp = null;
 	m_lastHook: EndpointAddr = null;
 	m_grabRequestId = 1;
 	
@@ -90,8 +91,8 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 						useIdentityTransform = true;
 					}
 
-					console.log( `sending grab by ${ endpointAddrToString( this.endpointAddr() )}`
-						+ ` of ${ endpointAddrToString( this.m_lastGrabbable ) }` );
+					// console.log( `sending grab by ${ endpointAddrToString( this.endpointAddr() )}`
+					// 	+ ` of ${ endpointAddrToString( this.m_lastGrabbable ) }` );
 					AvGadget.instance().sendGrabEvent( 
 						{
 							type: AvGrabEventType.StartGrab,
@@ -100,6 +101,7 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 							grabbableId: this.m_lastGrabbable,
 							useIdentityTransform,
 						});
+					this.m_grabStartTime = performance.now();
 					this.m_lastHighlight = GrabberHighlight.WaitingForGrabToStart;
 				}
 				else
@@ -126,7 +128,21 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 
 	@bind private onGrabberIntersections( isPressed: boolean, grabbableIds: EndpointAddr[], hookIds: EndpointAddr[] )
 	{
-		console.log( `grabberIntersections for ${ endpointAddrToString( this.endpointAddr() )}` );
+		if( this.m_lastGrabbable && this.m_lastHighlight == GrabberHighlight.Grabbed
+			&& -1 == indexOfEndpointAddrs( grabbableIds, this.m_lastGrabbable ) 
+			&& isPressed )
+		{
+			// The thing we think we're grabbing isn't in the grabbable list.
+			// This can happen if grabber intersections are in flight when the grab starts,
+			// or if the grabbable is a new thing that is slow to send its first scene graph.
+			
+			// just ignore grabber intersections that arrive in the first second of a grab
+			// if they don't include the thing they ought to include.
+			if( ( this.m_grabStartTime - performance.now() ) < 1000 )
+				return;
+		}
+
+		//console.log( `grabberIntersections for ${ endpointAddrToString( this.endpointAddr() )}` );
 		let prevHighlight = this.m_lastHighlight;
 		switch( this.m_lastHighlight )
 		{
