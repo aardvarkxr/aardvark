@@ -4,7 +4,7 @@ import { AvGadget } from './aardvark_gadget';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 import { AvNodeType, AvGrabEventType, AvGrabEvent, EVolumeType } from 'common/aardvark';
 import bind from 'bind-decorator';
-import { EndpointAddr, indexOfEndpointAddrs, endpointAddrsMatch } from './aardvark_protocol';
+import { EndpointAddr, indexOfEndpointAddrs, endpointAddrsMatch, endpointAddrToString } from './aardvark_protocol';
 
 function assert( expr: boolean, msg?: string )
 {
@@ -90,6 +90,8 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 						useIdentityTransform = true;
 					}
 
+					console.log( `sending grab by ${ endpointAddrToString( this.endpointAddr() )}`
+						+ ` of ${ endpointAddrToString( this.m_lastGrabbable ) }` );
 					AvGadget.instance().sendGrabEvent( 
 						{
 							type: AvGrabEventType.StartGrab,
@@ -124,6 +126,7 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 
 	@bind private onGrabberIntersections( isPressed: boolean, grabbableIds: EndpointAddr[], hookIds: EndpointAddr[] )
 	{
+		console.log( `grabberIntersections for ${ endpointAddrToString( this.endpointAddr() )}` );
 		let prevHighlight = this.m_lastHighlight;
 		switch( this.m_lastHighlight )
 		{

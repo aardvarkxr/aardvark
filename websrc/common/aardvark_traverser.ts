@@ -1,7 +1,7 @@
-import { MsgUpdateSceneGraph, EndpointType, MsgGrabEvent } from 'common/aardvark-react/aardvark_protocol';
+import { MsgUpdateSceneGraph, EndpointType, MsgGrabEvent, endpointAddrsMatch } from 'common/aardvark-react/aardvark_protocol';
 import { CRendererEndpoint } from './aardvark-react/renderer_endpoint';
-import { Av, AvGrabEventType } from 'common/aardvark';
-import { AvModelInstance, AvNode, AvNodeRoot, AvNodeType, AvVisualFrame, EHand, EVolumeType, AvGrabEvent } from './aardvark';
+import { Av, AvGrabEventType, AvNode } from 'common/aardvark';
+import { AvModelInstance, AvNodeRoot, AvNodeType, AvVisualFrame, EHand, EVolumeType, AvGrabEvent } from './aardvark';
 import { mat4, vec3, quat, vec4 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
 import { EndpointAddr, endpointAddrToString, endpointAddrIsEmpty, MessageType, MsgNodeHaptic } from './aardvark-react/aardvark_protocol';
@@ -125,9 +125,9 @@ export class AvDefaultTraverser
 	private m_nodeData: { [ nodeGlobalId:string ]: NodeData } = {};
 	private m_lastFrameUniverseFromNodeTransforms: { [ nodeGlobalId:string ]: mat4 } = {};
 	private m_roots: { [gadgetId:number] : AvNodeRoot } = {};
-	private m_currentRoot: AvNodeRoot = null;
 	private m_renderList: AvModelInstance[] = [];
 	private m_nodeToNodeAnchors: { [ nodeGlobalId: string ]: NodeToNodeAnchor_t } = {};
+	private m_hooksInUse: EndpointAddr[] = [];
 	private m_endpoint: CRendererEndpoint = null;
 
 	constructor()
@@ -199,12 +199,12 @@ export class AvDefaultTraverser
 		this.m_currentGrabbableGlobalId = null;
 		this.m_universeFromNodeTransforms = {};
 		this.m_renderList = [];
+		this.clearHooksInUse();
 
 		for ( let gadgetId in this.m_roots )
 		{
 			this.traverseSceneGraph( this.m_roots[ gadgetId ] );
 		}
-		this.m_currentRoot = null;
 	
 		this.m_lastFrameUniverseFromNodeTransforms = {};
 		for ( let nodeGlobalId in this.m_universeFromNodeTransforms )
@@ -224,6 +224,7 @@ export class AvDefaultTraverser
 
 	private updateGrabberIntersections()
 	{
+		console.log( "updating grabber intersections" );
 		let states = Av().renderer.updateGrabberIntersections();
 		for( let state of states )
 		{
@@ -274,7 +275,6 @@ export class AvDefaultTraverser
 				}
 			}
 
-			this.m_currentRoot = root;
 			if( root.hook )
 			{
 				this.setHookOrigin( root.hook, rootNode );
@@ -530,9 +530,13 @@ export class AvDefaultTraverser
 		let nodeIdStr = endpointAddrToString( node.globalId );
 		if( this.m_nodeToNodeAnchors.hasOwnProperty( nodeIdStr ) )
 		{
-			let anchor = this.m_nodeToNodeAnchors[ nodeIdStr ];
-			let parentTransform = this.getTransform( anchor.parentGlobalId );
-			this.updateTransform( node.globalId, parentTransform, anchor.parentFromNodeTransform, null );
+			let parentInfo = this.m_nodeToNodeAnchors[ nodeIdStr ];
+			if( parentInfo.parentGlobalId.type == EndpointType.Node )
+			{
+				this.addHookInUse( parentInfo.parentGlobalId );
+			}
+			let parentTransform = this.getTransform( parentInfo.parentGlobalId );
+			this.updateTransform( node.globalId, parentTransform, parentInfo.parentFromNodeTransform, null );
 		}
 	}
 	
@@ -597,6 +601,9 @@ export class AvDefaultTraverser
 		this.updateTransform( node.globalId, defaultParent, null,
 			( universeFromNode: mat4 ) =>
 		{
+			if( this.isHookInUse( hookGlobalId ) )
+				return;
+
 			switch( node.propVolume.type )
 			{
 				case EVolumeType.Sphere:
@@ -643,6 +650,8 @@ export class AvDefaultTraverser
 					parentFromNodeTransform: grabberFromGrabbable,
 				};
 				Av().renderer.startGrab( grabEvent.grabberId, grabEvent.grabbableId );
+				console.log( `telling collider about ${ endpointAddrToString( grabEvent.grabberId ) } `
+					+ `grabbing ${ endpointAddrToString( grabEvent.grabbableId ) }` );
 
 				this.m_endpoint.sendGrabEvent( 
 					{
@@ -723,6 +732,27 @@ export class AvDefaultTraverser
 
 		this.m_roots = frame.nodeRoots;
 	}
+
+	private isHookInUse( nodeId: EndpointAddr )
+	{
+		for( let hookId of this.m_hooksInUse )
+		{
+			if( endpointAddrsMatch( nodeId, hookId ) )
+				return true;
+		}
+		return false;
+	}
+
+	private addHookInUse( nodeId: EndpointAddr )
+	{
+		this.m_hooksInUse.push( nodeId );
+	}
+
+	private clearHooksInUse()
+	{
+		this.m_hooksInUse = [];
+	}
+
 }
 
 

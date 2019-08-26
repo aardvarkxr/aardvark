@@ -33,6 +33,7 @@ export class AvStandardHook extends React.Component< {}, StandardHookState >
 		{
 			default:
 			case HookHighlight.None:
+			case HookHighlight.Occupied:
 				return null;
 			
 			case HookHighlight.GrabInProgress:

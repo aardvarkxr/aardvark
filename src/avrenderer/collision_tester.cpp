@@ -44,6 +44,7 @@ void CCollisionTester::reset()
 {
 	m_activeGrabbers.clear();
 	m_activeGrabbables.clear();
+	m_activeHooks.clear();
 }
 
 bool SpheresIntersect( const glm::mat4 & grabberFromUniverse, float grabberRadius,

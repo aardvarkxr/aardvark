@@ -124,7 +124,7 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 	{
 		return this.m_endpoint.getGadgetManifest( gadgetUri );
 	}
-	
+
 	public register( node: IAvBaseNode )
 	{
 		//console.log( "assigning id", this.m_nextNodeId );
@@ -344,6 +344,7 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 
 		if( this.m_firstSceneGraph )
 		{
+			console.log( `sending GadgetStarted for ${ this.m_endpoint.getEndpointId() }`)
 			this.m_firstSceneGraph = false;
 			if( this.m_epToNotify )
 			{

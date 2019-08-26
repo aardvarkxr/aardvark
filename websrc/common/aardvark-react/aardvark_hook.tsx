@@ -2,6 +2,7 @@ import { AvGadget } from './aardvark_gadget';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 import { AvNodeType, AvGrabEventType, AvGrabEvent, EVolumeType } from 'common/aardvark';
 import bind from 'bind-decorator';
+import { endpointAddrsMatch, EndpointAddr } from './aardvark_protocol';
 
 
 export enum HookHighlight
@@ -9,6 +10,7 @@ export enum HookHighlight
 	None,
 	GrabInProgress,
 	InRange,
+	Occupied,
 }
 
 interface AvHookProps extends AvBaseNodeProps
@@ -20,6 +22,7 @@ interface AvHookProps extends AvBaseNodeProps
 export class AvHook extends AvBaseNode< AvHookProps, {} >
 {
 	m_lastHighlight = HookHighlight.None;
+	m_lastGrabbable: EndpointAddr = null;
 
 	public buildNode()
 	{
@@ -37,14 +40,24 @@ export class AvHook extends AvBaseNode< AvHookProps, {} >
 		switch( evt.type )
 		{
 			case AvGrabEventType.StartGrab:
-				if( evt.grabberId.endpointId != AvGadget.instance().getEndpointId() )
+				if( evt.grabberId.endpointId != AvGadget.instance().getEndpointId() 
+					&& ( !this.m_lastGrabbable || endpointAddrsMatch( this.m_lastGrabbable, evt.grabbableId ) ) )
 				{
 					newHighlight = HookHighlight.GrabInProgress;
+					this.m_lastGrabbable = null;
 				}
 				break;
 
 			case AvGrabEventType.EndGrab:
-				newHighlight = HookHighlight.None;
+				if( endpointAddrsMatch( evt.hookId, this.endpointAddr() ) )
+				{
+					newHighlight = HookHighlight.Occupied;
+					this.m_lastGrabbable = evt.grabbableId;
+				}
+				else
+				{
+					newHighlight = HookHighlight.None;
+				}
 				break;
 
 			case AvGrabEventType.EnterHookRange:
