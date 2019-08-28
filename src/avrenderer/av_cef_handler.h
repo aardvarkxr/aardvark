@@ -20,42 +20,6 @@
 
 class CAardvarkCefHandler;
 
-class CStartGadgetRequestClient : public CefURLRequestClient
-{
-public:
-	CStartGadgetRequestClient( CAardvarkCefHandler *cefHandler );
-
-	void OnRequestComplete( CefRefPtr<CefURLRequest> request ) override;
-
-	void OnUploadProgress( CefRefPtr<CefURLRequest> request,
-		int64 current,
-		int64 total ) override;
-
-	void OnDownloadProgress( CefRefPtr<CefURLRequest> request,
-		int64 current,
-		int64 total ) override;
-
-	void OnDownloadData( CefRefPtr<CefURLRequest> request,
-		const void* data,
-		size_t data_length ) override;
-
-	bool GetAuthCredentials( bool isProxy,
-		const CefString& host,
-		int port,
-		const CefString& realm,
-		const CefString& scheme,
-		CefRefPtr<CefAuthCallback> callback ) override;
-
-private:
-	CAardvarkCefHandler *m_cefHandler = nullptr;
-
-	std::string m_downloadData;
-
-private:
-	IMPLEMENT_REFCOUNTING( CStartGadgetRequestClient );
-};
-
-
 class IApplication;
 
 class CAardvarkCefHandler : public CefClient,
@@ -129,7 +93,7 @@ public:
 	void start();
 
 	// Called when the manifest load is completed
-	void onGadgetManifestReceived( bool success, const std::string & manifestData );
+	void onGadgetManifestReceived( bool success, const std::vector< uint8_t > & manifestData );
 private:
 	// Platform-specific implementation.
 	void PlatformTitleChange(CefRefPtr<CefBrowser> browser,
@@ -154,8 +118,6 @@ private:
 
 	void updateSceneGraphTextures();
 
-	CefRefPtr<CStartGadgetRequestClient> m_manifestRequestClient;
-	CefRefPtr<CefURLRequest> m_manifestRequest;
 	std::string m_gadgetUri;
 	std::string m_initialHook;
 	aardvark::EndpointAddr_t m_epToNotify;

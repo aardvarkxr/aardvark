@@ -21,49 +21,6 @@
 #include <json/json.hpp>
 
 
-CStartGadgetRequestClient::CStartGadgetRequestClient( CAardvarkCefHandler *cefHandler )
-{
-	m_cefHandler = cefHandler;
-}
-
-void CStartGadgetRequestClient::OnRequestComplete( CefRefPtr<CefURLRequest> request ) 
-{
-	CefURLRequest::Status status = request->GetRequestStatus();
-	CefURLRequest::ErrorCode error_code = request->GetRequestError();
-	CefRefPtr<CefResponse> response = request->GetResponse();
-
-	m_cefHandler->onGadgetManifestReceived( error_code == ERR_NONE, m_downloadData );
-}
-
-void CStartGadgetRequestClient::OnUploadProgress( CefRefPtr<CefURLRequest> request,
-	int64 current,
-	int64 total ) 
-{
-}
-
-void CStartGadgetRequestClient::OnDownloadProgress( CefRefPtr<CefURLRequest> request,
-	int64 current,
-	int64 total ) 
-{
-}
-
-void CStartGadgetRequestClient::OnDownloadData( CefRefPtr<CefURLRequest> request,
-	const void* data,
-	size_t data_length ) 
-{
-	m_downloadData += std::string( static_cast<const char*>( data ), data_length );
-}
-
-bool CStartGadgetRequestClient::GetAuthCredentials( bool isProxy,
-	const CefString& host,
-	int port,
-	const CefString& realm,
-	const CefString& scheme,
-	CefRefPtr<CefAuthCallback> callback ) 
-{
-	return false;  // Not handled.
-}
-
 CAardvarkCefHandler::CAardvarkCefHandler( IApplication *application, const std::string & gadgetUri, 
 	const std::string & initialHook, const aardvark::EndpointAddr_t & epToNotify )
     : m_useViews( false ), m_isClosing(false) 
@@ -84,19 +41,18 @@ CAardvarkCefHandler::~CAardvarkCefHandler()
 // Called after creation to kick off the gadget
 void CAardvarkCefHandler::start()
 {
-	m_manifestRequestClient = new CStartGadgetRequestClient( this );
+	m_uriRequestHandler.requestUri( m_gadgetUri + "/gadget_manifest.json",
+		[this]( CUriRequestHandler::Result_t & result )
+	{
+		this->onGadgetManifestReceived( result.success, result.data );
+	} );
 
-	CefRefPtr<CefRequest> request = CefRequest::Create();
-	std::string gadgetManifestUri = m_gadgetUri + "/gadget_manifest.json";
-	request->SetURL( gadgetManifestUri );
-	request->SetMethod( "GET" );
-
-	m_manifestRequest = CefURLRequest::Create( request, m_manifestRequestClient, nullptr );
+	CefPostDelayedTask( TID_UI, base::Bind( &CAardvarkCefHandler::RunFrame, this ), 0 );
 }
 
 
 // Called when the manifest load is completed
-void CAardvarkCefHandler::onGadgetManifestReceived( bool success, const std::string & manifestData )
+void CAardvarkCefHandler::onGadgetManifestReceived( bool success, const std::vector< uint8_t > & manifestData )
 {
 	if ( !success )
 	{
@@ -116,7 +72,7 @@ void CAardvarkCefHandler::onGadgetManifestReceived( bool success, const std::str
 		return;
 	}
 
-	m_gadgetManifestString = manifestData;
+	m_gadgetManifestString = std::string( manifestData.begin(), manifestData.end() );
 
 	// Specify CEF browser settings here.
 	CefBrowserSettings browser_settings;
@@ -146,9 +102,6 @@ void CAardvarkCefHandler::onGadgetManifestReceived( bool success, const std::str
 	// Create the first browser window.
 	CefBrowserHost::CreateBrowser( window_info, this, fullUri, browser_settings,
 		NULL );
-
-	CefPostDelayedTask( TID_UI, base::Bind( &CAardvarkCefHandler::RunFrame, this ), 0 );
-	m_manifestRequest = nullptr;
 }
 
 
@@ -379,7 +332,7 @@ void CAardvarkCefHandler::RunFrame()
 	}
 
 	m_uriRequestHandler.doCefRequestWork();
-
+	m_uriRequestHandler.processResults();
 }
 
 
