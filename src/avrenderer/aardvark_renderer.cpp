@@ -239,7 +239,7 @@ void VulkanExample::recordCommandBuffers( uint32_t cbIndex )
 	renderScene( cbIndex, renderPass, frameBuffers[cbIndex], width, height, EEye::Mirror );
 	renderSceneToTarget( cbIndex, leftEyeRT, eyeWidth, eyeHeight, EEye::Left );
 	renderSceneToTarget( cbIndex, rightEyeRT, eyeWidth, eyeHeight, EEye::Right );
-	//renderVarggles( cbIndex, vargglesRT, vargglesWidth, vargglesHeight);
+	renderVarggles( cbIndex, vargglesRT, vargglesWidth, vargglesHeight);
 
 	VK_CHECK_RESULT( vkEndCommandBuffer( currentCB ) );
 }
@@ -1050,7 +1050,7 @@ void VulkanExample::prepareVarggles()
 	pipelineCI.renderPass = m_vargglesVulkanBindings.renderpass;
 
 	shaderStages[0] = loadShader( device, "varggles.vert.spv", VK_SHADER_STAGE_VERTEX_BIT );
-	shaderStages[0] = loadShader( device, "varggles.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT );
+	shaderStages[1] = loadShader( device, "varggles.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT );
 
 	VK_CHECK_RESULT( vkCreateGraphicsPipelines( device, pipelineCache, 1, &pipelineCI, nullptr, &m_vargglesVulkanBindings.pipeline ) );
 
