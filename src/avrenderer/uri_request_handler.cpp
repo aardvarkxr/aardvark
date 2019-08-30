@@ -1,6 +1,9 @@
 #include "uri_request_handler.h"
 #include <include/cef_urlrequest.h>
 #include <tools/pathtools.h>
+#include <fstream>
+#include <streambuf>
+#include <iterator>
 
 class CUriRequestImpl
 {
@@ -59,7 +62,8 @@ public:
 
 	void onRequestComplete( bool success ) ;
 	void onDownloadData( const void* data, size_t data_length ) ;
-
+	bool isReadyToComplete() const { return m_state == EState::ReadyToComplete; }
+	void markCompleted() { onRequestComplete( this->m_result.success );  }
 	void fulfill() { m_callback( m_result ); }
 private:
 	CUriRequestHandler *m_handler;
@@ -70,6 +74,7 @@ private:
 	{
 		Pending,
 		Running,
+		ReadyToComplete,
 		Complete,
 	};
 	EState m_state = EState::Pending;
@@ -96,9 +101,14 @@ void CUriRequestImpl::startPendingRequests()
 		pendingRequests = std::move( m_pendingRequests );
 	}
 
+	std::vector< CUriRequest * > completedRequests;
 	for ( auto & request : pendingRequests )
 	{
 		request->start();
+		if ( request->isReadyToComplete() )
+		{
+			completedRequests.push_back( request.get() );
+		}
 	}
 
 	{
@@ -108,6 +118,11 @@ void CUriRequestImpl::startPendingRequests()
 		{
 			m_runningRequests.push_back( std::move( req ) );
 		}
+	}
+
+	for ( auto completedRequest : completedRequests )
+	{
+		completedRequest->markCompleted();
 	}
 }
 
@@ -157,14 +172,41 @@ void CUriRequest::onDownloadData( const void* data, size_t data_length )
 
 void CUriRequest::start()
 {
-	m_cefRequestClient = new CCefUriRequest( this );
+	if ( tools::IsFileUri( m_uri ) )
+	{
+		try
+		{
+			std::filesystem::path filePath = tools::FileUriToPath( m_uri );
 
-	CefRefPtr<CefRequest> request = CefRequest::Create();
-	request->SetURL( tools::filterUriForInstall( m_uri ) );
-	request->SetMethod( "GET" );
+			std::ifstream f( filePath, std::ios::binary );
+			f.unsetf( std::ios::skipws );
 
-	m_cefRequest = CefURLRequest::Create( request, m_cefRequestClient, nullptr );
-	m_state = EState::Running;
+			f.seekg( 0, std::ios::end );
+			m_result.data.reserve( f.tellg() );
+			f.seekg( 0, std::ios::beg );
+
+			m_result.data.assign( ( std::istream_iterator<uint8_t>( f ) ),
+				std::istream_iterator<uint8_t>() );
+			m_result.success = true;
+		}
+		catch ( ... )
+		{
+			m_result.success = false;
+		}
+		m_state = EState::ReadyToComplete;
+	}
+	else
+	{
+		m_cefRequestClient = new CCefUriRequest( this );
+
+		CefRefPtr<CefRequest> request = CefRequest::Create();
+		request->SetURL( tools::filterUriForInstall( m_uri ) );
+		request->SetMethod( "GET" );
+
+		m_cefRequest = CefURLRequest::Create( request, m_cefRequestClient, nullptr );
+
+		m_state = EState::Running;
+	}
 }
 
 
