@@ -8,6 +8,7 @@ import { AvGrabbable, HighlightType } from 'common/aardvark-react/aardvark_grabb
 import { AvStandardHook } from 'common/aardvark-react/aardvark_standard_hook';
 import { AvSphereHandle } from 'common/aardvark-react/aardvark_handles';
 import { AvModel } from 'common/aardvark-react/aardvark_model';
+import { endpointAddrToString } from 'common/aardvark-react/aardvark_protocol';
 
 
 interface CharmBraceletState
@@ -39,7 +40,7 @@ class CharmBracelet extends React.Component< {}, CharmBraceletState >
 				<AvGadget>
 					<AvGrabbable updateHighlight={ this.onGrabbableHighlight }>
 						<AvSphereHandle radius={0.1} />
-						<AvTransform translateY={ -0.2 } translateZ = {0.2}>
+						<AvTransform translateY={ -0.2 } translateZ = {0.2} visible={ !grabbedMode }>
 							<AvStandardHook />
 						</AvTransform>
 						{ grabbedMode && <AvModel uri="http://aardvark.install/models/bracelet.glb" /> }

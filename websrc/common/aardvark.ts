@@ -129,13 +129,17 @@ export interface AvVolume
 	radius?: number;
 }
 
+export enum ENodeFlags
+{
+	Visible = 1 << 0,
+}
 
 export interface AvNode
 {
 	type: AvNodeType;
 	id: number;
 	globalId?: EndpointAddr;
-	flags: number;
+	flags: ENodeFlags;
 	children?: AvNode[];
 
 	propOrigin?: string;

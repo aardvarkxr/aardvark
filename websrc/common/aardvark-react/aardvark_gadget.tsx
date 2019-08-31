@@ -1,8 +1,8 @@
 import * as React from 'react';
 
 import { Av, AvPanelHandler, AvPokerHandler, AvPanelMouseEventType, 
-	AvGrabEventProcessor, AvGrabberProcessor, AvGrabEventType, AvGrabEvent, AvGadgetManifest, AvNode, AvNodeType, AvStartGadgetCallback, AvPanelMouseEvent } from 'common/aardvark';
-import { IAvBaseNode } from './aardvark_base_node';
+	AvGrabEventProcessor, AvGrabberProcessor, AvGrabEventType, AvGrabEvent, AvGadgetManifest, AvNode, AvNodeType, AvStartGadgetCallback, AvPanelMouseEvent, ENodeFlags } from 'common/aardvark';
+import { IAvBaseNode, AvBaseNode } from './aardvark_base_node';
 import bind from 'bind-decorator';
 import { CGadgetEndpoint } from './gadget_endpoint';
 import { MessageType, MsgUpdateSceneGraph, EndpointAddr, MsgGrabberState, MsgGrabEvent, stringToEndpointAddr, MsgGadgetStarted, EndpointType, endpointAddrToString, MsgPokerProximity, MsgMouseEvent, MsgNodeHaptic } from './aardvark_protocol';
@@ -45,6 +45,7 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 	private m_epToNotify: EndpointAddr = null;
 	private m_firstSceneGraph: boolean = true;
 	private m_mainGrabbable: AvNode = null;
+	private m_mainGrabbableComponent: IAvBaseNode = null;
 
 	m_grabberProcessors: {[nodeId:number]: AvGrabberProcessor } = {};
 	m_grabEventProcessors: {[nodeId:number]: AvGrabEventProcessor } = {};
@@ -264,6 +265,7 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 						if( node.type == AvNodeType.Grabbable && !this.m_mainGrabbable )
 						{
 							this.m_mainGrabbable = node;
+							this.m_mainGrabbableComponent = reactNode;
 						}
 						this.m_traversedNodes[nodeId] = reactNode;
 					}
@@ -330,7 +332,7 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 				{
 					type: AvNodeType.Container,
 					id: 0,
-					flags: 0,
+					flags: ENodeFlags.Visible,
 					children: rootNodes,
 				};
 			}
@@ -356,6 +358,8 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 				if( this.m_mainGrabbable )
 				{
 					msgStarted.mainGrabbable = this.m_mainGrabbable.id;
+
+					this.m_mainGrabbableComponent.grabInProgress( this.m_epToNotify );
 				}
 
 				this.m_endpoint.sendMessage( MessageType.GadgetStarted, msgStarted );

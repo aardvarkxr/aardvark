@@ -1,6 +1,6 @@
 import { MsgUpdateSceneGraph, EndpointType, MsgGrabEvent, endpointAddrsMatch } from 'common/aardvark-react/aardvark_protocol';
 import { CRendererEndpoint } from './aardvark-react/renderer_endpoint';
-import { Av, AvGrabEventType, AvNode } from 'common/aardvark';
+import { Av, AvGrabEventType, AvNode, ENodeFlags } from 'common/aardvark';
 import { AvModelInstance, AvNodeRoot, AvNodeType, AvVisualFrame, EHand, EVolumeType, AvGrabEvent } from './aardvark';
 import { mat4, vec3, quat, vec4 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
@@ -120,6 +120,7 @@ export class AvDefaultTraverser
 	private m_inFrameTraversal = false;
 	private m_handDeviceForNode: { [nodeGlobalId:string]:EHand } = {};
 	private m_currentHand = EHand.Invalid;
+	private m_currentVisibility = true;
 	private m_currentGrabbableGlobalId:EndpointAddr = null;
 	private m_universeFromNodeTransforms: { [ nodeGlobalId:string ]: PendingTransform } = {};
 	private m_nodeData: { [ nodeGlobalId:string ]: NodeData } = {};
@@ -196,6 +197,7 @@ export class AvDefaultTraverser
 		this.m_inFrameTraversal = true;
 		this.m_handDeviceForNode = {};
 		this.m_currentHand = EHand.Invalid;
+		this.m_currentVisibility = true;
 		this.m_currentGrabbableGlobalId = null;
 		this.m_universeFromNodeTransforms = {};
 		this.m_renderList = [];
@@ -269,7 +271,7 @@ export class AvDefaultTraverser
 				{
 					type: AvNodeType.Container,
 					id: 0,
-					flags: 0,
+					flags: ENodeFlags.Visible,
 					globalId: { type: EndpointType.Node, endpointId: root.root.globalId.endpointId, nodeId: 0 },
 					children: [ root.root ],
 				}
@@ -287,51 +289,58 @@ export class AvDefaultTraverser
 	traverseNode( node: AvNode, defaultParent: PendingTransform ): void
 	{
 		let handBefore = this.m_currentHand;
+		let visibilityBefore = this.m_currentVisibility;
 
-		switch ( node.type )
+		this.m_currentVisibility = ( 0 != ( node.flags & ENodeFlags.Visible ) ) 
+			&& this.m_currentVisibility;
+
+		if( this.m_currentVisibility )
 		{
-		case AvNodeType.Container:
-			// nothing special to do here
-			break;
+			switch ( node.type )
+			{
+			case AvNodeType.Container:
+				// nothing special to do here
+				break;
 
-		case AvNodeType.Origin:
-			this.traverseOrigin( node, defaultParent );
-			break;
+			case AvNodeType.Origin:
+				this.traverseOrigin( node, defaultParent );
+				break;
 
-		case AvNodeType.Transform:
-			this.traverseTransform( node, defaultParent );
-			break;
+			case AvNodeType.Transform:
+				this.traverseTransform( node, defaultParent );
+				break;
 
-		case AvNodeType.Model:
-			this.traverseModel( node, defaultParent );
-			break;
+			case AvNodeType.Model:
+				this.traverseModel( node, defaultParent );
+				break;
 
-		case AvNodeType.Panel:
-			this.traversePanel( node, defaultParent );
-			break;
+			case AvNodeType.Panel:
+				this.traversePanel( node, defaultParent );
+				break;
 
-		case AvNodeType.Poker:
-			this.traversePoker( node, defaultParent );
-			break;
+			case AvNodeType.Poker:
+				this.traversePoker( node, defaultParent );
+				break;
 
-		case AvNodeType.Grabbable:
-			this.traverseGrabbable( node, defaultParent );
-			break;
+			case AvNodeType.Grabbable:
+				this.traverseGrabbable( node, defaultParent );
+				break;
 
-		case AvNodeType.Handle:
-			this.traverseHandle( node, defaultParent );
-			break;
+			case AvNodeType.Handle:
+				this.traverseHandle( node, defaultParent );
+				break;
 
-		case AvNodeType.Grabber:
-			this.traverseGrabber( node, defaultParent );
-			break;
+			case AvNodeType.Grabber:
+				this.traverseGrabber( node, defaultParent );
+				break;
 
-		case AvNodeType.Hook:
-			this.traverseHook( node, defaultParent );
-			break;
-		
-		default:
-			throw "Invalid node type";
+			case AvNodeType.Hook:
+				this.traverseHook( node, defaultParent );
+				break;
+			
+			default:
+				throw "Invalid node type";
+			}
 		}
 
 		let thisNodeTransform = this.getTransform( node.globalId );
@@ -356,6 +365,7 @@ export class AvDefaultTraverser
 		}
 
 		this.m_currentHand = handBefore;
+		this.m_currentVisibility = visibilityBefore;
 	}
 
 

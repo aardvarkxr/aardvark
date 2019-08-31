@@ -4,7 +4,7 @@ import { AvGadget } from './aardvark_gadget';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 import { AvNodeType, AvGrabEvent, AvGrabEventType } from 'common/aardvark';
 import bind from 'bind-decorator';
-import { EndpointAddr } from './aardvark_protocol';
+import { EndpointAddr, endpointAddrToString } from './aardvark_protocol';
 
 export interface GrabResponse
 {
@@ -36,10 +36,23 @@ export class AvGrabbable extends AvBaseNode< AvGrabbableProps, {} >
 		return this.createNodeObject( AvNodeType.Grabbable, this.m_nodeId );
 	}
 
+	public grabInProgress( grabber: EndpointAddr ):void
+	{
+		//console.log( `Starting out grabbed by ${ endpointAddrToString( grabber) }` );
+		this.m_lastHighlight = HighlightType.Grabbed;
+		if( this.props.updateHighlight )
+		{
+			this.props.updateHighlight( this.m_lastHighlight );
+		}
+	}
+
 	@bind private onGrabEvent( evt: AvGrabEvent )
 	{
-		var newHighlight = HighlightType.None;
-	
+//		console.log( `Grab event ${ AvGrabEventType[ evt.type ] }` );
+
+		// by default, don't change the highlight
+		var newHighlight = this.m_lastHighlight;
+
 		switch( evt.type )
 		{
 			case AvGrabEventType.EnterRange:
@@ -110,7 +123,6 @@ export class AvGrabbable extends AvBaseNode< AvGrabbableProps, {} >
 					});
 				}
 				break;
-
 		}
 
 		if( newHighlight != this.m_lastHighlight )
