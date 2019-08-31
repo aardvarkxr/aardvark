@@ -11,7 +11,7 @@ layout (set = 0, binding = 0) uniform UBO
 {
 	mat4 projection;
 	mat4 matHmdFromStage;
-	mat4 view;
+	mat4 matEyeFromHmd;
 	vec3 camPos;
 } ubo;
 
@@ -60,5 +60,5 @@ void main()
 	outUV1 = inUV1.xy * vertConstants.uvScaleAndOffset.xy + vertConstants.uvScaleAndOffset.zw;
 	vec4 invertYPos = ubo.matHmdFromStage * locPos;
 	invertYPos.y = -invertYPos.y;
-	gl_Position =  ubo.projection * ubo.view * invertYPos;
+	gl_Position =  ubo.projection * ubo.matEyeFromHmd * invertYPos;
 }
