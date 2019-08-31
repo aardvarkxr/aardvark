@@ -149,8 +149,9 @@ std::unique_ptr< CUriRequest> CUriRequestImpl::removeRunningRequest( CUriRequest
 
 CUriRequest::CUriRequest( CUriRequestHandler *handler, const std::string & uri, 
 	std::function<void( CUriRequestHandler::Result_t & result )> fn )
-	: m_handler( handler ), m_uri( uri ), m_callback( fn )
+	: m_handler( handler ), m_callback( fn )
 {
+	m_uri = tools::filterUriForInstall( uri );
 }
 
 CUriRequest::~CUriRequest()
