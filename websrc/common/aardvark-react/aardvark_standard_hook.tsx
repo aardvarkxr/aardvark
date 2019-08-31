@@ -52,7 +52,7 @@ export class AvStandardHook extends React.Component< {}, StandardHookState >
 	public render()
 	{
 		return <div>
-				<AvHook updateHighlight={ this.updateHookHighlight } radius={ 0.05 } />
+				<AvHook updateHighlight={ this.updateHookHighlight } radius={ 0.08 } />
 				{ this.renderModel() }
 			</div>;
 	}
