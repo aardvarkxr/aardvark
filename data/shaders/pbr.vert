@@ -49,10 +49,10 @@ void main()
 			inWeight0.w * node.jointMatrix[int(inJoint0.w)];
 
 		locPos = node.matStageFromNode * skinMat * vec4(inPos, 1.0);
-		outNormal = normalize(transpose(inverse(mat3(ubo.matHmdFromStage * node.matStageFromNode * skinMat))) * inNormal);
+		outNormal = normalize( mat3( node.matStageFromNode * skinMat ) * inNormal );
 	} else {
 		locPos = node.matStageFromNode * vec4(inPos, 1.0);
-		outNormal = normalize(transpose(inverse(mat3(ubo.matHmdFromStage * node.matStageFromNode))) * inNormal);
+		outNormal = normalize( mat3( node.matStageFromNode ) * inNormal );
 	}
 	outWorldPos = locPos.xyz / locPos.w;
 

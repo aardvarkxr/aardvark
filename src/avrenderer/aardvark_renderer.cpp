@@ -362,9 +362,13 @@ void VulkanExample::loadAssets()
 
 }
 
-void VulkanExample::UpdateDescriptorForScene( VkDescriptorSet descriptorSet, VkBuffer buffer, uint32_t bufferSize )
+void VulkanExample::UpdateDescriptorForScene( VkDescriptorSet descriptorSet, 
+	VkBuffer buffer, uint32_t bufferSize,
+	VkBuffer paramsBuffer, uint32_t paramsBufferSize
+)
 {
 	VkDescriptorBufferInfo bufferInfo = { buffer, 0, bufferSize };
+	VkDescriptorBufferInfo paramBufferInfo = { paramsBuffer, 0, paramsBufferSize };
 
 	std::array<VkWriteDescriptorSet, 5> writeDescriptorSets{};
 
@@ -380,7 +384,7 @@ void VulkanExample::UpdateDescriptorForScene( VkDescriptorSet descriptorSet, VkB
 	writeDescriptorSets[1].descriptorCount = 1;
 	writeDescriptorSets[1].dstSet = descriptorSet;
 	writeDescriptorSets[1].dstBinding = 1;
-	writeDescriptorSets[1].pBufferInfo = &bufferInfo;
+	writeDescriptorSets[1].pBufferInfo = &paramBufferInfo;
 
 	writeDescriptorSets[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	writeDescriptorSets[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -423,7 +427,9 @@ void VulkanExample::setupDescriptors()
 			{
 				UpdateDescriptorForScene( descriptor->set(),
 					uniformBuffers[i].scene.buffer,
-					uniformBuffers[i].scene.size );
+					uniformBuffers[i].scene.size,
+					uniformBuffers[i].params.buffer,
+					uniformBuffers[i].params.size );
 			};
 
 			descriptorSets[i].scene = m_descriptorManager->createDescriptorSet( fnUpdateDescriptor, vks::EDescriptorLayout::Scene );
@@ -433,7 +439,9 @@ void VulkanExample::setupDescriptors()
 			{
 				UpdateDescriptorForScene( descriptor->set(),
 					uniformBuffers[i].leftEye.buffer,
-					uniformBuffers[i].leftEye.size );
+					uniformBuffers[i].leftEye.size,
+					uniformBuffers[i].params.buffer,
+					uniformBuffers[i].params.size );
 			};
 			descriptorSets[i].eye[vr::Eye_Left] = m_descriptorManager->createDescriptorSet( fnUpdateDescriptorLeftEye, vks::EDescriptorLayout::Scene );
 
@@ -442,7 +450,9 @@ void VulkanExample::setupDescriptors()
 			{
 				UpdateDescriptorForScene( descriptor->set(),
 					uniformBuffers[i].rightEye.buffer,
-					uniformBuffers[i].rightEye.size );
+					uniformBuffers[i].rightEye.size,
+					uniformBuffers[i].params.buffer,
+					uniformBuffers[i].params.size );
 			};
 			descriptorSets[i].eye[vr::Eye_Right] = m_descriptorManager->createDescriptorSet( fnUpdateDescriptorRightEye, vks::EDescriptorLayout::Scene );
 		}
@@ -1534,11 +1544,26 @@ void VulkanExample::generateCubemaps()
 void VulkanExample::prepareUniformBuffers()
 {
 	for ( auto &uniformBuffer : uniformBuffers ) {
-		uniformBuffer.scene.create( vulkanDevice, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, sizeof( shaderValuesScene ) );
-		uniformBuffer.skybox.create( vulkanDevice, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, sizeof( shaderValuesSkybox ) );
-		uniformBuffer.params.create( vulkanDevice, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, sizeof( shaderValuesParams ) );
-		uniformBuffer.leftEye.create( vulkanDevice, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, sizeof( shaderValuesLeftEye ) );
-		uniformBuffer.rightEye.create( vulkanDevice, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, sizeof( shaderValuesRightEye ) );
+		uniformBuffer.scene.create( vulkanDevice, 
+			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+			sizeof( shaderValuesScene ) );
+		uniformBuffer.skybox.create( vulkanDevice, 
+			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+			sizeof( shaderValuesSkybox ) );
+		uniformBuffer.params.create( vulkanDevice, 
+			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+			sizeof( shaderValuesParams ) );
+		uniformBuffer.leftEye.create( vulkanDevice, 
+			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+			sizeof( shaderValuesLeftEye ) );
+		uniformBuffer.rightEye.create( vulkanDevice, 
+			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+			sizeof( shaderValuesRightEye ) );
 	}
 	updateUniformBuffers();
 }
@@ -1595,7 +1620,8 @@ void VulkanExample::updateParams()
 		sin( glm::radians( lightSource.rotation.y ) ),
 		cos( glm::radians( lightSource.rotation.x ) ) * cos( glm::radians( lightSource.rotation.y ) ),
 		0.0f );
-	shaderValuesParams.debugViewInputs = 1;
+	shaderValuesParams.debugViewInputs = 0;
+	shaderValuesParams.debugViewEquation = 0;
 }
 
 void VulkanExample::windowResized()

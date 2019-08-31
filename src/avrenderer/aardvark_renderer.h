@@ -78,7 +78,9 @@ public:
 	vkglTF::Model m_skybox;
 
 	void loadAssets();
-	void UpdateDescriptorForScene( VkDescriptorSet descriptorSet, VkBuffer buffer, uint32_t bufferSize );
+	void UpdateDescriptorForScene( VkDescriptorSet descriptorSet,
+		VkBuffer buffer, uint32_t bufferSize,
+		VkBuffer paramsBuffer, uint32_t paramsBufferSize );
 	void setupDescriptors();
 	void setupDescriptorSetsForModel( std::shared_ptr<vkglTF::Model> pModel );
 	void preparePipelines();
