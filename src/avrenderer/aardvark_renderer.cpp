@@ -1576,13 +1576,16 @@ void VulkanExample::updateUniformBuffers()
 	shaderValuesLeftEye.matProjectionFromView = GetHMDMatrixProjectionEye( vr::Eye_Left );
 	shaderValuesLeftEye.matViewFromHmd = GetHMDMatrixPoseEye( vr::Eye_Left );
 	shaderValuesLeftEye.matHmdFromStage = m_vrManager->getHmdFromUniverse();
-	shaderValuesLeftEye.camPos = glm::vec3( 1, 0, 0 );
+
+	glm::mat4 stageFromView = glm::inverse( shaderValuesLeftEye.matViewFromHmd * shaderValuesLeftEye.matHmdFromStage );
+	shaderValuesLeftEye.camPos = glm::vec3( stageFromView * glm::vec4( 0, 0, 0, 1.f ) );
 
 	// right eye
 	shaderValuesRightEye.matProjectionFromView = GetHMDMatrixProjectionEye( vr::Eye_Right );
 	shaderValuesRightEye.matViewFromHmd = GetHMDMatrixPoseEye( vr::Eye_Right );
 	shaderValuesRightEye.matHmdFromStage = m_vrManager->getHmdFromUniverse();
-	shaderValuesRightEye.camPos = glm::vec3( 1, 0, 0 );
+	stageFromView = glm::inverse( shaderValuesRightEye.matViewFromHmd * shaderValuesRightEye.matHmdFromStage );
+	shaderValuesRightEye.camPos = glm::vec3( stageFromView * glm::vec4( 0, 0, 0, 1.f ) );
 }
 
 void VulkanExample::updateParams()

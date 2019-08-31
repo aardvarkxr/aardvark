@@ -48,16 +48,17 @@ void main()
 			inWeight0.z * node.jointMatrix[int(inJoint0.z)] +
 			inWeight0.w * node.jointMatrix[int(inJoint0.w)];
 
-		locPos = ubo.matHmdFromStage * node.matStageFromNode * skinMat * vec4(inPos, 1.0);
+		locPos = node.matStageFromNode * skinMat * vec4(inPos, 1.0);
 		outNormal = normalize(transpose(inverse(mat3(ubo.matHmdFromStage * node.matStageFromNode * skinMat))) * inNormal);
 	} else {
-		locPos = ubo.matHmdFromStage * node.matStageFromNode * vec4(inPos, 1.0);
+		locPos = node.matStageFromNode * vec4(inPos, 1.0);
 		outNormal = normalize(transpose(inverse(mat3(ubo.matHmdFromStage * node.matStageFromNode))) * inNormal);
 	}
-	locPos.y = -locPos.y;
 	outWorldPos = locPos.xyz / locPos.w;
 
 	outUV0 = inUV0.xy * vertConstants.uvScaleAndOffset.xy + vertConstants.uvScaleAndOffset.zw;
 	outUV1 = inUV1.xy * vertConstants.uvScaleAndOffset.xy + vertConstants.uvScaleAndOffset.zw;
-	gl_Position =  ubo.projection * ubo.view * vec4(outWorldPos, 1.0);
+	vec4 invertYPos = ubo.matHmdFromStage * locPos;
+	invertYPos.y = -invertYPos.y;
+	gl_Position =  ubo.projection * ubo.view * invertYPos;
 }
