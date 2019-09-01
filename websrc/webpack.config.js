@@ -91,11 +91,8 @@ module.exports =
 	createConfig( 'aardvark_master', 'Master App', 'tsx' ),
 	createConfig( 'aardvark_monitor', 'Monitor', 'tsx' ),
 	createConfig( 'aardvark_renderer', 'Renderer', 'ts' ),
-	createConfig( 'default_hand', 'Default Poker', 'tsx' ),
 	createConfig( 'test_panel', 'Test Panel', 'tsx' ),
 	createConfig( 'charm_bracelet', 'Charm Bracelet', 'tsx' ),
-	createConfig( 'test_gadget_launcher', 'Test Gadget Launcher', 'tsx' ),
-	createConfig( 'control_panel', 'Control Panel', 'tsx' ),
 	{
 		target: "node",
 		entry: 

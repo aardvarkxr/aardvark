@@ -1,6 +1,0 @@
-{
-	"name" : "Default Hand",
-	"permissions" : [ "scenegraph" ],
-	"resolution": [ 16, 16 ],
-	"model" : "http://aardvark.install/models/space_man_hand.glb"
-}

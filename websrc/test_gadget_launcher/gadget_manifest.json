@@ -1,6 +1,0 @@
-{
-	"name" : "Test Gadget Launcher",
-	"permissions" : [ "scenegraph", "master" ],
-	"resolution": [ 1024, 1024 ],
-	"model" : "http://aardvark.install/models/Panel/panel.glb"
-}
