@@ -1,4 +1,4 @@
-* To compile shaders in this directory *
+**To compile shaders in this directory**
 
 1. Install the Vulkan SDK from LunarG: https://vulkan.lunarg.com/
 2. Make sure that the SDK install directory that includes "glslangValidator.exe" is in your path.
