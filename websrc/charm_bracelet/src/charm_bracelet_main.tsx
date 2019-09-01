@@ -41,7 +41,7 @@ class CharmBracelet extends React.Component< {}, CharmBraceletState >
 					<AvGrabbable updateHighlight={ this.onGrabbableHighlight }>
 						<AvSphereHandle radius={0.1} />
 						<AvTransform translateY={ -0.2 } translateZ = {0.2} visible={ !grabbedMode }>
-							<AvStandardHook />
+							<AvStandardHook persistentName="hook0" />
 						</AvTransform>
 						{ grabbedMode && <AvModel uri="http://aardvark.install/models/bracelet.glb" /> }
 					</AvGrabbable>

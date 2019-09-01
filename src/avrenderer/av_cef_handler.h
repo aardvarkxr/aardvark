@@ -30,7 +30,8 @@ class CAardvarkCefHandler : public CefClient,
 					  public CefRenderHandler
 {
 public:
-	explicit CAardvarkCefHandler( IApplication *application, const std::string & gadgetUri, const std::string & initialHook, const aardvark::EndpointAddr_t & epToNotify );
+	explicit CAardvarkCefHandler( IApplication *application, const std::string & gadgetUri, const std::string & initialHook, 
+		const std::string & persistentUuid, const aardvark::EndpointAddr_t & epToNotify );
 	~CAardvarkCefHandler();
 
 	// CefClient methods:
@@ -120,6 +121,7 @@ private:
 
 	std::string m_gadgetUri;
 	std::string m_initialHook;
+	std::string m_persistenceUuid;
 	aardvark::EndpointAddr_t m_epToNotify;
 	bool m_wantsToQuit = false;
 	bool m_wantsTexture = false;

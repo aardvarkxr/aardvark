@@ -22,7 +22,8 @@
 
 
 CAardvarkCefHandler::CAardvarkCefHandler( IApplication *application, const std::string & gadgetUri, 
-	const std::string & initialHook, const aardvark::EndpointAddr_t & epToNotify )
+	const std::string & initialHook, const std::string & persistenceUuid, 
+	const aardvark::EndpointAddr_t & epToNotify )
     : m_useViews( false ), m_isClosing(false) 
 {
 	m_epToNotify = epToNotify;
@@ -31,6 +32,7 @@ CAardvarkCefHandler::CAardvarkCefHandler( IApplication *application, const std::
 
 	m_gadgetUri = tools::filterUriForInstall( gadgetUri );
 	m_initialHook = initialHook;
+	m_persistenceUuid = persistenceUuid;
 }
 
 
@@ -94,9 +96,14 @@ void CAardvarkCefHandler::onGadgetManifestReceived( bool success, const std::vec
 
 	std::string fullUri = m_gadgetUri + "/index.html?initialHook=" + m_initialHook;
 
-	if ( this->m_epToNotify.type != aardvark::EEndpointType::Unknown )
+	if ( m_epToNotify.type != aardvark::EEndpointType::Unknown )
 	{
 		fullUri += "&epToNotify=" + aardvark::endpointAddrToString( this->m_epToNotify );
+	}
+
+	if ( !m_persistenceUuid.empty() )
+	{
+		fullUri += "&persistenceUuid=" + m_persistenceUuid;
 	}
 
 	// Create the first browser window.
@@ -247,12 +254,13 @@ bool CAardvarkCefHandler::OnProcessMessageReceived( CefRefPtr<CefBrowser> browse
 	{
 		std::string uri( message->GetArgumentList()->GetString( 0 ) );
 		std::string initialHook( message->GetArgumentList()->GetString( 1 ) );
+		std::string persistenceUuid( message->GetArgumentList()->GetString( 2 ) );
 		aardvark::EndpointAddr_t epToNotify;
-		epToNotify.type = ( aardvark::EEndpointType )message->GetArgumentList()->GetInt( 2 );
-		epToNotify.endpointId = ( uint32_t )message->GetArgumentList()->GetInt( 3 );
-		epToNotify.nodeId = ( uint32_t )message->GetArgumentList()->GetInt( 4 );
+		epToNotify.type = ( aardvark::EEndpointType )message->GetArgumentList()->GetInt( 3 );
+		epToNotify.endpointId = ( uint32_t )message->GetArgumentList()->GetInt( 4 );
+		epToNotify.nodeId = ( uint32_t )message->GetArgumentList()->GetInt( 5 );
 
-		CAardvarkCefApp::instance()->startGadget( uri, initialHook, epToNotify );
+		CAardvarkCefApp::instance()->startGadget( uri, initialHook, persistenceUuid, epToNotify );
 	}
 	else if ( message->GetName() == "request_texture_info" )
 	{

@@ -1,3 +1,4 @@
+import { MsgAttachGadgetToHook, MsgDetachGadgetFromHook } from './../common/aardvark-react/aardvark_protocol';
 import { AvGrabEvent } from './../common/aardvark';
 import { MsgGetGadgetManifest, MsgGetGadgetManifestResponse, MsgUpdateSceneGraph, EndpointAddr, endpointAddrToString, MsgGrabEvent, endpointAddrsMatch, MsgGrabberState, MsgGadgetStarted, MsgSetEndpointTypeResponse, MsgPokerProximity, MsgMouseEvent, MsgNodeHaptic } from 'common/aardvark-react/aardvark_protocol';
 import { MessageType, EndpointType, MsgSetEndpointType, Envelope, MsgNewEndpoint, MsgLostEndpoint, parseEnvelope, MsgError } from 'common/aardvark-react/aardvark_protocol';
@@ -13,6 +14,7 @@ import { URL, pathToFileURL } from 'url';
 import * as fileUrl from 'file-url';
 import { ENFILE } from 'constants';
 import { threadId } from 'worker_threads';
+import { persistence } from './persistence';
 
 let g_localInstallPathUri = fileUrl( path.resolve( process.cwd() ));
 console.log( "Data directory is", g_localInstallPathUri );
@@ -299,13 +301,45 @@ class CDispatcher
 			if( !hookNodes )
 				continue;
 			
-			for( let hookNode of hookNodes )
+			for( let hookData of hookNodes )
 			{
-				this.forwardToEndpoint( hookNode, env );
+				this.forwardToEndpoint( hookData.epa, env );
 			}
 		}
 	}
 
+	public getGadgetEndpoint( gadgetId: number ) : CEndpoint
+	{
+		let ep = this.m_endpoints[ gadgetId ];
+		if( ep && ep.getType() == EndpointType.Gadget )
+		{
+			return ep;
+		}
+		else
+		{
+			return null;
+		}
+	}
+
+	public getPersistentNodePath( hookId: EndpointAddr )
+	{
+		let gadget = this.getGadgetEndpoint( hookId.endpointId );
+		if( gadget )
+		{
+			return gadget.getGadgetData().getPersistentNodePath( hookId );
+		}
+		else
+		{
+			return null;
+		}
+	}
+
+}
+
+interface HookNodeData
+{
+	epa: EndpointAddr;
+	persistentName: string;
 }
 
 class CGadgetData
@@ -315,11 +349,31 @@ class CGadgetData
 	private m_manifest: AvGadgetManifest = null;
 	private m_root: AvNode = null;
 	private m_hook: string = null;
+	private m_persistenceUuid: string = null;
 	private m_dispatcher: CDispatcher = null;
-	private m_hookNodes:EndpointAddr[] = [];
+	private m_hookNodes:HookNodeData[] = [];
 
-	constructor( ep: CEndpoint, uri: string, initialHook: string, dispatcher: CDispatcher )
+	constructor( ep: CEndpoint, uri: string, initialHook: string, persistenceUuid:string,
+		dispatcher: CDispatcher )
 	{
+		if( persistenceUuid )
+		{
+			if( !initialHook )
+			{
+				initialHook = persistence.getGadgetHook( persistenceUuid );
+			}
+
+			this.m_persistenceUuid = persistenceUuid;
+		}
+		else
+		{
+			this.m_persistenceUuid = persistence.createGadgetPersistence( uri );
+			if( initialHook )
+			{
+				persistence.setGadgetHook( this.m_persistenceUuid, initialHook );
+			}
+		}
+
 		this.m_ep = ep;
 		this.m_gadgetUri = uri;
 		this.m_hook = initialHook;
@@ -343,6 +397,7 @@ class CGadgetData
 	public getRoot() { return this.m_root; }
 	public getHook() { return this.m_hook; }
 	public getHookNodes() { return this.m_hookNodes; }
+	public getPersistenceUuid() { return this.m_persistenceUuid; }
 
 	public updateSceneGraph( root: AvNode ) 
 	{
@@ -361,10 +416,14 @@ class CGadgetData
 		if( node.type == AvNodeType.Hook )
 		{
 			this.m_hookNodes.push(
-				{
-					endpointId: this.m_ep.getId(),
-					type: EndpointType.Node,
-					nodeId: node.id,
+				{ 
+					epa:
+					{
+						endpointId: this.m_ep.getId(),
+						type: EndpointType.Node,
+						nodeId: node.id,
+					},
+					persistentName: node.persistentName,
 				}
 			)
 		}
@@ -376,6 +435,18 @@ class CGadgetData
 				this.updateHookNodeList( child );
 			}
 		}
+	}
+
+	public getPersistentNodePath( hookId: EndpointAddr )
+	{
+		for( let hookData of this.m_hookNodes )
+		{
+			if( hookData.epa.nodeId == hookId.nodeId )
+			{
+				return "/gadget/" + this.m_persistenceUuid + "/" + hookData.persistentName;
+			}
+		}
+		return null;
 	}
 
 }
@@ -414,6 +485,8 @@ class CEndpoint
 		this.registerEnvelopeHandler( MessageType.PokerProximity, this.onPokerProximity );
 		this.registerEnvelopeHandler( MessageType.MouseEvent, this.onMouseEvent );
 		this.registerEnvelopeHandler( MessageType.NodeHaptic, this.onNodeHaptic );
+		this.registerEnvelopeHandler( MessageType.AttachGadgetToHook, this.onAttachGadgetToHook );
+		this.registerEnvelopeHandler( MessageType.DetachGadgetFromHook, this.onDetachGadgetFromHook );
 	}
 
 	public getId() { return this.m_id; }
@@ -533,16 +606,30 @@ class CEndpoint
 		console.log( `Setting endpoint ${ this.m_id } to ${ EndpointType[ m.newEndpointType ]}` );
 		this.m_type = m.newEndpointType;
 
+		let msgResponse: MsgSetEndpointTypeResponse =
+		{
+			endpointId: this.m_id,
+		}
+
 		if( this.getType() == EndpointType.Gadget )
 		{
 			console.log( " initial hook is " + m.initialHook );
-			this.m_gadgetData = new CGadgetData( this, m.gadgetUri, m.initialHook, this.m_dispatcher );
+			this.m_gadgetData = new CGadgetData( this, m.gadgetUri, m.initialHook, m.persistenceUuid,
+				this.m_dispatcher );
+
+			if( this.m_gadgetData.getHook() )
+			{
+				msgResponse.initialHook = this.m_gadgetData.getHook();
+			}
+			
+			let extraData = persistence.getGadgetExtraData( this.m_gadgetData.getPersistenceUuid() );
+			if( extraData )
+			{
+				msgResponse.extraData = extraData;
+			}
 		}
 
-		let msgResponse: MsgSetEndpointTypeResponse =
-		{
-			endpointId: this.m_id
-		}
+
 		this.sendMessage( MessageType.SetEndpointTypeResponse, msgResponse );
 		
 		this.m_dispatcher.setEndpointType( this );
@@ -616,6 +703,36 @@ class CEndpoint
 		}
 
 		this.m_dispatcher.forwardToEndpoint( m.epToNotify, env );
+	}
+
+	@bind private onAttachGadgetToHook( env: Envelope, m: MsgAttachGadgetToHook )
+	{
+		let gadget = this.m_dispatcher.getGadgetEndpoint( m.grabbableNodeId.endpointId );
+		gadget.attachToHook( m.hookNodeId );
+	}
+
+	@bind private onDetachGadgetFromHook( env: Envelope, m: MsgDetachGadgetFromHook )
+	{
+		let gadget = this.m_dispatcher.getGadgetEndpoint( m.grabbableNodeId.endpointId );
+		gadget.detachFromHook( m.hookNodeId );
+	}
+
+	private attachToHook( hookId: EndpointAddr )
+	{
+		let hookPath = this.m_dispatcher.getPersistentNodePath( hookId );
+		if( !hookPath )
+		{
+			console.log( `can't attach ${ this.m_id } to `
+				+`${ endpointAddrToString( hookId ) } because it doesn't have a path` );
+			return;
+		}
+
+		persistence.setGadgetHook( this.m_gadgetData.getPersistenceUuid(), hookPath );
+	}
+
+	private detachFromHook( hookId: EndpointAddr )
+	{
+		persistence.setGadgetHook( this.m_gadgetData.getPersistenceUuid(), null );
 	}
 
 	public sendMessage( type: MessageType, msg: any, target: EndpointAddr = undefined, sender:EndpointAddr = undefined  )

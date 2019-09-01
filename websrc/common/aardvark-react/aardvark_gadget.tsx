@@ -85,7 +85,9 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 			console.log( "This gadget wants to notify " + endpointAddrToString(this.m_epToNotify ) );
 		}
 
-		this.m_endpoint = new CGadgetEndpoint( this.m_actualGadgetUri, params["initialHook"], this.onEndpointOpen );
+		this.m_endpoint = new CGadgetEndpoint( this.m_actualGadgetUri, 
+			params["initialHook"], params[ "persistenceUuid" ], 
+			this.onEndpointOpen );
 	}
 
 	@bind public onEndpointOpen()
@@ -410,7 +412,7 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 				nodeId: notifyNodeId,
 			}
 		}
-		Av().startGadget( uri, initialHook, epToNotify );
+		Av().startGadget( uri, initialHook, "", epToNotify );
 	} 
 
 	public render()

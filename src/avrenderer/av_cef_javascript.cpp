@@ -113,7 +113,7 @@ bool CAardvarkObject::init( CefRefPtr<CefV8Value> container )
 	{
 		RegisterFunction( container, "startGadget", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 		{
-			if ( arguments.size() != 3 )
+			if ( arguments.size() != 4 )
 			{
 				exception = "Invalid arguments";
 				return;
@@ -128,13 +128,19 @@ bool CAardvarkObject::init( CefRefPtr<CefV8Value> container )
 				exception = "Invalid hook argument";
 				return;
 			}
+			if ( !arguments[2]->IsString() )
+			{
+				exception = "Invalid persistence UUID argument";
+				return;
+			}
 			aardvark::EndpointAddr_t epToNotify;
-			if ( !endpointAddrFromJs( arguments[2], &epToNotify ) )
+			if ( !endpointAddrFromJs( arguments[3], &epToNotify ) )
 			{
 				epToNotify.type = aardvark::EEndpointType::Unknown;
 			}
 
-			m_handler->requestStartGadget( arguments[0]->GetStringValue(), arguments[1]->GetStringValue(), epToNotify );
+			m_handler->requestStartGadget( arguments[0]->GetStringValue(), arguments[1]->GetStringValue(), 
+				arguments[2]->GetStringValue(), epToNotify );
 		} );
 
 		RegisterFunction( container, "getGadgetManifest", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
@@ -377,15 +383,16 @@ void CAardvarkRenderProcessHandler::sendBrowserMessage( CefRefPtr< CefProcessMes
 
 
 void CAardvarkRenderProcessHandler::requestStartGadget( const CefString & uri, const CefString & initialHook, 
-	const aardvark::EndpointAddr_t & epToNotify )
+	const CefString & persistenceUuid, const aardvark::EndpointAddr_t & epToNotify )
 {
 	CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "start_gadget" );
 
 	msg->GetArgumentList()->SetString( 0, uri );
 	msg->GetArgumentList()->SetString( 1, initialHook );
-	msg->GetArgumentList()->SetInt( 2, (int)epToNotify.type );
-	msg->GetArgumentList()->SetInt( 3, (int)epToNotify.endpointId);
-	msg->GetArgumentList()->SetInt( 4, (int)epToNotify.nodeId );
+	msg->GetArgumentList()->SetString( 2, persistenceUuid );
+	msg->GetArgumentList()->SetInt( 3, (int)epToNotify.type );
+	msg->GetArgumentList()->SetInt( 4, (int)epToNotify.endpointId);
+	msg->GetArgumentList()->SetInt( 5, (int)epToNotify.nodeId );
 
 	sendBrowserMessage( msg );
 }

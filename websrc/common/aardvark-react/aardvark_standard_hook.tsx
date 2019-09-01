@@ -5,12 +5,17 @@ import { AvModel } from 'common/aardvark-react/aardvark_model';
 import { HookHighlight, AvHook } from './aardvark_hook';
 
 
+interface StandardHookProps
+{
+	persistentName: string;
+}
+
 interface StandardHookState
 {
 	highlight: HookHighlight;
 }
 
-export class AvStandardHook extends React.Component< {}, StandardHookState >
+export class AvStandardHook extends React.Component< StandardHookProps, StandardHookState >
 {
 	constructor( props: any )
 	{
@@ -52,7 +57,8 @@ export class AvStandardHook extends React.Component< {}, StandardHookState >
 	public render()
 	{
 		return <div>
-				<AvHook updateHighlight={ this.updateHookHighlight } radius={ 0.08 } />
+				<AvHook updateHighlight={ this.updateHookHighlight } radius={ 0.08 } 
+					persistentName={ this.props.persistentName } />
 				{ this.renderModel() }
 			</div>;
 	}

@@ -37,7 +37,8 @@ public:
 
 	bool hasPermission( const std::string & permission );
 	const std::string getInitialHook() const { return m_initialHook; }
-	void requestStartGadget( const CefString & uri, const CefString & initialHook, const aardvark::EndpointAddr_t & epToNotify );
+	void requestStartGadget( const CefString & uri, const CefString & initialHook, const CefString & persistenceUuid, 
+		const aardvark::EndpointAddr_t & epToNotify );
 	void requestUri( const std::string & uri, std::function<void( CUriRequestHandler::Result_t & result ) > callback );
 	void requestTextureInfo();
 

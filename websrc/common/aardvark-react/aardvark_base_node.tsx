@@ -19,6 +19,7 @@ declare global
 export interface AvBaseNodeProps
 {
 	visible?: boolean; // defaults to true
+	persistentName?: string; // Set this if you need to store persistent references to this node
 	onIdAssigned?: ( addr: EndpointAddr ) => void;
 }
 
@@ -86,12 +87,19 @@ export abstract class AvBaseNode<TProps, TState> extends React.Component<TProps,
 	protected createNodeObject( type: AvNodeType, nodeId: number ): AvNode
 	{
 		//console.log( `creating ${ AvNodeType[ type] } ${ nodeId }` );
-		return (
+		let obj:AvNode =
 		{
 			type: type,
 			id: nodeId,
 			flags: this.getNodeFlags(),
-		} );
+		};
+
+		if( this.baseProps.persistentName )
+		{
+			obj.persistentName = this.baseProps.persistentName;
+		}
+
+		return obj;
 	}
 
 	private get baseProps()

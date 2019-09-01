@@ -138,6 +138,7 @@ export interface AvNode
 {
 	type: AvNodeType;
 	id: number;
+	persistentName?: string;
 	globalId?: EndpointAddr;
 	flags: ENodeFlags;
 	children?: AvNode[];
@@ -270,7 +271,7 @@ export interface Aardvark
 	spoofMouseEvent( type:AvPanelMouseEventType, x: number, y: number ): void;
 
 	// requires master permissions
-	startGadget( uri: string, initialHook: string, epToNotify: EndpointAddr ): void;
+	startGadget( uri: string, initialHook: string, persistenceUuid: string, epToNotify: EndpointAddr ): void;
 	getGadgetManifest( uri: string, callback: AvGadgetManifestCallback ): void;
 
 	// requires renderer permissions

@@ -24,6 +24,8 @@ export enum MessageType
 	PokerProximity = 304,
 	MouseEvent = 305,
 	NodeHaptic = 306,
+	AttachGadgetToHook = 307,
+	DetachGadgetFromHook = 308,
 }
 
 export enum EndpointType
@@ -140,11 +142,14 @@ export interface MsgSetEndpointType
 	newEndpointType: EndpointType;
 	gadgetUri?: string;
 	initialHook?: string;
+	persistenceUuid?: string;
 }
 
 export interface MsgSetEndpointTypeResponse
 {
 	endpointId: number;
+	initialHook?: string;
+	extraData?: any;
 }
 
 export interface MsgNewEndpoint
@@ -234,4 +239,16 @@ export interface MsgNodeHaptic
 	amplitude: number;
 	frequency: number;
 	duration: number;
+}
+
+export interface MsgAttachGadgetToHook
+{
+	grabbableNodeId: EndpointAddr;
+	hookNodeId: EndpointAddr;
+}
+
+export interface MsgDetachGadgetFromHook
+{
+	grabbableNodeId: EndpointAddr;
+	hookNodeId: EndpointAddr;
 }

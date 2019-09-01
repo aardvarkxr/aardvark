@@ -7,12 +7,15 @@ export class CGadgetEndpoint extends CAardvarkEndpoint
 {
 	private m_gadgetUri: string;
 	private m_initialHook: string;
+	private m_persistenceUuid: string;
 
-	constructor( gadgetUri: string, initialHook: string, openHandler: OpenHandler, defaultHandler: MessageHandler = null )
+	constructor( gadgetUri: string, initialHook: string, persistenceUuid: string,
+		openHandler: OpenHandler, defaultHandler: MessageHandler = null )
 	{
 		super( () => { this.onOpen() }, openHandler, defaultHandler );
 		this.m_gadgetUri = gadgetUri;
 		this.m_initialHook = initialHook;
+		this.m_persistenceUuid = persistenceUuid;
 	}
 
 	@bind onOpen()
@@ -23,6 +26,10 @@ export class CGadgetEndpoint extends CAardvarkEndpoint
 			newEndpointType: EndpointType.Gadget,
 			gadgetUri: this.m_gadgetUri,
 			initialHook: this.m_initialHook,
+		}
+		if( this.m_persistenceUuid )
+		{
+			msgSetEndpointType.persistenceUuid = this.m_persistenceUuid;
 		}
 
 		this.sendMessage( MessageType.SetEndpointType, msgSetEndpointType );

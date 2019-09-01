@@ -4,7 +4,7 @@ import { Av, AvGrabEventType, AvNode, ENodeFlags } from 'common/aardvark';
 import { AvModelInstance, AvNodeRoot, AvNodeType, AvVisualFrame, EHand, EVolumeType, AvGrabEvent } from './aardvark';
 import { mat4, vec3, quat, vec4 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
-import { EndpointAddr, endpointAddrToString, endpointAddrIsEmpty, MessageType, MsgNodeHaptic } from './aardvark-react/aardvark_protocol';
+import { EndpointAddr, endpointAddrToString, endpointAddrIsEmpty, MessageType, MsgNodeHaptic, MsgAttachGadgetToHook, MsgDetachGadgetFromHook } from './aardvark-react/aardvark_protocol';
 
 interface NodeData
 {
@@ -653,7 +653,19 @@ export class AvDefaultTraverser
 		
 					grabberFromGrabbable = grabberFromUniverse.multiply( universeFromGrabbable );
 				}
-		
+
+				let oldAnchor = this.m_nodeToNodeAnchors[ grabbableIdStr ];
+				if( oldAnchor && oldAnchor.parentGlobalId.type == EndpointType.Node )
+				{
+					let msg: MsgDetachGadgetFromHook =
+					{
+						grabbableNodeId: grabEvent.grabbableId,
+						hookNodeId: oldAnchor.parentGlobalId,
+					}
+	
+					this.m_endpoint.sendMessage( MessageType.DetachGadgetFromHook, msg );
+				}
+
 				this.m_nodeToNodeAnchors[ grabbableIdStr ] = 
 				{
 					parentGlobalId: grabEvent.grabberId,
@@ -683,6 +695,14 @@ export class AvDefaultTraverser
 						parentGlobalId: grabEvent.hookId,
 						parentFromNodeTransform: null,
 					};
+
+					let msg: MsgAttachGadgetToHook =
+					{
+						grabbableNodeId: grabEvent.grabbableId,
+						hookNodeId: grabEvent.hookId,
+					}
+
+					this.m_endpoint.sendMessage( MessageType.AttachGadgetToHook, msg );
 				}
 				else
 				{
