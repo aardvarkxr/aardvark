@@ -26,6 +26,7 @@ export enum MessageType
 	NodeHaptic = 306,
 	AttachGadgetToHook = 307,
 	DetachGadgetFromHook = 308,
+	MasterStartGadget = 309, // tells master to start a gadget
 }
 
 export enum EndpointType
@@ -106,6 +107,8 @@ export function endpointAddrsMatch( epa1: EndpointAddr, epa2: EndpointAddr ): bo
 {
 	if( endpointAddrIsEmpty( epa1 ) )
 		return endpointAddrIsEmpty( epa2 );
+	else if( endpointAddrIsEmpty( epa2 ) )
+		return true;
 
 	return epa1.type == epa2.type && epa1.nodeId == epa2.nodeId && epa1.endpointId == epa2.endpointId;
 }
@@ -148,7 +151,6 @@ export interface MsgSetEndpointType
 export interface MsgSetEndpointTypeResponse
 {
 	endpointId: number;
-	initialHook?: string;
 	extraData?: any;
 }
 
@@ -180,7 +182,7 @@ export interface MsgGetGadgetManifestResponse
 export interface MsgUpdateSceneGraph
 {
 	root?: AvNode;
-	hook?: string;
+	hook?: string|EndpointAddr;
 }
 
 export interface MsgGrabberState
@@ -252,3 +254,11 @@ export interface MsgDetachGadgetFromHook
 	grabbableNodeId: EndpointAddr;
 	hookNodeId: EndpointAddr;
 }
+
+export interface MsgMasterStartGadget
+{
+	uri: string;
+	initialHook: string;
+	persistenceUuid: string;
+}
+

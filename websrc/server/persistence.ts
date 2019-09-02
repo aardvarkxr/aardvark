@@ -10,6 +10,12 @@ interface GadgetPersistence
 	extraData?: any;
 }
 
+export interface StoredGadget
+{
+	uri: string;
+	uuid: string;
+}
+
 class CPersistenceManager
 {
 	private m_gadgets: { [uuid:string]: GadgetPersistence } = {};
@@ -139,7 +145,27 @@ class CPersistenceManager
 		catch( e )
 		{
 			console.log( "Failed to read state file. Using default start" );
+
+			this.m_gadgets[ "master" ] =
+			{
+				uri: "https://aardvark.install/gadgets/aardvark_master",
+			}
 		}
+	}
+
+	public getGadgets() : StoredGadget[]
+	{
+		let res: StoredGadget[] = [];
+		for( let uuid in this.m_gadgets )
+		{
+			res.push(
+				{
+					uri: this.m_gadgets[uuid ].uri,
+					uuid,
+				}
+			);
+		}
+		return res;
 	}
 }
 

@@ -5,7 +5,7 @@ import { Av, AvPanelHandler, AvPokerHandler, AvPanelMouseEventType,
 import { IAvBaseNode, AvBaseNode } from './aardvark_base_node';
 import bind from 'bind-decorator';
 import { CGadgetEndpoint } from './gadget_endpoint';
-import { MessageType, MsgUpdateSceneGraph, EndpointAddr, MsgGrabberState, MsgGrabEvent, stringToEndpointAddr, MsgGadgetStarted, EndpointType, endpointAddrToString, MsgPokerProximity, MsgMouseEvent, MsgNodeHaptic } from './aardvark_protocol';
+import { MessageType, MsgUpdateSceneGraph, EndpointAddr, MsgGrabberState, MsgGrabEvent, stringToEndpointAddr, MsgGadgetStarted, EndpointType, endpointAddrToString, MsgPokerProximity, MsgMouseEvent, MsgNodeHaptic, MsgMasterStartGadget } from './aardvark_protocol';
 
 interface AvGadgetProps
 {
@@ -104,6 +104,7 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 		this.m_endpoint.registerHandler( MessageType.GadgetStarted, this.onGadgetStarted );
 		this.m_endpoint.registerHandler( MessageType.PokerProximity, this.onPokerProximity );
 		this.m_endpoint.registerHandler( MessageType.MouseEvent, this.onMouseEvent );
+		this.m_endpoint.registerHandler( MessageType.MasterStartGadget, this.onMasterStartGadget );
 	}
 
 	public static instance()
@@ -247,6 +248,11 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 		{
 			processor( m.event );
 		}
+	}
+
+	@bind private onMasterStartGadget( type: MessageType, m: MsgMasterStartGadget )
+	{
+		Av().startGadget( m.uri, m.initialHook, m.persistenceUuid, null );
 	}
 
 	private traverseNode( domNode: HTMLElement ): AvNode[]

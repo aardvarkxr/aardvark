@@ -71,13 +71,16 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 		}
 
 		let originPath:string;
+		let hookName:string;
 		switch( this.props.hand )
 		{
 		case EHand.Left:
 			originPath = "/user/hand/left";
+			hookName = "left_hand";
 			break;
 		case EHand.Right:
 			originPath = "/user/hand/right";
+			hookName = "right_hand";
 			break;
 		}
 
@@ -90,7 +93,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 				<AvPoker updateHighlight = { this.updatePokerHighlight } />
 				<AvGrabber updateHighlight = { this.updateGrabberHighlight }
 					radius={0.001} />
-				<AvStandardHook persistentName="base"/>
+				<AvStandardHook persistentName={ hookName }/>
 			</AvOrigin>
 		);
 	}

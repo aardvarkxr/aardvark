@@ -153,24 +153,6 @@ export interface AvNode
 }
 
 
-export interface AvNodeRoot
-{
-	gadgetId: number;
-	root: AvNode;
-	hook?: string;
-}
-
-export interface AvVisualFrame
-{
-	id: string;
-	nodeRoots: AvNodeRoot[];
-}
-
-export interface AvTraversalFrameProcessor
-{
-	( frame: AvVisualFrame ): void;
-}
-
 export interface AvTraversalRenderer
 {
 	(): void;

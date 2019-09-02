@@ -1,8 +1,7 @@
-import { MsgAttachGadgetToHook, MsgDetachGadgetFromHook } from './../common/aardvark-react/aardvark_protocol';
-import { AvGrabEvent } from './../common/aardvark';
+import { MsgAttachGadgetToHook, MsgDetachGadgetFromHook, MsgMasterStartGadget } from './../common/aardvark-react/aardvark_protocol';
 import { MsgGetGadgetManifest, MsgGetGadgetManifestResponse, MsgUpdateSceneGraph, EndpointAddr, endpointAddrToString, MsgGrabEvent, endpointAddrsMatch, MsgGrabberState, MsgGadgetStarted, MsgSetEndpointTypeResponse, MsgPokerProximity, MsgMouseEvent, MsgNodeHaptic } from 'common/aardvark-react/aardvark_protocol';
 import { MessageType, EndpointType, MsgSetEndpointType, Envelope, MsgNewEndpoint, MsgLostEndpoint, parseEnvelope, MsgError } from 'common/aardvark-react/aardvark_protocol';
-import { AvGadgetManifest, AvNode, AvNodeType, AvGrabEventType } from 'common/aardvark';
+import { AvGadgetManifest, AvNode, AvNodeType, AvGrabEvent, AvGrabEventType } from 'common/aardvark';
 import * as express from 'express';
 import * as http from 'http';
 import * as WebSocket from 'ws';
@@ -10,11 +9,9 @@ import bind from 'bind-decorator';
 import axios, { AxiosResponse } from 'axios';
 import * as fs from 'fs';
 import * as path from 'path';
-import { URL, pathToFileURL } from 'url';
+import { URL } from 'url';
 import * as fileUrl from 'file-url';
-import { ENFILE } from 'constants';
-import { threadId } from 'worker_threads';
-import { persistence } from './persistence';
+import { persistence, StoredGadget } from './persistence';
 
 let g_localInstallPathUri = fileUrl( path.resolve( process.cwd() ));
 console.log( "Data directory is", g_localInstallPathUri );
@@ -79,9 +76,43 @@ function getJSONFromUri( uri: string ): Promise< any >
 		{
 			reject( e );
 		}
-} );
+	} );
 }
 
+
+function buildPersistentHookPath( gadgetUuid: string, hookPersistentName: string )
+{
+	return "/gadget/" + gadgetUuid + "/" + hookPersistentName;
+}
+
+interface HookPathParts
+{
+	gadgetUuid: string;
+	hookPersistentName: string;
+}
+
+function parsePersistentHookPath( path: string ): HookPathParts
+{
+	let re = new RegExp( "^/gadget/(.*)/(.*)$" );
+	let match = re.exec( path );
+	if( !match )
+	{
+		// this probably isn't a gadget hook path
+		return null;
+	}
+
+	return (
+		{ 
+			gadgetUuid: match[1],
+			hookPersistentName: match[2],
+		} );
+}
+
+interface GadgetToStart
+{
+	storedData: StoredGadget;
+	hookPath: string;
+}
 
 class CDispatcher
 {
@@ -89,10 +120,10 @@ class CDispatcher
 	private m_monitors: CEndpoint[] = [];
 	private m_renderers: CEndpoint[] = [];
 	private m_gadgets: CEndpoint[] = [];
+	private m_gadgetsByUuid: { [ uuid: string ] : CEndpoint } = {};
 
 	constructor()
 	{
-
 	}
 
 	private getListForType( ept: EndpointType )
@@ -147,6 +178,24 @@ class CDispatcher
 				}
 			}
 		}
+
+		if( ep.getGadgetData() )
+		{
+			this.m_gadgetsByUuid[ ep.getGadgetData().getPersistenceUuid() ] = ep;
+		}
+	}
+
+	public sendToMaster( type: MessageType, m: any )
+	{
+		let ep = this.m_gadgetsByUuid[ "master" ];
+		if( ep )
+		{
+			ep.sendMessage( type, m );
+		}
+		else
+		{
+			console.log( "Tried to send message to master, but there is no master gadget endpoint" );
+		}
 	}
 
 	public removeEndpoint( ep: CEndpoint )
@@ -161,6 +210,11 @@ class CDispatcher
 			}
 		}
 		delete this.m_endpoints[ ep.getId() ];
+
+		if( ep.getGadgetData() )
+		{
+			delete this.m_gadgetsByUuid[ ep.getGadgetData().getPersistenceUuid() ];
+		}
 	}
 
 	private sendStateToMonitor( targetEp: CEndpoint )
@@ -231,14 +285,15 @@ class CDispatcher
 		}
 	}
 
-	public updateGadgetSceneGraph( gadgetId: number, root: AvNode, hook: string )
+	public updateGadgetSceneGraph( gadgetId: number, root: AvNode, hook: string | EndpointAddr )
 	{
 		let env = this.buildUpdateSceneGraphMessage( gadgetId, root, hook );
 		this.sendToAllEndpointsOfType( EndpointType.Monitor, env );
 		this.sendToAllEndpointsOfType( EndpointType.Renderer, env );
 	}
 
-	private buildUpdateSceneGraphMessage( gadgetId: number, root: AvNode, hook: string ): Envelope
+	private buildUpdateSceneGraphMessage( gadgetId: number, root: AvNode, 
+		hook: string | EndpointAddr ): Envelope
 	{
 		let msg: MsgUpdateSceneGraph = 
 		{
@@ -334,6 +389,35 @@ class CDispatcher
 		}
 	}
 
+	public tellMasterToStartGadget( uri: string, initalHook: string, persistenceUuid: string )
+	{
+		if( !this.m_gadgetsByUuid[ persistenceUuid ] )
+		{
+			// we don't have one of these gadgets yet, so tell master to start one
+			let msg: MsgMasterStartGadget =
+			{
+				uri: uri,
+				initialHook: initalHook,
+				persistenceUuid: persistenceUuid,
+			} 
+
+			this.sendToMaster( MessageType.MasterStartGadget, msg );
+		}
+	}
+
+	public findHook( hookInfo:HookPathParts ): EndpointAddr
+	{
+		let gadgetEp = this.m_gadgetsByUuid[ hookInfo.gadgetUuid ];
+		if( gadgetEp )
+		{
+			return gadgetEp.getGadgetData().getHookNodeByPersistentName( hookInfo.hookPersistentName );
+		}
+		else
+		{
+			return null;
+		}
+	}
+
 }
 
 interface HookNodeData
@@ -348,7 +432,8 @@ class CGadgetData
 	private m_ep: CEndpoint;
 	private m_manifest: AvGadgetManifest = null;
 	private m_root: AvNode = null;
-	private m_hook: string = null;
+	private m_hook: string | EndpointAddr = null;
+	private m_mainGrabbable: EndpointAddr = null;
 	private m_persistenceUuid: string = null;
 	private m_dispatcher: CDispatcher = null;
 	private m_hookNodes:HookNodeData[] = [];
@@ -376,8 +461,27 @@ class CGadgetData
 
 		this.m_ep = ep;
 		this.m_gadgetUri = uri;
-		this.m_hook = initialHook;
 		this.m_dispatcher = dispatcher;
+
+		let hookInfo = parsePersistentHookPath( initialHook );
+		if( !hookInfo )
+		{
+			// must not be a gadget hook
+			this.m_hook = initialHook;
+		}
+		else
+		{
+			let hookAddr = this.m_dispatcher.findHook( hookInfo );
+			if( !hookAddr )
+			{
+				console.log( `Expected to find hook ${ initialHook } for ${ this.m_ep.getId() }` );
+			}
+			else
+			{
+				this.m_hook = hookAddr;
+			}
+		}
+
 
 		getJSONFromUri( this.m_gadgetUri + "/gadget_manifest.json")
 		.then( ( response: any ) => 
@@ -398,14 +502,94 @@ class CGadgetData
 	public getHook() { return this.m_hook; }
 	public getHookNodes() { return this.m_hookNodes; }
 	public getPersistenceUuid() { return this.m_persistenceUuid; }
+	public isMaster() { return this.m_persistenceUuid == "master"; }
+
+	public getHookNodeByPersistentName( hookPersistentName: string )
+	{
+		for( let hook of this.m_hookNodes )
+		{
+			if( hook.persistentName == hookPersistentName )
+			{
+				return hook.epa;
+			}
+		}
+
+		return null;
+	}
+
 
 	public updateSceneGraph( root: AvNode ) 
 	{
+		let firstUpdate = this.m_root == null;
+
 		this.m_root = root;
-		this.m_dispatcher.updateGadgetSceneGraph( this.m_ep.getId(), this.m_root, this.m_hook );
+
+		let hookToSend = this.m_hook;
+		if( !firstUpdate )
+		{
+			// Only send endpoint hooks once so the main grabbable
+			// can actually be grabbed.
+			if( typeof this.m_hook !== "string" )
+			{
+				hookToSend = null;
+			}
+		}
+
+		this.m_dispatcher.updateGadgetSceneGraph( this.m_ep.getId(), this.m_root, hookToSend );
 
 		this.m_hookNodes = [];
+		this.m_mainGrabbable = null;
 		this.updateHookNodeList( root );
+
+		if( firstUpdate )
+		{
+			// make sure the hook knows this thing is on it and that this thing knows it's
+			// on the hook
+			if( this.m_hook && typeof this.m_hook !== "string" )
+			{
+				if( this.m_mainGrabbable == null )
+				{
+					console.log( `Gadget ${ this.m_ep.getId() } is on a hook but`
+						+ ` doesn't have a main grabbable` );
+					this.m_hook = null;
+				}
+				else
+				{
+					let event: AvGrabEvent =
+					{
+						type: AvGrabEventType.EndGrab,
+						hookId: this.m_hook,
+						grabbableId: this.m_mainGrabbable,
+					};
+
+					let msg: MsgGrabEvent =
+					{
+						event,
+					}
+
+					let env: Envelope =
+					{
+						type: MessageType.GrabEvent,
+						payloadUnpacked: msg,
+					}
+
+					this.m_dispatcher.forwardToEndpoint( this.m_hook, env );
+					this.m_dispatcher.forwardToEndpoint( this.m_mainGrabbable, env );
+				}
+			}
+
+			let gadgetsToStart = persistence.getGadgets();
+			for( let gadget of gadgetsToStart )
+			{
+				let gadgetHook = persistence.getGadgetHook( gadget.uuid );
+				let hookParts = parsePersistentHookPath( gadgetHook )
+				if( !hookParts && this.isMaster() 
+					|| hookParts && hookParts.gadgetUuid == this.getPersistenceUuid() )
+				{
+					this.m_dispatcher.tellMasterToStartGadget( gadget.uri, gadgetHook, gadget.uuid );
+				}
+			}
+		}
 	}
 
 	private updateHookNodeList( node: AvNode )
@@ -427,6 +611,18 @@ class CGadgetData
 				}
 			)
 		}
+		else if( node.type == AvNodeType.Grabbable )
+		{
+			if( !this.m_mainGrabbable )
+			{
+				this.m_mainGrabbable = 
+				{
+					endpointId: this.m_ep.getId(),
+					type: EndpointType.Node,
+					nodeId: node.id,
+				};
+			}
+		}
 
 		if( node.children )
 		{
@@ -443,14 +639,13 @@ class CGadgetData
 		{
 			if( hookData.epa.nodeId == hookId.nodeId )
 			{
-				return "/gadget/" + this.m_persistenceUuid + "/" + hookData.persistentName;
+				return buildPersistentHookPath( this.m_persistenceUuid, hookData.persistentName );
 			}
 		}
 		return null;
 	}
 
 }
-
 
 interface EnvelopeHandler
 {
@@ -617,11 +812,6 @@ class CEndpoint
 			this.m_gadgetData = new CGadgetData( this, m.gadgetUri, m.initialHook, m.persistenceUuid,
 				this.m_dispatcher );
 
-			if( this.m_gadgetData.getHook() )
-			{
-				msgResponse.initialHook = this.m_gadgetData.getHook();
-			}
-			
 			let extraData = persistence.getGadgetExtraData( this.m_gadgetData.getPersistenceUuid() );
 			if( extraData )
 			{
@@ -826,5 +1016,12 @@ class CServer
 	}
 }
 
+// the VS Code debugger and the source maps get confused if the CWD is not the workspace dir.
+// Instead, just chdir to the data directory if we start in the workspace dir.
+let p = process.cwd();
+if( path.basename( p ) == "websrc" )
+{
+	process.chdir( "../data" );
+}
 
 let server = new CServer( Number( process.env.PORT ) || 8999 );

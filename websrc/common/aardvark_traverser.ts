@@ -1,7 +1,7 @@
 import { MsgUpdateSceneGraph, EndpointType, MsgGrabEvent, endpointAddrsMatch } from 'common/aardvark-react/aardvark_protocol';
 import { CRendererEndpoint } from './aardvark-react/renderer_endpoint';
 import { Av, AvGrabEventType, AvNode, ENodeFlags } from 'common/aardvark';
-import { AvModelInstance, AvNodeRoot, AvNodeType, AvVisualFrame, EHand, EVolumeType, AvGrabEvent } from './aardvark';
+import { AvModelInstance, AvNodeType, EHand, EVolumeType, AvGrabEvent } from './aardvark';
 import { mat4, vec3, quat, vec4 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
 import { EndpointAddr, endpointAddrToString, endpointAddrIsEmpty, MessageType, MsgNodeHaptic, MsgAttachGadgetToHook, MsgDetachGadgetFromHook } from './aardvark-react/aardvark_protocol';
@@ -113,6 +113,13 @@ interface NodeToNodeAnchor_t
 {
 	parentGlobalId: EndpointAddr;
 	parentFromNodeTransform: mat4;
+}
+
+interface AvNodeRoot
+{
+	gadgetId: number;
+	root: AvNode;
+	hook?: string | EndpointAddr;
 }
 
 export class AvDefaultTraverser
@@ -279,6 +286,12 @@ export class AvDefaultTraverser
 
 			if( root.hook )
 			{
+				if( root.root.type == AvNodeType.Grabbable 
+					&& root.root.id != 0 )
+				{
+					// grabbable nodes are what need their origin set
+					this.setHookOrigin( root.hook, root.root );
+				}
 				this.setHookOrigin( root.hook, rootNode );
 			}
 
@@ -375,24 +388,35 @@ export class AvDefaultTraverser
 	}
 
 
-	setHookOrigin( origin: string, node: AvNode )
+	setHookOrigin( origin: string | EndpointAddr, node: AvNode )
 	{
-		let universeFromOrigin = Av().renderer.getUniverseFromOriginTransform( origin );
-		if ( universeFromOrigin )
+		if( typeof origin === "string" )
 		{
-			this.updateTransform( node.globalId, null, new mat4( universeFromOrigin ), null );
-
-			if ( origin == "/user/hand/left" )
+			let universeFromOrigin = Av().renderer.getUniverseFromOriginTransform( origin );
+			if ( universeFromOrigin )
 			{
-				this.m_currentHand = EHand.Left;
+				this.updateTransform( node.globalId, null, new mat4( universeFromOrigin ), null );
+	
+				if ( origin == "/user/hand/left" )
+				{
+					this.m_currentHand = EHand.Left;
+				}
+				else if ( origin == "/user/hand/right" )
+				{
+					this.m_currentHand = EHand.Right;
+				}
+				else
+				{
+					this.m_currentHand = EHand.Invalid;
+				}
 			}
-			else if ( origin == "/user/hand/right" )
+		}
+		else if( origin != null )
+		{
+			this.m_nodeToNodeAnchors[ endpointAddrToString( node.globalId ) ] =
 			{
-				this.m_currentHand = EHand.Right;
-			}
-			else
-			{
-				this.m_currentHand = EHand.Invalid;
+				parentGlobalId: origin,
+				parentFromNodeTransform: mat4.identity,
 			}
 		}
 	}
@@ -744,23 +768,6 @@ export class AvDefaultTraverser
 		{
 			Av().renderer.sendHapticEventForHand( hapticHand, m.amplitude, m.frequency, m.duration );
 		}
-	}
-
-	@bind
-	public newSceneGraph( frame: AvVisualFrame )
-	{
-		if( this.m_inFrameTraversal )
-		{
-			throw "Received a new scene graph during traversal";
-		}
-//		console.log( "New scene graph frame " + frame.id );
-		if( frame.nodeRoots == undefined )
-		{
-			console.log( "roots were undefined");
-			return;
-		}
-
-		this.m_roots = frame.nodeRoots;
 	}
 
 	private isHookInUse( nodeId: EndpointAddr )
