@@ -10,7 +10,7 @@ export interface MessageHandler
 
 export interface OpenHandler
 {
-	():void;
+	( settings: any ):void;
 }
 
 interface PendingGadgetManifestLoad
@@ -90,7 +90,7 @@ export class CAardvarkEndpoint
 		this.m_endpointId = m.endpointId;
 		if( this.m_handshakeComplete )
 		{
-			this.m_handshakeComplete();
+			this.m_handshakeComplete( m.settings );
 		}
 	}
 

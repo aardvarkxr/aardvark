@@ -7,7 +7,7 @@ interface GadgetPersistence
 {
 	uri: string;
 	hook?: string;
-	extraData?: any;
+	settings?: any;
 }
 
 export interface StoredGadget
@@ -77,11 +77,11 @@ class CPersistenceManager
 		}
 	}
 
-	public getGadgetExtraData( uuid: string ): any
+	public getGadgetSettings( uuid: string ): any
 	{
 		if( this.m_gadgets[ uuid ] )
 		{
-			return this.m_gadgets[ uuid ].extraData;
+			return this.m_gadgets[ uuid ].settings;
 		}
 		else
 		{
@@ -100,14 +100,14 @@ class CPersistenceManager
 		this.markDirty();
 	}
 
-	public setGadgetExtraData( uuid: string, extraData: any )
+	public setGadgetSettings( uuid: string, settings: any )
 	{
 		if( !this.m_gadgets[ uuid ] )
 		{
 			throw "unknown persistence uuid";
 		}
 
-		this.m_gadgets[ uuid ].extraData = extraData;
+		this.m_gadgets[ uuid ].settings = settings;
 		this.markDirty();
 	}
 

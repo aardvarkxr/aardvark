@@ -5,11 +5,12 @@ import { Av, AvPanelHandler, AvPokerHandler, AvPanelMouseEventType,
 import { IAvBaseNode, AvBaseNode } from './aardvark_base_node';
 import bind from 'bind-decorator';
 import { CGadgetEndpoint } from './gadget_endpoint';
-import { MessageType, MsgUpdateSceneGraph, EndpointAddr, MsgGrabberState, MsgGrabEvent, stringToEndpointAddr, MsgGadgetStarted, EndpointType, endpointAddrToString, MsgPokerProximity, MsgMouseEvent, MsgNodeHaptic, MsgMasterStartGadget } from './aardvark_protocol';
+import { MessageType, MsgUpdateSceneGraph, EndpointAddr, MsgGrabberState, MsgGrabEvent, stringToEndpointAddr, MsgGadgetStarted, EndpointType, endpointAddrToString, MsgPokerProximity, MsgMouseEvent, MsgNodeHaptic, MsgMasterStartGadget, MsgSaveSettings } from './aardvark_protocol';
 
 interface AvGadgetProps
 {
 	gadgetUri?: string;
+	onSettingsReceived?: ( settings: any ) => void;
 }
 
 export function parseURL(url: string) 
@@ -90,7 +91,7 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 			this.onEndpointOpen );
 	}
 
-	@bind public onEndpointOpen()
+	@bind public onEndpointOpen( settings: any )
 	{
 		this.m_endpoint.getGadgetManifest( this.m_actualGadgetUri )
 		.then( ( manifest: AvGadgetManifest ) =>
@@ -105,6 +106,11 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 		this.m_endpoint.registerHandler( MessageType.PokerProximity, this.onPokerProximity );
 		this.m_endpoint.registerHandler( MessageType.MouseEvent, this.onMouseEvent );
 		this.m_endpoint.registerHandler( MessageType.MasterStartGadget, this.onMasterStartGadget );
+
+		if( this.props.onSettingsReceived )
+		{
+			this.props.onSettingsReceived( settings );
+		}
 	}
 
 	public static instance()
@@ -421,6 +427,16 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 		Av().startGadget( uri, initialHook, "", epToNotify );
 	} 
 
+	public saveSettings( settings: any )
+	{
+		let msg: MsgSaveSettings =
+		{
+			settings,
+		}
+
+		this.m_endpoint.sendMessage( MessageType.SaveSettings, msg );
+	}
+	
 	public render()
 	{
 		return <div>{ this.props.children }</div>;

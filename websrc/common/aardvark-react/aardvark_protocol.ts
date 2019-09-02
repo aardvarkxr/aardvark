@@ -27,6 +27,7 @@ export enum MessageType
 	AttachGadgetToHook = 307,
 	DetachGadgetFromHook = 308,
 	MasterStartGadget = 309, // tells master to start a gadget
+	SaveSettings = 310,
 }
 
 export enum EndpointType
@@ -151,7 +152,7 @@ export interface MsgSetEndpointType
 export interface MsgSetEndpointTypeResponse
 {
 	endpointId: number;
-	extraData?: any;
+	settings?: any;
 }
 
 export interface MsgNewEndpoint
@@ -262,3 +263,7 @@ export interface MsgMasterStartGadget
 	persistenceUuid: string;
 }
 
+export interface MsgSaveSettings
+{
+	settings: any;
+}

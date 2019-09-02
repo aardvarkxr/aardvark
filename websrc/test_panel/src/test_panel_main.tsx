@@ -18,6 +18,11 @@ interface TestPanelState
 	grabbableHighlight: HighlightType;
 }
 
+interface TestSettings
+{
+	count: number;
+}
+
 class TestPanel extends React.Component< {}, TestPanelState >
 {
 	private m_panelId: EndpointAddr;
@@ -35,6 +40,9 @@ class TestPanel extends React.Component< {}, TestPanelState >
 	@bind public incrementCount()
 	{
 		this.setState( { count: this.state.count + 1 } );
+
+		let newSettings: TestSettings = { count: this.state.count + 1 };
+		AvGadget.instance().saveSettings( newSettings );
 	}
 
 	@bind public onHighlightGrabbable( highlight: HighlightType )
@@ -50,6 +58,14 @@ class TestPanel extends React.Component< {}, TestPanelState >
 			allowed: true,
 		};
 		return Promise.resolve( response );
+	}
+
+	@bind public onSettingsReceived( settings: TestSettings )
+	{
+		if( settings )
+		{
+			this.setState( { count: settings.count } );
+		}
 	}
 
 	public render()
@@ -79,7 +95,7 @@ class TestPanel extends React.Component< {}, TestPanelState >
 
 		return (
 			<div className={ sDivClasses } >
-				<AvGadget gadgetUri="">
+				<AvGadget gadgetUri="" onSettingsReceived={ this.onSettingsReceived }>
 					<AvGrabbable updateHighlight={ this.onHighlightGrabbable }
 						onGrabRequest={ this.onGrabRequest }>
 						<AvSphereHandle radius={0.1} />

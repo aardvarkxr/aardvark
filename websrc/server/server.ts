@@ -1,4 +1,4 @@
-import { MsgAttachGadgetToHook, MsgDetachGadgetFromHook, MsgMasterStartGadget } from './../common/aardvark-react/aardvark_protocol';
+import { MsgAttachGadgetToHook, MsgDetachGadgetFromHook, MsgMasterStartGadget, MsgSaveSettings } from './../common/aardvark-react/aardvark_protocol';
 import { MsgGetGadgetManifest, MsgGetGadgetManifestResponse, MsgUpdateSceneGraph, EndpointAddr, endpointAddrToString, MsgGrabEvent, endpointAddrsMatch, MsgGrabberState, MsgGadgetStarted, MsgSetEndpointTypeResponse, MsgPokerProximity, MsgMouseEvent, MsgNodeHaptic } from 'common/aardvark-react/aardvark_protocol';
 import { MessageType, EndpointType, MsgSetEndpointType, Envelope, MsgNewEndpoint, MsgLostEndpoint, parseEnvelope, MsgError } from 'common/aardvark-react/aardvark_protocol';
 import { AvGadgetManifest, AvNode, AvNodeType, AvGrabEvent, AvGrabEventType } from 'common/aardvark';
@@ -682,6 +682,7 @@ class CEndpoint
 		this.registerEnvelopeHandler( MessageType.NodeHaptic, this.onNodeHaptic );
 		this.registerEnvelopeHandler( MessageType.AttachGadgetToHook, this.onAttachGadgetToHook );
 		this.registerEnvelopeHandler( MessageType.DetachGadgetFromHook, this.onDetachGadgetFromHook );
+		this.registerEnvelopeHandler( MessageType.SaveSettings, this.onSaveSettings );
 	}
 
 	public getId() { return this.m_id; }
@@ -812,10 +813,10 @@ class CEndpoint
 			this.m_gadgetData = new CGadgetData( this, m.gadgetUri, m.initialHook, m.persistenceUuid,
 				this.m_dispatcher );
 
-			let extraData = persistence.getGadgetExtraData( this.m_gadgetData.getPersistenceUuid() );
-			if( extraData )
+			let settings = persistence.getGadgetSettings( this.m_gadgetData.getPersistenceUuid() );
+			if( settings )
 			{
-				msgResponse.extraData = extraData;
+				msgResponse.settings = settings;
 			}
 		}
 
@@ -923,6 +924,14 @@ class CEndpoint
 	private detachFromHook( hookId: EndpointAddr )
 	{
 		persistence.setGadgetHook( this.m_gadgetData.getPersistenceUuid(), null );
+	}
+
+	@bind private onSaveSettings( env: Envelope, m: MsgSaveSettings )
+	{
+		if( this.m_gadgetData )
+		{
+			persistence.setGadgetSettings( this.m_gadgetData.getPersistenceUuid(), m.settings );
+		}
 	}
 
 	public sendMessage( type: MessageType, msg: any, target: EndpointAddr = undefined, sender:EndpointAddr = undefined  )
