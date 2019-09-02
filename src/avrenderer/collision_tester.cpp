@@ -92,14 +92,14 @@ std::vector<GrabberCollisionState_t> CCollisionTester::updateGrabberIntersection
 
 		for ( auto & grabbable : m_activeGrabbables )
 		{
-			if ( isSameHand( grabber.hand, grabbable.hand ) )
-				continue;
-
 			if ( grabbable.globalGrabbableId == currentlyGrabbedGrabbableId )
 			{
 				grabberState.grabbables.push_back( grabbable.globalGrabbableId );
 				continue;
 			}
+
+			if ( isSameHand( grabber.hand, grabbable.hand ) )
+				continue;
 
 			for ( auto & handle : grabbable.handles )
 			{

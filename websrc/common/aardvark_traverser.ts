@@ -565,6 +565,13 @@ export class AvDefaultTraverser
 		if( this.m_nodeToNodeAnchors.hasOwnProperty( nodeIdStr ) )
 		{
 			let parentInfo = this.m_nodeToNodeAnchors[ nodeIdStr ];
+
+			let hand = this.m_handDeviceForNode[ endpointAddrToString( parentInfo.parentGlobalId ) ];
+			if( hand != undefined )
+			{
+				this.m_currentHand = hand;
+			}
+
 			if( parentInfo.parentGlobalId.type == EndpointType.Node )
 			{
 				this.addHookInUse( parentInfo.parentGlobalId );
