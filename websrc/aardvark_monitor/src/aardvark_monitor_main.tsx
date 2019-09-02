@@ -17,7 +17,7 @@ interface GadgetData extends EndpointData
 {
 	gadgetUri?: string;
 	gadgetRoot?: AvNode;
-	gadgetHook?: string;
+	gadgetHook?: string | EndpointAddr;
 	grabberIsPressed?: boolean;
 	grabbables?: EndpointAddr[];
 	hooks?: EndpointAddr[];
@@ -307,11 +307,24 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 	public render()
 	{
 		let gadgetData = MonitorStore.getGadgetData( this.props.gadgetId );
+		let hookInfo:string;
+		if( gadgetData.gadgetHook )
+		{
+			if( typeof gadgetData.gadgetHook === "string" )
+			{
+				hookInfo = gadgetData.gadgetHook;
+			}
+			else
+			{
+				hookInfo = endpointAddrToString( gadgetData.gadgetHook );
+			}
+		}
+
 		return <div className="Gadget">
 			Gadget { this.props.gadgetId } 
 			<div className="GadgetName">{ this.state.manifest ? this.state.manifest.name : "???" } 
 				<span className="GadgetUri">({ gadgetData.gadgetUri })</span>
-				<span className="GadgetUri">({ gadgetData.gadgetHook })</span>
+				{ hookInfo && <span className="GadgetUri">({ hookInfo })</span> }
 			</div>
 			{ gadgetData.gadgetRoot && this.renderNode( gadgetData.gadgetRoot ) }
 			{ this.renderGrabberState() }
