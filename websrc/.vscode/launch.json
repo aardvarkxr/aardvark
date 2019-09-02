@@ -28,6 +28,18 @@
 			"sourceMaps": true,
 			"port": 9229,
 			"protocol": "auto"
+		},
+		{
+			"type": "node",
+			"request": "launch",
+			"name": "Start aardvark server in node",
+			"sourceMaps": true,
+			"program": "${workspaceFolder}/server/server.ts",
+			"outFiles": 
+			[ 
+				"${workspaceFolder}/../data/**/*.js",
+				"${workspaceFolder}/../data/**/*.js.map" 
+			]
 		}
 	]
 }
