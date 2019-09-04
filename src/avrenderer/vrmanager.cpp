@@ -12,6 +12,7 @@ void CVRManager::init()
 	vr::VRInput()->GetActionSetHandle( "/actions/aardvark", &m_actionSet );
 	vr::VRInput()->GetActionHandle( "/actions/aardvark/out/haptic", &m_actionHaptic );
 	vr::VRInput()->GetActionHandle( "/actions/aardvark/in/grab", &m_actionGrab );
+	vr::VRInput()->GetActionHandle( "/actions/aardvark/in/edit", &m_actionEdit );
 	vr::VRInput()->GetInputSourceHandle( "/user/hand/left", &m_leftHand );
 	vr::VRInput()->GetInputSourceHandle( "/user/hand/right", &m_rightHand );
 }
@@ -35,6 +36,11 @@ bool CVRManager::getUniverseFromOrigin( const std::string & originPath, glm::mat
 bool CVRManager::isGrabPressed( EHand hand )
 {
 	return isGrabPressed( getDeviceForHand( hand ) );
+}
+
+bool CVRManager::isEditPressed( EHand hand )
+{
+	return isEditPressed( getDeviceForHand( hand ) );
 }
 
 glm::mat4 CVRManager::glmMatFromVrMat( const vr::HmdMatrix34_t & mat )
@@ -101,8 +107,10 @@ void CVRManager::doInputWork()
 
 	vr::EVRInputError err = vr::VRInput()->UpdateActionState( actionSet, sizeof( vr::VRActiveActionSet_t ), 2 );
 
-	m_leftPressed = GetAction( m_actionGrab, m_leftHand );
-	m_rightPressed = GetAction( m_actionGrab, m_rightHand );
+	m_leftPressed	= GetAction( m_actionGrab, m_leftHand );
+	m_rightPressed	= GetAction( m_actionGrab, m_rightHand );
+	m_leftEdit		= GetAction( m_actionEdit, m_leftHand );
+	m_rightEdit		= GetAction( m_actionEdit, m_rightHand );
 }
 
 bool CVRManager::isGrabPressed( vr::VRInputValueHandle_t whichHand )
@@ -114,6 +122,22 @@ bool CVRManager::isGrabPressed( vr::VRInputValueHandle_t whichHand )
 	else if ( whichHand == m_rightHand )
 	{
 		return m_rightPressed;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+bool CVRManager::isEditPressed( vr::VRInputValueHandle_t whichHand )
+{
+	if ( whichHand == m_leftHand )
+	{
+		return m_leftEdit;
+	}
+	else if ( whichHand == m_rightHand )
+	{
+		return m_rightEdit;
 	}
 	else
 	{

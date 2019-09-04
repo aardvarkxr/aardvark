@@ -13,6 +13,10 @@
       {
          "name" : "/actions/aardvark/in/grab",
          "type" : "boolean"
+      },
+      {
+         "name" : "/actions/aardvark/in/edit",
+         "type" : "boolean"
       }
    ],
    "default_bindings" : [
@@ -25,6 +29,7 @@
       {
          "/actions/aardvark" : "Aardvark Actions",
          "/actions/aardvark/in/grab" : "Grab",
+         "/actions/aardvark/in/edit" : "Edit This Hand",
          "/actions/aardvark/out/haptic" : "Haptic Feedback",
          "language_tag" : "en_US"
       }

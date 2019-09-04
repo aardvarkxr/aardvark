@@ -660,6 +660,24 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 	} );
 
 
+	RegisterFunction( container, "isEditPressed", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 1 )
+		{
+			exception = "Invalid arguments";
+			return;
+		}
+
+		if ( !arguments[ 0 ]->IsInt() )
+		{
+			exception = "argument must be a number (and a hand enum)";
+		}
+
+		EHand hand = (EHand)arguments[ 0 ]->GetIntValue();
+		retval = CefV8Value::CreateBool( m_vrManager->isEditPressed( hand ) );
+	} );
+
+
 	return true;
 }
 

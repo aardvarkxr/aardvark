@@ -1,5 +1,5 @@
 import { MsgAttachGadgetToHook, MsgDetachGadgetFromHook, MsgMasterStartGadget, MsgSaveSettings } from './../common/aardvark-react/aardvark_protocol';
-import { MsgGetGadgetManifest, MsgGetGadgetManifestResponse, MsgUpdateSceneGraph, EndpointAddr, endpointAddrToString, MsgGrabEvent, endpointAddrsMatch, MsgGrabberState, MsgGadgetStarted, MsgSetEndpointTypeResponse, MsgPokerProximity, MsgMouseEvent, MsgNodeHaptic } from 'common/aardvark-react/aardvark_protocol';
+import { MsgGetGadgetManifest, MsgGetGadgetManifestResponse, MsgUpdateSceneGraph, EndpointAddr, endpointAddrToString, MsgGrabEvent, endpointAddrsMatch, MsgGrabberState, MsgGadgetStarted, MsgSetEndpointTypeResponse, MsgPokerProximity, MsgMouseEvent, MsgNodeHaptic, MsgSetEditMode } from 'common/aardvark-react/aardvark_protocol';
 import { MessageType, EndpointType, MsgSetEndpointType, Envelope, MsgNewEndpoint, MsgLostEndpoint, parseEnvelope, MsgError } from 'common/aardvark-react/aardvark_protocol';
 import { AvGadgetManifest, AvNode, AvNodeType, AvGrabEvent, AvGrabEventType } from 'common/aardvark';
 import * as express from 'express';
@@ -683,6 +683,7 @@ class CEndpoint
 		this.registerEnvelopeHandler( MessageType.AttachGadgetToHook, this.onAttachGadgetToHook );
 		this.registerEnvelopeHandler( MessageType.DetachGadgetFromHook, this.onDetachGadgetFromHook );
 		this.registerEnvelopeHandler( MessageType.SaveSettings, this.onSaveSettings );
+		this.registerEnvelopeHandler( MessageType.SetEditMode, this.onSetEditMode );
 	}
 
 	public getId() { return this.m_id; }
@@ -932,6 +933,11 @@ class CEndpoint
 		{
 			persistence.setGadgetSettings( this.m_gadgetData.getPersistenceUuid(), m.settings );
 		}
+	}
+
+	@bind private onSetEditMode( env: Envelope, m: MsgSetEditMode )
+	{
+		this.m_dispatcher.forwardToEndpoint( m.nodeId, env );
 	}
 
 	public sendMessage( type: MessageType, msg: any, target: EndpointAddr = undefined, sender:EndpointAddr = undefined  )

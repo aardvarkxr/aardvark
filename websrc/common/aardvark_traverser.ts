@@ -1,4 +1,4 @@
-import { MsgUpdateSceneGraph, EndpointType, MsgGrabEvent, endpointAddrsMatch } from 'common/aardvark-react/aardvark_protocol';
+import { MsgUpdateSceneGraph, EndpointType, MsgGrabEvent, endpointAddrsMatch, MsgSetEditMode } from 'common/aardvark-react/aardvark_protocol';
 import { CRendererEndpoint } from './aardvark-react/renderer_endpoint';
 import { Av, AvGrabEventType, AvNode, ENodeFlags } from 'common/aardvark';
 import { AvModelInstance, AvNodeType, EHand, EVolumeType, AvGrabEvent } from './aardvark';
@@ -137,6 +137,8 @@ export class AvDefaultTraverser
 	private m_nodeToNodeAnchors: { [ nodeGlobalId: string ]: NodeToNodeAnchor_t } = {};
 	private m_hooksInUse: EndpointAddr[] = [];
 	private m_endpoint: CRendererEndpoint = null;
+	private m_editMode: { [hand: number]: boolean } = { };
+	private m_editableNodesForHand: { [ hand: number ]: AvNode[] } = {}
 
 	constructor()
 	{
@@ -148,6 +150,9 @@ export class AvDefaultTraverser
 				this.grabEvent( m.event );
 			} );
 		this.m_endpoint.registerHandler( MessageType.NodeHaptic, this.onNodeHaptic );
+
+		this.m_editMode[ EHand.Left ] = false;
+		this.m_editMode[ EHand.Right ] = false;
 	}
 
 	@bind onEndpointOpen()
@@ -208,6 +213,9 @@ export class AvDefaultTraverser
 		this.m_currentGrabbableGlobalId = null;
 		this.m_universeFromNodeTransforms = {};
 		this.m_renderList = [];
+		this.m_editableNodesForHand[ EHand.Invalid ] = [];
+		this.m_editableNodesForHand[ EHand.Left ] = [];
+		this.m_editableNodesForHand[ EHand.Right ] = [];
 		this.clearHooksInUse();
 
 		for ( let gadgetId in this.m_roots )
@@ -227,8 +235,30 @@ export class AvDefaultTraverser
 	
 		Av().renderer.renderList( this.m_renderList );
 
+		this.updateEditMode( EHand.Left );
+		this.updateEditMode( EHand.Right );
 		this.updateGrabberIntersections();
 		this.updatePokerProximity();
+	}
+
+	private updateEditMode( hand: EHand )
+	{
+		let editMode = Av().renderer.isEditPressed( hand );
+		if( editMode != this.m_editMode[ hand ] )
+		{
+			for( let node of this.m_editableNodesForHand[ hand ] )
+			{
+				let m: MsgSetEditMode =
+				{
+					nodeId: node.globalId,
+					editMode,
+				}
+
+				this.m_endpoint.sendMessage( MessageType.SetEditMode, m );
+			}
+
+			this.m_editMode[ hand ] = editMode;
+		}
 	}
 
 	private updateGrabberIntersections()
@@ -363,6 +393,10 @@ export class AvDefaultTraverser
 		}
 
 		this.m_handDeviceForNode[ endpointAddrToString( node.globalId ) ] = this.m_currentHand;
+		if( node.flags & ENodeFlags.Editable )
+		{
+			this.m_editableNodesForHand[ this.m_currentHand ].push( node );
+		}
 
 		if( node.children )
 		{

@@ -28,6 +28,7 @@ export enum MessageType
 	DetachGadgetFromHook = 308,
 	MasterStartGadget = 309, // tells master to start a gadget
 	SaveSettings = 310,
+	SetEditMode = 311,
 }
 
 export enum EndpointType
@@ -266,4 +267,10 @@ export interface MsgMasterStartGadget
 export interface MsgSaveSettings
 {
 	settings: any;
+}
+
+export interface MsgSetEditMode
+{
+	nodeId: EndpointAddr;
+	editMode: boolean;
 }

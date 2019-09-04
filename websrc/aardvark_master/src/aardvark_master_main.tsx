@@ -25,6 +25,7 @@ interface DefaultHandState
 {
 	grabberHighlight: GrabberHighlight;
 	pokerHighlight: boolean;
+	editMode: boolean;
 }
 
 class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
@@ -37,6 +38,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 		{ 
 			grabberHighlight: GrabberHighlight.None,
 			pokerHighlight: false,
+			editMode: false,
 		};
 	}
 
@@ -50,7 +52,11 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 		this.setState( { pokerHighlight: newHighlight } );
 	}
 
-	
+	@bind onEditMode( editMode: boolean )
+	{
+		this.setState( { editMode } );
+	}
+
 	public render()
 	{
 		let modelUri = "https://aardvark.install/models/sphere/sphere.glb";
@@ -85,7 +91,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 		}
 
 		return (
-			<AvOrigin path={ originPath } >
+			<AvOrigin path={ originPath } onEditMode = { this.onEditMode } >
 				<AvTransform uniformScale= { 0.01 } >
 					<AvModel uri={ modelUri }/>
 				</AvTransform>
@@ -94,6 +100,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 				<AvGrabber updateHighlight = { this.updateGrabberHighlight }
 					radius={0.001} />
 				<AvStandardHook persistentName={ hookName }/>
+				{ this.state.editMode && <ControlPanel />}
 			</AvOrigin>
 		);
 	}
@@ -161,14 +168,14 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 	public render()
 	{
 		return (
-			<AvOrigin path="/user/hand/left">
+			<AvTransform>
 				<AvTransform translateZ={-0.1} rotateX={ 45 }>
 					<AvGrabButton modelUri="https://aardvark.install/models/gear.glb" 
 						onTrigger={ this.onActivateControlPanel } />
 				</AvTransform>;
 				{ this.renderPanel() }
 
-			</AvOrigin>	);
+			</AvTransform>	);
 	}
 }
 

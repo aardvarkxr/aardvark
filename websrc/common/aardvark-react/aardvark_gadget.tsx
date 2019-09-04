@@ -1,11 +1,11 @@
 import * as React from 'react';
 
 import { Av, AvPanelHandler, AvPokerHandler, AvPanelMouseEventType, 
-	AvGrabEventProcessor, AvGrabberProcessor, AvGrabEventType, AvGrabEvent, AvGadgetManifest, AvNode, AvNodeType, AvStartGadgetCallback, AvPanelMouseEvent, ENodeFlags } from 'common/aardvark';
+	AvGrabEventProcessor, AvGrabberProcessor, AvGrabEventType, AvGrabEvent, AvGadgetManifest, AvNode, AvNodeType, AvStartGadgetCallback, AvPanelMouseEvent, ENodeFlags, AvEditModeCallback } from 'common/aardvark';
 import { IAvBaseNode, AvBaseNode } from './aardvark_base_node';
 import bind from 'bind-decorator';
 import { CGadgetEndpoint } from './gadget_endpoint';
-import { MessageType, MsgUpdateSceneGraph, EndpointAddr, MsgGrabberState, MsgGrabEvent, stringToEndpointAddr, MsgGadgetStarted, EndpointType, endpointAddrToString, MsgPokerProximity, MsgMouseEvent, MsgNodeHaptic, MsgMasterStartGadget, MsgSaveSettings } from './aardvark_protocol';
+import { MessageType, MsgUpdateSceneGraph, EndpointAddr, MsgGrabberState, MsgGrabEvent, stringToEndpointAddr, MsgGadgetStarted, EndpointType, endpointAddrToString, MsgPokerProximity, MsgMouseEvent, MsgNodeHaptic, MsgMasterStartGadget, MsgSaveSettings, MsgSetEditMode } from './aardvark_protocol';
 
 interface AvGadgetProps
 {
@@ -53,6 +53,7 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 	m_pokerProcessors: {[nodeId:number]: AvPokerHandler } = {};
 	m_panelProcessors: {[nodeId:number]: AvPanelHandler } = {};
 	m_startGadgetCallbacks: {[nodeId:number]: AvStartGadgetCallback } = {};
+	m_editModeCallbacks: {[nodeId:number]: AvEditModeCallback } = {};
 
 	constructor( props: any )
 	{
@@ -106,6 +107,7 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 		this.m_endpoint.registerHandler( MessageType.PokerProximity, this.onPokerProximity );
 		this.m_endpoint.registerHandler( MessageType.MouseEvent, this.onMouseEvent );
 		this.m_endpoint.registerHandler( MessageType.MasterStartGadget, this.onMasterStartGadget );
+		this.m_endpoint.registerHandler( MessageType.SetEditMode, this.onSetEditMode );
 
 		if( this.props.onSettingsReceived )
 		{
@@ -148,6 +150,7 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 		if( node.m_nodeId )
 		{
 			delete this.m_registeredNodes[ node.m_nodeId ];
+			delete this.m_editModeCallbacks[ node.m_nodeId ];
 			node.m_nodeId = undefined;
 		}
 
@@ -175,6 +178,12 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 	public setGrabberProcessor( nodeId: number, processor: AvGrabberProcessor )
 	{
 		this.m_grabberProcessors[ nodeId ] = processor;
+		this.markDirty();
+	}
+
+	public setEditModeCallback( nodeId: number, callback: AvEditModeCallback )
+	{
+		this.m_editModeCallbacks[ nodeId ] = callback;
 		this.markDirty();
 	}
 
@@ -259,6 +268,15 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 	@bind private onMasterStartGadget( type: MessageType, m: MsgMasterStartGadget )
 	{
 		Av().startGadget( m.uri, m.initialHook, m.persistenceUuid, null );
+	}
+
+	@bind private onSetEditMode( type: MessageType, m: MsgSetEditMode )
+	{
+		let callback = this.m_editModeCallbacks[ m.nodeId.nodeId ];
+		if( callback )
+		{
+			callback( m.editMode );
+		}
 	}
 
 	private traverseNode( domNode: HTMLElement ): AvNode[]
@@ -436,7 +454,7 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 
 		this.m_endpoint.sendMessage( MessageType.SaveSettings, msg );
 	}
-	
+
 	public render()
 	{
 		return <div>{ this.props.children }</div>;

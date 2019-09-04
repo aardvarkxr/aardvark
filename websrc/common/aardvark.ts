@@ -132,6 +132,7 @@ export interface AvVolume
 export enum ENodeFlags
 {
 	Visible = 1 << 0,
+	Editable = 1 << 1,
 }
 
 export interface AvNode
@@ -198,6 +199,8 @@ interface AvRenderer
 
 	startGrab( grabberGlobalId: EndpointAddr, grabbableGlobalId: EndpointAddr  ): void;
 	endGrab( grabberGlobalId: EndpointAddr, grabbableGlobalId: EndpointAddr  ): void;
+
+	isEditPressed( hand: EHand ): boolean;
 }
 
 export interface AvStartGadgetCallback
@@ -244,6 +247,11 @@ export interface AvSharedTextureInfo
 export interface AvBrowserTextureCallback
 {
 	( textureInfo: AvSharedTextureInfo ): void;
+}
+
+export interface AvEditModeCallback
+{
+	( editMode: boolean ): void;
 }
 
 export interface Aardvark
