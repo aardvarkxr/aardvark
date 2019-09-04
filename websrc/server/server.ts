@@ -652,6 +652,11 @@ interface EnvelopeHandler
 	(env: Envelope, m: any): void;
 }
 
+interface ForwardHandler
+{
+	(m: any ): ( EndpointAddr | EndpointType ) [];
+}
+
 class CEndpoint
 {
 	private m_ws: WebSocket = null;
@@ -659,7 +664,8 @@ class CEndpoint
 	private m_type = EndpointType.Unknown;
 	private m_dispatcher: CDispatcher = null;
 	private m_gadgetData: CGadgetData = null;
-	private m_envelopeHandlers: { [ type:number]: EnvelopeHandler } = {}
+	private m_envelopeHandlers: { [ type:number]: EnvelopeHandler } = {};
+	private m_forwardHandlers: { [type: number]: ForwardHandler } = {};
 
 	constructor( ws: WebSocket, id: number, dispatcher: CDispatcher )
 	{
@@ -674,16 +680,31 @@ class CEndpoint
 		this.registerEnvelopeHandler( MessageType.SetEndpointType, this.onSetEndpointType );
 		this.registerEnvelopeHandler( MessageType.GetGadgetManifest, this.onGetGadgetManifest );
 		this.registerEnvelopeHandler( MessageType.UpdateSceneGraph, this.onUpdateSceneGraph );
-		this.registerEnvelopeHandler( MessageType.GrabberState, this.onGrabberState );
+		this.registerForwardHandler( MessageType.GrabberState, ( m: MsgGrabberState ) =>
+		{
+			return [m.grabberId, EndpointType.Monitor ];
+		} );
 		this.registerEnvelopeHandler( MessageType.GrabEvent, this.onGrabEvent );
 		this.registerEnvelopeHandler( MessageType.GadgetStarted, this.onGadgetStarted );
-		this.registerEnvelopeHandler( MessageType.PokerProximity, this.onPokerProximity );
-		this.registerEnvelopeHandler( MessageType.MouseEvent, this.onMouseEvent );
-		this.registerEnvelopeHandler( MessageType.NodeHaptic, this.onNodeHaptic );
+		this.registerForwardHandler( MessageType.PokerProximity, ( m: MsgPokerProximity ) =>
+		{
+			return [ m.pokerId, EndpointType.Monitor ];
+		} );
+		this.registerForwardHandler( MessageType.MouseEvent, ( m: MsgMouseEvent ) =>
+		{
+			return [ m.event.panelId, EndpointType.Monitor ];
+		} );
+		this.registerForwardHandler( MessageType.NodeHaptic, ( m: MsgNodeHaptic ) =>
+		{
+			return [ EndpointType.Monitor, EndpointType.Renderer ];
+		} );
 		this.registerEnvelopeHandler( MessageType.AttachGadgetToHook, this.onAttachGadgetToHook );
 		this.registerEnvelopeHandler( MessageType.DetachGadgetFromHook, this.onDetachGadgetFromHook );
 		this.registerEnvelopeHandler( MessageType.SaveSettings, this.onSaveSettings );
-		this.registerEnvelopeHandler( MessageType.SetEditMode, this.onSetEditMode );
+		this.registerForwardHandler( MessageType.SetEditMode, (m:MsgSetEditMode) =>
+		{
+			return [ m.nodeId ];
+		});
 	}
 
 	public getId() { return this.m_id; }
@@ -706,6 +727,34 @@ class CEndpoint
 		else
 		{
 			return false;
+		}
+	}
+	private registerForwardHandler( type: MessageType, handler: ForwardHandler )
+	{
+		this.m_forwardHandlers[ type ] = handler;
+		this.registerEnvelopeHandler( type, this.onForwardedMessage );
+	}
+
+	@bind private onForwardedMessage( env: Envelope, m: any )
+	{
+		let handler = this.m_forwardHandlers[ env.type ];
+		if( handler )
+		{
+			let eps = handler( m );
+			if( eps )
+			{
+				for( let ep of eps )
+				{
+					if( typeof ep === "object" )
+					{
+						this.m_dispatcher.forwardToEndpoint( ep as EndpointAddr, env );
+					}
+					else if( typeof ep === "number" )
+					{
+						this.m_dispatcher.sendToAllEndpointsOfType( ep as EndpointType, env );
+					}
+				}
+			}
 		}
 	}
 
@@ -830,30 +879,6 @@ class CEndpoint
 			this.m_dispatcher.buildNewEndpointMessage( this ) );
 	}
 
-	@bind private onGrabberState( env: Envelope, m: MsgGrabberState )
-	{
-		this.m_dispatcher.forwardToEndpoint( m.grabberId, env );
-		this.m_dispatcher.sendToAllEndpointsOfType( EndpointType.Monitor, env );
-	}
-
-	@bind private onPokerProximity( env: Envelope, m: MsgPokerProximity )
-	{
-		this.m_dispatcher.forwardToEndpoint( m.pokerId, env );
-		this.m_dispatcher.sendToAllEndpointsOfType( EndpointType.Monitor, env );
-	}
-
-	@bind private onMouseEvent( env: Envelope, m: MsgMouseEvent )
-	{
-		this.m_dispatcher.forwardToEndpoint( m.event.panelId, env );
-		this.m_dispatcher.sendToAllEndpointsOfType( EndpointType.Monitor, env );
-	}
-
-	@bind private onNodeHaptic( env: Envelope, m: MsgNodeHaptic )
-	{
-		this.m_dispatcher.sendToAllEndpointsOfType( EndpointType.Monitor, env );
-		this.m_dispatcher.sendToAllEndpointsOfType( EndpointType.Renderer, env );
-	}
-
 	@bind private onGrabEvent( env: Envelope, m: MsgGrabEvent )
 	{
 		if( m.event.grabberId )
@@ -933,11 +958,6 @@ class CEndpoint
 		{
 			persistence.setGadgetSettings( this.m_gadgetData.getPersistenceUuid(), m.settings );
 		}
-	}
-
-	@bind private onSetEditMode( env: Envelope, m: MsgSetEditMode )
-	{
-		this.m_dispatcher.forwardToEndpoint( m.nodeId, env );
 	}
 
 	public sendMessage( type: MessageType, msg: any, target: EndpointAddr = undefined, sender:EndpointAddr = undefined  )
