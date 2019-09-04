@@ -13,6 +13,8 @@
 
 
 
+
+
 working on animations and moving transform math to C++
 * I have a CTransform class that can be one of null (i.e. just use the parent), origin (set an origin path), matrix, or TRS.
 * Need to write tests for that an implement the manager for them.
@@ -26,11 +28,9 @@ working on animations and moving transform math to C++
 
 animation
 inventories/catalogs
-persistence
 npm module for aardvark classes
-npm tool for creating aardvark apps
+npm tool for creating aardvark gadgets
 make it work in release
-figure out how to get command line options into the renderer. Maybe init it whena function is called?
 
 
 
@@ -45,8 +45,9 @@ Step 8 - Building a gadget from a URI (done)
 Step 9 - Hooks on gadgets
 Step 10 - Spawning gadgets from a gadget - Launcher permission?
 Step 11 - bootstrapping from a list of gadgets
-
 Step 12 - persistence of your current gadget set
+
+Step 13 - Make it easier to edit transforms - start with monitors editing them?
 
 Step 50 - Make the pixels/input layer on top of other scene apps
 
