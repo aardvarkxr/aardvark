@@ -1,6 +1,9 @@
 ========= DEAL WITH THIS NEXT ===========
 
-Edit mode isn't starting in the right state for new nodes or new gadgets.
+Edit mode isn't starting in the right state for new gadgets.
+
+Need to add rotation to debug transforms
+Need to add copy/pasteable AvTransform props for debug transforms.
 
 =========================================
 
