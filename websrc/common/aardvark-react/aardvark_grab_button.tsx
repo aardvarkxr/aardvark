@@ -12,6 +12,7 @@ interface GrabButtonProps
 {
 	onTrigger: () => void;
 	modelUri?: string;
+	radius?: number;
 }
 
 interface GrabButtonState
@@ -54,7 +55,7 @@ export class AvGrabButton extends React.Component< GrabButtonProps, GrabButtonSt
 	{
 		return <div>
 				<AvGrabbable updateHighlight={ this.updateHighlight } onGrabRequest={ this.onGrabRequest }>
-					<AvSphereHandle radius={0.1} />
+					<AvSphereHandle radius={ this.props.radius ? this.props.radius : 0.1 } />
 				</AvGrabbable>
 				<AvTransform uniformScale={ this.state.highlight == HighlightType.InRange ? 1.1 : 1.0 } >
 					{ this.props.modelUri && <AvModel uri={ this.props.modelUri } /> }

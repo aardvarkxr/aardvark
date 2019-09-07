@@ -13,6 +13,7 @@ interface StandardHookProps
 interface StandardHookState
 {
 	highlight: HookHighlight;
+	editMode: boolean;
 }
 
 export class AvStandardHook extends React.Component< StandardHookProps, StandardHookState >
@@ -24,6 +25,7 @@ export class AvStandardHook extends React.Component< StandardHookProps, Standard
 		this.state = 
 		{ 
 			highlight: HookHighlight.None,
+			editMode: false,
 		};
 	}
 
@@ -34,22 +36,28 @@ export class AvStandardHook extends React.Component< StandardHookProps, Standard
 
 	public renderModel()
 	{
+		let showHook = false;
+		let hookScale = 1.0;
 		switch( this.state.highlight )
 		{
 			default:
 			case HookHighlight.None:
 			case HookHighlight.Occupied:
-				return null;
+				break;
 			
 			case HookHighlight.GrabInProgress:
-				return <AvTransform uniformScale={0.1}>
-						<AvModel uri="https://aardvark.install/models/hook.glb" />
-					</AvTransform>;
+				showHook = true;
+				break;
 
 			case HookHighlight.InRange:
-				return <AvTransform uniformScale={0.15}>
-						<AvModel uri="https://aardvark.install/models/hook.glb" />
-					</AvTransform>;
+				showHook = true;
+		}
+
+		if( showHook || this.state.editMode )
+		{
+			return <AvTransform uniformScale={ hookScale }>
+					<AvModel uri="https://aardvark.install/models/hook.glb" />
+				</AvTransform>;
 		}
 	}
 
@@ -58,7 +66,8 @@ export class AvStandardHook extends React.Component< StandardHookProps, Standard
 	{
 		return <div>
 				<AvHook updateHighlight={ this.updateHookHighlight } radius={ 0.08 } 
-					persistentName={ this.props.persistentName } />
+					persistentName={ this.props.persistentName } 
+					onEditMode = { ( editMode: boolean ) => { this.setState( { editMode } ); } }/>
 				{ this.renderModel() }
 			</div>;
 	}

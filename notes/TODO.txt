@@ -1,5 +1,6 @@
 ========= DEAL WITH THIS NEXT ===========
 
+Edit mode isn't starting in the right state for new nodes or new gadgets.
 
 =========================================
 
@@ -49,6 +50,7 @@ Step 12 - persistence of your current gadget set
 
 Step 13 - Make it easier to edit transforms - start with monitors editing them?
 
+Step 40 - Figure out how to make the server start/stop automatically on end user machines
 Step 50 - Make the pixels/input layer on top of other scene apps
 
 

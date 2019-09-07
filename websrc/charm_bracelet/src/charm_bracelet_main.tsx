@@ -9,21 +9,58 @@ import { AvStandardHook } from 'common/aardvark-react/aardvark_standard_hook';
 import { AvSphereHandle } from 'common/aardvark-react/aardvark_handles';
 import { AvModel } from 'common/aardvark-react/aardvark_model';
 import { endpointAddrToString } from 'common/aardvark-react/aardvark_protocol';
+import { AvGrabButton } from 'common/aardvark-react/aardvark_grab_button';
 
 
 interface CharmBraceletState
 {
 	highlight: HighlightType;
+	charmCount: number;
+	editMode: boolean;
+}
+
+interface CharmBraceletSettings
+{
+	charmCount: number;
+}
+
+interface CharmLocation
+{
+	x: number;
+	y: number;
+	z: number;
+	rot: number;
+}
+
+let charmLocations: { [charmCount: number]: CharmLocation[] } =
+{
+	1: [ { x: 0, y: 0.1, z: 0.1, rot: 0 } ],
+	2: [ { x: 0, y: 0.1, z: 0.1, rot: 0 }, { x: 0.1, y: 0.1, z: 0.1, rot: 0 } ],
+	3: [ 
+		{ x: 0, y: 0.1, z: 0.1, rot: 0 }, 
+		{ x: 0.1, y: 0.1, z: 0.1, rot: 0 }, 
+		{ x: -0.1, y: 0.1, z: 0.1, rot: 0 } 
+	],
+};
+
+let charmLocationMax = 0;
+for( let x in charmLocations )
+{
+	charmLocationMax = Math.max( parseInt( x ), charmLocationMax );
 }
 
 class CharmBracelet extends React.Component< {}, CharmBraceletState >
 {
+	private m_dirty = false;
+
 	constructor( props: any )
 	{
 		super( props );
 		this.state = 
 		{ 
 			highlight: HighlightType.None,
+			charmCount: 1,
+			editMode: false,
 		};
 	}
 
@@ -32,18 +69,90 @@ class CharmBracelet extends React.Component< {}, CharmBraceletState >
 		this.setState( { highlight: newHighlight } );
 	}
 
+	@bind onSettingsReceived( settings: CharmBraceletSettings )
+	{
+		this.setState( { charmCount: settings.charmCount })
+	}
+
+	@bind onPlus()
+	{
+		if( this.state.charmCount < charmLocationMax )
+		{
+			this.setState( { charmCount: this.state.charmCount + 1 } );
+			this.m_dirty = true;
+		}
+
+	}
+
+	@bind onMinus()
+	{
+		if( this.state.charmCount > 1 )
+		{
+			this.setState( { charmCount: this.state.charmCount - 1 } );
+			this.m_dirty = true;
+		}
+	}
+
+	@bind onEditMode( editMode: boolean )
+	{
+		this.setState( { editMode } );
+
+		if( !editMode && this.m_dirty )
+		{
+			this.m_dirty = false;
+
+			let settings: CharmBraceletSettings =
+			{
+				charmCount: this.state.charmCount,
+			};
+			AvGadget.instance().saveSettings( settings );
+		}
+	}
+
+	private renderControls()
+	{
+		if( !this.state.editMode )
+			return null;
+
+		return <div>
+			<AvTransform translateZ={0.2} translateY={0.1} translateX={ 0.05 }>
+				<AvGrabButton modelUri="https://aardvark.install/models/plus.glb" 
+					onTrigger={ this.onPlus } />
+			</AvTransform>
+			<AvTransform translateZ={0.2} translateY={0.1} translateX={ -0.05 }>
+				<AvGrabButton modelUri="https://aardvark.install/models/minus.glb" 
+					onTrigger={ this.onMinus } />
+			</AvTransform>
+
+		</div>
+	}
+
 	public render()
 	{
 		let grabbedMode = this.state.highlight == HighlightType.Grabbed;
+		let charms: JSX.Element[] = [];
+
+		let locs = charmLocations[ this.state.charmCount ];
+		for( let i = 0; i < this.state.charmCount; i++ )
+		{
+			let loc = locs[ i ];
+			charms.push(
+				<AvTransform translateX={ loc.x } translateY={ loc.y } translateZ={ loc.z }  
+					visible={ !grabbedMode || this.state.editMode } key={ i }>
+					<AvStandardHook persistentName={ "hook" + i } />
+				</AvTransform>
+				);
+		}
+
 		return (
 			<div className="FullPage" >
-				<AvGadget>
-					<AvGrabbable updateHighlight={ this.onGrabbableHighlight }>
+				<AvGadget onSettingsReceived={ this.onSettingsReceived }>
+					<AvGrabbable updateHighlight={ this.onGrabbableHighlight }
+						onEditMode={ this.onEditMode } >
 						<AvSphereHandle radius={0.1} />
-						<AvTransform translateY={ -0.2 } translateZ = {0.2} visible={ !grabbedMode }>
-							<AvStandardHook persistentName="hook0" />
-						</AvTransform>
+						{ charms }
 						{ grabbedMode && <AvModel uri="http://aardvark.install/models/bracelet.glb" /> }
+						{ this.renderControls() }
 					</AvGrabbable>
 				</AvGadget>
 			</div>
