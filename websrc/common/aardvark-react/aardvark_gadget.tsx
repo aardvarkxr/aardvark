@@ -1,7 +1,7 @@
 import * as React from 'react';
 
 import { Av, AvPanelHandler, AvPokerHandler, AvPanelMouseEventType, 
-	AvGrabEventProcessor, AvGrabberProcessor, AvGrabEventType, AvGrabEvent, AvGadgetManifest, AvNode, AvNodeType, AvStartGadgetCallback, AvPanelMouseEvent, ENodeFlags, AvEditModeCallback } from 'common/aardvark';
+	AvGrabEventProcessor, AvGrabberProcessor, AvGrabEventType, AvGrabEvent, AvGadgetManifest, AvNode, AvNodeType, AvStartGadgetCallback, AvPanelMouseEvent, ENodeFlags, EHand } from 'common/aardvark';
 import { IAvBaseNode, AvBaseNode } from './aardvark_base_node';
 import bind from 'bind-decorator';
 import { CGadgetEndpoint } from './gadget_endpoint';
@@ -32,9 +32,16 @@ export function parseURL(url: string)
 	return searchObject;
 }
 
-export class AvGadget extends React.Component< AvGadgetProps, {} >
+interface EditModeListener
+{
+	(): void;
+}
+
+export class AvGadget
 {
 	private static s_instance:AvGadget = null;
+
+	m_onSettingsReceived:( settings: any ) => void = null;
 
 	m_nextNodeId = 1;
 	m_registeredNodes: {[nodeId:number]:IAvBaseNode } = {};
@@ -43,6 +50,7 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 	m_endpoint: CGadgetEndpoint = null;
 	m_manifest: AvGadgetManifest = null;
 	m_actualGadgetUri: string = null;
+	m_editMode: { [hand:number]: boolean } = {};
 	private m_epToNotify: EndpointAddr = null;
 	private m_firstSceneGraph: boolean = true;
 	private m_mainGrabbable: AvNode = null;
@@ -53,30 +61,20 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 	m_pokerProcessors: {[nodeId:number]: AvPokerHandler } = {};
 	m_panelProcessors: {[nodeId:number]: AvPanelHandler } = {};
 	m_startGadgetCallbacks: {[nodeId:number]: AvStartGadgetCallback } = {};
-	m_editModeCallbacks: {[nodeId:number]: AvEditModeCallback } = {};
+	m_editModeListeners: { [listenerId: number] : EditModeListener } = {}
 
-	constructor( props: any )
+	constructor()
 	{
-		super( props );
-		AvGadget.s_instance = this;
-
-		if( this.props.gadgetUri )
+		if( window.location.pathname.lastIndexOf( ".html" ) == window.location.pathname.length - 5 )
 		{
-			this.m_actualGadgetUri = this.props.gadgetUri;
+			this.m_actualGadgetUri = 
+				window.location.origin
+				+ window.location.pathname.slice( 0, window.location.pathname.lastIndexOf( "/" ) );
+			console.log( "Stripping gadget URI down to", this.m_actualGadgetUri );
 		}
 		else
 		{
-			if( window.location.pathname.lastIndexOf( ".html" ) == window.location.pathname.length - 5 )
-			{
-				this.m_actualGadgetUri = 
-					window.location.origin
-					+ window.location.pathname.slice( 0, window.location.pathname.lastIndexOf( "/" ) );
-				console.log( "Stripping gadget URI down to", this.m_actualGadgetUri );
-			}
-			else
-			{
-				this.m_actualGadgetUri = window.location.origin;
-			}
+			this.m_actualGadgetUri = window.location.origin;
 		}
 
 		let params = parseURL( window.location.href );
@@ -109,14 +107,18 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 		this.m_endpoint.registerHandler( MessageType.MasterStartGadget, this.onMasterStartGadget );
 		this.m_endpoint.registerHandler( MessageType.SetEditMode, this.onSetEditMode );
 
-		if( this.props.onSettingsReceived )
+		if( this.m_onSettingsReceived )
 		{
-			this.props.onSettingsReceived( settings );
+			this.m_onSettingsReceived( settings );
 		}
 	}
 
 	public static instance()
 	{
+		if( !AvGadget.s_instance )
+		{
+			AvGadget.s_instance = new AvGadget();
+		}
 		return AvGadget.s_instance;
 	}
 
@@ -128,7 +130,7 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 		}
 		else
 		{
-			return this.props.gadgetUri;
+			return this.m_actualGadgetUri;
 		}
 	}
 
@@ -150,7 +152,6 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 		if( node.m_nodeId )
 		{
 			delete this.m_registeredNodes[ node.m_nodeId ];
-			delete this.m_editModeCallbacks[ node.m_nodeId ];
 			node.m_nodeId = undefined;
 		}
 
@@ -178,12 +179,6 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 	public setGrabberProcessor( nodeId: number, processor: AvGrabberProcessor )
 	{
 		this.m_grabberProcessors[ nodeId ] = processor;
-		this.markDirty();
-	}
-
-	public setEditModeCallback( nodeId: number, callback: AvEditModeCallback )
-	{
-		this.m_editModeCallbacks[ nodeId ] = callback;
 		this.markDirty();
 	}
 
@@ -270,13 +265,47 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 		Av().startGadget( m.uri, m.initialHook, m.persistenceUuid, null );
 	}
 
+	public listenForEditMode( callback: EditModeListener ): number
+	{
+		let handle = this.m_nextNodeId++;
+		this.m_editModeListeners[ handle ] = callback;
+		return handle;
+	}
+
+	public listenForEditModeWithComponent( comp: React.Component ): number
+	{
+		return this.listenForEditMode( () => { comp.forceUpdate(); } );
+	}
+
+	public unlistenForEditMode( handle: number )
+	{
+		delete this.m_editModeListeners[ handle ];
+	}
+
 	@bind private onSetEditMode( type: MessageType, m: MsgSetEditMode )
 	{
-		let callback = this.m_editModeCallbacks[ m.nodeId.nodeId ];
-		if( callback )
+		if( m.editMode != this.m_editMode[m.hand] )
 		{
-			callback( m.editMode );
+			this.m_editMode[m.hand] = m.editMode;
+			for( let handle in this.m_editModeListeners )
+			{
+				this.m_editModeListeners[ handle ]();
+			}
 		}
+	}
+
+	public getEditModeForHand( hand: EHand )
+	{
+		if( hand == undefined )
+			return this.editMode;
+		else
+			return this.m_editMode[ hand ];
+	}
+	
+	public get editMode()
+	{
+		return this.m_editMode[ EHand.Left ] || this.m_editMode[ EHand.Right ]
+			|| this.m_editMode[ EHand.Invalid ];
 	}
 
 	private traverseNode( domNode: HTMLElement ): AvNode[]
@@ -455,8 +484,9 @@ export class AvGadget extends React.Component< AvGadgetProps, {} >
 		this.m_endpoint.sendMessage( MessageType.SaveSettings, msg );
 	}
 
-	public render()
+	public registerForSettings( callback: ( settings: any ) => void )
 	{
-		return <div>{ this.props.children }</div>;
+		this.m_onSettingsReceived = callback;
 	}
 }
+

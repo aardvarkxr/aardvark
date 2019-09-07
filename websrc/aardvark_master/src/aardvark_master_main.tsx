@@ -25,11 +25,12 @@ interface DefaultHandState
 {
 	grabberHighlight: GrabberHighlight;
 	pokerHighlight: boolean;
-	editMode: boolean;
 }
 
 class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 {
+	private m_editModeHandle = 0;
+
 	constructor( props: any )
 	{
 		super( props );
@@ -38,8 +39,9 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 		{ 
 			grabberHighlight: GrabberHighlight.None,
 			pokerHighlight: false,
-			editMode: false,
 		};
+
+		this.m_editModeHandle = AvGadget.instance().listenForEditModeWithComponent( this )
 	}
 
 	@bind updateGrabberHighlight( newHighlight: GrabberHighlight )
@@ -52,11 +54,10 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 		this.setState( { pokerHighlight: newHighlight } );
 	}
 
-	@bind onEditMode( editMode: boolean )
+	componentWillUnmount()
 	{
-		this.setState( { editMode } );
+		AvGadget.instance().unlistenForEditMode( this.m_editModeHandle );
 	}
-
 	public render()
 	{
 		let modelUri = "https://aardvark.install/models/sphere/sphere.glb";
@@ -91,7 +92,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 		}
 
 		return (
-			<AvOrigin path={ originPath } onEditMode = { this.onEditMode } >
+			<AvOrigin path={ originPath }>
 				<AvTransform uniformScale= { 0.01 } >
 					<AvModel uri={ modelUri }/>
 				</AvTransform>
@@ -99,8 +100,8 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 				<AvPoker updateHighlight = { this.updatePokerHighlight } />
 				<AvGrabber updateHighlight = { this.updateGrabberHighlight }
 					radius={0.001} />
-				<AvStandardHook persistentName={ hookName }/>
-				{ this.state.editMode && <ControlPanel />}
+				<AvStandardHook persistentName={ hookName } hand={ this.props.hand }/>
+				{ AvGadget.instance().getEditModeForHand( this.props.hand ) && <ControlPanel />}
 			</AvOrigin>
 		);
 	}
@@ -189,11 +190,11 @@ class MasterControls extends React.Component< {}, {} >
 	public render()
 	{
 		return (
-			<AvGadget>
+			<div>
 				<DefaultHand hand={ EHand.Left } />
 				<DefaultHand hand={ EHand.Right } />
 				<ControlPanel />
-			</AvGadget>
+			</div>
 		);
 	}
 }

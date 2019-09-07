@@ -251,6 +251,7 @@ export class AvDefaultTraverser
 				let m: MsgSetEditMode =
 				{
 					nodeId: node.globalId,
+					hand,
 					editMode,
 				}
 
@@ -393,10 +394,6 @@ export class AvDefaultTraverser
 		}
 
 		this.m_handDeviceForNode[ endpointAddrToString( node.globalId ) ] = this.m_currentHand;
-		if( node.flags & ENodeFlags.Editable )
-		{
-			this.m_editableNodesForHand[ this.m_currentHand ].push( node );
-		}
 
 		if( node.children )
 		{
@@ -443,6 +440,8 @@ export class AvDefaultTraverser
 				{
 					this.m_currentHand = EHand.Invalid;
 				}
+
+				this.m_editableNodesForHand[ this.m_currentHand ].push( node );
 			}
 		}
 		else if( origin != null )
@@ -604,6 +603,7 @@ export class AvDefaultTraverser
 			if( hand != undefined )
 			{
 				this.m_currentHand = hand;
+				this.m_editableNodesForHand[ this.m_currentHand ].push( node );
 			}
 
 			if( parentInfo.parentGlobalId.type == EndpointType.Node )

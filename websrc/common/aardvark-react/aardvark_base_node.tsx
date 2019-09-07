@@ -21,7 +21,7 @@ export interface AvBaseNodeProps
 	visible?: boolean; // defaults to true
 	persistentName?: string; // Set this if you need to store persistent references to this node
 	onIdAssigned?: ( addr: EndpointAddr ) => void;
-	onEditMode?: ( editMode: boolean ) => void;
+	editable?: boolean;
 }
 
 export interface IAvBaseNode
@@ -67,7 +67,6 @@ export abstract class AvBaseNode<TProps, TState> extends React.Component<TProps,
 		return this.buildNode();
 	}
 
-
 	public componentWillMount()
 	{
 		AvGadget.instance().register( this );
@@ -75,11 +74,6 @@ export abstract class AvBaseNode<TProps, TState> extends React.Component<TProps,
 		if( this.baseProps.onIdAssigned )
 		{
 			this.baseProps.onIdAssigned( this.endpointAddr() );
-		}
-
-		if( this.baseProps.onEditMode )
-		{
-			AvGadget.instance().setEditModeCallback( this.m_nodeId, this.baseProps.onEditMode );
 		}
 	}
 
@@ -126,10 +120,6 @@ export abstract class AvBaseNode<TProps, TState> extends React.Component<TProps,
 		if( this.isVisible() )
 		{
 			flags |= ENodeFlags.Visible;
-		}
-		if( this.baseProps.onEditMode )
-		{
-			flags |= ENodeFlags.Editable;
 		}
 
 		return flags;

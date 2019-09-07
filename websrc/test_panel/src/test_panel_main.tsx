@@ -35,6 +35,8 @@ class TestPanel extends React.Component< {}, TestPanelState >
 			count: 0,
 			grabbableHighlight: HighlightType.None,
 		};
+
+		AvGadget.instance().registerForSettings( this.onSettingsReceived );
 	}
 
 	@bind public incrementCount()
@@ -95,7 +97,7 @@ class TestPanel extends React.Component< {}, TestPanelState >
 
 		return (
 			<div className={ sDivClasses } >
-				<AvGadget gadgetUri="" onSettingsReceived={ this.onSettingsReceived }>
+				<div>
 					<AvGrabbable updateHighlight={ this.onHighlightGrabbable }
 						onGrabRequest={ this.onGrabRequest }>
 						<AvSphereHandle radius={0.1} />
@@ -105,7 +107,7 @@ class TestPanel extends React.Component< {}, TestPanelState >
 								onIdAssigned={ (id: EndpointAddr) => { this.m_panelId = id } }/>
 						</AvTransform>
 					</AvGrabbable>
-				</AvGadget>
+				</div>
 				<div className="Label">Count: { this.state.count }</div>
 				<div className="Button" onMouseDown={ this.incrementCount }>
 					Click Me!

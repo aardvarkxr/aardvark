@@ -16,7 +16,6 @@ interface CharmBraceletState
 {
 	highlight: HighlightType;
 	charmCount: number;
-	editMode: boolean;
 }
 
 interface CharmBraceletSettings
@@ -60,8 +59,10 @@ class CharmBracelet extends React.Component< {}, CharmBraceletState >
 		{ 
 			highlight: HighlightType.None,
 			charmCount: 1,
-			editMode: false,
 		};
+
+		AvGadget.instance().registerForSettings( this.onSettingsReceived );
+		AvGadget.instance().listenForEditMode( this.onEditModeUpdated );
 	}
 
 	@bind onGrabbableHighlight( newHighlight: HighlightType )
@@ -93,11 +94,9 @@ class CharmBracelet extends React.Component< {}, CharmBraceletState >
 		}
 	}
 
-	@bind onEditMode( editMode: boolean )
+	@bind onEditModeUpdated()
 	{
-		this.setState( { editMode } );
-
-		if( !editMode && this.m_dirty )
+		if( !AvGadget.instance().editMode && this.m_dirty )
 		{
 			this.m_dirty = false;
 
@@ -107,11 +106,12 @@ class CharmBracelet extends React.Component< {}, CharmBraceletState >
 			};
 			AvGadget.instance().saveSettings( settings );
 		}
+		this.forceUpdate();
 	}
 
 	private renderControls()
 	{
-		if( !this.state.editMode )
+		if( !AvGadget.instance().editMode )
 			return null;
 
 		return <div>
@@ -123,7 +123,6 @@ class CharmBracelet extends React.Component< {}, CharmBraceletState >
 				<AvGrabButton modelUri="https://aardvark.install/models/minus.glb" 
 					onTrigger={ this.onMinus } />
 			</AvTransform>
-
 		</div>
 	}
 
@@ -138,7 +137,7 @@ class CharmBracelet extends React.Component< {}, CharmBraceletState >
 			let loc = locs[ i ];
 			charms.push(
 				<AvTransform translateX={ loc.x } translateY={ loc.y } translateZ={ loc.z }  
-					visible={ !grabbedMode || this.state.editMode } key={ i }>
+					key={ i }>
 					<AvStandardHook persistentName={ "hook" + i } />
 				</AvTransform>
 				);
@@ -146,15 +145,14 @@ class CharmBracelet extends React.Component< {}, CharmBraceletState >
 
 		return (
 			<div className="FullPage" >
-				<AvGadget onSettingsReceived={ this.onSettingsReceived }>
-					<AvGrabbable updateHighlight={ this.onGrabbableHighlight }
-						onEditMode={ this.onEditMode } >
+				<div>
+					<AvGrabbable updateHighlight={ this.onGrabbableHighlight } >
 						<AvSphereHandle radius={0.1} />
 						{ charms }
 						{ grabbedMode && <AvModel uri="http://aardvark.install/models/bracelet.glb" /> }
 						{ this.renderControls() }
 					</AvGrabbable>
-				</AvGadget>
+				</div>
 			</div>
 		)
 	}

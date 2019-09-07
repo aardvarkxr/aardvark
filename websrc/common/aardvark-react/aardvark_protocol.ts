@@ -1,4 +1,4 @@
-import { AvPanelMouseEvent } from 'common/aardvark';
+import { AvPanelMouseEvent, EHand } from 'common/aardvark';
 import { AvGadgetManifest, AvNode, AvGrabEvent, PokerProximity } from './../aardvark';
 
 export enum MessageType
@@ -272,5 +272,6 @@ export interface MsgSaveSettings
 export interface MsgSetEditMode
 {
 	nodeId: EndpointAddr;
+	hand: EHand;
 	editMode: boolean;
 }

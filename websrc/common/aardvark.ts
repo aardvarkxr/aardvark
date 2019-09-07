@@ -132,7 +132,6 @@ export interface AvVolume
 export enum ENodeFlags
 {
 	Visible = 1 << 0,
-	Editable = 1 << 1,
 }
 
 export interface AvNode
@@ -247,11 +246,6 @@ export interface AvSharedTextureInfo
 export interface AvBrowserTextureCallback
 {
 	( textureInfo: AvSharedTextureInfo ): void;
-}
-
-export interface AvEditModeCallback
-{
-	( editMode: boolean ): void;
 }
 
 export interface Aardvark
