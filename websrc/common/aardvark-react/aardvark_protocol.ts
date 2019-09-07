@@ -1,5 +1,6 @@
+import { AvTransform } from 'common/aardvark-react/aardvark_transform';
 import { AvPanelMouseEvent, EHand } from 'common/aardvark';
-import { AvGadgetManifest, AvNode, AvGrabEvent, PokerProximity } from './../aardvark';
+import { AvGadgetManifest, AvNode, AvGrabEvent, PokerProximity, AvNodeTransform } from './../aardvark';
 
 export enum MessageType
 {
@@ -15,6 +16,7 @@ export enum MessageType
 	// these are send to monitors to give them meta context
 	NewEndpoint = 200,
 	LostEndpoint = 201,
+	OverrideTransform = 202,
 
 	// Gadget messages
 	UpdateSceneGraph = 300,
@@ -274,4 +276,10 @@ export interface MsgSetEditMode
 	nodeId: EndpointAddr;
 	hand: EHand;
 	editMode: boolean;
+}
+
+export interface MsgOverrideTransform
+{
+	nodeId: EndpointAddr;
+	transform: AvNodeTransform;
 }

@@ -1,11 +1,12 @@
 import * as React from 'react';
 import  * as ReactDOM from 'react-dom';
 import { CMonitorEndpoint } from 'common/aardvark-react/aardvark_endpoint';
-import { EndpointType, MessageType, EndpointAddr, MsgNewEndpoint, MsgLostEndpoint, MsgUpdateSceneGraph, MsgGrabberState, endpointAddrToString, MsgGrabEvent } from 'common/aardvark-react/aardvark_protocol';
+import { EndpointType, MessageType, EndpointAddr, MsgNewEndpoint, MsgLostEndpoint, MsgUpdateSceneGraph, MsgGrabberState, endpointAddrToString, MsgGrabEvent, MsgPokerProximity, MsgOverrideTransform } from 'common/aardvark-react/aardvark_protocol';
 import bind from 'bind-decorator';
 import { AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, AvVector, AvQuaternion, AvGrabEvent, AvGrabEventType } from 'common/aardvark';
 import { observable, ObservableMap, action, observe, computed } from 'mobx';
 import { observer } from 'mobx-react';
+import { AvTransform } from 'common/aardvark-react/aardvark_transform';
 
 interface EndpointData
 {
@@ -21,6 +22,7 @@ interface GadgetData extends EndpointData
 	grabberIsPressed?: boolean;
 	grabbables?: EndpointAddr[];
 	hooks?: EndpointAddr[];
+	nodes?: { [ nodeId: number]: AvNode };
 }
 
 class CMonitorStore
@@ -39,6 +41,7 @@ class CMonitorStore
 		this.m_connection.registerHandler( MessageType.UpdateSceneGraph, this.onUpdateSceneGraph );
 		this.m_connection.registerHandler( MessageType.GrabberState, this.onGrabberState );
 		this.m_connection.registerHandler( MessageType.GrabEvent, this.onGrabEvent );
+		this.m_connection.registerHandler( MessageType.PokerProximity, this.onPokerProximity );
 
 	}
 
@@ -63,6 +66,18 @@ class CMonitorStore
 			return data as GadgetData;
 		else
 			return null;
+	}
+
+	public getNodeData( nodeId: EndpointAddr ): AvNode
+	{
+		if( nodeId.type != EndpointType.Node )
+			return null;
+
+		let gadgetData = this.getGadgetData( nodeId.endpointId );
+		if( !gadgetData )
+			return null;
+
+		return gadgetData.nodes[ nodeId.nodeId ];
 	}
 
 	@bind onUnhandledMessage( type: MessageType, message: any, sender: EndpointAddr )
@@ -101,6 +116,18 @@ class CMonitorStore
 		}
 	}
 
+	@action private updateNode( gadgetData: GadgetData, node: AvNode )
+	{
+		gadgetData.nodes[ node.id ] = node;
+		if( node.children )
+		{
+			for( let child of node.children )
+			{
+				this.updateNode( gadgetData, child );
+			}
+		}
+	}
+
 	@bind @action onUpdateSceneGraph( type: MessageType, message: MsgUpdateSceneGraph, sender: EndpointAddr )
 	{
 		if( !this.m_endpoints.has( sender.endpointId ) )
@@ -116,6 +143,12 @@ class CMonitorStore
 		let gadgetData = epData as GadgetData;
 		gadgetData.gadgetHook = message.hook;
 		gadgetData.gadgetRoot = message.root;
+
+		gadgetData.nodes = {};
+		if( gadgetData.gadgetRoot )
+		{
+			this.updateNode( gadgetData, gadgetData.gadgetRoot );
+		}
 	}
 
 	@bind @action onLostEndpoint( type: MessageType, message: MsgLostEndpoint, sender: EndpointAddr )
@@ -140,11 +173,265 @@ class CMonitorStore
 		this.m_grabEvents.push( message.event );
 	}
 
+	@bind @action onPokerProximity( type: MessageType, message: MsgPokerProximity )
+	{
+		// nothing here yet
+	}
+
 	@computed get recentGrabEvents()
 	{
 		return this.m_grabEvents.slice( -10 );
 	}
+
+	public sendMessage( type: MessageType, m: any )
+	{
+		this.m_connection.sendMessage( type, m );
+	}
 }
+
+interface SpinnerProps
+{
+	onUpdatedValue: (value: number) => void;
+	initialValue: number;
+	step: number;
+	min: number;
+	max: number;
+	label?: string;
+}
+
+interface SpinnerState
+{
+	value: number;
+}
+
+class Spinner extends React.Component< SpinnerProps, SpinnerState >
+{
+	constructor( props: any )
+	{
+		super( props );
+		this.state = { value: this.props.initialValue };
+	}
+
+	@bind onClickUp( event: React.MouseEvent )
+	{
+		event.preventDefault();
+		event.persist();
+		this.setState( ( prev: SpinnerState ) => 
+			{ 
+				let step = event.shiftKey ? this.props.step * 10 : this.props.step;
+				let value = Math.min( prev.value + step, this.props.max );
+				this.props.onUpdatedValue( value );
+				return { value };
+			} );
+	}
+
+	@bind onClickDown( event: React.MouseEvent )
+	{
+		event.preventDefault();
+		event.persist();
+		this.setState( ( prev: SpinnerState ) => 
+			{ 
+				let step = event.shiftKey ? this.props.step * 10 : this.props.step;
+				let value = Math.max( prev.value - step, this.props.min );
+				this.props.onUpdatedValue( value );
+				return { value };
+			} );
+	}
+	
+	render()
+	{
+		return <div className="Spinner">
+			{ this.props.label && <div className="SpinnerLabel">{ this.props.label }:</div> }
+			<div className="SpinnerValue">{ this.state.value.toFixed( 2 ) }</div>
+			<div className="SpinnerControls">
+				<div className="SpinnerButton" onClick={ this.onClickUp }>
+					<img className="SpinnerButtonImage Up" src="spinner_up.svg"/>
+				</div>
+				<div className="SpinnerButton" onClick={ this.onClickDown }>
+					<img className="SpinnerButtonImage Down" src="spinner_up.svg"/>
+				</div>
+			</div>
+		</div>
+	}
+}
+
+
+interface TransformMonitorProps
+{
+	nodeId: EndpointAddr;
+}
+
+interface TransformMonitorState
+{
+}
+
+@observer 
+class TransformMonitor extends React.Component< TransformMonitorProps, TransformMonitorState >
+{
+	constructor( props: any )
+	{
+		super( props )
+		
+	}
+
+	private renderQuaternion( name: string, q: AvQuaternion )
+	{
+		if( !q )
+			return null;
+
+		return <div className="AvNodeProperty">
+			<div className="AvNodePropertyName">{name}</div> 
+			<div className="AvNodePropertyValue">
+				[ {q.w}, {q.x}, {q.y}, {q.x} ]
+			</div>
+		</div>;
+	}
+
+	private renderVector( name: string, vector: AvVector, allowNegative: boolean, 
+		onUpdateVector: ( which: string, value: number ) => void )
+	{
+		if( !vector )
+		{
+			if( allowNegative )
+			{
+				vector = { x: 0, y: 0, z: 0 };
+			}
+			else
+			{
+				vector = { x: 1, y: 1, z: 1 };
+			}
+		}
+
+		let min = allowNegative ? -2 : 0.01;
+		return <div className="AvNodeProperty">
+			<div className="AvNodePropertyName">{name}</div> 
+			<div className="AvNodePropertyValue">
+				<Spinner min={ min } max={ 2 } step={ 0.01 } initialValue={ vector.x }
+					onUpdatedValue={ ( value: number ) => { onUpdateVector( "x", value ); } }/>
+				<Spinner min={ min } max={ 2 } step={ 0.01 } initialValue={ vector.y }
+					onUpdatedValue={ ( value: number ) => { onUpdateVector( "y", value ); } }/>
+				<Spinner min={ min } max={ 2 } step={ 0.01 } initialValue={ vector.z }
+					onUpdatedValue={ ( value: number ) => { onUpdateVector( "z", value ); } }/>
+			</div>
+		</div>;
+	}
+
+	private get transform(): AvNodeTransform
+	{
+		let node = MonitorStore.getNodeData( this.props.nodeId );
+		return node.propTransform;
+	}
+
+	private overrideTransform()
+	{
+		let m: MsgOverrideTransform =
+		{
+			nodeId: this.props.nodeId,
+			transform: this.transform,
+		};
+		MonitorStore.sendMessage( MessageType.OverrideTransform, m );
+	}
+
+	@bind private updateUniformScale( value: number )
+	{
+		this.transform.scale = 
+		{
+			x: value,
+			y: value,
+			z: value,
+		}
+		this.overrideTransform();
+	}
+
+	private renderScale( name: string, scale: AvVector )
+	{
+		if( scale && scale.x != null && scale.x == scale.y && scale.x == scale.z )
+		{
+			return <Spinner label="uniform scale" min={0.01} max={2.0} initialValue={ scale.x } step={0.01} 
+				onUpdatedValue={ this.updateUniformScale }/>
+		}
+		else
+		{
+			return this.renderVector( name, scale, false, 
+				( which: string, value: number ) =>
+				{
+					let scale = this.transform.scale;
+					if( !scale )
+					{
+						scale = { x: 1, y: 1, z: 1 };
+					}
+					switch( which )
+					{
+						case "x": 
+							scale.x = value;
+							break;
+
+						case "y": 
+							scale.y = value;
+							break;
+
+						case "z": 
+							scale.z = value;
+							break;
+					}
+
+					this.transform.scale = scale;
+					this.overrideTransform();
+				} );
+		}
+	}
+
+	private renderTransform( transform: AvNodeTransform )
+	{
+		if( !transform )
+		{
+			return null;
+		}
+
+		return <div>
+				{ this.renderVector( "translation", transform.position, true, 
+					( which: string, value: number ) =>
+					{
+						let translation = this.transform.position;
+						if( !translation )
+						{
+							translation = { x: 0, y: 0, z: 0 };
+						}
+
+						switch( which )
+						{
+							case "x": 
+								translation.x = value;
+								break;
+
+							case "y": 
+								translation.y = value;
+								break;
+
+							case "z": 
+								translation.z = value;
+								break;
+						}
+						this.transform.position = translation;
+
+						this.overrideTransform();
+					} ) }
+
+				{ this.renderScale( "scale", transform.scale ) }
+				{ this.renderQuaternion( "rotation", transform.rotation ) }
+			</div>;
+	}
+
+	render()
+	{
+		let node = MonitorStore.getNodeData( this.props.nodeId );
+		if( !node )
+			return null;
+
+		return this.renderTransform( node.propTransform );
+	}
+}
+
 
 interface GadgetMonitorProps
 {
@@ -172,61 +459,6 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 		});
 	}
 
-	private renderQuaternion( name: string, q: AvQuaternion )
-	{
-		if( !q )
-			return null;
-
-		return <div className="AvNodeProperty">
-			<div className="AvNodePropertyName">{name}</div> 
-			<div className="AvNodePropertyValue">
-				[ {q.w}, {q.x}, {q.y}, {q.x} ]
-			</div>
-		</div>;
-	}
-
-	private renderVector( name: string, vector: AvVector )
-	{
-		if( !vector )
-			return null;
-
-		return <div className="AvNodeProperty">
-			<div className="AvNodePropertyName">{name}</div> 
-			<div className="AvNodePropertyValue">
-				[ {vector.x}, {vector.y}, {vector.x} ]
-			</div>
-		</div>;
-	}
-
-	private renderScale( name: string, scale: AvVector )
-	{
-		if( !scale )
-			return null;
-
-		if( scale.x != null && scale.x == scale.y && scale.x == scale.z )
-		{
-			return <div className="AvNodeProperty">
-				<div className="AvNodePropertyName">{name}</div> 
-				<div className="AvNodePropertyValue">uniform( { scale.x } )</div>
-			</div>;
-		}
-		else
-		{
-			return this.renderVector( name, scale );
-		}
-	}
-
-	private renderTransform( transform: AvNodeTransform )
-	{
-		if( !transform )
-			return null;
-		return <div>
-			{ this.renderVector( "translation", transform.position ) }
-			{ this.renderScale( "scale", transform.scale ) }
-			{ this.renderQuaternion( "rotation", transform.rotation ) }
-		</div>
-	}
-
 	private renderFlags( flags: number )
 	{
 		if( !flags )
@@ -240,7 +472,6 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 		if( !node )
 			return null;
 
-		console.log( "rendering node", node );
 		let childElements: JSX.Element[] = [];
 		if( node.children )
 		{
@@ -261,7 +492,8 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 			{ node.propVolume && <div className="AvNodeProperty">volume: radius={node.propVolume.radius }</div> }
 			{ node.propInteractive && <div className="AvNodeProperty">Interactive</div> }
 			{ node.propSharedTexture && <div className="AvNodeProperty">{ JSON.stringify( node.propSharedTexture ) }</div> }
-			{ this.renderTransform( node.propTransform ) }
+			{ node.type == AvNodeType.Transform && <TransformMonitor 
+				nodeId={ { type: EndpointType.Node, endpointId: this.props.gadgetId, nodeId: node.id } } /> }
 			{ childElements }
 		</div>
 	}

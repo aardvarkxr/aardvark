@@ -75,10 +75,10 @@ body, html
 
 .AvNodePropertyValue
 {
-	display: inline;
+	display: flex;
+	flex-direction: row;
 	margin-left: 0.5rem;
 }
-
 
 .GrabEvent
 {
@@ -103,3 +103,42 @@ body, html
 	width: 50%;
 	flex-direction: column;
 }
+
+.Spinner
+{
+	display: flex;
+	flex-direction: row;
+}
+
+.SpinnerLabel
+{
+	margin-left: 2rem;
+}
+
+.SpinnerValue
+{
+	border-style: solid;
+	border-color: black;
+}
+
+.SpinnerControls
+{
+	flex-direction: column;
+}
+
+.SpinnerButton
+{
+	height: 1rem;
+	width: 1rem;
+}
+
+.SpinnerButtonImage
+{
+	height: 100%;
+	width: 100%;
+}
+.SpinnerButton .Down
+{
+	transform: rotate( 180deg );
+}
+

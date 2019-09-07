@@ -1,7 +1,6 @@
-import { MsgAttachGadgetToHook, MsgDetachGadgetFromHook, MsgMasterStartGadget, MsgSaveSettings } from './../common/aardvark-react/aardvark_protocol';
-import { MsgGetGadgetManifest, MsgGetGadgetManifestResponse, MsgUpdateSceneGraph, EndpointAddr, endpointAddrToString, MsgGrabEvent, endpointAddrsMatch, MsgGrabberState, MsgGadgetStarted, MsgSetEndpointTypeResponse, MsgPokerProximity, MsgMouseEvent, MsgNodeHaptic, MsgSetEditMode } from 'common/aardvark-react/aardvark_protocol';
+import { MsgAttachGadgetToHook, MsgMasterStartGadget, MsgSaveSettings, MsgOverrideTransform, MsgGetGadgetManifest, MsgGetGadgetManifestResponse, MsgUpdateSceneGraph, EndpointAddr, endpointAddrToString, MsgGrabEvent, endpointAddrsMatch, MsgGrabberState, MsgGadgetStarted, MsgSetEndpointTypeResponse, MsgPokerProximity, MsgMouseEvent, MsgNodeHaptic, MsgSetEditMode, MsgDetachGadgetFromHook } from 'common/aardvark-react/aardvark_protocol';
 import { MessageType, EndpointType, MsgSetEndpointType, Envelope, MsgNewEndpoint, MsgLostEndpoint, parseEnvelope, MsgError } from 'common/aardvark-react/aardvark_protocol';
-import { AvGadgetManifest, AvNode, AvNodeType, AvGrabEvent, AvGrabEventType } from 'common/aardvark';
+import { AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, AvGrabEvent, AvGrabEventType } from 'common/aardvark';
 import * as express from 'express';
 import * as http from 'http';
 import * as WebSocket from 'ws';
@@ -437,6 +436,7 @@ class CGadgetData
 	private m_persistenceUuid: string = null;
 	private m_dispatcher: CDispatcher = null;
 	private m_hookNodes:HookNodeData[] = [];
+	private m_transformOverrides: { [ nodeId: number ]: AvNodeTransform } = {}
 
 	constructor( ep: CEndpoint, uri: string, initialHook: string, persistenceUuid:string,
 		dispatcher: CDispatcher )
@@ -518,12 +518,8 @@ class CGadgetData
 	}
 
 
-	public updateSceneGraph( root: AvNode ) 
+	public processSceneGraph( firstUpdate: boolean )
 	{
-		let firstUpdate = this.m_root == null;
-
-		this.m_root = root;
-
 		let hookToSend = this.m_hook;
 		if( !firstUpdate )
 		{
@@ -535,11 +531,18 @@ class CGadgetData
 			}
 		}
 
-		this.m_dispatcher.updateGadgetSceneGraph( this.m_ep.getId(), this.m_root, hookToSend );
-
 		this.m_hookNodes = [];
 		this.m_mainGrabbable = null;
-		this.updateHookNodeList( root );
+		this.updateNode( this.m_root );
+		this.m_dispatcher.updateGadgetSceneGraph( this.m_ep.getId(), this.m_root, hookToSend );
+	}
+
+	public updateSceneGraph( root: AvNode ) 
+	{
+		this.m_root = root;
+
+		let firstUpdate = this.m_root == null;
+		this.processSceneGraph( firstUpdate );
 
 		if( firstUpdate )
 		{
@@ -592,43 +595,56 @@ class CGadgetData
 		}
 	}
 
-	private updateHookNodeList( node: AvNode )
+	private updateNode( node: AvNode )
 	{
 		if( !node )
 			return;
 
-		if( node.type == AvNodeType.Hook )
+		switch( node.type )
 		{
-			this.m_hookNodes.push(
-				{ 
-					epa:
+			case AvNodeType.Hook:
+				this.m_hookNodes.push(
+					{ 
+						epa:
+						{
+							endpointId: this.m_ep.getId(),
+							type: EndpointType.Node,
+							nodeId: node.id,
+						},
+						persistentName: node.persistentName,
+					}
+				);
+				break;
+			case AvNodeType.Grabbable:
+				if( !this.m_mainGrabbable )
+				{
+					this.m_mainGrabbable = 
 					{
 						endpointId: this.m_ep.getId(),
 						type: EndpointType.Node,
 						nodeId: node.id,
-					},
-					persistentName: node.persistentName,
+					};
 				}
-			)
-		}
-		else if( node.type == AvNodeType.Grabbable )
-		{
-			if( !this.m_mainGrabbable )
-			{
-				this.m_mainGrabbable = 
+				break;
+
+			case AvNodeType.Transform:
+				if( this.m_transformOverrides )
 				{
-					endpointId: this.m_ep.getId(),
-					type: EndpointType.Node,
-					nodeId: node.id,
-				};
-			}
+					let override = this.m_transformOverrides[ node.id ];
+					if( override )
+					{
+						node.propTransform = override;
+					}
+				}
+				break;
+		
 		}
 
 		if( node.children )
 		{
 			for( let child of node.children )
 			{
-				this.updateHookNodeList( child );
+				this.updateNode( child );
 			}
 		}
 	}
@@ -643,6 +659,20 @@ class CGadgetData
 			}
 		}
 		return null;
+	}
+
+	
+	public overrideTransform( nodeId: EndpointAddr, transform: AvNodeTransform )
+	{
+		if( transform )
+		{
+			this.m_transformOverrides[ nodeId.nodeId ] = transform;
+		}
+		else
+		{
+			delete this.m_transformOverrides[ nodeId.nodeId ];
+		}
+		this.processSceneGraph( false );
 	}
 
 }
@@ -705,6 +735,8 @@ class CEndpoint
 		{
 			return [ m.nodeId ];
 		});
+
+		this.registerEnvelopeHandler( MessageType.OverrideTransform, this.onOverrideTransform );
 	}
 
 	public getId() { return this.m_id; }
@@ -958,6 +990,13 @@ class CEndpoint
 		{
 			persistence.setGadgetSettings( this.m_gadgetData.getPersistenceUuid(), m.settings );
 		}
+	}
+
+	@bind private onOverrideTransform( env: Envelope, m: MsgOverrideTransform )
+	{
+		let ep = this.m_dispatcher.getGadgetEndpoint( m.nodeId.endpointId );
+		let gadgetData = ep.getGadgetData();
+		gadgetData.overrideTransform( m.nodeId, m.transform );
 	}
 
 	public sendMessage( type: MessageType, msg: any, target: EndpointAddr = undefined, sender:EndpointAddr = undefined  )
