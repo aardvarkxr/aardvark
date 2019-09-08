@@ -196,7 +196,6 @@ interface SpinnerProps
 	step: number;
 	min: number;
 	max: number;
-	label?: string;
 }
 
 interface SpinnerState
@@ -241,18 +240,53 @@ class Spinner extends React.Component< SpinnerProps, SpinnerState >
 	render()
 	{
 		return <div className="Spinner">
-			{ this.props.label && <div className="SpinnerLabel">{ this.props.label }:</div> }
 			<div className="SpinnerValue">{ this.state.value.toFixed( 2 ) }</div>
 			<div className="SpinnerControls">
 				<div className="SpinnerButton" onClick={ this.onClickUp }>
-					<img className="SpinnerButtonImage Up" src="spinner_up.svg"/>
+					<svg>    
+						<path d="M 0,16 8,0 16,16 Z" />
+					</svg>
 				</div>
 				<div className="SpinnerButton" onClick={ this.onClickDown }>
-					<img className="SpinnerButtonImage Down" src="spinner_up.svg"/>
+					<svg>    
+						<path d="M 0,0 16,0 8,16 Z" />
+					</svg>
 				</div>
 			</div>
 		</div>
 	}
+}
+
+interface EulerAngles
+{
+	yaw: number;
+	pitch: number;
+	roll: number;
+}
+
+// This code came from: https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles#Quaternion_to_Euler_Angles_Conversion
+function QuaternionToEulerAngles( q: AvQuaternion): EulerAngles
+{
+	let r: EulerAngles = { yaw: 0, pitch: 0, roll: 0 };
+
+    // roll (x-axis rotation)
+    let sinr_cosp = +2.0 * (q.w * q.x + q.y * q.z);
+    let cosr_cosp = +1.0 - 2.0 * (q.x * q.x + q.y * q.y);
+    r.roll = Math.atan2(sinr_cosp, cosr_cosp);
+
+    // pitch (y-axis rotation)
+    let sinp = +2.0 * (q.w * q.y - q.z * q.x);
+    if ( Math.abs( sinp ) >= 1 )
+        r.pitch = Math.sign( sinp) * Math.PI / 2; // use 90 degrees if out of range
+    else
+        r.pitch = Math.asin(sinp);
+
+    // yaw (z-axis rotation)
+    let siny_cosp = +2.0 * (q.w * q.z + q.x * q.y);
+    let cosy_cosp = +1.0 - 2.0 * (q.y * q.y + q.z * q.z);  
+    r.yaw = Math.atan2(siny_cosp, cosy_cosp);
+
+	return r;
 }
 
 
@@ -263,16 +297,94 @@ interface TransformMonitorProps
 
 interface TransformMonitorState
 {
+	transformOverridden: boolean
 }
 
 @observer 
 class TransformMonitor extends React.Component< TransformMonitorProps, TransformMonitorState >
 {
+	private m_inputCopyRef = React.createRef<HTMLInputElement>();
+
 	constructor( props: any )
 	{
 		super( props )
-		
+		this.state = { transformOverridden: false };
 	}
+
+	@bind private onCopy()
+	{
+		let transform = this.transform;
+		let props:{ [key:string]: number } = {};
+
+		if( transform.position )
+		{
+			if( transform.position.x != 0 )
+			{
+				props[ "positionX" ] = transform.position.x;
+			}
+			if( transform.position.y != 0 )
+			{
+				props[ "positionY" ] = transform.position.y;
+			}
+			if( transform.position.z != 0 )
+			{
+				props[ "positionZ" ] = transform.position.z;
+			}
+		}
+
+		if( transform.scale )
+		{
+			if( transform.scale.x == transform.scale.y && transform.scale.x == transform.scale.z 
+				&& transform.scale.x != 1 )
+			{
+				props[ "uniformScale" ] = transform.scale.x;
+			}
+			else
+			{
+				if( transform.scale.x != 1 )
+				{
+					props[ "scaleX" ] = transform.scale.x;
+				}
+				if( transform.scale.y != 1 )
+				{
+					props[ "scaleY" ] = transform.scale.y;
+				}
+				if( transform.scale.z != 1 )
+				{
+					props[ "scaleZ" ] = transform.scale.z;
+				}
+			}
+		}
+
+		if( transform.rotation )
+		{
+			let angles = QuaternionToEulerAngles( transform.rotation );
+			if( angles.yaw )
+			{
+				props[ "rotateY" ] = 180 * angles.yaw / Math.PI;
+			}
+			if( angles.roll )
+			{
+				props[ "rotateZ" ] = 180 * angles.roll / Math.PI;
+			}
+			if( angles.pitch )
+			{
+				props[ "rotateX" ] = 180 * angles.pitch / Math.PI;
+			}
+		}
+
+		let transformString = "<AvTransform";
+		for( let key in props )
+		{
+			transformString += ` ${key}={ ${ props[ key ].toFixed( 3 ) } }`;
+		}
+		transformString += " >";
+
+		this.m_inputCopyRef.current.value = transformString;
+		this.m_inputCopyRef.current.select();
+		document.execCommand( 'copy' );
+	}
+
 
 	private renderQuaternion( name: string, q: AvQuaternion )
 	{
@@ -324,6 +436,8 @@ class TransformMonitor extends React.Component< TransformMonitorProps, Transform
 
 	private overrideTransform()
 	{
+		this.setState( { transformOverridden: true } );
+
 		let m: MsgOverrideTransform =
 		{
 			nodeId: this.props.nodeId,
@@ -347,8 +461,13 @@ class TransformMonitor extends React.Component< TransformMonitorProps, Transform
 	{
 		if( scale && scale.x != null && scale.x == scale.y && scale.x == scale.z )
 		{
-			return <Spinner label="uniform scale" min={0.01} max={2.0} initialValue={ scale.x } step={0.01} 
-				onUpdatedValue={ this.updateUniformScale }/>
+			return <div className="AvNodeProperty">
+					<div className="AvNodePropertyName">Uniform Scale:</div> 
+					<div className="AvNodePropertyValue">
+						<Spinner min={ 0.01 } max={ 2 } step={ 0.01 } initialValue={ scale.x }
+							onUpdatedValue={ this.updateUniformScale }/>
+					</div>
+				</div>;
 		}
 		else
 		{
@@ -419,6 +538,12 @@ class TransformMonitor extends React.Component< TransformMonitorProps, Transform
 
 				{ this.renderScale( "scale", transform.scale ) }
 				{ this.renderQuaternion( "rotation", transform.rotation ) }
+				{ this.state.transformOverridden && 
+					<div>
+						<div className="TransformCopyButton" onClick={ this.onCopy }>Copy Transform</div>
+						<input type="text" className="TransformCopyInput" ref={ this.m_inputCopyRef }/>
+					</div> 
+				}
 			</div>;
 	}
 

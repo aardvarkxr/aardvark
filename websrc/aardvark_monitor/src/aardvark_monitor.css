@@ -66,18 +66,23 @@ body, html
 .AvNodeProperty
 {
 	margin-left: 0.5rem;
+	display: flex;
+	flex-direction: row;
 }
 
 .AvNodePropertyName
 {
-	display: inline;
+	display: flex;
+	margin-top: auto;
+	margin-bottom: auto;
 }
 
 .AvNodePropertyValue
 {
 	display: flex;
-	flex-direction: row;
 	margin-left: 0.5rem;
+	margin-top: auto;
+	margin-bottom: auto;
 }
 
 .GrabEvent
@@ -110,15 +115,16 @@ body, html
 	flex-direction: row;
 }
 
-.SpinnerLabel
-{
-	margin-left: 2rem;
-}
-
 .SpinnerValue
 {
-	border-style: solid;
-	border-color: black;
+	background-color: lightgray;
+	margin-left: 0.5rem;
+	margin-right: 0.5rem;
+	min-width: 2.5rem;
+	text-align: right;
+	font-family: monospace;
+	margin-top: auto;
+    margin-bottom: auto;
 }
 
 .SpinnerControls
@@ -130,15 +136,40 @@ body, html
 {
 	height: 1rem;
 	width: 1rem;
+	margin: 1px;
+	outline: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
 }
 
-.SpinnerButtonImage
+.SpinnerButton path
 {
-	height: 100%;
-	width: 100%;
-}
-.SpinnerButton .Down
-{
-	transform: rotate( 180deg );
+	fill: green;
 }
 
+.SpinnerButton path:hover
+{
+	fill: #409040;
+}
+
+.TransformCopyButton
+{
+	background-color: gold;
+    outline: none;
+    width: fit-content;
+    padding: 2px;
+	border-style: solid;
+}
+
+.TransformCopyButton:hover
+{
+	background-color: goldenrod;
+}
+
+.TransformCopyInput
+{
+	opacity: 0.01;
+    height: 0;
+    z-index: -1;
+}
