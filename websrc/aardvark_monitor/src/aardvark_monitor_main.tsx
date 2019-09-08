@@ -7,6 +7,7 @@ import { AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, AvVector, AvQuat
 import { observable, ObservableMap, action, observe, computed } from 'mobx';
 import { observer } from 'mobx-react';
 import { AvTransform } from 'common/aardvark-react/aardvark_transform';
+import { quat, vec3 } from '@tlaukkan/tsm';
 
 interface EndpointData
 {
@@ -269,26 +270,60 @@ function QuaternionToEulerAngles( q: AvQuaternion): EulerAngles
 {
 	let r: EulerAngles = { yaw: 0, pitch: 0, roll: 0 };
 
-    // roll (x-axis rotation)
+    // pitch (x-axis rotation)
     let sinr_cosp = +2.0 * (q.w * q.x + q.y * q.z);
     let cosr_cosp = +1.0 - 2.0 * (q.x * q.x + q.y * q.y);
-    r.roll = Math.atan2(sinr_cosp, cosr_cosp);
+    r.pitch = Math.atan2(sinr_cosp, cosr_cosp);
 
-    // pitch (y-axis rotation)
+    // yaw (y-axis rotation)
     let sinp = +2.0 * (q.w * q.y - q.z * q.x);
     if ( Math.abs( sinp ) >= 1 )
-        r.pitch = Math.sign( sinp) * Math.PI / 2; // use 90 degrees if out of range
+        r.yaw = Math.sign( sinp) * Math.PI / 2; // use 90 degrees if out of range
     else
-        r.pitch = Math.asin(sinp);
+        r.yaw = Math.asin(sinp);
 
-    // yaw (z-axis rotation)
+    // roll (z-axis rotation)
     let siny_cosp = +2.0 * (q.w * q.z + q.x * q.y);
     let cosy_cosp = +1.0 - 2.0 * (q.y * q.y + q.z * q.z);  
-    r.yaw = Math.atan2(siny_cosp, cosy_cosp);
+    r.roll = Math.atan2(siny_cosp, cosy_cosp);
 
 	return r;
 }
 
+function quatFromAxisAngleRadians( axis: vec3, rad?: number ): quat
+{
+	if( !rad )
+		return new quat( quat.identity.xyzw );
+
+	return quat.fromAxisAngle( axis, rad );
+}
+
+
+function EulerAnglesToQuaternion( angles: EulerAngles ): AvQuaternion
+{
+	let qx = quatFromAxisAngleRadians( vec3.right, angles.pitch );
+	let qy = quatFromAxisAngleRadians( vec3.up, angles.yaw );
+	let qz = quatFromAxisAngleRadians( vec3.forward, angles.roll );
+
+	let q = quat.product( quat.product( qx, qy ), qz );
+	return (
+	{
+		w: q.w,
+		x: q.x,
+		y: q.y,
+		z: q.z,
+	} );
+}
+
+function RadiansToDegrees( rad: number ): number
+{
+	return rad * 180 / Math.PI;
+}
+
+function DegreesToRadians( deg: number ): number
+{
+	return deg * Math.PI / 180;
+}
 
 interface TransformMonitorProps
 {
@@ -297,7 +332,20 @@ interface TransformMonitorProps
 
 interface TransformMonitorState
 {
-	transformOverridden: boolean
+	currentTransform?: AvNodeTransform;
+}
+
+enum VectorType
+{
+	Translation,
+	Scale,
+	Rotation,
+}
+
+function copyTransform( src: AvNodeTransform): AvNodeTransform
+{
+	// TODO: Maybe make this not stupid
+	return JSON.parse( JSON.stringify( src ) ) as AvNodeTransform;
 }
 
 @observer 
@@ -308,7 +356,7 @@ class TransformMonitor extends React.Component< TransformMonitorProps, Transform
 	constructor( props: any )
 	{
 		super( props )
-		this.state = { transformOverridden: false };
+		this.state = {};
 	}
 
 	@bind private onCopy()
@@ -391,38 +439,93 @@ class TransformMonitor extends React.Component< TransformMonitorProps, Transform
 		if( !q )
 			return null;
 
-		return <div className="AvNodeProperty">
-			<div className="AvNodePropertyName">{name}</div> 
-			<div className="AvNodePropertyValue">
-				[ {q.w}, {q.x}, {q.y}, {q.x} ]
-			</div>
-		</div>;
+		let angles = QuaternionToEulerAngles( q );
+		let v = 
+		{ 
+			x: RadiansToDegrees( angles.pitch ), 
+			y: RadiansToDegrees( angles.yaw ), 
+			z: RadiansToDegrees( angles.roll ),
+		};
+
+		return this.renderVector( "Rotation", v, VectorType.Rotation,
+			( which: string, value: number ) =>
+			{
+				let newTransform = copyTransform( this.transform );
+				let rot = newTransform.rotation;
+				if( !rot )
+				{
+					rot = { x: 0, y: 0, z: 0, w: 1 };
+				}
+
+				let angles = QuaternionToEulerAngles( rot );
+				switch( which )
+				{
+					case "x": 
+						angles.pitch = DegreesToRadians( value );
+						break;
+
+					case "y": 
+						angles.yaw = DegreesToRadians( value );
+						break;
+
+					case "z": 
+						angles.roll = DegreesToRadians( value );
+						break;
+				}
+
+				newTransform.rotation = EulerAnglesToQuaternion( angles );
+				this.setState( { currentTransform: newTransform } );
+				this.overrideTransform( newTransform );
+			}
+		);
 	}
 
-	private renderVector( name: string, vector: AvVector, allowNegative: boolean, 
+	private renderVector( name: string, vector: AvVector, type: VectorType, 
 		onUpdateVector: ( which: string, value: number ) => void )
 	{
-		if( !vector )
+		let min:number, max: number, step: number;
+		switch( type )
 		{
-			if( allowNegative )
-			{
-				vector = { x: 0, y: 0, z: 0 };
-			}
-			else
-			{
-				vector = { x: 1, y: 1, z: 1 };
-			}
+			case VectorType.Rotation:
+				if( !vector )
+				{
+					vector = { x: 0, y: 0, z: 0 };
+				}
+				min = -180;
+				max = 180;
+				step = 1;
+				break;
+
+			case VectorType.Translation:
+				if( !vector )
+				{
+					vector = { x: 0, y: 0, z: 0 };
+				}
+				min = -2;
+				max = 2;
+				step = 0.005;
+				break;
+
+			case VectorType.Scale:
+				if( !vector )
+				{
+					vector = { x: 1, y: 1, z: 1 };
+				}
+				min = 0.01;
+				max = 2;
+				step = 0.005;
+				break;
 		}
 
-		let min = allowNegative ? -2 : 0.01;
+
 		return <div className="AvNodeProperty">
 			<div className="AvNodePropertyName">{name}</div> 
 			<div className="AvNodePropertyValue">
-				<Spinner min={ min } max={ 2 } step={ 0.01 } initialValue={ vector.x }
+				<Spinner min={ min } max={ max } step={ step } initialValue={ vector.x }
 					onUpdatedValue={ ( value: number ) => { onUpdateVector( "x", value ); } }/>
-				<Spinner min={ min } max={ 2 } step={ 0.01 } initialValue={ vector.y }
+				<Spinner min={ min } max={ max } step={ step } initialValue={ vector.y }
 					onUpdatedValue={ ( value: number ) => { onUpdateVector( "y", value ); } }/>
-				<Spinner min={ min } max={ 2 } step={ 0.01 } initialValue={ vector.z }
+				<Spinner min={ min } max={ max } step={ step } initialValue={ vector.z }
 					onUpdatedValue={ ( value: number ) => { onUpdateVector( "z", value ); } }/>
 			</div>
 		</div>;
@@ -430,13 +533,20 @@ class TransformMonitor extends React.Component< TransformMonitorProps, Transform
 
 	private get transform(): AvNodeTransform
 	{
-		let node = MonitorStore.getNodeData( this.props.nodeId );
-		return node.propTransform;
+		if( this.state.currentTransform )
+		{
+			return this.state.currentTransform;
+		}
+		else
+		{
+			let node = MonitorStore.getNodeData( this.props.nodeId );
+			return node.propTransform;
+		}
 	}
 
-	private overrideTransform()
+	private overrideTransform( newTransform: AvNodeTransform )
 	{
-		this.setState( { transformOverridden: true } );
+		this.setState( { currentTransform: newTransform } );
 
 		let m: MsgOverrideTransform =
 		{
@@ -448,13 +558,14 @@ class TransformMonitor extends React.Component< TransformMonitorProps, Transform
 
 	@bind private updateUniformScale( value: number )
 	{
-		this.transform.scale = 
+		let newTransform = copyTransform( this.transform );
+		newTransform.scale = 
 		{
 			x: value,
 			y: value,
 			z: value,
 		}
-		this.overrideTransform();
+		this.overrideTransform( newTransform );
 	}
 
 	private renderScale( name: string, scale: AvVector )
@@ -471,31 +582,31 @@ class TransformMonitor extends React.Component< TransformMonitorProps, Transform
 		}
 		else
 		{
-			return this.renderVector( name, scale, false, 
+			return this.renderVector( name, scale, VectorType.Scale, 
 				( which: string, value: number ) =>
 				{
-					let scale = this.transform.scale;
-					if( !scale )
+					let newTransform = copyTransform( this.transform );
+					if( !newTransform.scale )
 					{
-						scale = { x: 1, y: 1, z: 1 };
+						newTransform.scale = { x: 1, y: 1, z: 1 };
 					}
 					switch( which )
 					{
 						case "x": 
-							scale.x = value;
+							newTransform.scale.x = value;
 							break;
 
 						case "y": 
-							scale.y = value;
+							newTransform.scale.y = value;
 							break;
 
 						case "z": 
-							scale.z = value;
+							newTransform.scale.z = value;
 							break;
 					}
 
 					this.transform.scale = scale;
-					this.overrideTransform();
+					this.overrideTransform( newTransform );
 				} );
 		}
 	}
@@ -508,10 +619,11 @@ class TransformMonitor extends React.Component< TransformMonitorProps, Transform
 		}
 
 		return <div>
-				{ this.renderVector( "translation", transform.position, true, 
+				{ this.renderVector( "translation", transform.position, VectorType.Translation, 
 					( which: string, value: number ) =>
 					{
-						let translation = this.transform.position;
+						let newTransform = copyTransform( this.transform );
+						let translation = newTransform.position;
 						if( !translation )
 						{
 							translation = { x: 0, y: 0, z: 0 };
@@ -531,14 +643,14 @@ class TransformMonitor extends React.Component< TransformMonitorProps, Transform
 								translation.z = value;
 								break;
 						}
-						this.transform.position = translation;
+						newTransform.position = translation;
 
-						this.overrideTransform();
+						this.overrideTransform( newTransform );
 					} ) }
 
 				{ this.renderScale( "scale", transform.scale ) }
 				{ this.renderQuaternion( "rotation", transform.rotation ) }
-				{ this.state.transformOverridden && 
+				{ this.state.currentTransform && 
 					<div>
 						<div className="TransformCopyButton" onClick={ this.onCopy }>Copy Transform</div>
 						<input type="text" className="TransformCopyInput" ref={ this.m_inputCopyRef }/>
@@ -553,7 +665,7 @@ class TransformMonitor extends React.Component< TransformMonitorProps, Transform
 		if( !node )
 			return null;
 
-		return this.renderTransform( node.propTransform );
+		return this.renderTransform( this.transform );
 	}
 }
 
