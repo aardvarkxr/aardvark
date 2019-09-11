@@ -3,7 +3,7 @@ import  * as ReactDOM from 'react-dom';
 import { AvGadget, parseURL } from 'common/aardvark-react/aardvark_gadget';
 import { AvOrigin } from 'common/aardvark-react/aardvark_origin';
 import { AvTransform } from 'common/aardvark-react/aardvark_transform';
-import { AvGrabber, GrabberHighlight } from 'common/aardvark-react/aardvark_grabber';
+import { AvGrabber } from 'common/aardvark-react/aardvark_grabber';
 import bind from 'bind-decorator';
 import { AvModel } from 'common/aardvark-react/aardvark_model';
 import { AvPoker } from 'common/aardvark-react/aardvark_poker';
@@ -14,6 +14,7 @@ import { AvPanel } from 'common/aardvark-react/aardvark_panel';
 import { AvPanelAnchor } from 'common/aardvark-react/aardvark_panelanchor';
 import { AvGadgetSeed } from 'common/aardvark-react/aardvark_gadget_seed';
 import { EndpointAddr } from 'common/aardvark-react/aardvark_protocol';
+import { GrabberHighlight } from 'common/aardvark-react/grab_state_processor';
 
 
 interface DefaultHandProps
