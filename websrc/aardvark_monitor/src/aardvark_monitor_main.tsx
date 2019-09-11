@@ -268,6 +268,11 @@ interface EulerAngles
 // This code came from: https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles#Quaternion_to_Euler_Angles_Conversion
 function QuaternionToEulerAngles( q: AvQuaternion): EulerAngles
 {
+	if( !q )
+	{
+		return ( { yaw: 0, pitch: 0, roll: 0 } );
+	}
+	
 	let r: EulerAngles = { yaw: 0, pitch: 0, roll: 0 };
 
     // pitch (x-axis rotation)
@@ -436,7 +441,7 @@ class TransformMonitor extends React.Component< TransformMonitorProps, Transform
 
 	private renderQuaternion( name: string, q: AvQuaternion )
 	{
-		if( !q )
+		if( !q && !this.state.currentTransform )
 			return null;
 
 		let angles = QuaternionToEulerAngles( q );
