@@ -2,9 +2,6 @@
 
 Edit mode isn't starting in the right state for new gadgets.
 
-Need to add rotation to debug transforms
-Need to add copy/pasteable AvTransform props for debug transforms.
-
 =========================================
 
 * Fix dynamic reload of renderer tab. This should tear down the whole renderer and recreate it. Not having this is a pain when there are code changes on the Javascript side.
