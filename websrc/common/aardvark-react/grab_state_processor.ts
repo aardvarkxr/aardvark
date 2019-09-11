@@ -1,23 +1,11 @@
-import { EndpointAddr, indexOfEndpointAddrs, endpointAddrsMatch } from 'common/aardvark-react/aardvark_protocol';
-import { AvGrabEvent, AvGrabEventType } from './../aardvark';
+import { EndpointAddr, indexOfEndpointAddrs, endpointAddrsMatch, MsgGrabberState } from 'common/aardvark-react/aardvark_protocol';
+import { AvGrabEvent, AvGrabEventType, GrabberHighlight } from './../aardvark';
 import { assert } from './aardvark_utils';
 
-
-export enum GrabberHighlight
-{
-	None = 0,
-	InRange = 1,
-	WaitingForConfirmation = 2,
-	WaitingForGrabToStart = 3,
-	Grabbed = 4,
-	NearHook = 5,
-	WaitingForReleaseAfterRejection = 6,
-}
 
 interface GrabContext
 {
 	sendGrabEvent( event: AvGrabEvent ): void;
-	updateHighlight( highlightType: GrabberHighlight ): void;
 	grabberEpa: EndpointAddr;
 }
 
@@ -98,19 +86,20 @@ export class CGrabStateProcessor
 
 		if( prevHighlight != this.m_lastHighlight )
 		{
-			if( this.m_context.updateHighlight )
-			{
-				this.m_context.updateHighlight( this.m_lastHighlight );
-			}
+			this.m_context.sendGrabEvent( 
+				{ 
+					type: AvGrabEventType.UpdateGrabberHighlight, 
+					grabberId: this.m_context.grabberEpa,
+					highlight: this.m_lastHighlight,
+				} );
 		}
 	}
 
-	public onGrabberIntersections( isPressed: boolean, grabbableIds: EndpointAddr[], 
-		hookIds: EndpointAddr[] )
+	public onGrabberIntersections( state: MsgGrabberState )
 	{
 		if( this.m_lastGrabbable && this.m_lastHighlight == GrabberHighlight.Grabbed
-			&& -1 == indexOfEndpointAddrs( grabbableIds, this.m_lastGrabbable ) 
-			&& isPressed )
+			&& -1 == indexOfEndpointAddrs( state.grabbables, this.m_lastGrabbable ) 
+			&& state.isPressed )
 		{
 			// The thing we think we're grabbing isn't in the grabbable list.
 			// This can happen if grabber intersections are in flight when the grab starts,
@@ -130,10 +119,10 @@ export class CGrabStateProcessor
 				assert( this.m_lastGrabbable == null );
 
 				// if we have no grabbables, we have nothing to do
-				if( grabbableIds.length == 0 )
+				if( !state.grabbables || state.grabbables.length == 0 )
 					break;
 
-				this.m_lastGrabbable = grabbableIds[0];
+				this.m_lastGrabbable = state.grabbables[0];
 				this.m_lastHighlight = GrabberHighlight.InRange;
 				
 				this.m_context.sendGrabEvent( 
@@ -148,7 +137,7 @@ export class CGrabStateProcessor
 
 			case GrabberHighlight.InRange:
 				assert( this.m_lastGrabbable != null );
-				if( -1 == indexOfEndpointAddrs( grabbableIds, this.m_lastGrabbable ) )
+				if( -1 == indexOfEndpointAddrs( state.grabbables, this.m_lastGrabbable ) )
 				{
 					// stop being in range.
 					this.m_context.sendGrabEvent( 
@@ -163,7 +152,7 @@ export class CGrabStateProcessor
 					break;
 				}
 
-				if( !isPressed )
+				if( !state.isPressed )
 				{
 					// if the user didn't press grab we have nothing else to do
 					break;
@@ -194,14 +183,14 @@ export class CGrabStateProcessor
 
 			case GrabberHighlight.WaitingForReleaseAfterRejection:
 				// when the button gets released, go back to in range
-				if( !isPressed )
+				if( !state.isPressed )
 				{
 					this.m_lastHighlight = GrabberHighlight.InRange;
 				}
 				break;
 				
 			case GrabberHighlight.Grabbed:
-				if( -1 == indexOfEndpointAddrs( grabbableIds, this.m_lastGrabbable ) )
+				if( -1 == indexOfEndpointAddrs( state.grabbables, this.m_lastGrabbable ) )
 				{
 					// cancel grabbing
 					console.log( "Ending grab of " + this.m_lastGrabbable 
@@ -217,11 +206,11 @@ export class CGrabStateProcessor
 					break;
 				}
 
-				if( hookIds.length > 0 )
+				if( state.hooks && state.hooks.length > 0 )
 				{
 					// we handle hooks before dropping in case we got the
 					// unpress and the hook in the same update
-					this.m_lastHook = hookIds[0];
+					this.m_lastHook = state.hooks[0];
 					this.m_context.sendGrabEvent( 
 						{
 							type: AvGrabEventType.EnterHookRange,
@@ -234,7 +223,7 @@ export class CGrabStateProcessor
 					break;
 				}
 
-				if( !isPressed )
+				if( !state.isPressed )
 				{
 					// drop not on a hook
 					this.m_context.sendGrabEvent( 
@@ -250,8 +239,8 @@ export class CGrabStateProcessor
 				break;
 
 			case GrabberHighlight.NearHook:
-				if( -1 == indexOfEndpointAddrs( hookIds, this.m_lastHook ) 
-					|| -1 == indexOfEndpointAddrs( grabbableIds, this.m_lastGrabbable ) )
+				if( -1 == indexOfEndpointAddrs( state.hooks, this.m_lastHook ) 
+					|| -1 == indexOfEndpointAddrs( state.grabbables, this.m_lastGrabbable ) )
 				{
 					// losing our hook or grabbable both kick us back to Grabbed. The 
 					// next update will change our phase from there. 
@@ -268,7 +257,7 @@ export class CGrabStateProcessor
 					break;
 				}
 
-				if( !isPressed )
+				if( !state.isPressed )
 				{
 					// a drop on a hook
 					this.m_context.sendGrabEvent( 
@@ -295,10 +284,12 @@ export class CGrabStateProcessor
 
 		if( prevHighlight != this.m_lastHighlight )
 		{
-			if( this.m_context.updateHighlight )
-			{
-				this.m_context.updateHighlight( this.m_lastHighlight );
-			}
+			this.m_context.sendGrabEvent( 
+				{ 
+					type: AvGrabEventType.UpdateGrabberHighlight, 
+					grabberId: this.m_context.grabberEpa,
+					highlight: this.m_lastHighlight,
+				} );
 		}
 	}
 }

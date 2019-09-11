@@ -1,15 +1,17 @@
-import { MsgUpdateSceneGraph, EndpointType, MsgGrabEvent, endpointAddrsMatch, MsgSetEditMode } from 'common/aardvark-react/aardvark_protocol';
+import { CGrabStateProcessor } from './aardvark-react/grab_state_processor';
+import { MsgUpdateSceneGraph, EndpointType, MsgGrabEvent, endpointAddrsMatch, MsgSetEditMode, EndpointAddr } from 'common/aardvark-react/aardvark_protocol';
 import { CRendererEndpoint } from './aardvark-react/renderer_endpoint';
 import { Av, AvGrabEventType, AvNode, ENodeFlags } from 'common/aardvark';
 import { AvModelInstance, AvNodeType, EHand, EVolumeType, AvGrabEvent } from './aardvark';
 import { mat4, vec3, quat, vec4 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
-import { EndpointAddr, endpointAddrToString, endpointAddrIsEmpty, MessageType, MsgNodeHaptic, MsgAttachGadgetToHook, MsgDetachGadgetFromHook } from './aardvark-react/aardvark_protocol';
+import { endpointAddrToString, endpointAddrIsEmpty, MessageType, MsgNodeHaptic, MsgAttachGadgetToHook, MsgDetachGadgetFromHook } from './aardvark-react/aardvark_protocol';
 
 interface NodeData
 {
 	lastModelUri?: string;
 	modelInstance?: AvModelInstance;
+	grabberProcessor?: CGrabStateProcessor;
 }
 
 function translateMat( t: vec3)
@@ -139,6 +141,8 @@ export class AvDefaultTraverser
 	private m_endpoint: CRendererEndpoint = null;
 	private m_editMode: { [hand: number]: boolean } = { };
 	private m_editableNodesForHand: { [ hand: number ]: AvNode[] } = {}
+	private m_grabEventsToProcess: AvGrabEvent[] = [];
+	private m_grabEventTimer: number = -1;
 
 	constructor()
 	{
@@ -268,7 +272,20 @@ export class AvDefaultTraverser
 		let states = Av().renderer.updateGrabberIntersections();
 		for( let state of states )
 		{
-			this.m_endpoint.sendMessage( MessageType.GrabberState, state );
+			let nodeData = this.getNodeDataByEpa( state.grabberId );
+			if( !nodeData.grabberProcessor )
+			{
+				nodeData.grabberProcessor = new CGrabStateProcessor(
+					{
+						sendGrabEvent: ( event: AvGrabEvent ) => 
+						{ 
+							this.sendGrabEvent( event );
+						},
+						grabberEpa: state.grabberId
+					} );
+			}
+
+			nodeData.grabberProcessor.onGrabberIntersections( state );
 		}
 	}
 
@@ -281,10 +298,35 @@ export class AvDefaultTraverser
 		}
 	}
 
+	private sendGrabEvent( event: AvGrabEvent )
+	{
+		this.m_grabEventsToProcess.push( event );
+		if( this.m_grabEventTimer == -1 )
+		{
+			this.m_grabEventTimer = window.setTimeout( () => 
+			{
+				let events = this.m_grabEventsToProcess;
+				this.m_grabEventsToProcess = [];
+				this.m_grabEventTimer = -1;
+				for( let event of events )
+				{
+					this.grabEvent( event );
+				}
+
+			})
+		}
+
+		this.m_endpoint.sendGrabEvent( event );
+	}
 
 	getNodeData( node: AvNode ): NodeData
 	{
-		let nodeIdStr = endpointAddrToString( node.globalId );
+		return this.getNodeDataByEpa( node.globalId );
+	}
+
+	getNodeDataByEpa( nodeGlobalId: EndpointAddr ): NodeData
+	{
+		let nodeIdStr = endpointAddrToString( nodeGlobalId );
 		if( !this.m_nodeData.hasOwnProperty( nodeIdStr ) )
 		{
 			this.m_nodeData[ nodeIdStr] = {};
@@ -740,13 +782,13 @@ export class AvDefaultTraverser
 				console.log( `telling collider about ${ endpointAddrToString( grabEvent.grabberId ) } `
 					+ `grabbing ${ endpointAddrToString( grabEvent.grabbableId ) }` );
 
-				this.m_endpoint.sendGrabEvent( 
-					{
-						type: AvGrabEventType.GrabStarted,
-						grabberId: grabEvent.grabberId,
-						grabbableId: grabEvent.grabbableId,
-					}
-				);
+				let grabStartedEvent:AvGrabEvent = 
+				{
+					type: AvGrabEventType.GrabStarted,
+					grabberId: grabEvent.grabberId,
+					grabbableId: grabEvent.grabbableId,
+				};
+				this.sendGrabEvent( grabStartedEvent );
 				break;
 
 			case AvGrabEventType.EndGrab:
@@ -775,6 +817,15 @@ export class AvDefaultTraverser
 					delete this.m_nodeToNodeAnchors[ endpointAddrToString( grabEvent.grabbableId ) ];
 				}
 				break;
+		}
+
+		if( grabEvent.grabberId )
+		{
+			let nodeData = this.getNodeDataByEpa( grabEvent.grabberId );
+			if( nodeData && nodeData.grabberProcessor )
+			{
+				nodeData.grabberProcessor.onGrabEvent( grabEvent );
+			}
 		}
 	}
 

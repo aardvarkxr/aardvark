@@ -67,7 +67,19 @@ export enum AvGrabEventType
 	RequestGrabResponse = 8,
 	CancelGrab = 9,
 	GrabStarted = 10,
+	UpdateGrabberHighlight = 11,
 };
+
+export enum GrabberHighlight
+{
+	None = 0,
+	InRange = 1,
+	WaitingForConfirmation = 2,
+	WaitingForGrabToStart = 3,
+	Grabbed = 4,
+	NearHook = 5,
+	WaitingForReleaseAfterRejection = 6,
+}
 
 export interface AvGrabEvent
 {
@@ -79,6 +91,7 @@ export interface AvGrabEvent
 	requestId?: number;
 	allowed?: boolean;
 	useIdentityTransform?: boolean;
+	highlight?: GrabberHighlight;
 }
 
 export interface AvGrabEventProcessor

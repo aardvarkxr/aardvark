@@ -119,6 +119,11 @@ export function endpointAddrsMatch( epa1: EndpointAddr, epa2: EndpointAddr ): bo
 
 export function indexOfEndpointAddrs( epaArray: EndpointAddr[], epa: EndpointAddr ): number
 {
+	if( !epaArray )
+	{
+		return -1;
+	}
+	
 	for( let i = 0; i < epaArray.length; i++ )
 	{
 		if( endpointAddrsMatch( epaArray[i], epa ) )
