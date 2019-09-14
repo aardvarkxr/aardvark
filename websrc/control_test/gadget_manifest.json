@@ -1,6 +1,6 @@
 {
 	"name" : "Control Tester",
 	"permissions" : [ "scenegraph" ],
-	"resolution": [ 128, 128 ],
+	"resolution": [ 1024, 1024 ],
 	"model" : "http://aardvark.install/models/gear.glb"
 }

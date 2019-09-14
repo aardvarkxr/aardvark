@@ -7,10 +7,13 @@ import { AvSlider } from 'common/aardvark-react/aardvark_slider';
 import { AvGrabbable } from 'common/aardvark-react/aardvark_grabbable';
 import { AvSphereHandle } from 'common/aardvark-react/aardvark_handles';
 import { AvModel } from 'common/aardvark-react/aardvark_model';
+import { AvPanel } from 'common/aardvark-react/aardvark_panel';
+import { AvPanelAnchor } from 'common/aardvark-react/aardvark_panelanchor';
 
 
 interface ControlTestState
 {
+	sliderValue: number;
 }
 
 
@@ -21,12 +24,13 @@ class ControlTest extends React.Component< {}, ControlTestState >
 		super( props );
 		this.state = 
 		{ 
+			sliderValue: 0,
 		};
 	}
 
 	@bind onSetSlider( newValue: number[] )
 	{
-		console.log( `Slider set to ${ newValue[0] }` );
+		this.setState( { sliderValue: newValue[0] } );
 	}
 
 	public render()
@@ -39,10 +43,20 @@ class ControlTest extends React.Component< {}, ControlTestState >
 					</AvTransform>
 					<AvSphereHandle radius={0.1} />
 
-					<AvTransform translateY={ 0.3 } >
-						<AvSlider rangeX={ 1 } onSetValue={ this.onSetSlider }
-							modelUri="https://aardvark.install/models/gear.glb"/>
-					</AvTransform>
+					<AvPanel interactive={ false } >
+						<div className="ControlList">
+							<div className="SliderContainer">
+								<div className="SliderLabel">{ this.state.sliderValue.toFixed( 2 ) }</div>
+								<div className="SliderControl">
+									<AvPanelAnchor>
+										<AvSlider rangeX={ 1 } onSetValue={ this.onSetSlider }
+											modelUri="https://aardvark.install/models/gear.glb"/>
+									</AvPanelAnchor>
+								</div>
+							</div>
+
+						</div>
+					</AvPanel>
 				</AvGrabbable>
 			</div>
 		)
