@@ -731,7 +731,13 @@ export class AvDefaultTraverser
 			if( !node.propConstraint || !defaultParent )
 			{
 				// this is a simple grabbable that is transformed by its grabber directly
-				this.updateTransform( node.globalId, grabberTransform, parentInfo.parentFromNodeTransform, null );
+				this.updateTransform( node.globalId, grabberTransform, 
+					parentInfo.parentFromNodeTransform, 
+					( universeFromNode: mat4 ) =>
+					{
+						this.preserveTransform( node, parentInfo.parentGlobalId, defaultParent, 
+							universeFromNode );
+					} );
 			}
 			else
 			{
@@ -788,25 +794,53 @@ export class AvDefaultTraverser
 						}
 
 						let universeFromNode = mat4.product( universeFromParent, parentFromNode, new mat4() );
-						if( node.flags & ENodeFlags.NotifyOnTransformChange )
-						{
-							this.sendGrabEvent( 
-								{
-									type: AvGrabEventType.TransformUpdated,
-									grabbableId: node.globalId,
-									grabberId: parentInfo.parentGlobalId,
-									parentFromNode: nodeTransformFromMat4( parentFromNode ),
-									universeFromNode: nodeTransformFromMat4( universeFromNode ),
-								}
-							)
-						}
-
+						this.preserveTransform( node, parentInfo.parentGlobalId, defaultParent,
+							universeFromNode, parentFromNode );
 						return universeFromNode;
 					} );
 			}
 		}
 	}
+
+	private preserveTransform( node: AvNode, grabberGlobalId: EndpointAddr, 
+		parent: PendingTransform, universeFromNode: mat4, parentFromNode?: mat4 )
+	{
+		if( 0 == ( node.flags & ( ENodeFlags.PreserveGrabTransform | ENodeFlags.NotifyOnTransformChange ) ) )
+			return;
+
+		if( !parentFromNode )
+		{
+			parentFromNode = universeFromNode;
+			if( parent )
+			{
+				let parentFromUniverse = parent.getUniverseFromNode().copy().inverse();
+				let parentFromNode = mat4.product( parentFromUniverse, universeFromNode, new mat4() );
 	
+				parentFromNode = parentFromNode;
+			}	
+		}
+
+		if( node.flags & ENodeFlags.PreserveGrabTransform )
+		{
+			let nodeData = this.getNodeData( node );
+			nodeData.lastParentFromNode = parentFromNode;
+		}
+
+		if( node.flags & ENodeFlags.NotifyOnTransformChange )
+		{
+			this.sendGrabEvent( 
+				{
+					type: AvGrabEventType.TransformUpdated,
+					grabbableId: node.globalId,
+					grabberId: grabberGlobalId,
+					parentFromNode: nodeTransformFromMat4( parentFromNode ),
+					universeFromNode: nodeTransformFromMat4( universeFromNode ),
+				}
+			)
+		}
+	}
+
+
 	traverseHandle( node: AvNode, defaultParent: PendingTransform )
 	{
 		if ( !node.propVolume )

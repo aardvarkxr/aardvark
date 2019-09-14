@@ -96,7 +96,8 @@ export class AvSlider extends React.Component< SliderProps, SliderState >
 
 		return <div>
 				<AvGrabbable updateHighlight={ this.updateHighlight } onGrabRequest={ this.onGrabRequest }
-					constraint={ constraint } onTransformUpdated={ this.onTransformUpdated }>
+					constraint={ constraint } onTransformUpdated={ this.onTransformUpdated }
+					preserveDropTransform={ true }>
 					<AvSphereHandle radius={ 0.1 } />
 					<AvTransform uniformScale={ this.state.highlight == HighlightType.InRange ? 1.1 : 1.0 } >
 						{ this.props.modelUri && <AvModel uri={ this.props.modelUri } /> }

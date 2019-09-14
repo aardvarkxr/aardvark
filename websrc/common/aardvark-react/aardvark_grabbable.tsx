@@ -26,6 +26,7 @@ interface AvGrabbableProps extends AvBaseNodeProps
 	onGrabRequest?: ( event: AvGrabEvent ) => Promise<GrabResponse>;
 	onTransformUpdated?: ( parentFromNode: AvNodeTransform, universeFromNode: AvNodeTransform ) => void;
 	constraint?: AvConstraint;
+	preserveDropTransform?: boolean;
 }
 
 export class AvGrabbable extends AvBaseNode< AvGrabbableProps, {} >
@@ -39,11 +40,14 @@ export class AvGrabbable extends AvBaseNode< AvGrabbableProps, {} >
 		if( this.props.constraint )
 		{
 			node.propConstraint = this.props.constraint;
-			node.flags |= ENodeFlags.PreserveGrabTransform;
 		}
 		if( this.props.onTransformUpdated )
 		{
 			node.flags |= ENodeFlags.NotifyOnTransformChange;
+		}
+		if( this.props.preserveDropTransform )
+		{
+			node.flags |= ENodeFlags.PreserveGrabTransform;
 		}
 		return node;
 	}

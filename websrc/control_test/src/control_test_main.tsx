@@ -33,7 +33,7 @@ class ControlTest extends React.Component< {}, ControlTestState >
 	{
 		return (
 			<div className="FullPage" >
-				<AvGrabbable>
+				<AvGrabbable preserveDropTransform={true}>
 					<AvTransform uniformScale={0.1}>
 						<AvModel uri="https://aardvark.install/models/sphere/sphere.glb"/>
 					</AvTransform>
