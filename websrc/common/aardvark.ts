@@ -68,6 +68,7 @@ export enum AvGrabEventType
 	CancelGrab = 9,
 	GrabStarted = 10,
 	UpdateGrabberHighlight = 11,
+	TransformUpdated = 12,
 };
 
 export enum GrabberHighlight
@@ -92,6 +93,8 @@ export interface AvGrabEvent
 	allowed?: boolean;
 	useIdentityTransform?: boolean;
 	highlight?: GrabberHighlight;
+	parentFromNode?: AvNodeTransform;
+	universeFromNode?: AvNodeTransform;
 }
 
 export interface AvGrabEventProcessor
@@ -144,7 +147,19 @@ export interface AvVolume
 
 export enum ENodeFlags
 {
-	Visible = 1 << 0,
+	Visible 				= 1 << 0,
+	PreserveGrabTransform 	= 1 << 1,
+	NotifyOnTransformChange	= 1 << 2,
+}
+
+export interface AvConstraint
+{
+	minX: number;
+	maxX: number;
+	minY: number;
+	maxY: number;
+	minZ: number;
+	maxZ: number;
 }
 
 export interface AvNode
@@ -163,6 +178,7 @@ export interface AvNode
 	propInteractive?: boolean;
 	propCustomNodeType?: string;
 	propSharedTexture?: AvSharedTextureInfo;
+	propConstraint?: AvConstraint;
 }
 
 

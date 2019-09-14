@@ -1,9 +1,9 @@
 import { CGrabStateProcessor } from './aardvark-react/grab_state_processor';
 import { MsgUpdateSceneGraph, EndpointType, MsgGrabEvent, endpointAddrsMatch, MsgSetEditMode, EndpointAddr } from 'common/aardvark-react/aardvark_protocol';
 import { CRendererEndpoint } from './aardvark-react/renderer_endpoint';
-import { Av, AvGrabEventType, AvNode, ENodeFlags } from 'common/aardvark';
+import { Av, AvGrabEventType, AvNode, ENodeFlags, AvNodeTransform } from 'common/aardvark';
 import { AvModelInstance, AvNodeType, EHand, EVolumeType, AvGrabEvent } from './aardvark';
-import { mat4, vec3, quat, vec4 } from '@tlaukkan/tsm';
+import { mat4, vec3, quat, vec4, mat3 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
 import { endpointAddrToString, endpointAddrIsEmpty, MessageType, MsgNodeHaptic, MsgAttachGadgetToHook, MsgDetachGadgetFromHook } from './aardvark-react/aardvark_protocol';
 
@@ -12,6 +12,7 @@ interface NodeData
 	lastModelUri?: string;
 	modelInstance?: AvModelInstance;
 	grabberProcessor?: CGrabStateProcessor;
+	lastParentFromNode?: mat4;
 }
 
 function translateMat( t: vec3)
@@ -30,14 +31,58 @@ function scaleMat( s: vec3)
 	return m;
 }
 
+function getRowFromMat( m: mat4, n: number ) : vec3 
+{
+	let row = m.row( n );
+	return new vec3( [ row[ 0 ], row[ 1 ],row[ 2 ], ] );
+}
+
+function nodeTransformFromMat4( m: mat4 ) : AvNodeTransform
+{
+	let transform: AvNodeTransform = {};
+	let pos = m.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) );
+	if( pos.x != 0 || pos.y != 0 || pos.z != 0 )
+	{
+		transform.position = { x: pos.x, y: pos.y, z: pos.z };
+	}
+
+	let xScale = getRowFromMat( m, 0 ).length();
+	let yScale = getRowFromMat( m, 1 ).length();
+	let zScale = getRowFromMat( m, 2 ).length();
+	if( xScale != 1 || yScale != 1 || zScale != 1 )
+	{
+		transform.scale = { x : xScale, y: yScale, z: zScale };
+	}
+
+	let rotMat = new mat3( 
+		[
+			m.at( 0 + 0 ) / xScale, m.at( 0 + 1 ) / xScale, m.at( 0 + 2 ) / xScale,
+			m.at( 4 + 0 ) / yScale, m.at( 4 + 1 ) / yScale, m.at( 4 + 2 ) / yScale,
+			m.at( 8 + 0 ) / zScale, m.at( 8 + 1 ) / zScale, m.at( 8 + 2 ) / zScale,
+		] );
+	let rot = rotMat.toQuat();
+	if( rot.x != 0 || rot.y != 0 || rot.z != 0 )
+	{
+		transform.rotation = { x: rot.x, y: rot.y, z: rot.z, w: rot.w };
+	}
+
+	return transform;
+}
+
+
+interface TransformComputeFunction
+{
+	( universeFromParents: mat4[], parentFromNode: mat4 ): mat4;
+}
 
 class PendingTransform
 {
 	private m_needsUpdate = true;
-	private m_parent: PendingTransform = null;
+	private m_parents: PendingTransform[] = null;
 	private m_parentFromNode: mat4 = null;
 	private m_universeFromNode: mat4 = null;
 	private m_applyFunction: (universeFromNode: mat4) => void = null;
+	private m_computeFunction: TransformComputeFunction = null;
 	private m_currentlyResolving = false;
 
 	public resolve()
@@ -60,11 +105,26 @@ class PendingTransform
 
 		this.m_currentlyResolving = true;
 
-		if( this.m_parent )
+		if( this.m_parents )
 		{
-			this.m_parent.resolve();
-			this.m_universeFromNode = new mat4;
-			mat4.product( this.m_parent.m_universeFromNode, this.m_parentFromNode, this.m_universeFromNode );
+			let universeFromParents: mat4[] = [];
+			for( let parent of this.m_parents )
+			{
+				parent.resolve();
+				universeFromParents.push( parent.m_universeFromNode );
+			}
+
+			if( this.m_computeFunction )
+			{
+				this.m_universeFromNode = this.m_computeFunction( universeFromParents, 
+					this.m_parentFromNode );
+			}
+			else
+			{
+				this.m_universeFromNode = new mat4;
+				mat4.product( universeFromParents[ 0 ], this.m_parentFromNode, 
+					this.m_universeFromNode );
+			}
 		}
 		else
 		{
@@ -88,19 +148,25 @@ class PendingTransform
 	{
 		return this.m_needsUpdate;
 	}
-	public update( parent: PendingTransform, parentFromNode: mat4, updateCallback?: ( universeFromNode:mat4 ) => void )
+	public update( parents: PendingTransform[], parentFromNode: mat4, 
+		updateCallback?: ( universeFromNode:mat4 ) => void,
+		computeCallback?: TransformComputeFunction)
 	{
 		this.m_needsUpdate = false;
-		this.m_parent = parent;
+		this.m_parents = parents;
 		this.m_parentFromNode = parentFromNode ? parentFromNode : mat4.identity;
 		this.m_applyFunction = updateCallback;
+		this.m_computeFunction = computeCallback;
 
 		this.checkForLoops();
 	}
 
 	private checkForLoops()
 	{
-		for( let test = this.m_parent; test != null; test = test.m_parent )
+		if( !this.m_parents )
+			return;
+
+		for( let test = this.m_parents[0]; test != null; test = test.m_parents ? test.m_parents[0] : null )
 		{
 			if( test == this )
 			{
@@ -432,7 +498,7 @@ export class AvDefaultTraverser
 		let thisNodeTransform = this.getTransform( node.globalId );
 		if ( thisNodeTransform.needsUpdate() )
 		{
-			thisNodeTransform.update( defaultParent, mat4.identity );
+			thisNodeTransform.update( defaultParent ? [ defaultParent ] : null, mat4.identity );
 		}
 
 		this.m_handDeviceForNode[ endpointAddrToString( node.globalId ) ] = this.m_currentHand;
@@ -635,9 +701,17 @@ export class AvDefaultTraverser
 	
 	traverseGrabbable( node: AvNode, defaultParent: PendingTransform )
 	{
+		let nodeData = this.getNodeData( node );
 		this.m_currentGrabbableGlobalId = node.globalId;
 		let nodeIdStr = endpointAddrToString( node.globalId );
-		if( this.m_nodeToNodeAnchors.hasOwnProperty( nodeIdStr ) )
+		if( !this.m_nodeToNodeAnchors.hasOwnProperty( nodeIdStr ) )
+		{
+			if( nodeData.lastParentFromNode )
+			{
+				this.updateTransform( node.globalId, defaultParent, nodeData.lastParentFromNode, null );
+			}
+		}
+		else
 		{
 			let parentInfo = this.m_nodeToNodeAnchors[ nodeIdStr ];
 
@@ -652,8 +726,84 @@ export class AvDefaultTraverser
 			{
 				this.addHookInUse( parentInfo.parentGlobalId );
 			}
-			let parentTransform = this.getTransform( parentInfo.parentGlobalId );
-			this.updateTransform( node.globalId, parentTransform, parentInfo.parentFromNodeTransform, null );
+			let grabberTransform = this.getTransform( parentInfo.parentGlobalId );
+
+			if( !node.propConstraint || !defaultParent )
+			{
+				// this is a simple grabbable that is transformed by its grabber directly
+				this.updateTransform( node.globalId, grabberTransform, parentInfo.parentFromNodeTransform, null );
+			}
+			else
+			{
+				// this is a constrained grabbable that combines its parent's pose, the
+				// constraints, and its grabber. We need a callback when it's time to compute
+				// the transform
+				let constraint = node.propConstraint;
+				this.updateTransformWithCompute( node.globalId,
+					[ defaultParent, grabberTransform],
+					mat4.identity, null,
+					( universeFromParents: mat4[], unused: mat4) =>
+					{
+						let universeFromGrabber = universeFromParents[1];
+						let universeFromParent = universeFromParents[0];
+						let parentFromUniverse = universeFromParent.copy().inverse();
+						let grabberPositionInParent = new vec3(
+							parentFromUniverse.multiplyVec4( 
+								universeFromGrabber.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) ) ).xyz );
+						
+						if( constraint.minX != undefined )
+						{
+							grabberPositionInParent.x = Math.max( constraint.minX, 
+								grabberPositionInParent.x );
+						}
+						if( constraint.maxX  != undefined )
+						{
+							grabberPositionInParent.x = Math.min( constraint.maxX, 
+								grabberPositionInParent.x );
+						}
+						if( constraint.minY != undefined )
+						{
+							grabberPositionInParent.y = Math.max( constraint.minY, 
+								grabberPositionInParent.y );
+						}
+						if( constraint.maxY != undefined )
+						{
+							grabberPositionInParent.y = Math.min( constraint.maxY, 
+								grabberPositionInParent.y );
+						}
+						if( constraint.minZ != undefined )
+						{
+							grabberPositionInParent.z = Math.max( constraint.minZ, 
+								grabberPositionInParent.z );
+						}
+						if( constraint.maxZ != undefined )
+						{
+							grabberPositionInParent.z = Math.min( constraint.maxZ, 
+								grabberPositionInParent.z );
+						}
+						let parentFromNode = translateMat( grabberPositionInParent );
+						if( node.flags & ENodeFlags.PreserveGrabTransform )
+						{
+							nodeData.lastParentFromNode = parentFromNode;
+						}
+
+						let universeFromNode = mat4.product( universeFromParent, parentFromNode, new mat4() );
+						if( node.flags & ENodeFlags.NotifyOnTransformChange )
+						{
+							this.sendGrabEvent( 
+								{
+									type: AvGrabEventType.TransformUpdated,
+									grabbableId: node.globalId,
+									grabberId: parentInfo.parentGlobalId,
+									parentFromNode: nodeTransformFromMat4( parentFromNode ),
+									universeFromNode: nodeTransformFromMat4( universeFromNode ),
+								}
+							)
+						}
+
+						return universeFromNode;
+					} );
+			}
 		}
 	}
 	
@@ -847,7 +997,17 @@ export class AvDefaultTraverser
 		applyFunction: ( universeFromNode: mat4 ) => void )
 	{
 		let transform = this.getTransform( globalNodeId );
-		transform.update( parent, parentFromNode, applyFunction );
+		transform.update( parent ? [ parent ] : null, parentFromNode, applyFunction );
+		return transform;
+	}
+
+	updateTransformWithCompute( globalNodeId: EndpointAddr,
+		parents: PendingTransform[], parentFromNode: mat4,
+		applyFunction: ( universeFromNode: mat4 ) => void,
+		computeFunction: TransformComputeFunction )
+	{
+		let transform = this.getTransform( globalNodeId );
+		transform.update( parents, parentFromNode, applyFunction, computeFunction );
 		return transform;
 	}
 

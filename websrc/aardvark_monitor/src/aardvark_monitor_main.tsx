@@ -733,6 +733,11 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 			{ node.propModelUri && <div className="AvNodeProperty">model: {node.propModelUri }</div> }
 			{ node.propVolume && <div className="AvNodeProperty">volume: radius={node.propVolume.radius }</div> }
 			{ node.propInteractive && <div className="AvNodeProperty">Interactive</div> }
+			{ node.propConstraint && <div className="AvNodeProperty">Constraint: 
+				[ { node.propConstraint.minX }, {node.propConstraint.maxX } ]
+				[ { node.propConstraint.minY }, {node.propConstraint.maxY } ]
+				[ { node.propConstraint.minZ }, {node.propConstraint.maxZ } ]
+				</div> }
 			{ node.propSharedTexture && <div className="AvNodeProperty">{ JSON.stringify( node.propSharedTexture ) }</div> }
 			{ node.type == AvNodeType.Transform && <TransformMonitor 
 				nodeId={ { type: EndpointType.Node, endpointId: this.props.gadgetId, nodeId: node.id } } /> }

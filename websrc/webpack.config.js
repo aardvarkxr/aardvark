@@ -93,6 +93,7 @@ module.exports =
 	createConfig( 'aardvark_renderer', 'Renderer', 'ts' ),
 	createConfig( 'test_panel', 'Test Panel', 'tsx' ),
 	createConfig( 'charm_bracelet', 'Charm Bracelet', 'tsx' ),
+	createConfig( 'control_test', 'Control Tester', 'tsx' ),
 	{
 		target: "node",
 		entry: 

@@ -2,7 +2,7 @@ import * as React from 'react';
 
 import { AvGadget } from './aardvark_gadget';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
-import { AvNodeType, AvGrabEvent, AvGrabEventType } from 'common/aardvark';
+import { AvNodeType, AvGrabEvent, AvGrabEventType, AvConstraint, AvNodeTransform, ENodeFlags } from 'common/aardvark';
 import bind from 'bind-decorator';
 import { EndpointAddr, endpointAddrToString } from './aardvark_protocol';
 
@@ -24,6 +24,8 @@ interface AvGrabbableProps extends AvBaseNodeProps
 {
 	updateHighlight?: ( highlightType: HighlightType ) => void;
 	onGrabRequest?: ( event: AvGrabEvent ) => Promise<GrabResponse>;
+	onTransformUpdated?: ( parentFromNode: AvNodeTransform, universeFromNode: AvNodeTransform ) => void;
+	constraint?: AvConstraint;
 }
 
 export class AvGrabbable extends AvBaseNode< AvGrabbableProps, {} >
@@ -33,7 +35,17 @@ export class AvGrabbable extends AvBaseNode< AvGrabbableProps, {} >
 	public buildNode()
 	{
 		AvGadget.instance().setGrabEventProcessor( this.m_nodeId, this.onGrabEvent );
-		return this.createNodeObject( AvNodeType.Grabbable, this.m_nodeId );
+		let node = this.createNodeObject( AvNodeType.Grabbable, this.m_nodeId );
+		if( this.props.constraint )
+		{
+			node.propConstraint = this.props.constraint;
+			node.flags |= ENodeFlags.PreserveGrabTransform;
+		}
+		if( this.props.onTransformUpdated )
+		{
+			node.flags |= ENodeFlags.NotifyOnTransformChange;
+		}
+		return node;
 	}
 
 	public grabInProgress( grabber: EndpointAddr ):void
@@ -123,6 +135,12 @@ export class AvGrabbable extends AvBaseNode< AvGrabbableProps, {} >
 					});
 				}
 				break;
+
+			case AvGrabEventType.TransformUpdated:
+				if( this.props.onTransformUpdated )
+				{
+					this.props.onTransformUpdated( evt.parentFromNode, evt.universeFromNode );
+				}
 		}
 
 		if( newHighlight != this.m_lastHighlight )
