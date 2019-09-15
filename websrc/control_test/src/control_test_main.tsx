@@ -9,11 +9,13 @@ import { AvSphereHandle } from 'common/aardvark-react/aardvark_handles';
 import { AvModel } from 'common/aardvark-react/aardvark_model';
 import { AvPanel } from 'common/aardvark-react/aardvark_panel';
 import { AvPanelAnchor } from 'common/aardvark-react/aardvark_panelanchor';
+import { AvTranslateControl } from 'common/aardvark-react/aardvark_translate_control';
 
 
 interface ControlTestState
 {
 	sliderValue: number;
+	translateValue: [ number, number, number ];
 }
 
 
@@ -25,12 +27,18 @@ class ControlTest extends React.Component< {}, ControlTestState >
 		this.state = 
 		{ 
 			sliderValue: 0,
+			translateValue: [ 0, 0, 0 ],
 		};
 	}
 
 	@bind onSetSlider( newValue: number[] )
 	{
 		this.setState( { sliderValue: newValue[0] } );
+	}
+
+	@bind onSetTranslate( newValue: number[] )
+	{
+		this.setState( { translateValue: ( newValue as [number, number, number ]) } );
 	}
 
 	public render()
@@ -49,12 +57,26 @@ class ControlTest extends React.Component< {}, ControlTestState >
 								<div className="SliderLabel">{ this.state.sliderValue.toFixed( 2 ) }</div>
 								<div className="SliderControl">
 									<AvPanelAnchor>
-										<AvSlider rangeX={ 1 } onSetValue={ this.onSetSlider }
+										<AvSlider rangeX={ 0.7 } onSetValue={ this.onSetSlider }
 											modelUri="https://aardvark.install/models/gear.glb"/>
 									</AvPanelAnchor>
 								</div>
 							</div>
 
+							<div className="TranslateContainer">
+								<div className="TranslateLabel">
+									[ 
+										{ this.state.translateValue[0] },
+										{ this.state.translateValue[1] },
+										{ this.state.translateValue[2] }
+									]
+								</div>
+								<div className="TranslateControl">
+									<AvPanelAnchor>
+										<AvTranslateControl onSetValue={ this.onSetTranslate } />
+									</AvPanelAnchor>
+								</div>
+							</div>
 						</div>
 					</AvPanel>
 				</AvGrabbable>

@@ -77,6 +77,7 @@ export class AvGrabbable extends AvBaseNode< AvGrabbableProps, {} >
 				break;
 
 			case AvGrabEventType.LeaveRange:
+				newHighlight = HighlightType.None;
 				break;
 
 			case AvGrabEventType.StartGrab:

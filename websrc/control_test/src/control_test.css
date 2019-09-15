@@ -17,11 +17,12 @@ body, html
 {
 	display: flex;
 	flex-direction: column;
+	height: 100%;
 }
 
 .SliderContainer
 {
-	height: 20%;
+	height: 10%;
 	width: 100%;
 	flex-direction: row;
 	display: flex;
@@ -33,13 +34,37 @@ body, html
 	color: black;
 	font-size: 1rem;
 	width: 10%;
-	height: 100%;
 	text-align: center;
 	margin-top: auto;
 	margin-bottom: auto;
 }
 
 .SliderControl
+{
+	width: 80%;
+	height: 100%
+}
+
+.TranslateContainer
+{
+	height: 30%;
+	width: 100%;
+	flex-direction: row;
+	display: flex;
+}
+
+.TranslateLabel
+{
+	background-color: aliceblue;
+	color: black;
+	font-size: 1rem;
+	width: 10%;
+	text-align: center;
+	margin-top: auto;
+	margin-bottom: auto;
+}
+
+.TranslateControl
 {
 	width: 80%;
 	height: 100%

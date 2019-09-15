@@ -1,7 +1,7 @@
 import { CGrabStateProcessor } from './aardvark-react/grab_state_processor';
 import { MsgUpdateSceneGraph, EndpointType, MsgGrabEvent, endpointAddrsMatch, MsgSetEditMode, EndpointAddr } from 'common/aardvark-react/aardvark_protocol';
 import { CRendererEndpoint } from './aardvark-react/renderer_endpoint';
-import { Av, AvGrabEventType, AvNode, ENodeFlags, AvNodeTransform } from 'common/aardvark';
+import { Av, AvGrabEventType, AvNode, ENodeFlags, AvNodeTransform, AvConstraint } from 'common/aardvark';
 import { AvModelInstance, AvNodeType, EHand, EVolumeType, AvGrabEvent } from './aardvark';
 import { mat4, vec3, quat, vec4, mat3 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
@@ -13,6 +13,7 @@ interface NodeData
 	modelInstance?: AvModelInstance;
 	grabberProcessor?: CGrabStateProcessor;
 	lastParentFromNode?: mat4;
+	constraint?: AvConstraint;
 }
 
 function translateMat( t: vec3)
@@ -180,6 +181,7 @@ class PendingTransform
 interface NodeToNodeAnchor_t
 {
 	parentGlobalId: EndpointAddr;
+	handleGlobalId?: EndpointAddr;
 	parentFromNodeTransform: mat4;
 }
 
@@ -735,7 +737,17 @@ export class AvDefaultTraverser
 			}
 			let grabberTransform = this.getTransform( parentInfo.parentGlobalId );
 
-			if( !node.propConstraint || !defaultParent )
+			let constraint = node.propConstraint;
+			if( parentInfo.handleGlobalId )
+			{
+				let handleNodeData = this.getNodeDataByEpa( parentInfo.handleGlobalId );
+				if( handleNodeData.constraint )
+				{
+					constraint = handleNodeData.constraint;
+				}
+			}
+
+			if( !constraint || !defaultParent )
 			{
 				// this is a simple grabbable that is transformed by its grabber directly
 				this.updateTransform( node.globalId, grabberTransform, 
@@ -751,7 +763,6 @@ export class AvDefaultTraverser
 				// this is a constrained grabbable that combines its parent's pose, the
 				// constraints, and its grabber. We need a callback when it's time to compute
 				// the transform
-				let constraint = node.propConstraint;
 				this.updateTransformWithCompute( node.globalId,
 					[ defaultParent, grabberTransform],
 					mat4.identity, null,
@@ -855,6 +866,12 @@ export class AvDefaultTraverser
 			return;
 		}
 	
+		if( node.propConstraint )
+		{
+			let nodeData = this.getNodeData( node );
+			nodeData.constraint = node.propConstraint;
+		}
+
 		let grabbableGlobalId = this.m_currentGrabbableGlobalId;
 		let hand = this.m_currentHand;
 		this.updateTransform( node.globalId, defaultParent, null,
@@ -968,6 +985,7 @@ export class AvDefaultTraverser
 				this.m_nodeToNodeAnchors[ grabbableIdStr ] = 
 				{
 					parentGlobalId: grabEvent.grabberId,
+					handleGlobalId: grabEvent.handleId,
 					parentFromNodeTransform: grabberFromGrabbable,
 				};
 				Av().renderer.startGrab( grabEvent.grabberId, grabEvent.grabbableId );
