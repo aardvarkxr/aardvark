@@ -1,6 +1,6 @@
 import { AvTransform } from 'common/aardvark-react/aardvark_transform';
 import { AvPanelMouseEvent, EHand } from 'common/aardvark';
-import { AvGadgetManifest, AvNode, AvGrabEvent, PokerProximity, AvNodeTransform } from './../aardvark';
+import { AvGadgetManifest, AvNode, AvGrabEvent, PokerProximity, AvNodeTransform, AvGrabbableCollision } from './../aardvark';
 
 export enum MessageType
 {
@@ -198,7 +198,7 @@ export interface MsgGrabberState
 {
 	grabberId: EndpointAddr;
 	isPressed: boolean;
-	grabbables?: EndpointAddr[];
+	grabbables?: AvGrabbableCollision[];
 	hooks?: EndpointAddr[];
 }
 
@@ -229,7 +229,9 @@ export interface MsgGadgetStarted
 {
 	epToNotify: EndpointAddr;
 	mainGrabbable?: number;
+	mainHandle?: number;
 	mainGrabbableGlobalId?: EndpointAddr;
+	mainHandleGlobalId?: EndpointAddr;
 }
 
 

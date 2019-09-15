@@ -10,6 +10,7 @@ export interface GrabResponse
 {
 	allowed: boolean;
 	proxyGrabbableGlobalId?: EndpointAddr;
+	proxyHandleGlobalId?: EndpointAddr;
 }
 
 export enum HighlightType
@@ -104,6 +105,7 @@ export class AvGrabbable extends AvBaseNode< AvGrabbableProps, {} >
 							type: AvGrabEventType.RequestGrabResponse,
 							senderId: this.m_nodeId,
 							grabbableId: evt.grabbableId,
+							handleId: evt.handleId,
 							grabberId: evt.grabberId,
 							requestId: evt.requestId,
 							allowed: true,
@@ -114,11 +116,25 @@ export class AvGrabbable extends AvBaseNode< AvGrabbableProps, {} >
 					this.props.onGrabRequest( evt )
 					.then( ( response: GrabResponse ) =>
 					{
+						let grabbableId: EndpointAddr;
+						let handleId: EndpointAddr;
+						if( response.proxyGrabbableGlobalId )
+						{
+							grabbableId = response.proxyGrabbableGlobalId;
+							handleId = response.proxyHandleGlobalId;
+						}
+						else
+						{
+							grabbableId = evt.grabbableId;
+							handleId = evt.handleId;
+						}
+
 						AvGadget.instance().sendGrabEvent(
 							{
 								type: AvGrabEventType.RequestGrabResponse,
 								senderId: this.m_nodeId,
-								grabbableId: response.proxyGrabbableGlobalId ? response.proxyGrabbableGlobalId : evt.grabbableId,
+								grabbableId: grabbableId,
+								handleId: handleId,
 								grabberId: evt.grabberId,
 								requestId: evt.requestId,
 								allowed: response.allowed,
@@ -132,6 +148,7 @@ export class AvGrabbable extends AvBaseNode< AvGrabbableProps, {} >
 								type: AvGrabEventType.RequestGrabResponse,
 								senderId: this.m_nodeId,
 								grabbableId: evt.grabbableId,
+								handleId: evt.handleId,
 								grabberId: evt.grabberId,
 								requestId: evt.requestId,
 								allowed: false,

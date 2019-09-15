@@ -863,7 +863,8 @@ export class AvDefaultTraverser
 			switch( node.propVolume.type )
 			{
 				case EVolumeType.Sphere:
-					Av().renderer.addGrabbableHandle_Sphere( grabbableGlobalId, universeFromNode.all(), 
+					Av().renderer.addGrabbableHandle_Sphere( grabbableGlobalId, node.globalId,
+						universeFromNode.all(), 
 						node.propVolume.radius, hand );
 					break;
 				default:

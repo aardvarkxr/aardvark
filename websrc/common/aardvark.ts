@@ -87,6 +87,7 @@ export interface AvGrabEvent
 	type: AvGrabEventType;
 	senderId?: number;
 	grabbableId?: EndpointAddr;
+	handleId?: EndpointAddr;
 	grabberId?: EndpointAddr;
 	hookId?: EndpointAddr;
 	requestId?: number;
@@ -102,9 +103,15 @@ export interface AvGrabEventProcessor
 	( event: AvGrabEvent ): void;
 }
 
+export interface AvGrabbableCollision
+{
+	grabbableId: EndpointAddr;
+	handleId: EndpointAddr;
+}
+
 export interface AvGrabberProcessor
 {
-	( isPressed: boolean, grabbableIds: EndpointAddr[], hookIds: EndpointAddr[] ): void;
+	( isPressed: boolean, grabbables: AvGrabbableCollision[], hookIds: EndpointAddr[] ): void;
 }
 
 
@@ -231,7 +238,9 @@ interface AvRenderer
 	
 	updateGrabberIntersections(): MsgGrabberState[];
 	registerGrabEventProcessor( grabEventProcessor: AvGrabEventProcessor ): void;
-	addGrabbableHandle_Sphere( grabbableGlobalId: EndpointAddr, universeFromGrabbable: number[], radius: number, hand: EHand ): void;
+	addGrabbableHandle_Sphere( grabbableGlobalId: EndpointAddr, 
+		handleGlobalId: EndpointAddr,
+		universeFromHandle: number[], radius: number, hand: EHand ): void;
 	addGrabber_Sphere( grabberGlobalId: EndpointAddr, universeFromGrabber: number[], radius: number, hand: EHand ): void;
 	addHook_Sphere( hookGlobalId: EndpointAddr, universeFromGrabber: number[], radius: number, hand: EHand  ): void;
 
@@ -243,7 +252,7 @@ interface AvRenderer
 
 export interface AvStartGadgetCallback
 {
-	(success: boolean, mainGrabbableGlobalId: EndpointAddr ) : void;
+	(success: boolean, mainGrabbableGlobalId: EndpointAddr, mainHandleId: EndpointAddr ) : void;
 }
 
 export interface AvGadgetManifest

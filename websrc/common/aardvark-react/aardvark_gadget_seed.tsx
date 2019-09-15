@@ -43,7 +43,7 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 		return new Promise<GrabResponse>( ( resolve, reject ) =>
 		{
 			AvGadget.instance().startGadget( this.props.uri, "", 
-				( success: boolean, mainGrabbableId: EndpointAddr ):void =>
+				( success: boolean, mainGrabbableId: EndpointAddr, mainHandleId: EndpointAddr ):void =>
 				{
 					if( success )
 					{
@@ -51,6 +51,7 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 						{
 							allowed: true,
 							proxyGrabbableGlobalId: mainGrabbableId,
+							proxyHandleGlobalId: mainHandleId,
 						};
 						resolve( response );
 					}

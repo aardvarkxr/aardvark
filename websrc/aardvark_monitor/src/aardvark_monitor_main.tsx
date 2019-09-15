@@ -40,7 +40,6 @@ class CMonitorStore
 		this.m_connection.registerHandler( MessageType.NewEndpoint, this.onNewEndpoint );
 		this.m_connection.registerHandler( MessageType.LostEndpoint, this.onLostEndpoint );
 		this.m_connection.registerHandler( MessageType.UpdateSceneGraph, this.onUpdateSceneGraph );
-		this.m_connection.registerHandler( MessageType.GrabberState, this.onGrabberState );
 		this.m_connection.registerHandler( MessageType.GrabEvent, this.onGrabEvent );
 		this.m_connection.registerHandler( MessageType.PokerProximity, this.onPokerProximity );
 
@@ -156,17 +155,6 @@ class CMonitorStore
 	{
 		console.log( "Lost endpoint!", message );
 		this.m_endpoints.delete( message.endpointId );
-	}
-
-	@bind @action onGrabberState( type: MessageType, message: MsgGrabberState, sender: EndpointAddr )
-	{
-		let gadgetData = this.getGadgetData( message.grabberId.endpointId );
-		if( !gadgetData )
-			return;
-
-		gadgetData.grabberIsPressed = message.isPressed;
-		gadgetData.grabbables = message.grabbables;
-		gadgetData.hooks = message.hooks;
 	}
 
 	@bind @action onGrabEvent( type: MessageType, message: MsgGrabEvent, sender: EndpointAddr )
@@ -872,6 +860,7 @@ class GrabEventMonitor extends React.Component< GrabEventProps, {} >
 			Sender: { this.props.event.senderId }
 			{ this.renderAddr( "Grabber", this.props.event.grabberId ) }
 			{ this.renderAddr( "Grabbable", this.props.event.grabbableId ) }
+			{ this.renderAddr( "Handle", this.props.event.handleId ) }
 			{ this.renderAddr( "Hook", this.props.event.hookId ) }
 		</div> );
 	}

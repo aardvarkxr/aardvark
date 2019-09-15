@@ -1,5 +1,5 @@
 import { EndpointAddr, indexOfEndpointAddrs, endpointAddrsMatch, MsgGrabberState } from 'common/aardvark-react/aardvark_protocol';
-import { AvGrabEvent, AvGrabEventType, GrabberHighlight } from './../aardvark';
+import { AvGrabEvent, AvGrabEventType, GrabberHighlight, AvGrabbableCollision } from './../aardvark';
 import { assert } from './aardvark_utils';
 
 
@@ -9,10 +9,23 @@ interface GrabContext
 	grabberEpa: EndpointAddr;
 }
 
+function indexOfGrabbable( grabbables: AvGrabbableCollision[], grabbableId: EndpointAddr ):number
+{
+	for( let n = 0; grabbables && n < grabbables.length; n++ )
+	{
+		if( endpointAddrsMatch( grabbables[n].grabbableId, grabbableId ) )
+		{
+			return n;
+		}
+	}
+	return -1;
+}
+
 export class CGrabStateProcessor
 {
 	m_lastHighlight = GrabberHighlight.None;
 	m_lastGrabbable:EndpointAddr = null;
+	m_lastHandle: EndpointAddr = null;
 	m_grabStartTime: DOMHighResTimeStamp = null;
 	m_lastHook: EndpointAddr = null;
 	m_grabRequestId = 1;
@@ -45,7 +58,8 @@ export class CGrabStateProcessor
 								type: AvGrabEventType.LeaveRange,
 								senderId: this.m_context.grabberEpa.nodeId,
 								grabberId: this.m_context.grabberEpa,
-								grabbableId: this.m_lastGrabbable
+								grabbableId: this.m_lastGrabbable,
+								handleId: this.m_lastHandle,
 							});
 							this.m_context.sendGrabEvent( 
 							{
@@ -53,8 +67,10 @@ export class CGrabStateProcessor
 								senderId: this.m_context.grabberEpa.nodeId,
 								grabberId: this.m_context.grabberEpa,
 								grabbableId: evt.grabbableId,
+								handleId: this.m_lastHandle,
 							});
 						this.m_lastGrabbable = evt.grabbableId;
+						this.m_lastHandle = evt.handleId;
 						useIdentityTransform = true;
 					}
 
@@ -66,6 +82,7 @@ export class CGrabStateProcessor
 							senderId: this.m_context.grabberEpa.nodeId,
 							grabberId: this.m_context.grabberEpa,
 							grabbableId: this.m_lastGrabbable,
+							handleId: this.m_lastHandle,
 							useIdentityTransform,
 						});
 					this.m_grabStartTime = performance.now();
@@ -98,7 +115,7 @@ export class CGrabStateProcessor
 	public onGrabberIntersections( state: MsgGrabberState )
 	{
 		if( this.m_lastGrabbable && this.m_lastHighlight == GrabberHighlight.Grabbed
-			&& -1 == indexOfEndpointAddrs( state.grabbables, this.m_lastGrabbable ) 
+			&& -1 == indexOfGrabbable( state.grabbables, this.m_lastGrabbable ) 
 			&& state.isPressed )
 		{
 			// The thing we think we're grabbing isn't in the grabbable list.
@@ -122,7 +139,8 @@ export class CGrabStateProcessor
 				if( !state.grabbables || state.grabbables.length == 0 )
 					break;
 
-				this.m_lastGrabbable = state.grabbables[0];
+				this.m_lastGrabbable = state.grabbables[0].grabbableId;
+				this.m_lastHandle = state.grabbables[0].handleId
 				this.m_lastHighlight = GrabberHighlight.InRange;
 				
 				this.m_context.sendGrabEvent( 
@@ -130,14 +148,15 @@ export class CGrabStateProcessor
 						type: AvGrabEventType.EnterRange,
 						senderId: this.m_context.grabberEpa.nodeId,
 						grabberId: this.m_context.grabberEpa,
-						grabbableId: this.m_lastGrabbable
+						grabbableId: this.m_lastGrabbable,
+						handleId: this.m_lastHandle,
 					});
 
 				// FALL THROUGH (in case we also pressed on the same frame)
 
 			case GrabberHighlight.InRange:
 				assert( this.m_lastGrabbable != null );
-				if( -1 == indexOfEndpointAddrs( state.grabbables, this.m_lastGrabbable ) )
+				if( -1 == indexOfGrabbable( state.grabbables, this.m_lastGrabbable ) )
 				{
 					// stop being in range.
 					this.m_context.sendGrabEvent( 
@@ -145,9 +164,11 @@ export class CGrabStateProcessor
 							type: AvGrabEventType.LeaveRange,
 							senderId: this.m_context.grabberEpa.nodeId,
 							grabberId: this.m_context.grabberEpa,
-							grabbableId: this.m_lastGrabbable
+							grabbableId: this.m_lastGrabbable,
+							handleId: this.m_lastHandle,
 						});
 					this.m_lastGrabbable = null;
+					this.m_lastHandle = null;
 					this.m_lastHighlight = GrabberHighlight.None;
 					break;
 				}
@@ -167,6 +188,7 @@ export class CGrabStateProcessor
 						senderId: this.m_context.grabberEpa.nodeId,
 						grabberId: this.m_context.grabberEpa,
 						grabbableId: this.m_lastGrabbable,
+						handleId: this.m_lastHandle,
 						requestId: this.m_grabRequestId,
 					});
 				this.m_lastHighlight = GrabberHighlight.WaitingForConfirmation;
@@ -190,7 +212,7 @@ export class CGrabStateProcessor
 				break;
 				
 			case GrabberHighlight.Grabbed:
-				if( -1 == indexOfEndpointAddrs( state.grabbables, this.m_lastGrabbable ) )
+				if( -1 == indexOfGrabbable( state.grabbables, this.m_lastGrabbable ) )
 				{
 					// cancel grabbing
 					console.log( "Ending grab of " + this.m_lastGrabbable 
@@ -200,7 +222,8 @@ export class CGrabStateProcessor
 							type: AvGrabEventType.EndGrab,
 							senderId: this.m_context.grabberEpa.nodeId,
 							grabberId: this.m_context.grabberEpa,
-							grabbableId: this.m_lastGrabbable
+							grabbableId: this.m_lastGrabbable,
+							handleId: this.m_lastHandle,
 						});
 					this.m_lastHighlight = GrabberHighlight.InRange;
 					break;
@@ -217,6 +240,7 @@ export class CGrabStateProcessor
 							senderId: this.m_context.grabberEpa.nodeId,
 							grabberId: this.m_context.grabberEpa,
 							grabbableId: this.m_lastGrabbable,
+							handleId: this.m_lastHandle,
 							hookId: this.m_lastHook,
 						});
 					this.m_lastHighlight = GrabberHighlight.NearHook;
@@ -231,7 +255,8 @@ export class CGrabStateProcessor
 							type: AvGrabEventType.EndGrab,
 							senderId: this.m_context.grabberEpa.nodeId,
 							grabberId: this.m_context.grabberEpa,
-							grabbableId: this.m_lastGrabbable
+							grabbableId: this.m_lastGrabbable,
+							handleId: this.m_lastHandle,
 						});
 					this.m_lastHighlight = GrabberHighlight.InRange;
 					break;
@@ -240,7 +265,7 @@ export class CGrabStateProcessor
 
 			case GrabberHighlight.NearHook:
 				if( -1 == indexOfEndpointAddrs( state.hooks, this.m_lastHook ) 
-					|| -1 == indexOfEndpointAddrs( state.grabbables, this.m_lastGrabbable ) )
+					|| -1 == indexOfGrabbable( state.grabbables, this.m_lastGrabbable ) )
 				{
 					// losing our hook or grabbable both kick us back to Grabbed. The 
 					// next update will change our phase from there. 
@@ -250,6 +275,7 @@ export class CGrabStateProcessor
 							senderId: this.m_context.grabberEpa.nodeId,
 							grabberId: this.m_context.grabberEpa,
 							grabbableId: this.m_lastGrabbable,
+							handleId: this.m_lastHandle,
 							hookId: this.m_lastHook,
 						});
 					this.m_lastHook = null;
@@ -266,6 +292,7 @@ export class CGrabStateProcessor
 							senderId: this.m_context.grabberEpa.nodeId,
 							grabberId: this.m_context.grabberEpa,
 							grabbableId: this.m_lastGrabbable,
+							handleId: this.m_lastHandle,
 							hookId: this.m_lastHook,
 						});
 					this.m_context.sendGrabEvent( 
@@ -274,6 +301,7 @@ export class CGrabStateProcessor
 							senderId: this.m_context.grabberEpa.nodeId,
 							grabberId: this.m_context.grabberEpa,
 							grabbableId: this.m_lastGrabbable,
+							handleId: this.m_lastHandle,
 							hookId: this.m_lastHook,
 						});
 					this.m_lastHighlight = GrabberHighlight.InRange;

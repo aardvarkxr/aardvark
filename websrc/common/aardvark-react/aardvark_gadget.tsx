@@ -54,9 +54,10 @@ export class AvGadget
 	private m_epToNotify: EndpointAddr = null;
 	private m_firstSceneGraph: boolean = true;
 	private m_mainGrabbable: AvNode = null;
+	private m_mainHandle: AvNode = null;
 	private m_mainGrabbableComponent: IAvBaseNode = null;
+	private m_mainHandleComponent: IAvBaseNode = null;
 
-	m_grabberProcessors: {[nodeId:number]: AvGrabberProcessor } = {};
 	m_grabEventProcessors: {[nodeId:number]: AvGrabEventProcessor } = {};
 	m_pokerProcessors: {[nodeId:number]: AvPokerHandler } = {};
 	m_panelProcessors: {[nodeId:number]: AvPanelHandler } = {};
@@ -99,7 +100,6 @@ export class AvGadget
 			this.markDirty();
 		});
 
-		this.m_endpoint.registerHandler( MessageType.GrabberState, this.onGrabberState );
 		this.m_endpoint.registerHandler( MessageType.GrabEvent, this.onGrabEvent );
 		this.m_endpoint.registerHandler( MessageType.GadgetStarted, this.onGadgetStarted );
 		this.m_endpoint.registerHandler( MessageType.PokerProximity, this.onPokerProximity );
@@ -176,25 +176,9 @@ export class AvGadget
 		this.markDirty();
 	}
 
-	public setGrabberProcessor( nodeId: number, processor: AvGrabberProcessor )
-	{
-		this.m_grabberProcessors[ nodeId ] = processor;
-		this.markDirty();
-	}
-
 	public getEndpointId() : number
 	{
 		return this.m_endpoint.getEndpointId();
-	}
-
-	@bind onGrabberState( type:MessageType, m: MsgGrabberState, sender: EndpointAddr, target: EndpointAddr ):void
-	{
-		let processor = this.m_grabberProcessors[ target.nodeId ];
-		if( processor )
-		{
-			processor( m.isPressed, m.grabbables != undefined ? m.grabbables : [], 
-				m.hooks != undefined ? m.hooks : [] );
-		}
 	}
 
 	@bind onGrabEvent( type:MessageType, m: MsgGrabEvent, sender: EndpointAddr, target: EndpointAddr ):void
@@ -211,7 +195,7 @@ export class AvGadget
 		let processor = this.m_startGadgetCallbacks[ target.nodeId ];
 		if( processor )
 		{
-			processor( true, m.mainGrabbableGlobalId );
+			processor( true, m.mainGrabbableGlobalId, m.mainHandleGlobalId );
 			delete this.m_startGadgetCallbacks[ target.nodeId ];
 		}
 	}
@@ -328,6 +312,12 @@ export class AvGadget
 							this.m_mainGrabbable = node;
 							this.m_mainGrabbableComponent = reactNode;
 						}
+						if( node.type == AvNodeType.Handle && !this.m_mainHandle )
+						{
+							this.m_mainHandle = node;
+							this.m_mainHandleComponent = reactNode;
+						}
+
 						this.m_traversedNodes[nodeId] = reactNode;
 					}
 				}
@@ -416,10 +406,12 @@ export class AvGadget
 					epToNotify: this.m_epToNotify,
 				}
 
-				if( this.m_mainGrabbable )
+				if( this.m_mainGrabbable && this.m_mainHandle )
 				{
 					msgStarted.mainGrabbable = this.m_mainGrabbable.id;
+					msgStarted.mainHandle = this.m_mainHandle.id;
 
+					this.m_mainHandleComponent.grabInProgress( this.m_epToNotify );
 					this.m_mainGrabbableComponent.grabInProgress( this.m_epToNotify );
 				}
 

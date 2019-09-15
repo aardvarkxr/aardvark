@@ -344,7 +344,16 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 			out->SetValue( "isPressed", CefV8Value::CreateBool( grabberState.isPressed ), V8_PROPERTY_ATTRIBUTE_NONE );
 			if ( !grabberState.grabbables.empty() )
 			{
-				out->SetValue( "grabbables", endpointAddrVectorToJs( grabberState.grabbables ), V8_PROPERTY_ATTRIBUTE_NONE );
+				CefRefPtr<CefV8Value> grabbables = CefV8Value::CreateArray( (int)grabberState.grabbables.size() );
+				for ( uint32_t n = 0; n < grabberState.grabbables.size(); n++ )
+				{
+					const GrabbableCollision_t & gc = grabberState.grabbables[n];
+					CefRefPtr<CefV8Value> grabbable = CefV8Value::CreateObject( nullptr, nullptr );
+					grabbable->SetValue( "grabbableId", endpointAddrToJs( gc.grabbableId ), V8_PROPERTY_ATTRIBUTE_NONE );
+					grabbable->SetValue( "handleId", endpointAddrToJs( gc.handleId), V8_PROPERTY_ATTRIBUTE_NONE );
+					grabbables->SetValue( n, grabbable );
+				}
+				out->SetValue( "grabbables", grabbables, V8_PROPERTY_ATTRIBUTE_NONE );
 			}
 			if ( !grabberState.hooks.empty() )
 			{
@@ -391,31 +400,39 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 
 	RegisterFunction( container, "addGrabbableHandle_Sphere", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
-		if ( arguments.size() != 4 )
+		if ( arguments.size() != 5 )
 		{
 			exception = "Invalid arguments";
 			return;
 		}
 
-		EndpointAddr_t nodeId;
-		if ( !endpointAddrFromJs( arguments[0], &nodeId ) )
+		EndpointAddr_t grabbableId;
+		if ( !endpointAddrFromJs( arguments[0], &grabbableId ) )
+		{
+			exception = "argument must be an endpoint address";
+			return;
+		}
+
+		EndpointAddr_t handleId;
+		if ( !endpointAddrFromJs( arguments[1], &handleId ) )
 		{
 			exception = "argument must be an endpoint address";
 			return;
 		}
 
 		glm::mat4 grabberFromUniverse;
-		if ( !mat4FromJavascript( arguments[1], &grabberFromUniverse ) )
+		if ( !mat4FromJavascript( arguments[2], &grabberFromUniverse ) )
 		{
 			exception = "argument must be a string";
 			return;
 		}
 
 		m_collisions.addGrabbableHandle_Sphere(
-			nodeId,
+			grabbableId,
+			handleId,
 			grabberFromUniverse,
-			arguments[2]->GetDoubleValue(),
-			(EHand )arguments[3]->GetIntValue()
+			arguments[3]->GetDoubleValue(),
+			(EHand )arguments[4]->GetIntValue()
 			);
 	} );
 

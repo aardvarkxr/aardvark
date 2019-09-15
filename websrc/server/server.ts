@@ -433,6 +433,7 @@ class CGadgetData
 	private m_root: AvNode = null;
 	private m_hook: string | EndpointAddr = null;
 	private m_mainGrabbable: EndpointAddr = null;
+	private m_mainHandle: EndpointAddr = null;
 	private m_persistenceUuid: string = null;
 	private m_dispatcher: CDispatcher = null;
 	private m_hookNodes:HookNodeData[] = [];
@@ -533,6 +534,7 @@ class CGadgetData
 
 		this.m_hookNodes = [];
 		this.m_mainGrabbable = null;
+		this.m_mainHandle = null;
 		this.updateNode( this.m_root );
 		this.m_dispatcher.updateGadgetSceneGraph( this.m_ep.getId(), this.m_root, hookToSend );
 	}
@@ -563,6 +565,7 @@ class CGadgetData
 						type: AvGrabEventType.EndGrab,
 						hookId: this.m_hook,
 						grabbableId: this.m_mainGrabbable,
+						handleId: this.m_mainHandle,
 					};
 
 					let msg: MsgGrabEvent =
@@ -615,10 +618,23 @@ class CGadgetData
 					}
 				);
 				break;
+
 			case AvNodeType.Grabbable:
 				if( !this.m_mainGrabbable )
 				{
 					this.m_mainGrabbable = 
+					{
+						endpointId: this.m_ep.getId(),
+						type: EndpointType.Node,
+						nodeId: node.id,
+					};
+				}
+				break;
+
+			case AvNodeType.Handle:
+				if( !this.m_mainHandle )
+				{
+					this.m_mainHandle = 
 					{
 						endpointId: this.m_ep.getId(),
 						type: EndpointType.Node,
@@ -921,6 +937,10 @@ class CEndpoint
 		{
 			this.m_dispatcher.forwardToEndpoint( m.event.grabbableId, env );
 		}
+		if( m.event.handleId )
+		{
+			this.m_dispatcher.forwardToEndpoint( m.event.handleId, env );
+		}
 		if( m.event.hookId )
 		{
 			this.m_dispatcher.forwardToEndpoint( m.event.hookId, env );
@@ -948,6 +968,15 @@ class CEndpoint
 				type: EndpointType.Node, 
 				endpointId: this.m_id,
 				nodeId: m.mainGrabbable,
+			};
+		}
+		if( m.mainHandle )
+		{
+			m.mainHandleGlobalId = 
+			{ 
+				type: EndpointType.Node, 
+				endpointId: this.m_id,
+				nodeId: m.mainHandle,
 			};
 		}
 

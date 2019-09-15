@@ -12,11 +12,17 @@
 #include <openvr.h>
 #include <aardvark/aardvark_scene_graph.h>
 
+struct GrabbableCollision_t
+{
+	aardvark::EndpointAddr_t grabbableId;
+	aardvark::EndpointAddr_t handleId;
+};
+
 struct GrabberCollisionState_t
 {
 	aardvark::EndpointAddr_t grabberGlobalId;
 	bool isPressed;
-	std::vector<aardvark::EndpointAddr_t> grabbables;
+	std::vector<GrabbableCollision_t> grabbables;
 	std::vector<aardvark::EndpointAddr_t> hooks;
 };
 
@@ -27,7 +33,9 @@ public:
 
 	void addGrabber_Sphere( const aardvark::EndpointAddr_t & globalGrabberId, const glm::mat4 & grabberFromUniverse,
 		float radius, EHand hand, bool isPressed );
-	void addGrabbableHandle_Sphere( const aardvark::EndpointAddr_t & globalGrabbableId, const glm::mat4 & universeFromHandle,
+	void addGrabbableHandle_Sphere( const aardvark::EndpointAddr_t & globalGrabbableId, 
+		const aardvark::EndpointAddr_t & globalHandleId, 
+		const glm::mat4 & universeFromHandle,
 		float radius, EHand hand );
 
 	void addHook_Sphere( const aardvark::EndpointAddr_t & globalHookId, const glm::mat4 & universeFromHook,
@@ -52,6 +60,7 @@ private:
 
 	struct Handle_t
 	{
+		aardvark::EndpointAddr_t globalHandleId;
 		glm::mat4 universeFromHandle;
 		float radius;
 	};
