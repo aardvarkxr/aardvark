@@ -61,7 +61,7 @@ export class AvTransform extends AvBaseNode< AvTransformProps, {} >
 				z: this.props.translateZ != null ? this.props.translateZ : 0,
 			}
 		}
-		if( this.props.rotateX != null || this.props.rotateX != null || this.props.rotateX != null )
+		if( this.props.rotateX != null || this.props.rotateY != null || this.props.rotateZ != null )
 		{
 			let qx = quatFromAxisAngleDegrees( vec3.right, this.props.rotateX );
 			let qy = quatFromAxisAngleDegrees( vec3.up, this.props.rotateY );
