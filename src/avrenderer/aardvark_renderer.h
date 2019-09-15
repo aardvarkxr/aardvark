@@ -37,6 +37,7 @@ public:
 	virtual void setUniverseFromModel( const glm::mat4 & universeFromModel ) override;
 	virtual void setOverrideTexture( void *textureHandle, ETextureType type, ETextureFormat format,
 		uint32_t width, uint32_t height ) override;
+	virtual void setBaseColor( const glm::vec4 & color ) override;
 
 	void animate( float animationTimeElapsed );
 protected:
@@ -46,6 +47,7 @@ protected:
 	vkglTF::Transformable m_modelParent;
 
 	void *m_lastDxgiHandle = nullptr;
+	glm::vec4 m_lastBaseColor = { 0, 0, 0, 0 };
 	std::shared_ptr< vks::Texture2D > m_overrideTexture;
 };
 

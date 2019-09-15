@@ -85,6 +85,32 @@ bool CJavascriptModelInstance::init( CefRefPtr<CefV8Value > container )
 
 		m_modelInstance->setOverrideTexture( sharedTextureHandle, type, format, width, height );
 	} );
+
+	RegisterFunction( container, "setBaseColor", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 1 )
+		{
+			exception = "Invalid arguments";
+			return;
+		}
+
+		if ( !arguments[0]->IsArray() || arguments[0]->GetArrayLength() != 4 )
+		{
+			exception = "argument must an array of 4 numbers";
+			return;
+		}
+
+		glm::vec4 color =
+		{
+			arguments[0]->GetValue( 0 )->GetDoubleValue(),
+			arguments[0]->GetValue( 1 )->GetDoubleValue(),
+			arguments[0]->GetValue( 2 )->GetDoubleValue(),
+			arguments[0]->GetValue( 3 )->GetDoubleValue(),
+		};
+
+		m_modelInstance->setBaseColor( color );
+	} );
+
 	return true;
 }
 

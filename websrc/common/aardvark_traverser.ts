@@ -622,6 +622,13 @@ export class AvDefaultTraverser
 
 		if ( nodeData.modelInstance )
 		{
+			if( node.propColor )
+			{
+				let alpha = ( node.propColor.a == undefined ) ? 1 : node.propColor.a;
+				nodeData.modelInstance.setBaseColor( 
+					[ node.propColor.r, node.propColor.g, node.propColor.b, alpha ] );
+			}
+
 			this.updateTransform( node.globalId, defaultParent, mat4.identity,
 				( universeFromNode: mat4 ) =>
 			{

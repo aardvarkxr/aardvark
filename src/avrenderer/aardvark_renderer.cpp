@@ -1993,6 +1993,21 @@ void CVulkanRendererModelInstance::setOverrideTexture( void *textureHandle, ETex
 
 }
 
+void CVulkanRendererModelInstance::setBaseColor( const glm::vec4 & color )
+{
+	if ( m_lastBaseColor!= color )
+	{
+		m_lastBaseColor = color;
+
+		for ( auto & material : m_model->materials )
+		{
+			material.baseColorFactor = color;
+		}
+
+		m_renderer->setupDescriptorSetsForModel( m_model );
+	}
+}
+
 
 
 void CVulkanRendererModelInstance::animate( float animationTimeElapsed )

@@ -48,6 +48,7 @@ public:
 	virtual void setUniverseFromModel( const glm::mat4 & universeFromModel ) = 0;
 	virtual void setOverrideTexture( void *textureHandle, ETextureType type, ETextureFormat format,
 		uint32_t width, uint32_t height ) = 0;
+	virtual void setBaseColor( const glm::vec4 & color ) = 0;
 };
 
 

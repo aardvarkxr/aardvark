@@ -162,6 +162,14 @@ export interface AvConstraint
 	maxZ: number;
 }
 
+export interface AvColor
+{
+	r: number;
+	g: number;
+	b: number;
+	a?: number;
+}
+
 export interface AvNode
 {
 	type: AvNodeType;
@@ -179,6 +187,7 @@ export interface AvNode
 	propCustomNodeType?: string;
 	propSharedTexture?: AvSharedTextureInfo;
 	propConstraint?: AvConstraint;
+	propColor?: AvColor;
 }
 
 
@@ -195,6 +204,7 @@ export interface AvModelInstance
 {
 	setUniverseFromModelTransform( universeFromModel: number[] ): void;
 	setOverrideTexture( textureInfo: AvSharedTextureInfo ): void;
+	setBaseColor( color: [ number, number, number, number ] ): void;
 }
 
 export enum EHand
