@@ -34,7 +34,7 @@ export class AvPanelAnchor extends AvBaseNode< AvBaseNodeProps, {} >
 
 	public render()
 	{
-		return <div ref={ this.m_ref }>
+		return <div ref={ this.m_ref } style={ { height: "100%", width: "100%" }}>
 			{ this.baseNodeRender( this, this.props.children ) }
 		</div>;
 	}
