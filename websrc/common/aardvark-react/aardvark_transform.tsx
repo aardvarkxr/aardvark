@@ -21,7 +21,7 @@ interface AvTransformProps extends AvBaseNodeProps
 function quatFromAxisAngleDegrees( axis: vec3, deg?: number ): quat
 {
 	if( !deg )
-		return quat.identity;
+		return new quat( quat.identity.xyzw );
 
 	return quat.fromAxisAngle( axis, deg * Math.PI / 180 );
 }
