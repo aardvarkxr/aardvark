@@ -21,6 +21,11 @@ interface SliderState
 	highlight: HighlightType;
 }
 
+function clamp( n: number, min: number, max: number ): number
+{
+	return Math.min( max, Math.max( min, n ) );
+}
+
 export class AvSlider extends React.Component< SliderProps, SliderState >
 {
 	constructor( props: any )
@@ -55,15 +60,18 @@ export class AvSlider extends React.Component< SliderProps, SliderState >
 		let newValue = [ 0, 0, 0 ];
 		if( this.props.rangeX )
 		{
-			newValue[0] = ( parentFromNode.position.x + this.props.rangeX / 2 ) / this.props.rangeX;
+			newValue[0] = clamp( ( parentFromNode.position.x + this.props.rangeX / 2 ) / this.props.rangeX,
+				0, 1 );
 		}
 		if( this.props.rangeX )
 		{
-			newValue[1] = ( parentFromNode.position.y + this.props.rangeY / 2 ) / this.props.rangeY;
+			newValue[1] = clamp( ( parentFromNode.position.y + this.props.rangeY / 2 ) / this.props.rangeY,
+				0, 1 );		
 		}
 		if( this.props.rangeX )
 		{
-			newValue[2] = ( parentFromNode.position.z + this.props.rangeZ / 2 ) / this.props.rangeZ;
+			newValue[2] = clamp( ( parentFromNode.position.z + this.props.rangeZ / 2 ) / this.props.rangeZ,
+				0, 1 );
 		}
 
 		this.props.onSetValue( newValue );
