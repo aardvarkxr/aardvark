@@ -57,6 +57,13 @@ class HINSTANCE__; // Forward or never
 typedef HINSTANCE__* HINSTANCE;
 #endif
 
+struct AABB_t
+{
+	float xMin = 0, xMax = 0;
+	float yMin = 0, yMax = 0;
+	float zMin = 0, zMax = 0;
+};
+
 class IRenderer
 {
 public:
@@ -69,5 +76,6 @@ public:
 	virtual void resetRenderList() = 0;
 	virtual void addToRenderList( IModelInstance *modelInstance ) = 0;
 	virtual void processRenderList() = 0;
+	virtual bool getModelBox( const std::string & uri, AABB_t *pBox ) = 0;
 };
 

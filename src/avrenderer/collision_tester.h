@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <openvr.h>
 #include <aardvark/aardvark_scene_graph.h>
+#include <aardvark/irenderer.h>
 
 struct GrabbableCollision_t
 {
@@ -31,12 +32,36 @@ class CCollisionTester
 public:
 	CCollisionTester( );
 
-	void addGrabber_Sphere( const aardvark::EndpointAddr_t & globalGrabberId, const glm::mat4 & grabberFromUniverse,
+	enum class VolumeType
+	{
+		Sphere,
+		Box
+	};
+	struct Volume_t
+	{
+		static Volume_t createSphere( const glm::mat4 & universeFromVolume, float radius );
+		static Volume_t createBox( const glm::mat4 & universeFromVolume, const AABB_t & box );
+		VolumeType type;
+		glm::mat4 universeFromVolume;
+		AABB_t box;
+		float radius;
+	};
+
+	void addGrabber_Sphere( const aardvark::EndpointAddr_t & globalGrabberId, const glm::mat4 & universeFromGrabber,
 		float radius, EHand hand, bool isPressed );
 	void addGrabbableHandle_Sphere( const aardvark::EndpointAddr_t & globalGrabbableId, 
 		const aardvark::EndpointAddr_t & globalHandleId, 
 		const glm::mat4 & universeFromHandle,
 		float radius, EHand hand );
+
+	void addGrabbableHandle( const aardvark::EndpointAddr_t & globalGrabbableId, 
+		const aardvark::EndpointAddr_t & globalHandleId, 
+		Volume_t volume, EHand hand );
+
+	void addGrabbableHandle_Box( const aardvark::EndpointAddr_t & globalGrabbableId,
+		const aardvark::EndpointAddr_t & globalHandleId,
+		const glm::mat4 & universeFromHandle,
+		const AABB_t & box, EHand hand );
 
 	void addHook_Sphere( const aardvark::EndpointAddr_t & globalHookId, const glm::mat4 & universeFromHook,
 		float radius, EHand hand );
@@ -48,21 +73,20 @@ public:
 	std::vector< GrabberCollisionState_t > updateGrabberIntersections();
 
 private:
+
 	struct ActiveGrabber_t
 	{
 		aardvark::EndpointAddr_t globalGrabberId;
 		EHand hand;
 		bool isPressed;
-		glm::mat4 matGrabberFromUniverse;
-		float radius;
+		Volume_t volume;
 	};
 	std::vector<ActiveGrabber_t> m_activeGrabbers;
 
 	struct Handle_t
 	{
 		aardvark::EndpointAddr_t globalHandleId;
-		glm::mat4 universeFromHandle;
-		float radius;
+		Volume_t volume;
 	};
 
 	struct ActiveGrabbable_t
@@ -77,8 +101,7 @@ private:
 	{
 		aardvark::EndpointAddr_t globalHookId;
 		EHand hand;
-		glm::mat4 universeFromHook;
-		float radius;
+		Volume_t volume;
 	};
 	std::vector<ActiveHook_t> m_activeHooks;
 

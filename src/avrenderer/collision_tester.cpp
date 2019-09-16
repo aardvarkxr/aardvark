@@ -5,10 +5,28 @@ CCollisionTester::CCollisionTester()
 {
 }
 
-void CCollisionTester::addGrabber_Sphere( const aardvark::EndpointAddr_t & globalGrabberId, const glm::mat4 & grabberFromUniverse,
+void CCollisionTester::addGrabber_Sphere( const aardvark::EndpointAddr_t & globalGrabberId, const glm::mat4 & universeFromGrabber,
 	float radius, EHand hand, bool isPressed )
 {
-	m_activeGrabbers.push_back( { globalGrabberId, hand, isPressed, grabberFromUniverse, radius } );
+	m_activeGrabbers.push_back( { globalGrabberId, hand, isPressed, Volume_t::createSphere( universeFromGrabber, radius ) } );
+}
+
+CCollisionTester::Volume_t CCollisionTester::Volume_t::createSphere( const glm::mat4 & universeFromVolume, float radius )
+{
+	Volume_t volume;
+	volume.type = VolumeType::Sphere;
+	volume.universeFromVolume = universeFromVolume;
+	volume.radius = radius;
+	return volume;
+}
+
+CCollisionTester::Volume_t CCollisionTester::Volume_t::createBox( const glm::mat4 & universeFromVolume, const AABB_t & box )
+{
+	Volume_t volume;
+	volume.type = VolumeType::Box;
+	volume.universeFromVolume = universeFromVolume;
+	volume.box = box;
+	return volume;
 }
 
 void CCollisionTester::addGrabbableHandle_Sphere( const aardvark::EndpointAddr_t & globalGrabbableId, 
@@ -16,29 +34,45 @@ void CCollisionTester::addGrabbableHandle_Sphere( const aardvark::EndpointAddr_t
 	const glm::mat4 & universeFromHandle,
 	float radius, EHand hand )
 {
+	addGrabbableHandle( globalGrabbableId, globalHandleId, Volume_t::createSphere( universeFromHandle, radius ), hand );
+}
+
+void CCollisionTester::addGrabbableHandle( const aardvark::EndpointAddr_t & globalGrabbableId, 
+	const aardvark::EndpointAddr_t & globalHandleId, 
+	Volume_t volume, EHand hand )
+{
 	for ( auto & grabbable : m_activeGrabbables )
 	{
 		if ( grabbable.globalGrabbableId == globalGrabbableId )
 		{
-			grabbable.handles.push_back( { globalHandleId, universeFromHandle, radius } );
+			grabbable.handles.push_back( { globalHandleId, volume } );
 			return;
 		}
 	}
 
 	m_activeGrabbables.push_back(
 		{
-			globalGrabbableId, 
+			globalGrabbableId,
 			hand,
 			{
-				{ globalHandleId, universeFromHandle, radius }
+				{ globalHandleId, volume }
 			}
 		} );
 }
 
+void CCollisionTester::addGrabbableHandle_Box( const aardvark::EndpointAddr_t & globalGrabbableId,
+	const aardvark::EndpointAddr_t & globalHandleId,
+	const glm::mat4 & universeFromHandle,
+	const AABB_t & box, EHand hand )
+{
+	addGrabbableHandle( globalGrabbableId, globalHandleId, Volume_t::createBox( universeFromHandle, box), hand );
+}
+
+
 void CCollisionTester::addHook_Sphere( const aardvark::EndpointAddr_t & globalHookId, const glm::mat4 & universeFromHook,
 	float radius, EHand hand )
 {
-	m_activeHooks.push_back( { globalHookId, hand, universeFromHook, radius } );
+	m_activeHooks.push_back( { globalHookId, hand, Volume_t::createSphere( universeFromHook, radius ) } );
 }
 
 
@@ -49,16 +83,24 @@ void CCollisionTester::reset()
 	m_activeHooks.clear();
 }
 
-bool SpheresIntersect( const glm::mat4 & grabberFromUniverse, float grabberRadius,
-	const glm::mat4 & universeFromHandle, float handleRadius )
+bool spheresIntersect( const CCollisionTester::Volume_t & v1, const CCollisionTester::Volume_t &v2 )
 {
-	glm::mat grabberFromHandle = grabberFromUniverse * universeFromHandle;
 	glm::vec4 zero( 0, 0, 0, 1.f );
-	glm::vec4 offset = grabberFromHandle * zero;
-	float dist = glm::length( glm::vec3( offset ) );
-	return dist < ( grabberRadius + handleRadius );
+	glm::vec3 v1Center( v1.universeFromVolume * zero );
+	glm::vec3 v2Center( v2.universeFromVolume * zero );
+	float dist = glm::length( v1Center - v2Center );
+	return dist < ( v1.radius + v2.radius );
 }
 
+bool volumesIntersect( const CCollisionTester::Volume_t & v1, const CCollisionTester::Volume_t &v2 )
+{
+	if ( v1.type == CCollisionTester::VolumeType::Sphere && v2.type == CCollisionTester::VolumeType::Sphere )
+	{
+		return spheresIntersect( v1, v2 );
+	}
+
+	return false;
+}
 
 void CCollisionTester::startGrab( const aardvark::EndpointAddr_t & globalGrabberId, const aardvark::EndpointAddr_t & globalGrabbableId )
 {
@@ -109,8 +151,7 @@ std::vector<GrabberCollisionState_t> CCollisionTester::updateGrabberIntersection
 
 			for ( auto & handle : grabbable.handles )
 			{
-				if ( SpheresIntersect( grabber.matGrabberFromUniverse, grabber.radius,
-					handle.universeFromHandle, handle.radius ) )
+				if ( volumesIntersect( grabber.volume, handle.volume ) )
 				{
 					grabberState.grabbables.push_back( 
 						{
@@ -127,8 +168,7 @@ std::vector<GrabberCollisionState_t> CCollisionTester::updateGrabberIntersection
 			if ( isSameHand( grabber.hand, hook.hand ) )
 				continue;
 
-			if ( SpheresIntersect( grabber.matGrabberFromUniverse, grabber.radius,
-				hook.universeFromHook, hook.radius ) )
+			if ( volumesIntersect( grabber.volume, hook.volume ) )
 			{
 				grabberState.hooks.push_back( hook.globalHookId );
 				break;

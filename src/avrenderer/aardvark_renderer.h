@@ -115,6 +115,7 @@ public:
 	virtual void resetRenderList() override;
 	virtual void addToRenderList( IModelInstance *modelInstance ) override;
 	virtual void processRenderList() override;
+	virtual bool getModelBox( const std::string & uri, AABB_t *pBox ) override;
 
 protected:
 	IVrManager *m_vrManager;

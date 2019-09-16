@@ -902,11 +902,10 @@ export class AvDefaultTraverser
 		this.updateTransform( node.globalId, defaultParent, null,
 			( universeFromNode: mat4 ) =>
 		{
-			let nodeFromUniverse = new mat4( universeFromNode.all() ).inverse();
 			switch( node.propVolume.type )
 			{
 				case EVolumeType.Sphere:
-					Av().renderer.addGrabber_Sphere( grabberGlobalId, nodeFromUniverse.all(), 
+					Av().renderer.addGrabber_Sphere( grabberGlobalId, universeFromNode.all(), 
 						node.propVolume.radius, grabberHand );
 					break;
 				default:

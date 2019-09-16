@@ -1903,6 +1903,29 @@ void VulkanExample::processRenderList()
 	m_uriRequests.processResults();
 }
 
+bool VulkanExample::getModelBox( const std::string & uri, AABB_t *pBox ) 
+{
+	auto pModel = findOrLoadModel( uri );
+	if ( !pModel )
+	{
+		return false;
+	}
+
+	if ( pModel->nodes.empty() )
+	{
+		return false;
+	}
+
+	vkglTF::BoundingBox aabb = pModel->nodes.front()->aabb;
+	pBox->xMin = aabb.min.x;
+	pBox->yMin = aabb.min.y;
+	pBox->zMin = aabb.min.z;
+	pBox->xMax = aabb.max.x;
+	pBox->yMax = aabb.max.y;
+	pBox->zMax = aabb.max.z;
+	return true;
+}
+
 
 void VulkanExample::submitEyeBuffers()
 {

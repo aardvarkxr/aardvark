@@ -420,8 +420,8 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 			return;
 		}
 
-		glm::mat4 grabberFromUniverse;
-		if ( !mat4FromJavascript( arguments[2], &grabberFromUniverse ) )
+		glm::mat4 universeFromHandle;
+		if ( !mat4FromJavascript( arguments[2], &universeFromHandle ) )
 		{
 			exception = "argument must be a string";
 			return;
@@ -430,10 +430,64 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 		m_collisions.addGrabbableHandle_Sphere(
 			grabbableId,
 			handleId,
-			grabberFromUniverse,
+			universeFromHandle,
 			arguments[3]->GetDoubleValue(),
 			(EHand )arguments[4]->GetIntValue()
 			);
+	} );
+
+	RegisterFunction( container, "addGrabbableHandle_ModelBox", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 5 )
+		{
+			exception = "Invalid arguments";
+			return;
+		}
+
+		EndpointAddr_t grabbableId;
+		if ( !endpointAddrFromJs( arguments[0], &grabbableId ) )
+		{
+			exception = "argument must be an endpoint address";
+			return;
+		}
+
+		EndpointAddr_t handleId;
+		if ( !endpointAddrFromJs( arguments[1], &handleId ) )
+		{
+			exception = "argument must be an endpoint address";
+			return;
+		}
+
+		glm::mat4 universeFromHandle;
+		if ( !mat4FromJavascript( arguments[2], &universeFromHandle ) )
+		{
+			exception = "argument must be a string";
+			return;
+		}
+
+		if ( !arguments[3]->IsString() )
+		{
+			exception = "argument must be a model URI";
+			return;
+		}
+
+		AABB_t box;
+
+		if ( !m_renderer->getModelBox( arguments[3]->GetStringValue(), &box ) )
+		{
+			// if we don't have a box for this model, it's either because we 
+			// haven't loaded it yet or because the URL is invalid. Either way,
+			// just don't add the handle
+			return;
+		}
+
+		m_collisions.addGrabbableHandle_Box(
+			grabbableId,
+			handleId,
+			universeFromHandle,
+			box,
+			(EHand)arguments[4]->GetIntValue()
+		);
 	} );
 
 	RegisterFunction( container, "addGrabber_Sphere", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
