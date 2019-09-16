@@ -1,4 +1,7 @@
 ========= DEAL WITH THIS NEXT ===========
+* Need to implement box/box and box/sphere intersections.
+* need to add node plumbing for model boxes (and generic boxes?)
+* Need to make sure the AABB on the models is actually valid. 
 
 Edit mode isn't starting in the right state for new gadgets.
 
