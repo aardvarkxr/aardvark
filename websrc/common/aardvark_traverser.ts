@@ -183,7 +183,6 @@ interface NodeToNodeAnchor_t
 	parentGlobalId: EndpointAddr;
 	handleGlobalId?: EndpointAddr;
 	parentFromNodeTransform: mat4;
-	universeFromParentStart: mat4;
 }
 
 interface AvNodeRoot
@@ -993,7 +992,6 @@ export class AvDefaultTraverser
 					parentGlobalId: grabEvent.grabberId,
 					handleGlobalId: grabEvent.handleId,
 					parentFromNodeTransform: grabberFromGrabbable,
-					universeFromParentStart: universeFromGrabber.copy(),
 				};
 				Av().renderer.startGrab( grabEvent.grabberId, grabEvent.grabbableId );
 				console.log( `telling collider about ${ endpointAddrToString( grabEvent.grabberId ) } `
