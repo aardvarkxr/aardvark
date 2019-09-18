@@ -14,6 +14,7 @@ interface TranslateArrowProps
 	rotateX?: number;
 	rotateY?: number;
 	rotateZ?: number;
+	constraint: AvConstraint;
 }
 
 interface TranslateArrowState
@@ -39,13 +40,6 @@ class AvTranslateArrow extends React.Component< TranslateArrowProps, TranslateAr
 	
 	public render()
 	{
-		let constraint: AvConstraint = 
-		{
-			minX: 0, maxX: 0,
-			minY: -100, maxY: 100,
-			minZ: 0, maxZ: 0,
-		}
-
 		let color: AvColor;
 		switch( this.state.highlight )
 		{
@@ -61,15 +55,15 @@ class AvTranslateArrow extends React.Component< TranslateArrowProps, TranslateAr
 		}
 
 		return <div>
-					<AvModelBoxHandle uri="http://aardvark.install/models/arrow.glb" 
-						updateHighlight={ this.updateHighlight }
-						constraint={ constraint }/>
 					<AvTransform 
 						rotateX={ this.props.rotateX } rotateY={ this.props.rotateY } rotateZ={ this.props.rotateZ }>
+						<AvModelBoxHandle uri="http://aardvark.install/models/arrow.glb" 
+							updateHighlight={ this.updateHighlight }
+							constraint={ this.props.constraint }/>
 						<AvModel uri={ "http://aardvark.install/models/arrow.glb" }
 							color={ color }/> }
+						{ this.props.children }
 					</AvTransform>
-					{ this.props.children }
 				</div>;
 	}
 }
@@ -132,15 +126,33 @@ export class AvTranslateControl extends React.Component< TranslateControlProps, 
 				preserveDropTransform={ true }>
 				<AvTranslateArrow 
 					color={ { r: 0.8, g: 0, b: 0 } }
-					highlightColor={ { r: 1, g: 0, b: 0 } }/>
+					highlightColor={ { r: 1, g: 0, b: 0 } }
+					constraint= 
+					{ {
+						minX: 0, maxX: 0,
+						minY: -100, maxY: 100,
+						minZ: 0, maxZ: 0,
+					} } />
 				<AvTranslateArrow 
 					rotateX={ -90 }
 					color={ { r: 0, g: 0.8, b: 0 } }
-					highlightColor={ { r: 0, g: 1, b: 0 } }/>
+					highlightColor={ { r: 0, g: 1, b: 0 } }
+					constraint= 
+					{ {
+						minX: 0, maxX: 0,
+						minY: 0, maxY: 0,
+						minZ: -100, maxZ: 100,
+					} } />
 				<AvTranslateArrow 
 					rotateZ={ -90 }
 					color={ { r: 0, g: 0, b: 0.8 } }
-					highlightColor={ { r: 0, g: 0, b: 1 } }/>
+					highlightColor={ { r: 0, g: 0, b: 1 } }
+					constraint= 
+					{ {
+						minX: -100, maxX: 100,
+						minY: 0, maxY: 0,
+						minZ: 0, maxZ: 0,
+					} } />
 				{ this.props.children }
 			</AvGrabbable> );
 	}
