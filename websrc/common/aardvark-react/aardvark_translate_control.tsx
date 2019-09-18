@@ -3,7 +3,7 @@ import { AvTransform } from 'common/aardvark-react/aardvark_transform';
 import bind from 'bind-decorator';
 import { AvModel } from 'common/aardvark-react/aardvark_model';
 import { HighlightType, AvGrabbable, GrabResponse } from './aardvark_grabbable';
-import { AvSphereHandle } from './aardvark_handles';
+import { AvSphereHandle, AvModelBoxHandle } from './aardvark_handles';
 import { AvGrabEvent, AvConstraint, AvNodeTransform, AvColor } from 'common/aardvark';
 
 
@@ -61,7 +61,8 @@ class AvTranslateArrow extends React.Component< TranslateArrowProps, TranslateAr
 		}
 
 		return <div>
-					<AvSphereHandle radius={ 0.1 } updateHighlight={ this.updateHighlight }
+					<AvModelBoxHandle uri="http://aardvark.install/models/arrow.glb" 
+						updateHighlight={ this.updateHighlight }
 						constraint={ constraint }/>
 					<AvTransform 
 						rotateX={ this.props.rotateX } rotateY={ this.props.rotateY } rotateZ={ this.props.rotateZ }>

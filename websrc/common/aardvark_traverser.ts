@@ -884,6 +884,13 @@ export class AvDefaultTraverser
 						universeFromNode.all(), 
 						node.propVolume.radius, hand );
 					break;
+
+				case EVolumeType.ModelBox:
+					Av().renderer.addGrabbableHandle_ModelBox( grabbableGlobalId, node.globalId,
+						universeFromNode.all(), 
+						node.propVolume.uri, hand );
+					break;
+					
 				default:
 					throw "unsupported volume type";
 			}

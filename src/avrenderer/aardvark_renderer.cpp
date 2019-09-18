@@ -1911,18 +1911,12 @@ bool VulkanExample::getModelBox( const std::string & uri, AABB_t *pBox )
 		return false;
 	}
 
-	if ( pModel->nodes.empty() )
-	{
-		return false;
-	}
-
-	vkglTF::BoundingBox aabb = pModel->nodes.front()->aabb;
-	pBox->xMin = aabb.min.x;
-	pBox->yMin = aabb.min.y;
-	pBox->zMin = aabb.min.z;
-	pBox->xMax = aabb.max.x;
-	pBox->yMax = aabb.max.y;
-	pBox->zMax = aabb.max.z;
+	pBox->xMin = pModel->dimensions.min.x;
+	pBox->yMin = pModel->dimensions.min.y;
+	pBox->zMin = pModel->dimensions.min.z;
+	pBox->xMax = pModel->dimensions.max.x;
+	pBox->yMax = pModel->dimensions.max.y;
+	pBox->zMax = pModel->dimensions.max.z;
 	return true;
 }
 

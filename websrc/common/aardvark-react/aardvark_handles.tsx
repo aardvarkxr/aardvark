@@ -7,18 +7,27 @@ import bind from 'bind-decorator';
 import { AvGadget } from './aardvark_gadget';
 import { EndpointAddr } from './aardvark_protocol';
 
-interface AvSphereHandleProps extends AvBaseNodeProps
+interface AvBaseHandleProps extends AvBaseNodeProps
 {
-	radius: number;
 	updateHighlight?: ( highlightType: HighlightType ) => void;
 	constraint?: AvConstraint;
 }
 
-export class AvSphereHandle extends AvBaseNode< AvSphereHandleProps, {} > 
+interface AvBaseHandleState
+{
+
+}
+
+export abstract class AvBaseHandle<TProps, TState> extends AvBaseNode<TProps, TState> 
 {
 	m_lastHighlight = HighlightType.None;
 
-	@bind private onGrabEvent( evt: AvGrabEvent )
+	protected get handleProps()
+	{
+		return this.props as AvBaseHandleProps;
+	}
+
+	@bind protected onGrabEvent( evt: AvGrabEvent )
 	{
 		// by default, don't change the highlight
 		var newHighlight = this.m_lastHighlight;
@@ -53,9 +62,9 @@ export class AvSphereHandle extends AvBaseNode< AvSphereHandleProps, {} >
 		if( newHighlight != this.m_lastHighlight )
 		{
 			this.m_lastHighlight = newHighlight;
-			if( this.props.updateHighlight )
+			if( this.handleProps.updateHighlight )
 			{
-				this.props.updateHighlight( this.m_lastHighlight );
+				this.handleProps.updateHighlight( this.m_lastHighlight );
 			}
 		}
 	}
@@ -63,13 +72,23 @@ export class AvSphereHandle extends AvBaseNode< AvSphereHandleProps, {} >
 	public grabInProgress( grabber: EndpointAddr ):void
 	{
 		this.m_lastHighlight = HighlightType.Grabbed;
-		if( this.props.updateHighlight )
+		if( this.handleProps.updateHighlight )
 		{
-			this.props.updateHighlight( this.m_lastHighlight );
+			this.handleProps.updateHighlight( this.m_lastHighlight );
 		}
 	}
 
 
+}
+
+
+interface AvSphereHandleProps extends AvBaseHandleProps
+{
+	radius: number;
+}
+
+export class AvSphereHandle extends AvBaseHandle< AvSphereHandleProps, {} > 
+{
 	public buildNode()
 	{
 		let node = this.createNodeObject( AvNodeType.Handle, this.m_nodeId );
@@ -80,3 +99,19 @@ export class AvSphereHandle extends AvBaseNode< AvSphereHandleProps, {} >
 	}
 }
 
+interface AvModelBoxHandleProps extends AvBaseHandleProps
+{
+	uri: string;
+}
+
+export class AvModelBoxHandle extends AvBaseHandle< AvModelBoxHandleProps, {} > 
+{
+	public buildNode()
+	{
+		let node = this.createNodeObject( AvNodeType.Handle, this.m_nodeId );
+		node.propVolume = { type: EVolumeType.ModelBox, uri : this.props.uri };
+		node.propConstraint = this.props.constraint;
+		AvGadget.instance().setGrabEventProcessor( this.m_nodeId, this.onGrabEvent );
+		return node;
+	}
+}

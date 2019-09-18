@@ -92,12 +92,43 @@ bool spheresIntersect( const CCollisionTester::Volume_t & v1, const CCollisionTe
 	return dist < ( v1.radius + v2.radius );
 }
 
+template<typename T>
+T Max( T v1, T v2 )
+{
+	if ( v1 > v2 )
+		return v1;
+	else
+		return v2;
+}
+
+bool sphereBoxIntersect( const CCollisionTester::Volume_t & sphere, const CCollisionTester::Volume_t & box )
+{
+	glm::mat4 boxFromSphere = glm::inverse( box.universeFromVolume ) * sphere.universeFromVolume;
+	glm::vec3 sphereCenter = glm::vec3( boxFromSphere * glm::vec4( 0, 0, 0, 1 ) );
+
+	float xDist = Max( Max( box.box.xMin - sphereCenter.x, sphereCenter.x - box.box.xMax ), 0.f );
+	float yDist = Max( Max( box.box.yMin - sphereCenter.y, sphereCenter.y - box.box.yMax ), 0.f );
+	float zDist = Max( Max( box.box.zMin - sphereCenter.z, sphereCenter.z - box.box.zMax ), 0.f );
+	return ( xDist * xDist + yDist * yDist + zDist * zDist ) < sphere.radius;
+}
+
+
 bool volumesIntersect( const CCollisionTester::Volume_t & v1, const CCollisionTester::Volume_t &v2 )
 {
 	if ( v1.type == CCollisionTester::VolumeType::Sphere && v2.type == CCollisionTester::VolumeType::Sphere )
 	{
 		return spheresIntersect( v1, v2 );
 	}
+	if ( v1.type == CCollisionTester::VolumeType::Sphere && v2.type == CCollisionTester::VolumeType::Box )
+	{
+		return sphereBoxIntersect( v1, v2 );
+	}
+	if ( v2.type == CCollisionTester::VolumeType::Sphere && v1.type == CCollisionTester::VolumeType::Box )
+	{
+		return sphereBoxIntersect( v2, v1 );
+	}
+
+	// TODO: probably need box/box intersection eventually
 
 	return false;
 }

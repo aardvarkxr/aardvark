@@ -142,6 +142,7 @@ export enum EVolumeType
 	Invalid = -1,
 
 	Sphere = 0,
+	ModelBox = 1,
 };
 
 
@@ -150,6 +151,7 @@ export interface AvVolume
 	type: EVolumeType;
 
 	radius?: number;
+	uri?: string;
 }
 
 export enum ENodeFlags
@@ -241,6 +243,9 @@ interface AvRenderer
 	addGrabbableHandle_Sphere( grabbableGlobalId: EndpointAddr, 
 		handleGlobalId: EndpointAddr,
 		universeFromHandle: number[], radius: number, hand: EHand ): void;
+	addGrabbableHandle_ModelBox( grabbableGlobalId: EndpointAddr, 
+		handleGlobalId: EndpointAddr,
+		universeFromHandle: number[], uri: string, hand: EHand ): void;
 	addGrabber_Sphere( grabberGlobalId: EndpointAddr, universeFromGrabber: number[], radius: number, hand: EHand ): void;
 	addHook_Sphere( hookGlobalId: EndpointAddr, universeFromGrabber: number[], radius: number, hand: EHand  ): void;
 
