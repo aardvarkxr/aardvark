@@ -183,6 +183,7 @@ interface NodeToNodeAnchor_t
 	parentGlobalId: EndpointAddr;
 	handleGlobalId?: EndpointAddr;
 	parentFromNodeTransform: mat4;
+	universeFromParentStart: mat4;
 }
 
 interface AvNodeRoot
@@ -768,12 +769,15 @@ export class AvDefaultTraverser
 					mat4.identity, null,
 					( universeFromParents: mat4[], unused: mat4) =>
 					{
+						let grabberFromGrabbable = parentInfo.parentFromNodeTransform;
+						let grabPoint = grabberFromGrabbable.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) );
 						let universeFromGrabber = universeFromParents[1];
 						let universeFromParent = universeFromParents[0];
 						let parentFromUniverse = universeFromParent.copy().inverse();
+						
 						let grabberPositionInParent = new vec3(
 							parentFromUniverse.multiplyVec4( 
-								universeFromGrabber.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) ) ).xyz );
+								universeFromGrabber.multiplyVec4( grabPoint ) ).xyz );
 						
 						if( constraint.minX != undefined )
 						{
@@ -806,11 +810,6 @@ export class AvDefaultTraverser
 								grabberPositionInParent.z );
 						}
 						let parentFromNode = translateMat( grabberPositionInParent );
-						if( node.flags & ENodeFlags.PreserveGrabTransform )
-						{
-							nodeData.lastParentFromNode = parentFromNode;
-						}
-
 						let universeFromNode = mat4.product( universeFromParent, parentFromNode, new mat4() );
 						this.preserveTransform( node, parentInfo.parentGlobalId, defaultParent,
 							universeFromNode, parentFromNode );
@@ -890,7 +889,7 @@ export class AvDefaultTraverser
 						universeFromNode.all(), 
 						node.propVolume.uri, hand );
 					break;
-					
+
 				default:
 					throw "unsupported volume type";
 			}
@@ -962,6 +961,7 @@ export class AvDefaultTraverser
 					throw "grabber wasn't rendered last frame";
 				}
 
+				let universeFromGrabber = this.m_lastFrameUniverseFromNodeTransforms[ grabberIdStr ];
 				let grabberFromGrabbable: mat4;
 				if( !this.m_lastFrameUniverseFromNodeTransforms.hasOwnProperty( grabbableIdStr  ) 
 					|| grabEvent.useIdentityTransform )
@@ -971,7 +971,7 @@ export class AvDefaultTraverser
 				else
 				{
 					let universeFromGrabbable = this.m_lastFrameUniverseFromNodeTransforms[ grabbableIdStr ];
-					let grabberFromUniverse = this.m_lastFrameUniverseFromNodeTransforms[ grabberIdStr ].inverse();
+					let grabberFromUniverse = universeFromGrabber.copy().inverse();
 		
 					grabberFromGrabbable = grabberFromUniverse.multiply( universeFromGrabbable );
 				}
@@ -993,6 +993,7 @@ export class AvDefaultTraverser
 					parentGlobalId: grabEvent.grabberId,
 					handleGlobalId: grabEvent.handleId,
 					parentFromNodeTransform: grabberFromGrabbable,
+					universeFromParentStart: universeFromGrabber.copy(),
 				};
 				Av().renderer.startGrab( grabEvent.grabberId, grabEvent.grabbableId );
 				console.log( `telling collider about ${ endpointAddrToString( grabEvent.grabberId ) } `
