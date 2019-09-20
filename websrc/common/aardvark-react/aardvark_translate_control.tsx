@@ -15,6 +15,7 @@ interface TranslateArrowProps
 	rotateY?: number;
 	rotateZ?: number;
 	constraint: AvConstraint;
+	centerGap?: number;
 }
 
 interface TranslateArrowState
@@ -57,34 +58,87 @@ class AvTranslateArrow extends React.Component< TranslateArrowProps, TranslateAr
 		return <div>
 					<AvTransform 
 						rotateX={ this.props.rotateX } rotateY={ this.props.rotateY } rotateZ={ this.props.rotateZ }>
-						<AvModelBoxHandle uri="http://aardvark.install/models/arrow.glb" 
-							updateHighlight={ this.updateHighlight }
-							constraint={ this.props.constraint }/>
-						<AvModel uri={ "http://aardvark.install/models/arrow.glb" }
-							color={ color }/> }
-						{ this.props.children }
+						<AvTransform translateY={ this.props.centerGap }>
+							<AvModelBoxHandle uri="http://aardvark.install/models/arrow.glb" 
+								updateHighlight={ this.updateHighlight }
+								constraint={ this.props.constraint }/>
+							<AvModel uri={ "http://aardvark.install/models/arrow.glb" }
+								color={ color }/> }
+							{ this.props.children }
+						</AvTransform>
 					</AvTransform>
 				</div>;
 	}
 }
 
-
-interface TranslateControlProps
+interface BallHandleProps
 {
-	onSetValue: ( newValue: number[] ) => void;
+	color: AvColor;
+	highlightColor: AvColor;
+	radius: number;
 }
 
-interface TranslateControlState
+interface BallHandleState
 {
 	highlight: HighlightType;
 }
 
-function clamp( n: number, min: number, max: number ): number
+class AvBallHandle extends React.Component< BallHandleProps, BallHandleState >
 {
-	return Math.min( max, Math.max( min, n ) );
+	constructor( props: any )
+	{
+		super( props );
+		this.state = { highlight: HighlightType.None };
+	}
+
+	@bind updateHighlight( newHighlight: HighlightType )
+	{
+		this.setState( { highlight: newHighlight } );
+	}
+	
+	public render()
+	{
+		let color: AvColor;
+		switch( this.state.highlight )
+		{
+			case HighlightType.Grabbed:
+			case HighlightType.InRange:
+			case HighlightType.InHookRange:
+				color = this.props.highlightColor;
+				break;
+			default:
+			case HighlightType.None:
+				color = this.props.color;
+				break;
+		}
+
+		return <div>
+					<AvTransform uniformScale={ this.props.radius }>
+							<AvModel uri={ "http://aardvark.install/models/sphere/sphere.glb" }
+								color={ color }/> }
+							{ this.props.children }
+					</AvTransform>
+					<AvSphereHandle radius={ this.props.radius } />
+				</div>;
+	}
+	
 }
 
-export class AvTranslateControl extends React.Component< TranslateControlProps, TranslateControlState >
+
+interface TransformControlProps
+{
+	onSetValue: ( newValue: AvNodeTransform ) => void;
+	scale?: boolean;
+	rotate?: boolean;
+	translate?: boolean;
+	general?: boolean;
+}
+
+interface TransformControlState
+{
+}
+
+export class AvTransformControl extends React.Component< TransformControlProps, TransformControlState >
 {
 	constructor( props: any )
 	{
@@ -116,7 +170,62 @@ export class AvTranslateControl extends React.Component< TranslateControlProps, 
 
 	@bind onTransformUpdated( parentFromNode: AvNodeTransform, universeFromNode: AvNodeTransform )
 	{
-//		this.props.onUpdateValue( parentFromNode.position.y );
+		if( this.props.onSetValue )
+		{
+			this.props.onSetValue( parentFromNode );
+		}
+	}
+
+	private renderTranslate(): JSX.Element[]
+	{
+		if( !this.props.translate )
+			return null;
+
+		let centerGap = this.props.general ? 0.04 : 0;
+		return (
+		[
+			<AvTranslateArrow 
+				color={ { r: 0.8, g: 0, b: 0 } }
+				highlightColor={ { r: 1, g: 0, b: 0 } }
+				centerGap={ centerGap }
+				constraint= 
+				{ {
+					minX: 0, maxX: 0,
+					minY: -100, maxY: 100,
+					minZ: 0, maxZ: 0,
+				} } />,
+			<AvTranslateArrow 
+				rotateX={ -90 }
+				color={ { r: 0, g: 0.8, b: 0 } }
+				highlightColor={ { r: 0, g: 1, b: 0 } }
+				centerGap={ centerGap }
+				constraint= 
+				{ {
+					minX: 0, maxX: 0,
+					minY: 0, maxY: 0,
+					minZ: -100, maxZ: 100,
+				} } />,
+			<AvTranslateArrow 
+				rotateZ={ -90 }
+				color={ { r: 0, g: 0, b: 0.8 } }
+				highlightColor={ { r: 0, g: 0, b: 1 } }
+				centerGap={ centerGap }
+				constraint= 
+				{ {
+					minX: -100, maxX: 100,
+					minY: 0, maxY: 0,
+					minZ: 0, maxZ: 0,
+				} } />,
+		] );
+	}
+
+	private renderGeneral()
+	{
+		if( !this.props.general )
+			return null;
+
+		return ( <AvBallHandle radius = { 0.04 } color={ {r: 0.8, g: 0.8, b: 0 } }
+			highlightColor={ { r: 1, g: 1, b: 0 }} /> )
 	}
 
 	public render()
@@ -124,35 +233,8 @@ export class AvTranslateControl extends React.Component< TranslateControlProps, 
 		return (	
 			<AvGrabbable onTransformUpdated={ this.onTransformUpdated } 
 				preserveDropTransform={ true }>
-				<AvTranslateArrow 
-					color={ { r: 0.8, g: 0, b: 0 } }
-					highlightColor={ { r: 1, g: 0, b: 0 } }
-					constraint= 
-					{ {
-						minX: 0, maxX: 0,
-						minY: -100, maxY: 100,
-						minZ: 0, maxZ: 0,
-					} } />
-				<AvTranslateArrow 
-					rotateX={ -90 }
-					color={ { r: 0, g: 0.8, b: 0 } }
-					highlightColor={ { r: 0, g: 1, b: 0 } }
-					constraint= 
-					{ {
-						minX: 0, maxX: 0,
-						minY: 0, maxY: 0,
-						minZ: -100, maxZ: 100,
-					} } />
-				<AvTranslateArrow 
-					rotateZ={ -90 }
-					color={ { r: 0, g: 0, b: 0.8 } }
-					highlightColor={ { r: 0, g: 0, b: 1 } }
-					constraint= 
-					{ {
-						minX: -100, maxX: 100,
-						minY: 0, maxY: 0,
-						minZ: 0, maxZ: 0,
-					} } />
+				{ this.renderTranslate() }
+				{ this.renderGeneral() }
 				{ this.props.children }
 			</AvGrabbable> );
 	}

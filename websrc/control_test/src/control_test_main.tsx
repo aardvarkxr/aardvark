@@ -9,13 +9,15 @@ import { AvSphereHandle } from 'common/aardvark-react/aardvark_handles';
 import { AvModel } from 'common/aardvark-react/aardvark_model';
 import { AvPanel } from 'common/aardvark-react/aardvark_panel';
 import { AvPanelAnchor } from 'common/aardvark-react/aardvark_panelanchor';
-import { AvTranslateControl } from 'common/aardvark-react/aardvark_translate_control';
+import { AvTransformControl } from 'common/aardvark-react/aardvark_translate_control';
+import { AvNodeTransform } from 'common/aardvark';
+import { QuaternionToEulerAngles, RadiansToDegrees } from 'common/aardvark-react/aardvark_utils';
 
 
 interface ControlTestState
 {
 	sliderValue: number;
-	translateValue: [ number, number, number ];
+	transformValue: AvNodeTransform;
 }
 
 
@@ -27,7 +29,9 @@ class ControlTest extends React.Component< {}, ControlTestState >
 		this.state = 
 		{ 
 			sliderValue: 0,
-			translateValue: [ 0, 0, 0 ],
+			transformValue: 
+			{
+			},
 		};
 	}
 
@@ -36,9 +40,31 @@ class ControlTest extends React.Component< {}, ControlTestState >
 		this.setState( { sliderValue: newValue[0] } );
 	}
 
-	@bind onSetTranslate( newValue: number[] )
+	@bind onSetTransform( newValue: AvNodeTransform )
 	{
-		this.setState( { translateValue: ( newValue as [number, number, number ]) } );
+		this.setState( { transformValue: newValue } );
+	}
+
+	private renderTransformLabel()
+	{
+		if( !this.state.transformValue )
+			return null;
+
+		let tx = this.state.transformValue.position ? this.state.transformValue.position.x : 0;
+		let ty = this.state.transformValue.position ? this.state.transformValue.position.y : 0;
+		let tz = this.state.transformValue.position ? this.state.transformValue.position.z : 0;
+		let sx = this.state.transformValue.scale ? this.state.transformValue.scale.x : 1;
+		let sy = this.state.transformValue.scale ? this.state.transformValue.scale.y : 1;
+		let sz = this.state.transformValue.scale ? this.state.transformValue.scale.z : 1;
+		let r = QuaternionToEulerAngles( this.state.transformValue.rotation );
+
+		return <div className="TranslateLabel">
+
+				<div>[ { tx.toFixed( 3 ) }, { ty.toFixed( 3 ) }, { tz.toFixed( 3 ) } ]</div>
+				<div>[ { sx.toFixed( 2 ) }, { sy.toFixed( 2 ) }, { sz.toFixed( 2 ) } ]</div>
+				<div>[ { RadiansToDegrees( r.yaw ).toFixed( 0 ) }, 
+					{ RadiansToDegrees( r.pitch ).toFixed( 0 ) }, { RadiansToDegrees( r.roll ).toFixed( 0 ) } ]</div>
+			</div>;
 	}
 
 	public render()
@@ -64,16 +90,14 @@ class ControlTest extends React.Component< {}, ControlTestState >
 							</div>
 
 							<div className="TranslateContainer">
-								<div className="TranslateLabel">
-									[ 
-										{ this.state.translateValue[0] },
-										{ this.state.translateValue[1] },
-										{ this.state.translateValue[2] }
-									]
-								</div>
+								{ this.renderTransformLabel() }
 								<div className="TranslateControl">
 									<AvPanelAnchor>
-										<AvTranslateControl onSetValue={ this.onSetTranslate } />
+										<AvTransformControl onSetValue={ this.onSetTransform }
+											translate= { true } 
+											rotate= { true } 
+											scale= { true } 
+											general= { true } />
 									</AvPanelAnchor>
 								</div>
 							</div>
