@@ -830,9 +830,7 @@ export class AvDefaultTraverser
 			if( parent )
 			{
 				let parentFromUniverse = parent.getUniverseFromNode().copy().inverse();
-				let parentFromNode = mat4.product( parentFromUniverse, universeFromNode, new mat4() );
-	
-				parentFromNode = parentFromNode;
+				parentFromNode = mat4.product( parentFromUniverse, universeFromNode, new mat4() );
 			}	
 		}
 
