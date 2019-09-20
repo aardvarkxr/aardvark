@@ -279,4 +279,8 @@ protected:
 
 	std::vector< CVulkanRendererModelInstance *> m_modelsToRender;
 
+private:
+	void setOverlayTexture();
+	bool m_OverlayTextureIsSet = false;
+	glm::mat4 m_InverseHorizontalLook;
 };

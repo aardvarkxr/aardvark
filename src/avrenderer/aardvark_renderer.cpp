@@ -95,38 +95,38 @@ VulkanExample::VulkanExample()
 
 VulkanExample::~VulkanExample() noexcept
 {
-    vkDestroyPipeline(device, pipelines.skybox, nullptr);
-    vkDestroyPipeline(device, pipelines.pbr, nullptr);
-    vkDestroyPipeline(device, pipelines.pbrAlphaBlend, nullptr);
-    vkDestroyPipeline(device, pipelines.varggles, nullptr);
+	vkDestroyPipeline(device, pipelines.skybox, nullptr);
+	vkDestroyPipeline(device, pipelines.pbr, nullptr);
+	vkDestroyPipeline(device, pipelines.pbrAlphaBlend, nullptr);
+	vkDestroyPipeline(device, pipelines.varggles, nullptr);
 
-    vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
+	vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
 
-    m_mapModels.clear();
+	m_mapModels.clear();
 
-    for (auto buffer : uniformBuffers)
-    {
-        buffer.params.destroy();
-        buffer.scene.destroy();
-        buffer.skybox.destroy();
-        buffer.leftEye.destroy();
-        buffer.rightEye.destroy();
-    }
-    for (auto fence : waitFences) {
-        vkDestroyFence(device, fence, nullptr);
-    }
-    for (auto semaphore : renderCompleteSemaphores) {
-        vkDestroySemaphore(device, semaphore, nullptr);
-    }
-    for (auto semaphore : presentCompleteSemaphores) {
-        vkDestroySemaphore(device, semaphore, nullptr);
-    }
+	for (auto buffer : uniformBuffers)
+	{
+		buffer.params.destroy();
+		buffer.scene.destroy();
+		buffer.skybox.destroy();
+		buffer.leftEye.destroy();
+		buffer.rightEye.destroy();
+	}
+	for (auto fence : waitFences) {
+		vkDestroyFence(device, fence, nullptr);
+	}
+	for (auto semaphore : renderCompleteSemaphores) {
+		vkDestroySemaphore(device, semaphore, nullptr);
+	}
+	for (auto semaphore : presentCompleteSemaphores) {
+		vkDestroySemaphore(device, semaphore, nullptr);
+	}
 
-    textures.environmentCube.destroy();
-    textures.irradianceCube.destroy();
-    textures.prefilteredCube.destroy();
-    textures.lutBrdf.destroy();
-    textures.empty.destroy();
+	textures.environmentCube.destroy();
+	textures.irradianceCube.destroy();
+	textures.prefilteredCube.destroy();
+	textures.lutBrdf.destroy();
+	textures.empty.destroy();
 }
 
 void VulkanExample::renderNode( std::shared_ptr<vkglTF::Model> pModel, std::shared_ptr<vkglTF::Node> node, uint32_t cbIndex, vkglTF::Material::AlphaMode alphaMode, EEye eEye )
@@ -294,8 +294,9 @@ void VulkanExample::renderVarggles( uint32_t cbIndex, vks::RenderTarget target, 
 
 	PushConstBlockVarggles pushConstVarggles{};
 	pushConstVarggles.fov = m_eyeFOV * (M_PI / 180.0f);
-	// TODO: Pluto - Get inverse horizontal look here
-	pushConstVarggles.inverseHorizontalLook = glm::mat4(); //glm::vec4(1, 1, 1, 1);
+
+	m_vrManager->getVargglesInverseHorizontalLookTransform(m_InverseHorizontalLook);
+	pushConstVarggles.inverseHorizontalLook = m_InverseHorizontalLook;
 	vkCmdPushConstants( commandBuffers[cbIndex], m_vargglesVulkanBindings.pipelinelayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( PushConstBlockVarggles ), &pushConstVarggles);
 
 	vkCmdDraw( commandBuffers[cbIndex], 3, 1, 0, 0 );
@@ -2200,6 +2201,7 @@ void VulkanExample::processRenderList()
 	VK_CHECK_RESULT( vkQueueSubmit( queue, 1, &submitInfo, waitFences[frameIndex] ) );
 
 	submitEyeBuffers();
+	setOverlayTexture();
 
 	VkResult present = swapChain.queuePresent( queue, currentBuffer, renderCompleteSemaphores[frameIndex] );
 	if ( !( ( present == VK_SUCCESS ) || ( present == VK_SUBOPTIMAL_KHR ) ) ) {
@@ -2262,6 +2264,36 @@ void VulkanExample::submitEyeBuffers()
 
 	vulkanData.m_nImage = (uint64_t)rightEyeRT.color.image;
 	vr::VRCompositor()->Submit( vr::Eye_Right, &texture, &bounds );
+}
+
+void VulkanExample::setOverlayTexture() {
+	if (m_OverlayTextureIsSet)
+		return;
+
+	vr::VRTextureBounds_t bounds;
+	bounds.uMin = 0.0f;
+	bounds.uMax = 1.0f;
+	bounds.vMin = 0.0f;
+	bounds.vMax = 1.0f;
+
+	vr::VRVulkanTextureData_t vulkanData;
+	vulkanData.m_nImage = (uint64_t)vargglesRT.color.image;
+	vulkanData.m_pDevice = (VkDevice_T *)device;
+	vulkanData.m_pPhysicalDevice = (VkPhysicalDevice_T *)vulkanDevice->physicalDevice;
+	vulkanData.m_pInstance = (VkInstance_T *)instance;
+	vulkanData.m_pQueue = (VkQueue_T *)queue;
+	vulkanData.m_nQueueFamilyIndex = vulkanDevice->queueFamilyIndices.graphics;
+
+	vulkanData.m_nWidth = vargglesWidth;
+	vulkanData.m_nHeight = vargglesHeight;
+	vulkanData.m_nFormat = VK_FORMAT_R8G8B8A8_UNORM;
+	vulkanData.m_nSampleCount = 1;
+
+	vr::Texture_t texture = { &vulkanData, vr::TextureType_Vulkan, vr::ColorSpace_Auto };
+	m_vrManager->setVargglesTexture(&texture);
+
+	// TODO PlutoVR: Set this once only
+	// m_OverlayTextureIsSet = true;
 }
 
 CVulkanRendererModelInstance::CVulkanRendererModelInstance( 

@@ -1,6 +1,12 @@
 #pragma once
 
 #include <unordered_map>
+//TODO PlutoVR: Put this def somewhere that makes more sense or move away from using exp
+#ifndef GLM_ENABLE_EXPERIMENTAL
+	#define GLM_ENABLE_EXPERIMENTAL
+#endif
+#include <glm/gtx/matrix_interpolation.hpp>
+#include <glm/gtx/vector_angle.hpp>
 
 #include "ivrmanager.h"
 
@@ -13,13 +19,16 @@ public:
 	virtual void sentHapticEventForHand( EHand hand, float amplitude, float frequency, float duration ) override;
 	virtual void updateOpenVrPoses() override;
 	virtual void doInputWork() override;
+	virtual void setVargglesTexture(const vr::Texture_t *pTexture) override;
 	virtual glm::mat4 getHmdFromUniverse() override { return m_hmdFromUniverse; }
+	virtual void getVargglesInverseHorizontalLookTransform(glm::mat4 &horizontalLooktransform) override;
 
 	vr::VRInputValueHandle_t getDeviceForHand( EHand hand );
 	glm::mat4 glmMatFromVrMat( const vr::HmdMatrix34_t & mat );
 
 	bool isGrabPressed( vr::VRInputValueHandle_t whichHand );
 	void initOpenVR();
+	~CVRManager();
 
 protected:
 	vr::VRActionSetHandle_t m_actionSet = vr::k_ulInvalidActionSetHandle;
@@ -32,5 +41,25 @@ protected:
 
 	std::unordered_map<std::string, glm::mat4> m_universeFromOriginTransforms;
 	glm::mat4 m_hmdFromUniverse;
+
+private:
+	void createAndPositionVargglesOverlay();
+	void calculateInverseHorizontalLook();
+	void destroyVargglesOverlay();
+
+	const char* c_pchVargglesOverlayKey = "aardvark.varggles";
+	const char* c_pchVargglesOverlayName = "varggles";
+	const float c_fOverlayWidthInMeters = 1.f;
+	const vr::ETrackingUniverseOrigin c_eTrackingOrigin = vr::TrackingUniverseStanding;
+	const vr::HmdMatrix34_t m_vargglesOverlayTransform{
+		{
+			{1, 0, 0, 0},
+			{0, 1, 0, 0},
+			{0, 0, 1, -1}
+		}
+	};
+	vr::VROverlayHandle_t m_vargglesOverlay = vr::k_ulOverlayHandleInvalid;
+	glm::mat4 m_vargglesInverseHorizontalLook;
+	bool m_bVargglesLookVectorIsValid = false;
 };
 

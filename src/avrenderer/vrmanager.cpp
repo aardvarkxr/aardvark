@@ -14,7 +14,15 @@ void CVRManager::init()
 	vr::VRInput()->GetActionHandle( "/actions/aardvark/in/grab", &m_actionGrab );
 	vr::VRInput()->GetInputSourceHandle( "/user/hand/left", &m_leftHand );
 	vr::VRInput()->GetInputSourceHandle( "/user/hand/right", &m_rightHand );
+
+	createAndPositionVargglesOverlay();
 }
+
+CVRManager::~CVRManager()
+{
+	destroyVargglesOverlay();
+}
+
 
 bool CVRManager::getUniverseFromOrigin( const std::string & originPath, glm::mat4 *universeFromOrigin )
 {
@@ -77,6 +85,27 @@ void CVRManager::updateOpenVrPoses()
 	m_hmdFromUniverse = glm::inverse( universeFromHmd );
 	m_universeFromOriginTransforms["/user/head"] = universeFromHmd;
 	m_universeFromOriginTransforms["/space/stage"] = glm::mat4( 1.f );
+
+	calculateInverseHorizontalLook();
+}
+
+void CVRManager::calculateInverseHorizontalLook() 
+{
+	// get forward
+	glm::vec3 forward = m_hmdFromUniverse * glm::vec4(0.0, 0.0, -1.0, 0.0);
+
+	// get angle w.r.t. up
+	auto angle = glm::orientedAngle(glm::vec3(0.0, 0.0, -1.0), forward, glm::vec3(0.0, 1.0, 0.0));
+
+	// get rotation matrix with inverse of that angle
+	m_vargglesInverseHorizontalLook = glm::axisAngleMatrix(glm::vec3(0.0, 1.0, 0.0), -angle);
+	m_bVargglesLookVectorIsValid = true;
+}
+
+void CVRManager::getVargglesInverseHorizontalLookTransform(glm::mat4& horizontalLooktransform) 
+{
+	if (m_bVargglesLookVectorIsValid)
+		horizontalLooktransform = m_vargglesInverseHorizontalLook;
 }
 
 bool GetAction( vr::VRActionHandle_t action, vr::VRInputValueHandle_t whichHand )
@@ -151,13 +180,71 @@ void CVRManager::sentHapticEventForHand( EHand hand, float amplitude, float freq
 void CVRManager::initOpenVR()
 {
 	vr::EVRInitError vrErr;
-	vr::VR_Init( &vrErr, vr::VRApplication_Scene );
-	if ( vrErr != vr::VRInitError_None )
+	vr::VR_Init(&vrErr, vr::VRApplication_Scene);
+	if (vrErr != vr::VRInitError_None)
 	{
 		std::cout << "FATAL: VR_Init failed" << std::endl;
 		return;
 	}
 
-	vr::VRCompositor()->SetTrackingSpace( vr::TrackingUniverseStanding );
+	vr::VRCompositor()->SetTrackingSpace(c_eTrackingOrigin);
+}
 
+void CVRManager::createAndPositionVargglesOverlay()
+{
+	// create, early out if error
+	if (vr::VROverlay()->CreateOverlay(c_pchVargglesOverlayKey, c_pchVargglesOverlayName, &m_vargglesOverlay) != vr::VROverlayError_None)
+	{
+		std::cout << "ERROR: CreateOverlay failed" << std::endl;
+		m_vargglesOverlay = vr::k_ulOverlayHandleInvalid;
+		return;
+	}
+
+	/*if (vr::VROverlay()->SetOverlayFlag(m_vargglesOverlay, vr::VROverlayFlags_StereoPanorama, true) != vr::VROverlayError_None)
+	{
+		std::cout << "ERROR: StereoPanorama failed" << std::endl;
+		return;
+	}*/
+
+	if (vr::VROverlay()->SetOverlayWidthInMeters(m_vargglesOverlay, c_fOverlayWidthInMeters) != vr::VROverlayError_None)
+	{
+		std::cout << "ERROR: SetOverlayWidth failed" << std::endl;
+		return;
+	}
+
+	if (vr::VROverlay()->SetOverlayTransformAbsolute(m_vargglesOverlay, c_eTrackingOrigin, &m_vargglesOverlayTransform) != vr::VROverlayError_None)
+	{
+		std::cout << "ERROR: SetOverlayTransform failed" << std::endl;
+		return;
+	}
+
+	if (vr::VROverlay()->SetOverlayTransformTrackedDeviceRelative(m_vargglesOverlay, vr::k_unTrackedDeviceIndex_Hmd, &m_vargglesOverlayTransform) != vr::VROverlayError_None)
+	{
+		std::cout << "ERROR: SetOverlayTransform failed" << std::endl;
+		return;
+	}
+}
+
+void CVRManager::destroyVargglesOverlay()
+{
+	vr::VROverlay()->DestroyOverlay(m_vargglesOverlay);
+	m_vargglesOverlay = vr::k_ulOverlayHandleInvalid;
+}
+
+void CVRManager::setVargglesTexture(const vr::Texture_t *pTexture)
+{
+	if (m_vargglesOverlay == vr::k_ulOverlayHandleInvalid)
+	{
+		std::cout << "ERROR: SetTexture on invalid overlay" << std::endl;
+		return;
+	}
+
+	if (vr::VROverlay()->SetOverlayTexture(m_vargglesOverlay, pTexture) != vr::VROverlayError_None)
+	{
+		std::cout << "ERROR: SetTexture Failed on Varggles Overlay" << std::endl;
+		return;
+	}
+
+	if (vr::VROverlay()->ShowOverlay(m_vargglesOverlay) != vr::VROverlayError_None)
+		std::cout << "ERROR: ShowOverlay failed" << std::endl;
 }
