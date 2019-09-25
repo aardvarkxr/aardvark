@@ -29,7 +29,7 @@ public:
 	virtual void sentHapticEventForHand( EHand hand, float amplitude, float frequency, float duration ) = 0;
 	virtual void updateOpenVrPoses() = 0;
 	virtual void doInputWork() = 0;
-	virtual void getVargglesInverseHorizontalLookTransform(glm::mat4& horizontalLooktransform) = 0;
+	virtual void getVargglesLookRotation(glm::mat4& horizontalLooktransform) = 0;
 	virtual void setVargglesTexture(const vr::Texture_t* pTexture) = 0;
 	virtual glm::mat4 getHmdFromUniverse() = 0;
 };

@@ -1,13 +1,8 @@
 #pragma once
 
 #include <unordered_map>
-//TODO PlutoVR: Put this def somewhere that makes more sense or move away from using exp
-#ifndef GLM_ENABLE_EXPERIMENTAL
-	#define GLM_ENABLE_EXPERIMENTAL
-#endif
-#include <glm/gtx/matrix_interpolation.hpp>
-#include <glm/gtx/vector_angle.hpp>
-
+#define GLM_FORCE_RADIANS
+#include <glm/gtc/matrix_transform.hpp> 
 #include "ivrmanager.h"
 
 class CVRManager : public IVrManager
@@ -21,10 +16,13 @@ public:
 	virtual void doInputWork() override;
 	virtual void setVargglesTexture(const vr::Texture_t *pTexture) override;
 	virtual glm::mat4 getHmdFromUniverse() override { return m_hmdFromUniverse; }
-	virtual void getVargglesInverseHorizontalLookTransform(glm::mat4 &horizontalLooktransform) override;
+	virtual void getVargglesLookRotation(glm::mat4 &horizontalLooktransform) override;
 
 	vr::VRInputValueHandle_t getDeviceForHand( EHand hand );
 	glm::mat4 glmMatFromVrMat( const vr::HmdMatrix34_t & mat );
+	void createAndPositionVargglesOverlay();
+	void calculateInverseHorizontalLook();
+	void destroyVargglesOverlay();
 
 	bool isGrabPressed( vr::VRInputValueHandle_t whichHand );
 	void initOpenVR();
@@ -42,14 +40,9 @@ protected:
 	std::unordered_map<std::string, glm::mat4> m_universeFromOriginTransforms;
 	glm::mat4 m_hmdFromUniverse;
 
-private:
-	void createAndPositionVargglesOverlay();
-	void calculateInverseHorizontalLook();
-	void destroyVargglesOverlay();
-
-	const char* c_pchVargglesOverlayKey = "aardvark.varggles";
-	const char* c_pchVargglesOverlayName = "varggles";
-	const float c_fOverlayWidthInMeters = 1.f;
+	const char* k_pchVargglesOverlayKey = "aardvark.varggles";
+	const char* k_pchVargglesOverlayName = "varggles";
+	const float k_fOverlayWidthInMeters = 1.f;
 	const vr::ETrackingUniverseOrigin c_eTrackingOrigin = vr::TrackingUniverseStanding;
 	const vr::HmdMatrix34_t m_vargglesOverlayTransform{
 		{
@@ -59,7 +52,7 @@ private:
 		}
 	};
 	vr::VROverlayHandle_t m_vargglesOverlay = vr::k_ulOverlayHandleInvalid;
-	glm::mat4 m_vargglesInverseHorizontalLook;
+	glm::mat4 m_vargglesHorizontallyInvertedLook;
 	bool m_bVargglesLookVectorIsValid = false;
 };
 

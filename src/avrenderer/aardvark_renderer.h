@@ -95,7 +95,7 @@ public:
 	void updateUniformBuffers();
 	void updateParams();
 	void windowResized();
-
+	void setOverlayTexture();
 	void prepare();
 
 	virtual void onWindowClose() override;
@@ -189,6 +189,7 @@ protected:
 	vks::RenderTarget leftEyeRT;
 	vks::RenderTarget rightEyeRT;
 	vks::RenderTarget vargglesRT;
+	glm::mat4 m_lookRotation;
 
 	uint32_t eyeWidth = 0;
 	uint32_t eyeHeight = 0;
@@ -251,11 +252,11 @@ protected:
 		glm::vec4 uvScaleAndOffset;
 	};
 
-    struct PushConstBlockVarggles
-    {
-        float fov;
-		glm::mat4 inverseHorizontalLook;
-    };
+	struct PushConstBlockVarggles
+	{
+		glm::mat4 lookRotation;
+		float fov;
+	};
 
 	struct VargglesVulkanBindings {
 		VkRenderPass renderpass;
@@ -273,14 +274,11 @@ protected:
 
 	int32_t debugViewInputs = 0;
 	int32_t debugViewEquation = 0;
-    float m_eyeFOV = 45.0f;
+	float m_eyeFOV = 135.0f;
 
 	CUriRequestHandler m_uriRequests;
 
 	std::vector< CVulkanRendererModelInstance *> m_modelsToRender;
 
-private:
-	void setOverlayTexture();
-	bool m_OverlayTextureIsSet = false;
-	glm::mat4 m_InverseHorizontalLook;
+	
 };

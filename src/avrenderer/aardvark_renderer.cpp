@@ -292,12 +292,12 @@ void VulkanExample::renderVarggles( uint32_t cbIndex, vks::RenderTarget target, 
 	const std::vector<VkDescriptorSet> descriptorsets = { descriptorSet };
 	vkCmdBindDescriptorSets( commandBuffers[cbIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, m_vargglesVulkanBindings.pipelinelayout, 0, static_cast<uint32_t>( descriptorsets.size() ), descriptorsets.data(), 0, NULL );
 
+	m_vrManager->getVargglesLookRotation(m_lookRotation);
+
 	PushConstBlockVarggles pushConstVarggles{};
 	pushConstVarggles.fov = m_eyeFOV * (M_PI / 180.0f);
-
-	m_vrManager->getVargglesInverseHorizontalLookTransform(m_InverseHorizontalLook);
-	pushConstVarggles.inverseHorizontalLook = m_InverseHorizontalLook;
-	vkCmdPushConstants( commandBuffers[cbIndex], m_vargglesVulkanBindings.pipelinelayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof( PushConstBlockVarggles ), &pushConstVarggles);
+	pushConstVarggles.lookRotation = m_lookRotation;
+	vkCmdPushConstants( commandBuffers[cbIndex], m_vargglesVulkanBindings.pipelinelayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( PushConstBlockVarggles ), &pushConstVarggles);
 
 	vkCmdDraw( commandBuffers[cbIndex], 3, 1, 0, 0 );
 
@@ -2267,9 +2267,6 @@ void VulkanExample::submitEyeBuffers()
 }
 
 void VulkanExample::setOverlayTexture() {
-	if (m_OverlayTextureIsSet)
-		return;
-
 	vr::VRTextureBounds_t bounds;
 	bounds.uMin = 0.0f;
 	bounds.uMax = 1.0f;
@@ -2291,9 +2288,6 @@ void VulkanExample::setOverlayTexture() {
 
 	vr::Texture_t texture = { &vulkanData, vr::TextureType_Vulkan, vr::ColorSpace_Auto };
 	m_vrManager->setVargglesTexture(&texture);
-
-	// TODO PlutoVR: Set this once only
-	// m_OverlayTextureIsSet = true;
 }
 
 CVulkanRendererModelInstance::CVulkanRendererModelInstance( 
