@@ -42,7 +42,7 @@ protected:
 
 	const char* k_pchVargglesOverlayKey = "aardvark.varggles";
 	const char* k_pchVargglesOverlayName = "varggles";
-	const float k_fOverlayWidthInMeters = 1.f;
+	const float k_fOverlayWidthInMeters = 3.f;
 	const vr::ETrackingUniverseOrigin c_eTrackingOrigin = vr::TrackingUniverseStanding;
 	const vr::HmdMatrix34_t m_vargglesOverlayTransform{
 		{

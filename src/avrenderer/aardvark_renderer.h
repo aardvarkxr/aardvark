@@ -196,8 +196,6 @@ protected:
 	glm::mat4 m_matProjection[2];
 	glm::mat4 m_matEye[2];
 
-	uint32_t vargglesWidth = 4096;
-	uint32_t vargglesHeight = 4096;
 
 	const uint32_t renderAhead = 2;
 	uint32_t frameIndex = 0;
@@ -255,11 +253,10 @@ protected:
 	struct PushConstBlockVarggles
 	{
 		glm::mat4 lookRotation;
-		float fov;
+		float halfFOVInRadians;
 	};
 
 	struct VargglesVulkanBindings {
-		VkRenderPass renderpass;
 		VkDescriptorPool descriptorpool;
 		std::vector<VkDescriptorSet> descriptorsets;
 		VkDescriptorSetLayout descriptorsetlayout;
@@ -268,13 +265,19 @@ protected:
 	};
 
 	VargglesVulkanBindings m_vargglesVulkanBindings;
+	glm::mat4 m_vargglesEyePerspectiveProjection;
+
+	uint32_t m_unVargglesWidth = 4096;
+	uint32_t m_unVargglesHeight = 4096;
+
+	uint32_t m_unVargglesEyeResolution = 2000;
 
 	std::map<std::string, std::string> environments;
 	std::string selectedEnvironment = "papermill";
 
 	int32_t debugViewInputs = 0;
 	int32_t debugViewEquation = 0;
-	float m_eyeFOV = 135.0f;
+	float m_eyeFOV = 115.0f;
 
 	CUriRequestHandler m_uriRequests;
 

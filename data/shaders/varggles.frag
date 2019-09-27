@@ -10,7 +10,7 @@ layout (location = 0) out vec4 outColor;
 
 layout (push_constant) uniform Varggles {
 	mat4 lookRotation;
-	float fov;
+	float halfFOVInRadians;
 } varggles;
 
 float PI = 3.141592;
@@ -45,7 +45,7 @@ void main() {
 	// both eyes go from -pi -> pi left to right and -pi/2 -> pi/2 bottom to top
 
 	// Get scalar for modifying projection from cubemap (90 fov) to eye target fov
-	float fovScalar = tan(varggles.fov) / tan(QUARTER_PI);
+	float fovScalar = tan(varggles.halfFOVInRadians) / tan(QUARTER_PI);
 
 	// create vector looking out at equirect CubeMap
 	vec3 cubeMapLookupDirection = vec3(sin(xy.x), 1.0, cos(xy.x)) * vec3(cos(xy.y), sin(xy.y), cos(xy.y));
@@ -56,15 +56,14 @@ void main() {
 	cubeMapLookupDirection = (varggles.lookRotation * vec4(cubeMapLookupDirection, 0)).xyz;
 
 	// project the vector onto the 2d texture
-	// this will be wrong everywhere that is not near the rotated backward plane of the cubeMap
-	// U = ((-X/|Z|) + 1) / 2
-	// V = ((-Y/|Z|) + 1) / 2
+	// this will be wrong everywhere that is not near the rotated forward plane of the cubeMap
+	// U = ((X/|Z|) + 1) / 2
+	// V = ((Y/|Z|) + 1) / 2
 	// always project the +Z axis of a cube map
-	// -X/|Z|, -Y/|Z| places uv coords in -1, 1. + 1 / 2 shifts to 0 -> 1
+	// X/|Z|, -Y/|Z| places uv coords in -1, 1. + 1 / 2 shifts to 0 -> 1
 	// fovScalar scales U/V from 90 degrees into eye fov that was rendered with.
-	// projection is happening on the back of the cube so flip U axis
-	float projectLookOntoUAxis = 1 - ((cubeMapLookupDirection.x / abs(cubeMapLookupDirection.z) / fovScalar) + 1) / 2;
-	float projectLookOntoVAxis = ((cubeMapLookupDirection.y / abs(cubeMapLookupDirection.z) / fovScalar) + 1) / 2;
+	float projectLookOntoUAxis = ((cubeMapLookupDirection.x / abs(cubeMapLookupDirection.z) / fovScalar) + 1) / 2;
+	float projectLookOntoVAxis = 1 - (((cubeMapLookupDirection.y / abs(cubeMapLookupDirection.z) / fovScalar) + 1) / 2);
 
 	vec2 eyeUV = vec2(projectLookOntoUAxis, projectLookOntoVAxis);
 
@@ -77,4 +76,8 @@ void main() {
 
 	// TODO PlutoVR: Fix alpha rendering in main renderer and remove this hack
 	outColor.a = 1.0;
+
+	//outColor.rgb = cubeMapLookupDirection.xyz;
+	//outColor.b = 0.0;
+	//outColor.rg = eyeUV.xy;
 }

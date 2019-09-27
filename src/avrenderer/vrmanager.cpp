@@ -87,36 +87,41 @@ void CVRManager::updateOpenVrPoses()
 	m_universeFromOriginTransforms["/space/stage"] = glm::mat4( 1.f );
 
 	// TODO PlutoVR: throw out inversion after testing
-	//calculateInverseHorizontalLook();
+	calculateInverseHorizontalLook();
 }
 
 void CVRManager::calculateInverseHorizontalLook() 
 {
-	// TODO PlutoVR: throw out inversion after testing make sure translations don't interfere
-	glm::vec3 forward = m_universeFromOriginTransforms["/user/head"] * glm::vec4(0.0, 0.0, -1.0, 0.0);
+	// TODO PlutoVR: negate roll around +Z 
+	glm::vec3 right = m_universeFromOriginTransforms["/user/head"] * glm::vec4(1.0, 0.0, 0.0, 0.0);
+	
 
-	// project onto x / z plane
-	auto xComponent = glm::dot(glm::vec3(1.0, 0.0, 0.0), forward);
-	auto zComponent = glm::dot(glm::vec3(0.0, 0.0, 1.0), forward);
-	auto xzForwardNormalized = glm::normalize(glm::vec3(xComponent, 0.0, zComponent));
+	// project onto x / y plane
+	auto xComponent = glm::dot(glm::vec3(1.0, 0.0, 0.0), right);
+	auto yComponent = glm::dot(glm::vec3(0.0, 1.0, 0.0), right);
+	
+	auto xyRightNormalized = glm::normalize(glm::vec3(xComponent, yComponent, 0.0));
 
 	// get angle about forward
-	auto angleInRadians = glm::acos(glm::dot(glm::vec3(0.0, 0.0, -1.0), xzForwardNormalized));
+	auto angleInRadians = glm::acos(glm::dot(glm::vec3(1.0, 0.0, 0.0), xyRightNormalized));
 
 	// get sign of angle w.r.t. xz plane
-	auto crossBetweenBoth = glm::cross(glm::vec3(0.0, 0.0, -1.0), xzForwardNormalized);
-	if (glm::dot(glm::vec3(0.0, 1.0, 0.0), crossBetweenBoth) < 0)
+	auto crossBetweenBoth = glm::cross(glm::vec3(1.0, 0.0, 0.0), xyRightNormalized);
+	if (glm::dot(glm::vec3(0.0, 0.0, 1.0), crossBetweenBoth) < 0)
 	{
 		angleInRadians = -angleInRadians;
 	}
 
 	// get rotation matrix with inverse of that angle
-	m_vargglesHorizontallyInvertedLook = glm::rotate(m_universeFromOriginTransforms["/user/head"], -angleInRadians * 2.f, glm::vec3(0.0, 1.0, 0.0));
+	//m_vargglesHorizontallyInvertedLook = glm::rotate(m_universeFromOriginTransforms["/user/head"], -angleInRadians * 2.f, glm::vec3(0.0, 1.0, 0.0));
+	//m_vargglesHorizontallyInvertedLook = glm::rotate(glm::mat4(1.0), -angleInRadians * 2.f, glm::vec3(0.0, 1.0, 0.0));
+	//m_vargglesHorizontallyInvertedLook = glm::rotate(glm::mat4(1.0), angleInRadians, glm::vec3(0.0, 1.0, 0.0));
 }
 
 void CVRManager::getVargglesLookRotation(glm::mat4& horizontalLooktransform)
 {
 	horizontalLooktransform = m_universeFromOriginTransforms["/user/head"];
+	//horizontalLooktransform = m_vargglesHorizontallyInvertedLook;
 }
 
 bool GetAction( vr::VRActionHandle_t action, vr::VRInputValueHandle_t whichHand )
@@ -211,20 +216,18 @@ void CVRManager::createAndPositionVargglesOverlay()
 		return;
 	}
 
-	/*
+	if (vr::VROverlay()->SetOverlayFlag(m_vargglesOverlay, vr::VROverlayFlags_Panorama, false) != vr::VROverlayError_None)
+	{
+		std::cout << "ERROR: StereoPanorama failed" << std::endl;
+		return;
+	}
+	
 	if (vr::VROverlay()->SetOverlayFlag(m_vargglesOverlay, vr::VROverlayFlags_StereoPanorama, true) != vr::VROverlayError_None)
 	{
 		std::cout << "ERROR: StereoPanorama failed" << std::endl;
 		return;
 	}
 
-	if (vr::VROverlay()->SetOverlayFlag(m_vargglesOverlay, vr::VROverlayFlags_SideBySide_Crossed, true) != vr::VROverlayError_None)
-	{
-		std::cout << "ERROR: SideBySideCrossed failed" << std::endl;
-		return;
-	}
-	*/
-	
 	if (vr::VROverlay()->SetOverlayWidthInMeters(m_vargglesOverlay, k_fOverlayWidthInMeters) != vr::VROverlayError_None)
 	{
 		std::cout << "ERROR: SetOverlayWidth failed" << std::endl;

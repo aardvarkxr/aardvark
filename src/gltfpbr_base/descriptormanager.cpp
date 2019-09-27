@@ -23,7 +23,6 @@ CDescriptorManager::~CDescriptorManager()
 		vkDestroyDescriptorSetLayout( m_vulkanDevice->logicalDevice, m_layoutScene, nullptr );
 		vkDestroyDescriptorSetLayout( m_vulkanDevice->logicalDevice, m_layoutMaterial, nullptr );
 		vkDestroyDescriptorSetLayout( m_vulkanDevice->logicalDevice, m_layoutNode, nullptr );
-		vkDestroyDescriptorSetLayout( m_vulkanDevice->logicalDevice, m_layoutVarggles, nullptr );
 	}
 }
 
@@ -88,18 +87,6 @@ bool CDescriptorManager::init()
 		VK_CHECK_RESULT( vkCreateDescriptorSetLayout( m_vulkanDevice->logicalDevice, &descriptorSetLayoutCI, nullptr, &m_layoutNode ) );
 	}
 
-	{
-		std::vector<VkDescriptorSetLayoutBinding> setLayoutBindings = {
-		{ 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
-		{ 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
-		};
-		VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCI{};
-		descriptorSetLayoutCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		descriptorSetLayoutCI.pBindings = setLayoutBindings.data();
-		descriptorSetLayoutCI.bindingCount = static_cast<uint32_t>( setLayoutBindings.size() );
-		VK_CHECK_RESULT( vkCreateDescriptorSetLayout( m_vulkanDevice->logicalDevice, &descriptorSetLayoutCI, nullptr, &m_layoutVarggles ) );
-	}
-
 	return true;
 }
 
@@ -138,7 +125,6 @@ VkDescriptorSetLayout CDescriptorManager::getLayout( EDescriptorLayout eLayout )
 	case EDescriptorLayout::Node: return m_layoutNode;
 	case EDescriptorLayout::Material: return m_layoutMaterial;
 	case EDescriptorLayout::Scene: return m_layoutScene;
-    case EDescriptorLayout::Varggles: return m_layoutVarggles;
 	default:
 		assert( false );
 		return nullptr;

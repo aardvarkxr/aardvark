@@ -18,7 +18,6 @@ namespace vks
 		Scene,
 		Material,
 		Node,
-		Varggles,
 	};
 
 	class CDescriptorManager
@@ -43,7 +42,6 @@ namespace vks
 		VkDescriptorSetLayout m_layoutScene;
 		VkDescriptorSetLayout m_layoutMaterial;
 		VkDescriptorSetLayout m_layoutNode;
-		VkDescriptorSetLayout m_layoutVarggles;
 
 		std::list<std::unique_ptr<CDescriptorSet>> m_uniformBuffers;
 		std::list<std::unique_ptr<CDescriptorSet>> m_generalDescriptors;
