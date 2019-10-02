@@ -11,6 +11,35 @@
 			"sourceMaps": true,
 			"port": 8042,
 			"webRoot": "${workspaceFolder}"
+		},
+		{
+			"type": "chrome",
+			"request": "launch",
+			"name": "Start Monitor in Chrome",
+			"sourceMaps": true,
+			"url": "file:///E:/homedev/aardvark/data/gadgets/aardvark_monitor/index.html",
+			"port": 9222,
+			"webRoot": "${workspaceFolder}"
+		},
+		{
+			"type": "node",
+			"request": "attach",
+			"name": "Attach to node",
+			"sourceMaps": true,
+			"port": 9229,
+			"protocol": "auto"
+		},
+		{
+			"type": "node",
+			"request": "launch",
+			"name": "Start aardvark server in node",
+			"sourceMaps": true,
+			"program": "${workspaceFolder}/server/server.ts",
+			"outFiles": 
+			[ 
+				"${workspaceFolder}/../data/**/*.js",
+				"${workspaceFolder}/../data/**/*.js.map" 
+			]
 		}
 	]
 }

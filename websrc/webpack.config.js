@@ -88,9 +88,59 @@ function createConfig( appName, appTitle, ext )
 
 module.exports = 
 [
-	createConfig( 'aardvark_master', 'Master App', 'ts' ),
+	createConfig( 'aardvark_master', 'Master App', 'tsx' ),
+	createConfig( 'aardvark_monitor', 'Monitor', 'tsx' ),
 	createConfig( 'aardvark_renderer', 'Renderer', 'ts' ),
-	createConfig( 'default_hand', 'Default Poker', 'tsx' ),
 	createConfig( 'test_panel', 'Test Panel', 'tsx' ),
 	createConfig( 'charm_bracelet', 'Charm Bracelet', 'tsx' ),
+	createConfig( 'control_test', 'Control Tester', 'tsx' ),
+	{
+		target: "node",
+		entry: 
+		{
+			app: ["./server/server.ts" ]
+		},
+		output:
+		{
+			path: path.resolve( __dirname, '../data/server' ),
+			filename: "server_bundle.js"
+		},
+		resolve:
+		{
+			extensions: ['.ts', '.js' ]
+		},
+		module: 
+		{
+			rules:
+			[
+				{ 
+					test: /\.tsx?$/,
+					use: 'ts-loader',
+					exclude: /node_modules/
+				},
+			]
+		},
+
+		// Workaround for ws module trying to require devDependencies
+		externals: 
+		[ 
+			// {
+			// 	'express': {commonjs: 'express'}
+			// },
+			'utf-8-validate', 
+			'bufferutil' 
+		],
+
+		mode: "development",
+		devtool: "source-map",
+
+		resolve:
+		{
+			extensions: [ '.ts', '.tsx', '.js' ],
+			alias: 
+			{
+				"common" : path.resolve( __dirname, "./common" )
+			}
+		},	
+	}
 ];

@@ -2,8 +2,9 @@ import * as React from 'react';
 
 import { AvGadget } from './aardvark_gadget';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
-import { AvSceneContext, AvNodeType, AvPanelMouseEvent, AvPanelMouseEventType, AvPanelHandler } from 'common/aardvark';
+import { AvNodeType, AvPanelMouseEvent, AvPanelMouseEventType, AvPanelHandler, Av, AvSharedTextureInfo } from 'common/aardvark';
 import bind from 'bind-decorator';
+import { EndpointAddr } from './aardvark_protocol';
 
 export interface AvPanelProps extends AvBaseNodeProps
 {
@@ -13,20 +14,58 @@ export interface AvPanelProps extends AvBaseNodeProps
 
 export class AvPanel extends AvBaseNode< AvPanelProps, {} >
 {
-	public startNode( context:AvSceneContext )
-	{
-		context.startNode( this.m_nodeId, "panel" + this.m_nodeId, AvNodeType.Panel );
-		context.setTextureSource( AvGadget.instance().getName() );
-		context.setInteractive( this.props.interactive );
+	private m_sharedTextureInfo: AvSharedTextureInfo = null;
 
+	constructor( props: any )
+	{
+		super( props );
+
+		Av().subscribeToBrowserTexture( this.onUpdateBrowserTexture );
+	}
+
+	@bind onUpdateBrowserTexture( info: AvSharedTextureInfo )
+	{
+		this.m_sharedTextureInfo = info;
+		AvGadget.instance().markDirty();
+	}
+
+	@bind onDefaultMouseEvent( event: AvPanelMouseEvent )
+	{
+		let hapticAmplitude = 0;
+		switch( event.type )
+		{
+			case AvPanelMouseEventType.Enter:
+			case AvPanelMouseEventType.Leave:
+				hapticAmplitude = 0.05;
+				break;
+
+			case AvPanelMouseEventType.Down:
+				hapticAmplitude = 1;
+				break;
+		}
+
+		if( hapticAmplitude > 0 )
+		{
+			AvGadget.instance().sendHapticEvent( event.pokerId, hapticAmplitude, 1, 0 );
+		}
+
+		Av().spoofMouseEvent( event.type, event.x, event.y );
+	}
+
+	public buildNode()
+	{
 		if( this.props.customMouseHandler )
 		{
 			AvGadget.instance().setPanelHandler( this.m_nodeId, this.props.customMouseHandler );
 		}
 		else
 		{
-			AvGadget.instance().enableDefaultPanelHandling( this.m_nodeId );
+			AvGadget.instance().setPanelHandler( this.m_nodeId, this.onDefaultMouseEvent );
 		}
-	}
 
+		let node = this.createNodeObject( AvNodeType.Panel, this.m_nodeId );
+		node.propInteractive = this.props.interactive;
+		node.propSharedTexture = this.m_sharedTextureInfo;
+		return node;
+	}
 }

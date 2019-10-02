@@ -1,7 +1,6 @@
 {
    "action_manifest_version" : 0,
    "alias_info" : {},
-   "app_key" : "system.generated.avrenderer.exe",
    "bindings" : {
       "/actions/aardvark" : {
          "haptics" : [
@@ -32,6 +31,24 @@
                },
                "mode" : "button",
                "path" : "/user/hand/right/input/trigger"
+            },
+            {
+               "inputs" : {
+                  "click" : {
+                     "output" : "/actions/aardvark/in/edit"
+                  }
+               },
+               "mode" : "button",
+               "path" : "/user/hand/left/input/b"
+            },
+            {
+               "inputs" : {
+                  "click" : {
+                     "output" : "/actions/aardvark/in/edit"
+                  }
+               },
+               "mode" : "button",
+               "path" : "/user/hand/right/input/b"
             }
          ]
       }
@@ -39,7 +56,7 @@
    "category" : "steamvr_input",
    "controller_type" : "knuckles",
    "description" : "",
-   "name" : "Default Index Controller Bindings for Aardvark",
+   "name" : "Default Index Controller bindings for Aardvark",
    "options" : {},
    "simulated_actions" : []
 }

@@ -1,20 +1,18 @@
 
 #include "intersection_tester.h"
 
-#include <aardvark/aardvark_client.h>
-
 CIntersectionTester::CIntersectionTester()
 {
 }
 
-void CIntersectionTester::addActivePanel( uint64_t globalPanelId, const glm::mat4 & matPanelFromUniverse, 
+void CIntersectionTester::addActivePanel( const aardvark::EndpointAddr_t & globalPanelId, const glm::mat4 & matPanelFromUniverse,
 	float zScale, EHand hand )
 {
 	assert( zScale > 0.f );
 	m_activePanels.push_back( { globalPanelId, hand, matPanelFromUniverse, zScale } );
 }
 
-void CIntersectionTester::addActivePoker( uint64_t globalPokerId, const glm::vec3 & posPokerInUniverse, 
+void CIntersectionTester::addActivePoker( const aardvark::EndpointAddr_t & globalPokerId, const glm::vec3 & posPokerInUniverse,
 	EHand hand )
 {
 	m_activePokers.push_back( { globalPokerId, hand, posPokerInUniverse } );
@@ -27,21 +25,14 @@ void CIntersectionTester::reset()
 	m_activePokers.clear();
 }
 
-struct ProximityToSend_t
+std::vector<PokerState_t> CIntersectionTester::updatePokerProximity()
 {
-	uint64_t panelId;
-	float u, v, distance;
-};
-
-void CIntersectionTester::updatePokerProximity( aardvark::CAardvarkClient *client )
-{
-	std::vector<ProximityToSend_t> proxToSend;
+	std::vector<PokerState_t> proxToSend;
 	for ( auto & poker : m_activePokers )
 	{
-		auto req = client->Server().pushPokerProximityRequest();
-		req.setPokerId( poker.globalPokerId );
+		PokerState_t pokerState;
+		pokerState.pokerId = poker.globalPokerId;
 
-		proxToSend.clear();
 		for ( auto & panel : m_activePanels )
 		{
 			if ( isSameHand( poker.hand, panel.hand ) )
@@ -58,20 +49,12 @@ void CIntersectionTester::updatePokerProximity( aardvark::CAardvarkClient *clien
 				|| dist < -0.1f || dist > 0.2f )
 				continue;
 
-			proxToSend.push_back( { panel.globalPanelId, u, v, dist } );
+			pokerState.panels.push_back( { panel.globalPanelId, u, v, dist } );
 		}
 
-		auto prox = req.initProximity( (int)proxToSend.size() );
-		for( int n = 0; n < proxToSend.size(); n++ )
-		{
-			ProximityToSend_t & toSend = proxToSend[n];
-			prox[n].setPanelId( toSend.panelId );
-			prox[n].setX( toSend.u );
-			prox[n].setY( toSend.v );
-			prox[n].setDistance( toSend.distance );
-		}
-
-		client->addRequestToTasks( std::move( req ) );
+		proxToSend.push_back( std::move( pokerState ) );
 	}
+
+	return proxToSend;
 }
 

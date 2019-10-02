@@ -1,36 +1,43 @@
-Gadget library
-* List of gadget URIs
-
-hook could be:
-* left hand/right hand
-* a grabber on a gadget
-* an anchor point on another gadget
-* transform relative to the stage?
-
-/user/hand/left
-/user/hand/right
-/gadget/charm_bracelet_left/slota
-/gadget/hand/right/grabbera
-
-
-
-anchors
-animation
-inventories/catalogs
-persistence
-clean up data directory/hard coded paths
-npm module for aardvark classes
-npm tool for creating aardvark apps
-make it work in release
-make model loading work for non-file URLs
-figure out how to get command line options into the renderer. Maybe init it whena function is called?
-
 ========= DEAL WITH THIS NEXT ===========
+* Need to implement box/box  intersections.
+
+* after free-rotating, the translate controls are resetting to no rotation
+* Need scale control
+* Need rotation control
+* Need a white sphere so highlight colors work.
+
+Edit mode isn't starting in the right state for new gadgets.
+
+=========================================
 
 * Fix dynamic reload of renderer tab. This should tear down the whole renderer and recreate it. Not having this is a pain when there are code changes on the Javascript side.
 
+* Probably need to make things on hooks not trivially grabbable. Maybe a global mode? Maybe a timer or something like that?
+* panel textures appear to be wrapping instead of clamping. Seeing a little of the scrollbar on the left edge of the control panel.
 
-========= DEAL WITH THIS NEXT ===========
+* avrenderer is crashing on exit after starting a gadget from a gadget seed. - This is a CEF72 bug, but we can't update yet.
+* CEF76 doesn't support OSR and acceleration anymore. It only lasted for about 2 releases in a functional state.
+
+
+
+
+
+working on animations and moving transform math to C++
+* I have a CTransform class that can be one of null (i.e. just use the parent), origin (set an origin path), matrix, or TRS.
+* Need to write tests for that an implement the manager for them.
+* Need to hook up animation:
+  * When a transform changes from one type to another it transitions immediately
+  * all other transitions take the transition time to happen (which default to 0/immediate.) This means other types are going to need to keep track of from and to values, as well as the current interpolated value. 
+  * If another new value is set while still transitioning, the interpolated value becomes the new start point.
+  * every frame the manager is called with the animation time, and it goes and visits all the transforms
+* Maybe use shared pointers for transforms for memory management? Javascript will hold some, C++ will hold some, etc.
+* The idea is that only actual changes to the scene graph actually require a new traversal. Frame-to-frame transform changes, including animations, can be handled by C++ without calling back into JS to re-traverse
+
+animation
+inventories/catalogs
+npm module for aardvark classes
+npm tool for creating aardvark gadgets
+make it work in release
 
 
 
@@ -42,10 +49,14 @@ Step 5 - Make input work back to Javascript/HTML/CSS (done)
 Step 6 - Haptics from panels (and pokers?) (done)
 Step 7 - Grabbables and grabbers (done)
 Step 8 - Building a gadget from a URI (done)
-
 Step 9 - Hooks on gadgets
 Step 10 - Spawning gadgets from a gadget - Launcher permission?
+Step 11 - bootstrapping from a list of gadgets
+Step 12 - persistence of your current gadget set
 
+Step 13 - Make it easier to edit transforms - start with monitors editing them?
+
+Step 40 - Figure out how to make the server start/stop automatically on end user machines
 Step 50 - Make the pixels/input layer on top of other scene apps
 
 

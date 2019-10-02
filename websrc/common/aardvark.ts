@@ -1,15 +1,11 @@
+import { EndpointAddr, MsgGrabberState, MsgPokerProximity } from './aardvark-react/aardvark_protocol';
 
 export interface PokerProximity
 {
-	panelId: string;
+	panelId: EndpointAddr;
 	x: number;
 	y: number;
 	distance: number;
-}
-
-interface AvSceneContext_Finish
-{
-	():void;
 }
 
 export enum AvNodeType
@@ -25,94 +21,13 @@ export enum AvNodeType
 	Grabbable = 6,
 	Handle = 7,
 	Grabber = 8,
-	Custom = 9,
+	Hook = 9,
 }
 
-interface AvSceneContext_StartNode
-{
-	( nodeId: number, nodeName: string, nodeType:AvNodeType):void;
-}
-
-interface AvSceneContext_FinishNode
-{
-	():void;
-}
-
-interface AvSceneContext_SetOriginPath
-{
-	( path: string ): void;
-}
-
-interface AvSceneContext_SetTranslation
-{
-	( x: number, y: number, z: number ):void;
-}
-
-interface AvSceneContext_SetScale
-{
-	( x: number, y: number, z: number ):void;
-}
-
-interface AvSceneContext_SetUniformScale
-{
-	( scale: number ):void;
-}
-
-interface AvSceneContext_SetRotationEulerDegrees
-{
-	( yaw:number, pitch:number, roll:number):void;
-}
-
-interface AvSceneContext_SetModelUri
-{
-	(modelUri:string):void;
-}
-
-interface AvSceneContext_SetTextureSource
-{
-	(textureSource:string):void;
-}
-
-interface AvSceneContext_SetInteractive
-{
-	(interactive:boolean):void;
-}
-
-export interface AvSceneContext
-{
-	finish: AvSceneContext_Finish;
-	startNode: AvSceneContext_StartNode;
-	finishNode: AvSceneContext_FinishNode;
-	setOriginPath: AvSceneContext_SetOriginPath;
-	setTranslation: AvSceneContext_SetTranslation;
-	setScale: AvSceneContext_SetScale;
-	setUniformScale: AvSceneContext_SetUniformScale;
-	setRotationEulerDegrees: AvSceneContext_SetRotationEulerDegrees;
-	setModelUri: AvSceneContext_SetModelUri;
-	setTextureSource: AvSceneContext_SetTextureSource;
-	setInteractive: AvSceneContext_SetInteractive;
-	setSphereVolume( radius: number ): void;
-	startCustomNode( nodeId: number, name: string, customNodeType: string ): void;
-}
-
-interface AvGadget_GetName
-{
-	():string;
-}
-
-interface AvGadget_StartSceneContext
-{
-	():AvSceneContext;
-}
 
 export interface AvPokerHandler
 {
 	( proximity: PokerProximity[] ): void;
-}
-
-interface AvGadget_RegisterPokerHandler
-{
-	( nodeId:number, handlerFunction: AvPokerHandler ): void;
 }
 
 export enum AvPanelMouseEventType
@@ -128,25 +43,15 @@ export enum AvPanelMouseEventType
 export interface AvPanelMouseEvent
 {
 	type: AvPanelMouseEventType;
-	panelId: string;
-	pokerId: string;
+	panelId: EndpointAddr;
+	pokerId: EndpointAddr;
 	x: number;
 	y: number;
-}
-
-interface AvGadget_SendMouseEvent
-{
-	(pokerId: number, panelId:string, type: AvPanelMouseEventType, x:number, y:number ): void;
 }
 
 export interface AvPanelHandler
 {
 	( event: AvPanelMouseEvent ): void;
-}
-
-interface AvGadget_RegisterPanelHandler
-{
-	( nodeId:number, handlerFunction: AvPanelHandler ): void;
 }
 
 export enum AvGrabEventType
@@ -158,14 +63,39 @@ export enum AvGrabEventType
 	EndGrab = 4,
 	EnterHookRange = 5,
 	LeaveHookRange = 6,
+	RequestGrab = 7,
+	RequestGrabResponse = 8,
+	CancelGrab = 9,
+	GrabStarted = 10,
+	UpdateGrabberHighlight = 11,
+	TransformUpdated = 12,
 };
+
+export enum GrabberHighlight
+{
+	None = 0,
+	InRange = 1,
+	WaitingForConfirmation = 2,
+	WaitingForGrabToStart = 3,
+	Grabbed = 4,
+	NearHook = 5,
+	WaitingForReleaseAfterRejection = 6,
+}
 
 export interface AvGrabEvent
 {
 	type: AvGrabEventType;
-	grabbableId: string;
-	grabberId: string;
-	hookId: string;
+	senderId?: number;
+	grabbableId?: EndpointAddr;
+	handleId?: EndpointAddr;
+	grabberId?: EndpointAddr;
+	hookId?: EndpointAddr;
+	requestId?: number;
+	allowed?: boolean;
+	useIdentityTransform?: boolean;
+	highlight?: GrabberHighlight;
+	parentFromNode?: AvNodeTransform;
+	universeFromNode?: AvNodeTransform;
 }
 
 export interface AvGrabEventProcessor
@@ -173,34 +103,17 @@ export interface AvGrabEventProcessor
 	( event: AvGrabEvent ): void;
 }
 
+export interface AvGrabbableCollision
+{
+	grabbableId: EndpointAddr;
+	handleId: EndpointAddr;
+}
+
 export interface AvGrabberProcessor
 {
-	( isPressed: boolean, grabbableIds: string[], hookIds: string[] ): void;
+	( isPressed: boolean, grabbables: AvGrabbableCollision[], hookIds: EndpointAddr[] ): void;
 }
 
-export interface AvGadgetObj
-{
-	getName: AvGadget_GetName;
-	startSceneContext: AvGadget_StartSceneContext;
-	registerPokerHandler: AvGadget_RegisterPokerHandler;
-	registerPanelHandler: AvGadget_RegisterPanelHandler;
-	enableDefaultPanelHandling( panelId: number ): void;
-	sendHapticEventFromPanel( panelId: number, amplitude: number, frequency: number, duration: number ): void;
-	sendMouseEvent: AvGadget_SendMouseEvent;
-	registerGrabbableProcessor( nodeId: number, processor: AvGrabEventProcessor ): void;
-	registerGrabberProcessor( nodeId: number, processor: AvGrabberProcessor ): void;
-	sendGrabEvent( grabberId: number, grabbableId: string, hookId: string, eventType: AvGrabEventType ): void;
-}
-
-interface Av_CreateGadget
-{
-	(gadgetName:string):AvGadgetObj;
-}
-
-interface Av_StartGadget
-{
-	( uri:string, initialHook: string ):void;
-}
 
 export interface AvVector
 {
@@ -229,6 +142,7 @@ export enum EVolumeType
 	Invalid = -1,
 
 	Sphere = 0,
+	ModelBox = 1,
 };
 
 
@@ -237,15 +151,41 @@ export interface AvVolume
 	type: EVolumeType;
 
 	radius?: number;
+	uri?: string;
 }
 
+export enum ENodeFlags
+{
+	Visible 				= 1 << 0,
+	PreserveGrabTransform 	= 1 << 1,
+	NotifyOnTransformChange	= 1 << 2,
+}
+
+export interface AvConstraint
+{
+	minX: number;
+	maxX: number;
+	minY: number;
+	maxY: number;
+	minZ: number;
+	maxZ: number;
+}
+
+export interface AvColor
+{
+	r: number;
+	g: number;
+	b: number;
+	a?: number;
+}
 
 export interface AvNode
 {
 	type: AvNodeType;
 	id: number;
-	globalId: string;
-	flags: number;
+	persistentName?: string;
+	globalId?: EndpointAddr;
+	flags: ENodeFlags;
 	children?: AvNode[];
 
 	propOrigin?: string;
@@ -254,26 +194,11 @@ export interface AvNode
 	propVolume?: AvVolume;
 	propInteractive?: boolean;
 	propCustomNodeType?: string;
+	propSharedTexture?: AvSharedTextureInfo;
+	propConstraint?: AvConstraint;
+	propColor?: AvColor;
 }
 
-
-export interface AvNodeRoot
-{
-	gadgetId: number;
-	root: AvNode;
-	hook?: string;
-}
-
-export interface AvVisualFrame
-{
-	id: string;
-	nodeRoots: AvNodeRoot[];
-}
-
-export interface AvTraversalFrameProcessor
-{
-	( frame: AvVisualFrame ): void;
-}
 
 export interface AvTraversalRenderer
 {
@@ -287,7 +212,8 @@ export interface AvHapticProcessor
 export interface AvModelInstance
 {
 	setUniverseFromModelTransform( universeFromModel: number[] ): void;
-	setOverrideTexture( textureId: number ): void;
+	setOverrideTexture( textureInfo: AvSharedTextureInfo ): void;
+	setBaseColor( color: [ number, number, number, number ] ): void;
 }
 
 export enum EHand
@@ -300,29 +226,92 @@ export enum EHand
 
 interface AvRenderer
 {
-	registerSceneProcessor( sceneProcessor: AvTraversalFrameProcessor ): void;
 	registerTraverser( traverser: AvTraversalRenderer ): void;
 	renderList( renderList: AvModelInstance[] ): void,
 	createModelInstance( uri: string): AvModelInstance;
-	addToRenderList( modelInstance: AvModelInstance ): void;
 	getUniverseFromOriginTransform( origin: string ): number[];
 
 	registerHapticProcessor( hapticProcessor: AvHapticProcessor ) : void;
 	sendHapticEventForHand( hand: EHand, amplitude: number, frequency: number, duration: number ): void;
 
-	addActivePanel( panelGlobalId: string, nodeFromUniverse: number[], zScale: number, hand: EHand  ): void;
-	addActivePoker( pokerGlobalId: string, pokerInUniverse: number[], hand: EHand  ): void;
-
+	updatePokerProximity(): MsgPokerProximity[];
+	addActivePanel( panelGlobalId: EndpointAddr, nodeFromUniverse: number[], zScale: number, hand: EHand  ): void;
+	addActivePoker( pokerGlobalId: EndpointAddr, pokerInUniverse: number[], hand: EHand  ): void;
+	
+	updateGrabberIntersections(): MsgGrabberState[];
 	registerGrabEventProcessor( grabEventProcessor: AvGrabEventProcessor ): void;
-	addGrabbableHandle_Sphere( grabbableGlobalId: string, universeFromGrabbable: number[], radius: number, hand: EHand ): void;
-	addGrabber_Sphere( grabberGlobalId: string, universeFromGrabber: number[], radius: number, hand: EHand ): void;
-	addHook_Sphere( hookGlobalId: string, universeFromGrabber: number[], radius: number, hand: EHand  ): void;
+	addGrabbableHandle_Sphere( grabbableGlobalId: EndpointAddr, 
+		handleGlobalId: EndpointAddr,
+		universeFromHandle: number[], radius: number, hand: EHand ): void;
+	addGrabbableHandle_ModelBox( grabbableGlobalId: EndpointAddr, 
+		handleGlobalId: EndpointAddr,
+		universeFromHandle: number[], uri: string, hand: EHand ): void;
+	addGrabber_Sphere( grabberGlobalId: EndpointAddr, universeFromGrabber: number[], radius: number, hand: EHand ): void;
+	addHook_Sphere( hookGlobalId: EndpointAddr, universeFromGrabber: number[], radius: number, hand: EHand  ): void;
+
+	startGrab( grabberGlobalId: EndpointAddr, grabbableGlobalId: EndpointAddr  ): void;
+	endGrab( grabberGlobalId: EndpointAddr, grabbableGlobalId: EndpointAddr  ): void;
+
+	isEditPressed( hand: EHand ): boolean;
+}
+
+export interface AvStartGadgetCallback
+{
+	(success: boolean, mainGrabbableGlobalId: EndpointAddr, mainHandleId: EndpointAddr ) : void;
+}
+
+export interface AvGadgetManifest
+{
+	name: string;
+	permissions: string[];
+	width: number;
+	height: number;
+	model: string;
+}
+
+export interface AvGadgetManifestCallback
+{
+	(manifest: AvGadgetManifest) : void;
+}
+
+enum ETextureType
+{
+	Invalid = 0,
+	D3D11Texture2D = 1,
+}
+
+enum ETextureFormat
+{
+	R8G8B8A8 = 1,
+	B8G8R8A8 = 2,
+}
+
+export interface AvSharedTextureInfo
+{
+	dxgiHandle?: string;
+	type: ETextureType;
+	format: ETextureFormat;
+	invertY?: boolean;
+	width: number;
+	height: number;
+}
+
+export interface AvBrowserTextureCallback
+{
+	( textureInfo: AvSharedTextureInfo ): void;
 }
 
 export interface Aardvark
 {
-	createGadget: Av_CreateGadget;
-	startGadget: Av_StartGadget;
+	// requires scenegraph permissions
+	subscribeToBrowserTexture( callback: AvBrowserTextureCallback ): void;
+	spoofMouseEvent( type:AvPanelMouseEventType, x: number, y: number ): void;
+
+	// requires master permissions
+	startGadget( uri: string, initialHook: string, persistenceUuid: string, epToNotify: EndpointAddr ): void;
+	getGadgetManifest( uri: string, callback: AvGadgetManifestCallback ): void;
+
+	// requires renderer permissions
 	renderer: AvRenderer;
 }
 

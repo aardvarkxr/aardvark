@@ -6,8 +6,10 @@ import { AvOrigin } from 'common/aardvark-react/aardvark_origin';
 import { AvTransform } from 'common/aardvark-react/aardvark_transform';
 import { AvPanel } from 'common/aardvark-react/aardvark_panel';
 import bind from 'bind-decorator';
-import { AvGrabbable, HighlightType } from 'common/aardvark-react/aardvark_grabbable';
+import { AvGrabbable, HighlightType, GrabResponse } from 'common/aardvark-react/aardvark_grabbable';
 import { AvSphereHandle } from 'common/aardvark-react/aardvark_handles';
+import { AvGrabEvent } from 'common/aardvark';
+import { EndpointAddr } from 'common/aardvark-react/aardvark_protocol';
 
 
 interface TestPanelState
@@ -16,9 +18,14 @@ interface TestPanelState
 	grabbableHighlight: HighlightType;
 }
 
+interface TestSettings
+{
+	count: number;
+}
+
 class TestPanel extends React.Component< {}, TestPanelState >
 {
-	private m_panelId:number = 0;
+	private m_panelId: EndpointAddr;
 
 	constructor( props: any )
 	{
@@ -28,23 +35,41 @@ class TestPanel extends React.Component< {}, TestPanelState >
 			count: 0,
 			grabbableHighlight: HighlightType.None,
 		};
+
+		AvGadget.instance().registerForSettings( this.onSettingsReceived );
 	}
 
 	@bind public incrementCount()
 	{
-		AvGadget.instance().sendHapticEventFromPanel( 1234, 1, 1, 0 );
 		this.setState( { count: this.state.count + 1 } );
-	}
 
-	@bind onMouseEnterOrLeave()
-	{
-		AvGadget.instance().sendHapticEventFromPanel( 1234, 0.05, 1, 0 );
+		let newSettings: TestSettings = { count: this.state.count + 1 };
+		AvGadget.instance().saveSettings( newSettings );
 	}
 
 	@bind public onHighlightGrabbable( highlight: HighlightType )
 	{
 		this.setState( { grabbableHighlight: highlight } );
 	}
+
+	@bind public onGrabRequest( grabRequest: AvGrabEvent ): Promise< GrabResponse >
+	{
+		// this is totally unnecessary, but a good test of the plumbing.
+		let response: GrabResponse =
+		{
+			allowed: true,
+		};
+		return Promise.resolve( response );
+	}
+
+	@bind public onSettingsReceived( settings: TestSettings )
+	{
+		if( settings )
+		{
+			this.setState( { count: settings.count } );
+		}
+	}
+
 	public render()
 	{
 		let sDivClasses:string;
@@ -72,23 +97,21 @@ class TestPanel extends React.Component< {}, TestPanelState >
 
 		return (
 			<div className={ sDivClasses } >
-				<AvGadget name="Fnord the gadget">
-					<AvGrabbable updateHighlight={ this.onHighlightGrabbable }>
+				<div>
+					<AvGrabbable updateHighlight={ this.onHighlightGrabbable }
+						onGrabRequest={ this.onGrabRequest }>
 						<AvSphereHandle radius={0.1} />
 						
 						<AvTransform uniformScale={ scale }>
 							<AvPanel interactive={true}
-								onIdAssigned={ (id:number) => { this.m_panelId = id } }/>
+								onIdAssigned={ (id: EndpointAddr) => { this.m_panelId = id } }/>
 						</AvTransform>
 					</AvGrabbable>
-				</AvGadget>
+				</div>
 				<div className="Label">Count: { this.state.count }</div>
-				<div className="Button" onMouseDown={ this.incrementCount }
-					onMouseEnter={ this.onMouseEnterOrLeave } 
-					onMouseLeave={ this.onMouseEnterOrLeave }>
+				<div className="Button" onMouseDown={ this.incrementCount }>
 					Click Me!
 					</div> 
-				<iframe src="http://programmerjoe.com" style={ { width: "100%", height: "100%" }} />
 			</div>
 		)
 	}

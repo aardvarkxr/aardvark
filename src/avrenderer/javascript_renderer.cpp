@@ -3,9 +3,12 @@
 #include "aardvark_renderer.h"
 #include "vrmanager.h"
 
-CJavascriptModelInstance::CJavascriptModelInstance( std::unique_ptr<IModelInstance> modelInstance, 
-	std::unordered_map< uint32_t, tools::OwnCapnp< AvSharedTextureInfo > > &textureInfo )
-	: m_textureInfo( textureInfo )
+using aardvark::EEndpointType;
+using aardvark::EndpointAddr_t;
+
+extern CefRefPtr<CefV8Value> grabEventToCefEvent( const aardvark::GrabEvent_t & grabEvent );
+
+CJavascriptModelInstance::CJavascriptModelInstance( std::unique_ptr<IModelInstance> modelInstance )
 {
 	m_modelInstance = std::move( modelInstance );
 }
@@ -67,22 +70,47 @@ bool CJavascriptModelInstance::init( CefRefPtr<CefV8Value > container )
 			return;
 		}
 
-		if ( !arguments[0]->IsUInt() )
+		if ( !arguments[0]->IsObject() )
 		{
-			exception = "argument must an unsigned int";
+			exception = "argument must a AvSharedTextureInfo object";
 			return;
 		}
 
-		uint32_t textureId = arguments[0]->GetUIntValue();
-		auto iTexture = m_textureInfo.find( textureId );
-		if ( iTexture == m_textureInfo.end() )
-		{
-			exception = "unknown texture " + std::to_string( textureId );
-			return;
-		}
+		ETextureType type = (ETextureType)arguments[0]->GetValue( "type" )->GetIntValue();
+		ETextureFormat format = (ETextureFormat)arguments[0]->GetValue( "format" )->GetIntValue();
+		uint32_t width = arguments[0]->GetValue( "width" )->GetUIntValue();
+		uint32_t height = arguments[0]->GetValue( "height" )->GetUIntValue();
+		void *sharedTextureHandle = reinterpret_cast<void*>(
+			std::strtoull( std::string( arguments[0]->GetValue( "dxgiHandle" )->GetStringValue() ).c_str(), nullptr, 0 ) );
 
-		m_modelInstance->setOverrideTexture( iTexture->second );
+		m_modelInstance->setOverrideTexture( sharedTextureHandle, type, format, width, height );
 	} );
+
+	RegisterFunction( container, "setBaseColor", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 1 )
+		{
+			exception = "Invalid arguments";
+			return;
+		}
+
+		if ( !arguments[0]->IsArray() || arguments[0]->GetArrayLength() != 4 )
+		{
+			exception = "argument must an array of 4 numbers";
+			return;
+		}
+
+		glm::vec4 color =
+		{
+			arguments[0]->GetValue( 0 )->GetDoubleValue(),
+			arguments[0]->GetValue( 1 )->GetDoubleValue(),
+			arguments[0]->GetValue( 2 )->GetDoubleValue(),
+			arguments[0]->GetValue( 3 )->GetDoubleValue(),
+		};
+
+		m_modelInstance->setBaseColor( color );
+	} );
+
 	return true;
 }
 
@@ -116,8 +144,6 @@ void CJavascriptRenderer::runFrame()
 
 		m_jsTraverser->ExecuteFunction( nullptr, CefV8ValueList{} );
 
-		m_intersections.updatePokerProximity( m_handler->getClient() );
-		m_collisions.updateGrabberIntersections( m_handler->getClient() );
 	}
 
 
@@ -139,37 +165,78 @@ void CJavascriptRenderer::runFrame()
 	}
 }
 
+bool endpointAddrFromJs( CefRefPtr< CefV8Value > obj, EndpointAddr_t *addr )
+{
+	if ( !obj || !obj->IsObject() || !addr )
+		return false;
+
+	addr->type = EEndpointType::Unknown;
+
+	if ( obj->HasValue( "type" ) )
+	{
+		CefRefPtr<CefV8Value> type = obj->GetValue( "type" );
+		if ( type->IsInt() )
+		{
+			addr->type = (EEndpointType)type->GetIntValue();
+		}
+	}
+
+	if ( obj->HasValue( "endpointId" ) )
+	{
+		CefRefPtr<CefV8Value> v = obj->GetValue( "endpointId" );
+		if ( v->IsUInt() )
+		{
+			addr->endpointId= v->GetUIntValue();
+		}
+	}
+
+	if ( obj->HasValue( "nodeId" ) )
+	{
+		CefRefPtr<CefV8Value> v = obj->GetValue( "nodeId" );
+		if ( v->IsUInt() )
+		{
+			addr->nodeId = v->GetUIntValue();
+		}
+	}
+
+	return addr->type != EEndpointType::Unknown;
+}
+
+CefRefPtr<CefV8Value> endpointAddrToJs( const EndpointAddr_t & addr )
+{
+	CefRefPtr<CefV8Value> out = CefV8Value::CreateObject( nullptr, nullptr );
+	out->SetValue( "type", CefV8Value::CreateInt( (int)addr.type ), V8_PROPERTY_ATTRIBUTE_NONE );
+	if ( addr.type != EEndpointType::Hub )
+	{
+		out->SetValue( "endpointId", CefV8Value::CreateUInt( addr.endpointId ), V8_PROPERTY_ATTRIBUTE_NONE );
+	}
+	if ( addr.type == EEndpointType::Node )
+	{
+		out->SetValue( "nodeId", CefV8Value::CreateUInt( addr.nodeId ), V8_PROPERTY_ATTRIBUTE_NONE );
+	}
+	return out;
+}
+
+CefRefPtr<CefV8Value> endpointAddrVectorToJs( const std::vector<EndpointAddr_t> & addrs )
+{
+	if ( addrs.empty() )
+	{
+		return CefV8Value::CreateNull();
+	}
+
+	CefRefPtr<CefV8Value> out = CefV8Value::CreateArray( (int)addrs.size() );
+	for ( int i = 0; i < addrs.size(); i++ )
+	{
+		out->SetValue( i, endpointAddrToJs( addrs[i] ) );
+	}
+	return out;
+}
+
 
 bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 {
-	m_frameListener = kj::heap<AvFrameListenerImpl>();
-	m_frameListener->m_renderer = this;
-	m_frameListener->m_context = CefV8Context::GetCurrentContext();
-
-	auto reqListen = m_handler->getClient()->Server().listenForFramesRequest();
-	AvFrameListener::Client listenerClient = std::move( m_frameListener );
-	reqListen.setListener( listenerClient );
-	reqListen.send().wait( m_handler->getClient()->WaitScope() );
-
 	m_vrManager->init();
-	m_renderer->init( nullptr, m_vrManager.get(), m_handler->getClient() );
-
-	RegisterFunction( container, "registerSceneProcessor", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
-	{
-		if ( arguments.size() != 1 )
-		{
-			exception = "Invalid arguments";
-			return;
-		}
-
-		if ( !arguments[0]->IsFunction() )
-		{
-			exception = "argument must be a function";
-			return;
-		}
-
-		m_jsSceneProcessor = arguments[0];
-	} );
+	m_renderer->init( nullptr, m_vrManager.get() );
 
 	RegisterFunction( container, "registerTraverser", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
@@ -259,50 +326,168 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 	} );
 
 
-	RegisterFunction( container, "registerGrabEventProcessor", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	RegisterFunction( container, "updateGrabberIntersections", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
-		if ( arguments.size() != 1 )
+		if ( arguments.size() != 0 )
 		{
 			exception = "Invalid arguments";
 			return;
 		}
 
-		if ( !arguments[0]->IsFunction() )
+		std::vector<GrabberCollisionState_t> res = m_collisions.updateGrabberIntersections();
+		retval = CefV8Value::CreateArray( (int)res.size() );
+		for ( size_t unIndex = 0; unIndex < res.size(); unIndex++ )
 		{
-			exception = "argument must be a function";
+			const GrabberCollisionState_t & grabberState = res[unIndex];
+			CefRefPtr<CefV8Value> out = CefV8Value::CreateObject( nullptr, nullptr );
+			out->SetValue( "grabberId", endpointAddrToJs( grabberState.grabberGlobalId ), V8_PROPERTY_ATTRIBUTE_NONE );
+			out->SetValue( "isPressed", CefV8Value::CreateBool( grabberState.isPressed ), V8_PROPERTY_ATTRIBUTE_NONE );
+			if ( !grabberState.grabbables.empty() )
+			{
+				CefRefPtr<CefV8Value> grabbables = CefV8Value::CreateArray( (int)grabberState.grabbables.size() );
+				for ( uint32_t n = 0; n < grabberState.grabbables.size(); n++ )
+				{
+					const GrabbableCollision_t & gc = grabberState.grabbables[n];
+					CefRefPtr<CefV8Value> grabbable = CefV8Value::CreateObject( nullptr, nullptr );
+					grabbable->SetValue( "grabbableId", endpointAddrToJs( gc.grabbableId ), V8_PROPERTY_ATTRIBUTE_NONE );
+					grabbable->SetValue( "handleId", endpointAddrToJs( gc.handleId), V8_PROPERTY_ATTRIBUTE_NONE );
+					grabbables->SetValue( n, grabbable );
+				}
+				out->SetValue( "grabbables", grabbables, V8_PROPERTY_ATTRIBUTE_NONE );
+			}
+			if ( !grabberState.hooks.empty() )
+			{
+				out->SetValue( "hooks", endpointAddrVectorToJs( grabberState.hooks ), V8_PROPERTY_ATTRIBUTE_NONE );
+			}
+			retval->SetValue( (int)unIndex, out );
+		}
+	} );
+
+
+	RegisterFunction( container, "updatePokerProximity", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 0 )
+		{
+			exception = "Invalid arguments";
 			return;
 		}
 
-		m_jsGrabEventProcessor = arguments[0];
+		std::vector<PokerState_t> res = m_intersections.updatePokerProximity();
+		retval = CefV8Value::CreateArray( (int)res.size() );
+		for ( size_t pokerIndex = 0; pokerIndex < res.size(); pokerIndex++ )
+		{
+			const PokerState_t & pokerState = res[pokerIndex];
+			CefRefPtr<CefV8Value> out = CefV8Value::CreateObject( nullptr, nullptr );
+			out->SetValue( "pokerId", endpointAddrToJs( pokerState.pokerId ), V8_PROPERTY_ATTRIBUTE_NONE );
+
+			CefRefPtr<CefV8Value> panels = CefV8Value::CreateArray( (int)pokerState.panels.size() );
+			for ( size_t panelIndex = 0; panelIndex < pokerState.panels.size(); panelIndex++ )
+			{
+				const aardvark::PokerProximity_t & inPanel = pokerState.panels[panelIndex];
+				CefRefPtr< CefV8Value > outPanel = CefV8Value::CreateObject( nullptr, nullptr );
+				outPanel->SetValue( "panelId", endpointAddrToJs( inPanel.panelId ), V8_PROPERTY_ATTRIBUTE_NONE );
+				outPanel->SetValue( "x", CefV8Value::CreateDouble( inPanel.x ), V8_PROPERTY_ATTRIBUTE_NONE );
+				outPanel->SetValue( "y", CefV8Value::CreateDouble( inPanel.y ), V8_PROPERTY_ATTRIBUTE_NONE );
+				outPanel->SetValue( "distance", CefV8Value::CreateDouble( inPanel.distance ), V8_PROPERTY_ATTRIBUTE_NONE );
+				panels->SetValue( (int)panelIndex, outPanel );
+			}
+			out->SetValue( "panels", panels, V8_PROPERTY_ATTRIBUTE_NONE );
+
+			retval->SetValue( (int)pokerIndex, out );
+		}
 	} );
+
 
 	RegisterFunction( container, "addGrabbableHandle_Sphere", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
-		if ( arguments.size() != 4 )
+		if ( arguments.size() != 5 )
 		{
 			exception = "Invalid arguments";
 			return;
 		}
 
-		if ( !arguments[0]->IsString() )
+		EndpointAddr_t grabbableId;
+		if ( !endpointAddrFromJs( arguments[0], &grabbableId ) )
 		{
-			exception = "argument must be a string";
+			exception = "argument must be an endpoint address";
 			return;
 		}
 
-		glm::mat4 grabberFromUniverse;
-		if ( !mat4FromJavascript( arguments[1], &grabberFromUniverse ) )
+		EndpointAddr_t handleId;
+		if ( !endpointAddrFromJs( arguments[1], &handleId ) )
+		{
+			exception = "argument must be an endpoint address";
+			return;
+		}
+
+		glm::mat4 universeFromHandle;
+		if ( !mat4FromJavascript( arguments[2], &universeFromHandle ) )
 		{
 			exception = "argument must be a string";
 			return;
 		}
 
 		m_collisions.addGrabbableHandle_Sphere(
-			std::strtoull( std::string( arguments[0]->GetStringValue() ).c_str(), nullptr, 0 ),
-			grabberFromUniverse,
-			arguments[2]->GetDoubleValue(),
-			(EHand )arguments[3]->GetIntValue()
+			grabbableId,
+			handleId,
+			universeFromHandle,
+			arguments[3]->GetDoubleValue(),
+			(EHand )arguments[4]->GetIntValue()
 			);
+	} );
+
+	RegisterFunction( container, "addGrabbableHandle_ModelBox", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 5 )
+		{
+			exception = "Invalid arguments";
+			return;
+		}
+
+		EndpointAddr_t grabbableId;
+		if ( !endpointAddrFromJs( arguments[0], &grabbableId ) )
+		{
+			exception = "argument must be an endpoint address";
+			return;
+		}
+
+		EndpointAddr_t handleId;
+		if ( !endpointAddrFromJs( arguments[1], &handleId ) )
+		{
+			exception = "argument must be an endpoint address";
+			return;
+		}
+
+		glm::mat4 universeFromHandle;
+		if ( !mat4FromJavascript( arguments[2], &universeFromHandle ) )
+		{
+			exception = "argument must be a string";
+			return;
+		}
+
+		if ( !arguments[3]->IsString() )
+		{
+			exception = "argument must be a model URI";
+			return;
+		}
+
+		AABB_t box;
+
+		if ( !m_renderer->getModelBox( arguments[3]->GetStringValue(), &box ) )
+		{
+			// if we don't have a box for this model, it's either because we 
+			// haven't loaded it yet or because the URL is invalid. Either way,
+			// just don't add the handle
+			return;
+		}
+
+		m_collisions.addGrabbableHandle_Box(
+			grabbableId,
+			handleId,
+			universeFromHandle,
+			box,
+			(EHand)arguments[4]->GetIntValue()
+		);
 	} );
 
 	RegisterFunction( container, "addGrabber_Sphere", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
@@ -313,9 +498,10 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 			return;
 		}
 
-		if ( !arguments[0]->IsString() )
+		EndpointAddr_t grabberGlobalId;
+		if ( !endpointAddrFromJs( arguments[0], &grabberGlobalId ) )
 		{
-			exception = "argument must be a string";
+			exception = "argument must be an endpoint address";
 			return;
 		}
 
@@ -338,7 +524,7 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 		EHand hand = (EHand)arguments[3]->GetIntValue();
 
 		m_collisions.addGrabber_Sphere(
-			std::strtoull( std::string( arguments[0]->GetStringValue() ).c_str(), nullptr, 0 ),
+			grabberGlobalId,
 			universeFromHandle,
 			arguments[2]->GetDoubleValue(),
 			hand,
@@ -353,9 +539,10 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 			return;
 		}
 
-		if ( !arguments[0]->IsString() )
+		EndpointAddr_t hookGlobalId;
+		if ( !endpointAddrFromJs( arguments[0], &hookGlobalId ) )
 		{
-			exception = "argument must be a string";
+			exception = "argument must be an endpoint address";
 			return;
 		}
 
@@ -376,7 +563,7 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 		}
 
 		m_collisions.addHook_Sphere(
-			std::strtoull( std::string( arguments[0]->GetStringValue() ).c_str(), nullptr, 0 ),
+			hookGlobalId,
 			universeFromHandle,
 			arguments[2]->GetDoubleValue(),
 			(EHand)arguments[3]->GetIntValue() );
@@ -438,8 +625,7 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 		{
 			JsObjectPtr<CJavascriptModelInstance> newModelInstance =
 				CJavascriptObjectWithFunctions::create<CJavascriptModelInstance>(
-					std::move( modelInstance ),
-					m_textureInfo );
+					std::move( modelInstance ) );
 			retval = newModelInstance.object;
 		}
 	} );
@@ -453,9 +639,10 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 			return;
 		}
 
-		if ( !arguments[0]->IsString() )
+		EndpointAddr_t panelId;
+		if ( !endpointAddrFromJs( arguments[0], &panelId ) )
 		{
-			exception = "argument must be the global panel ID as a string";
+			exception = "argument must be the global panel ID";
 			return;
 		}
 
@@ -474,12 +661,11 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 
 		if ( !arguments[3]->IsDouble() )
 		{
-			exception = "foruth argument must be an int (and hand enum value)";
+			exception = "fourth argument must be an int (and hand enum value)";
 			return;
 		}
 
-		uint64_t globalPanelId = std::strtoull( std::string( arguments[0]->GetStringValue() ).c_str(), nullptr, 0 );
-		m_intersections.addActivePanel( globalPanelId, panelFromUniverse, 
+		m_intersections.addActivePanel( panelId, panelFromUniverse, 
 			arguments[2]->GetDoubleValue(), (EHand)arguments[3]->GetIntValue() );
 	} );
 
@@ -491,11 +677,13 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 			return;
 		}
 
-		if ( !arguments[0]->IsString() )
+		EndpointAddr_t pokerId;
+		if ( !endpointAddrFromJs( arguments[0], &pokerId ) )
 		{
-			exception = "argument must be the global panel ID as a string";
+			exception = "argument must be the global poker ID";
 			return;
 		}
+
 
 		if ( !arguments[1]->IsArray()
 			|| arguments[1]->GetArrayLength() != 3
@@ -515,9 +703,77 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 		pokerInUniverse.y = arguments[1]->GetValue( 1 )->GetDoubleValue();
 		pokerInUniverse.z = arguments[1]->GetValue( 2 )->GetDoubleValue();
 
-		uint64_t globalPokerId = std::strtoull( std::string( arguments[0]->GetStringValue() ).c_str(), nullptr, 0 );
-		m_intersections.addActivePoker( globalPokerId, pokerInUniverse, (EHand)arguments[2]->GetIntValue() );
+		m_intersections.addActivePoker( pokerId, pokerInUniverse, (EHand)arguments[2]->GetIntValue() );
 	} );
+
+	RegisterFunction( container, "startGrab", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 2 )
+		{
+			exception = "Invalid arguments";
+			return;
+		}
+
+		EndpointAddr_t grabberGlobalId;
+		if ( !endpointAddrFromJs( arguments[0], &grabberGlobalId ) )
+		{
+			exception = "first argument must be an endpoint address";
+			return;
+		}
+
+		EndpointAddr_t grabbableGlobalId;
+		if ( !endpointAddrFromJs( arguments[1], &grabbableGlobalId ) )
+		{
+			exception = "second argument must be an endpoint address";
+			return;
+		}
+
+		m_collisions.startGrab( grabberGlobalId, grabbableGlobalId );
+	} );
+
+	RegisterFunction( container, "endGrab", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 2 )
+		{
+			exception = "Invalid arguments";
+			return;
+		}
+
+		EndpointAddr_t grabberGlobalId;
+		if ( !endpointAddrFromJs( arguments[0], &grabberGlobalId ) )
+		{
+			exception = "first argument must be an endpoint address";
+			return;
+		}
+
+		EndpointAddr_t grabbableGlobalId;
+		if ( !endpointAddrFromJs( arguments[1], &grabbableGlobalId ) )
+		{
+			exception = "second argument must be an endpoint address";
+			return;
+		}
+
+		m_collisions.endGrab( grabberGlobalId, grabbableGlobalId );
+	} );
+
+
+	RegisterFunction( container, "isEditPressed", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 1 )
+		{
+			exception = "Invalid arguments";
+			return;
+		}
+
+		if ( !arguments[ 0 ]->IsInt() )
+		{
+			exception = "argument must be a number (and a hand enum)";
+		}
+
+		EHand hand = (EHand)arguments[ 0 ]->GetIntValue();
+		retval = CefV8Value::CreateBool( m_vrManager->isEditPressed( hand ) );
+	} );
+
 
 	return true;
 }
@@ -527,275 +783,4 @@ CJavascriptRenderer::~CJavascriptRenderer() noexcept
 	m_renderer = nullptr;
 }
 
-
-CefRefPtr< CefV8Value > protoVectorToJsVector( AvVector::Reader & vector )
-{
-	CefRefPtr<CefV8Value> jsVector = CefV8Value::CreateObject( nullptr, nullptr );
-	jsVector->SetValue( "x",
-		CefV8Value::CreateDouble( vector.getX() ), V8_PROPERTY_ATTRIBUTE_NONE );
-	jsVector->SetValue( "y",
-		CefV8Value::CreateDouble( vector.getY() ), V8_PROPERTY_ATTRIBUTE_NONE );
-	jsVector->SetValue( "z",
-		CefV8Value::CreateDouble( vector.getZ() ), V8_PROPERTY_ATTRIBUTE_NONE );
-	return jsVector;
-}
-
-CefRefPtr< CefV8Value > protoQuatToJsQuat( AvQuaternion::Reader & quat )
-{
-	CefRefPtr<CefV8Value> jsVector = CefV8Value::CreateObject( nullptr, nullptr );
-	jsVector->SetValue( "x",
-		CefV8Value::CreateDouble( quat.getX() ), V8_PROPERTY_ATTRIBUTE_NONE );
-	jsVector->SetValue( "y",
-		CefV8Value::CreateDouble( quat.getY() ), V8_PROPERTY_ATTRIBUTE_NONE );
-	jsVector->SetValue( "z",
-		CefV8Value::CreateDouble( quat.getZ() ), V8_PROPERTY_ATTRIBUTE_NONE );
-	jsVector->SetValue( "w",
-		CefV8Value::CreateDouble( quat.getW() ), V8_PROPERTY_ATTRIBUTE_NONE );
-	return jsVector;
-}
-
-CefRefPtr< CefV8Value> protoTransformToJsTransform( AvTransform::Reader & transform )
-{
-	CefRefPtr<CefV8Value> jsTransform = CefV8Value::CreateObject( nullptr, nullptr );
-	if ( transform.hasPosition() )
-	{
-		jsTransform->SetValue( "position", 
-			protoVectorToJsVector( transform.getPosition() ), V8_PROPERTY_ATTRIBUTE_NONE );
-	}
-	if ( transform.hasScale() )
-	{
-		jsTransform->SetValue( "scale",
-			protoVectorToJsVector( transform.getScale() ), V8_PROPERTY_ATTRIBUTE_NONE );
-	}
-	if ( transform.hasRotation() )
-	{
-		jsTransform->SetValue( "rotation",
-			protoQuatToJsQuat( transform.getRotation() ), V8_PROPERTY_ATTRIBUTE_NONE );
-	}
-
-	return jsTransform;
-}
-
-enum class EVolumeType
-{
-	Invalid = -1,
-
-	Sphere = 0,
-};
-
-EVolumeType protoVolumeTypeToEnum( AvVolume::Type protoType )
-{
-	switch ( protoType )
-	{
-	case AvVolume::Type::SPHERE:
-		return EVolumeType::Sphere;
-
-	default:
-		return EVolumeType::Invalid;
-	}
-}
-
-
-CefRefPtr< CefV8Value> protoVolumeToJsVolume( AvVolume::Reader & volume )
-{
-	CefRefPtr<CefV8Value> jsVolume = CefV8Value::CreateObject( nullptr, nullptr );
-	jsVolume->SetValue( "type", 
-		CefV8Value::CreateInt( (int)protoVolumeTypeToEnum( volume.getType() ) ), V8_PROPERTY_ATTRIBUTE_NONE );
-	jsVolume->SetValue( "radius", CefV8Value::CreateDouble( volume.getRadius() ), V8_PROPERTY_ATTRIBUTE_NONE );
-	return jsVolume;
-}
-
-
-
-CefRefPtr<CefV8Value> CJavascriptRenderer::nodeToJsObject( AvNodeRoot::Reader & nodeRoot, 
-	const std::unordered_map<uint32_t, uint32_t> & nodeIdToNodeIndex, uint32_t nodeIndex )
-{
-	if ( !nodeRoot.hasNodes() || nodeRoot.getNodes().size() <= nodeIndex )
-		return nullptr;
-
-	auto node = nodeRoot.getNodes()[ nodeIndex ].getNode();
-	CefRefPtr<CefV8Value> jsNode = CefV8Value::CreateObject( nullptr, nullptr );
-
-	aardvark::EAvSceneGraphNodeType nodeType = aardvark::ApiTypeFromProtoType( node.getType() );
-	if ( nodeType == aardvark::EAvSceneGraphNodeType::Invalid )
-		return nullptr;
-
-	uint64_t globalId = (uint64_t)nodeRoot.getSourceId() << 32 | node.getId();
-
-	jsNode->SetValue( "type", CefV8Value::CreateInt( (int)nodeType ), V8_PROPERTY_ATTRIBUTE_NONE );
-	jsNode->SetValue( "id", CefV8Value::CreateUInt( node.getId() ), V8_PROPERTY_ATTRIBUTE_NONE );
-	jsNode->SetValue( "globalId", 
-		CefV8Value::CreateString( std::to_string( globalId ) ), V8_PROPERTY_ATTRIBUTE_NONE );
-	jsNode->SetValue( "flags", CefV8Value::CreateUInt( node.getFlags() ), V8_PROPERTY_ATTRIBUTE_NONE );
-
-	if ( node.hasPropOrigin() )
-	{
-		jsNode->SetValue( "propOrigin", 
-			CefV8Value::CreateString( node.getPropOrigin() ), V8_PROPERTY_ATTRIBUTE_NONE );
-	}
-	if ( node.hasPropTransform() )
-	{
-		jsNode->SetValue( "propTransform",
-			protoTransformToJsTransform( node.getPropTransform() ), V8_PROPERTY_ATTRIBUTE_NONE );
-	}
-	if ( node.hasPropModelUri() )
-	{
-		jsNode->SetValue( "propModelUri", 
-			CefV8Value::CreateString( node.getPropModelUri() ), V8_PROPERTY_ATTRIBUTE_NONE );
-	}
-	if ( node.hasPropVolume() )
-	{
-		jsNode->SetValue( "propVolume", protoVolumeToJsVolume( node.getPropVolume() ), V8_PROPERTY_ATTRIBUTE_NONE );
-	}
-	jsNode->SetValue( "propInteractive",
-		CefV8Value::CreateBool( node.getPropInteractive() ), V8_PROPERTY_ATTRIBUTE_NONE );
-
-	if ( node.hasPropCustomNodeType() )
-	{
-		jsNode->SetValue( "propCustomNodeType",
-			CefV8Value::CreateString( node.getPropCustomNodeType() ), V8_PROPERTY_ATTRIBUTE_NONE );
-	}
-
-	if ( node.hasChildren() && node.getChildren().size() > 0 )
-	{
-		CefRefPtr<CefV8Value> children = CefV8Value::CreateArray( node.getChildren().size() );
-		for ( uint32_t child = 0; child < node.getChildren().size(); child++ )
-		{
-			auto nodeIndex = nodeIdToNodeIndex.find( node.getChildren()[child] );
-			if ( nodeIndex != nodeIdToNodeIndex.end() )
-			{
-				children->SetValue( child, nodeToJsObject( nodeRoot, nodeIdToNodeIndex, nodeIndex->second ) );
-			}
-		}
-		jsNode->SetValue( "children", children, V8_PROPERTY_ATTRIBUTE_NONE );
-	}
-
-	return jsNode;
-}
-
-CefRefPtr<CefV8Value> CJavascriptRenderer::nodeRootToJsObject( AvNodeRoot::Reader & nodeRoot )
-{
-	std::unordered_map<uint32_t, uint32_t> nodeIdToNodeIndex;
-	for ( uint32_t n = 0; n < nodeRoot.getNodes().size(); n++ )
-	{
-		auto & node = nodeRoot.getNodes()[n].getNode();
-		nodeIdToNodeIndex.insert_or_assign( node.getId(), n );
-	}
-
-	CefRefPtr<CefV8Value> jsNodeRoot = CefV8Value::CreateObject( nullptr, nullptr );
-	jsNodeRoot->SetValue( "gadgetId", CefV8Value::CreateUInt( nodeRoot.getSourceId() ), V8_PROPERTY_ATTRIBUTE_NONE );
-	if ( nodeRoot.hasHook() && nodeRoot.getHook().size() > 0 )
-	{
-		jsNodeRoot->SetValue( "hook", CefV8Value::CreateString( nodeRoot.getHook() ), V8_PROPERTY_ATTRIBUTE_NONE );
-	}
-
-	jsNodeRoot->SetValue( "root", nodeToJsObject( nodeRoot, nodeIdToNodeIndex, 0 ), V8_PROPERTY_ATTRIBUTE_NONE );
-	return jsNodeRoot;
-}
-
-CefRefPtr<CefV8Value> CJavascriptRenderer::frameToJsObject( AvVisualFrame::Reader & frame )
-{
-	CefRefPtr<CefV8Value> jsFrame = CefV8Value::CreateObject( nullptr,nullptr );
-	jsFrame->SetValue( "id", CefV8Value::CreateString( std::to_string( frame.getId() ) ), V8_PROPERTY_ATTRIBUTE_NONE );
-
-	CefRefPtr<CefV8Value> roots = CefV8Value::CreateArray( frame.getRoots().size() );
-	for ( uint32_t unRoot = 0; unRoot < frame.getRoots().size(); unRoot++ )
-	{
-		roots->SetValue( unRoot, nodeRootToJsObject( frame.getRoots()[unRoot] ) );
-	}
-	jsFrame->SetValue( "nodeRoots", roots, V8_PROPERTY_ATTRIBUTE_NONE );
-
-	return jsFrame;
-}
-
-
-::kj::Promise<void> AvFrameListenerImpl::newFrame( NewFrameContext context )
-{
-	m_renderer->m_textureInfo.clear();
-	if ( m_renderer->m_jsSceneProcessor )
-	{
-		auto frame = context.getParams().getFrame();
-		if ( frame.hasGadgetTextures() )
-		{
-			for ( auto & texture : frame.getGadgetTextures() )
-			{
-				m_renderer->m_textureInfo.insert_or_assign( texture.getGadgetId(),
-					tools::newOwnCapnp( texture.getSharedTextureInfo() ) );
-			}
-		}
-
-		m_context->Enter();
-
-		CefRefPtr< CefV8Value > jsFrame = m_renderer->frameToJsObject( context.getParams().getFrame() );
-		m_renderer->m_jsSceneProcessor->ExecuteFunction( nullptr, CefV8ValueList{ jsFrame } );
-
-		m_context->Exit();
-	}
-	return kj::READY_NOW;
-}
-
-::kj::Promise<void> AvFrameListenerImpl::sendHapticEvent( SendHapticEventContext context )
-{
-	if ( m_renderer->m_jsHapticProcessor )
-	{
-		m_context->Enter();
-
-		m_renderer->m_jsHapticProcessor->ExecuteFunction( nullptr, CefV8ValueList
-			{
-				CefV8Value::CreateString( std::to_string( context.getParams().getTargetGlobalId() ) ),
-				CefV8Value::CreateDouble( context.getParams().getAmplitude() ),
-				CefV8Value::CreateDouble( context.getParams().getFrequency() ),
-				CefV8Value::CreateDouble( context.getParams().getDuration() ),
-			} );
-
-		m_context->Exit();
-	}
-	return kj::READY_NOW;
-}
-
-
-::kj::Promise<void> AvFrameListenerImpl::grabEvent( GrabEventContext context )
-{
-	if ( m_renderer->m_jsGrabEventProcessor )
-	{
-		auto grabEvent = context.getParams().getEvent();
-
-		m_context->Enter();
-
-		CefRefPtr< CefV8Value > evt = CefV8Value::CreateObject( nullptr, nullptr );
-		uint64_t grabberId = grabEvent.getGrabberId();
-		if ( grabberId )
-		{
-			evt->SetValue( CefString( "grabberId" ),
-				CefV8Value::CreateString( std::to_string( grabberId ) ),
-				V8_PROPERTY_ATTRIBUTE_NONE );
-		}
-		uint64_t grabbableId = grabEvent.getGrabbableId();
-		if ( grabbableId )
-		{
-			evt->SetValue( CefString( "grabbableId" ),
-				CefV8Value::CreateString( std::to_string( grabbableId ) ),
-				V8_PROPERTY_ATTRIBUTE_NONE );
-		}
-		uint64_t hookId = grabEvent.getHookId();
-		if ( hookId )
-		{
-			evt->SetValue( CefString( "hookId" ),
-				CefV8Value::CreateString( std::to_string( hookId ) ),
-				V8_PROPERTY_ATTRIBUTE_NONE );
-		}
-		evt->SetValue( CefString( "type" ),
-			CefV8Value::CreateInt( (int)aardvark::grabTypeFromProtoType( grabEvent.getType() ) ),
-			V8_PROPERTY_ATTRIBUTE_NONE );
-
-		m_renderer->m_jsGrabEventProcessor->ExecuteFunction( nullptr, CefV8ValueList
-			{
-				evt,
-			} );
-
-		m_context->Exit();
-	}
-
-	return kj::READY_NOW;
-}
 

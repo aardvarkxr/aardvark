@@ -1,5 +1,4 @@
 #pragma once
-#include <kj/async.h>
 
 #include <vector>
 #include <memory>
@@ -21,19 +20,18 @@ public:
 
 	// called from threads that make requests
 	void processResults();
-	kj::Promise<Result_t> requestUri( const std::string & uri );
+	void requestUri( const std::string & uri, std::function<void (Result_t & result ) > fn );
 
 	// called from a CEF thread that services requests
 	void doCefRequestWork();
 
 
 protected:
-	void addCompletedRequest( CUriRequest *request );
-	void removeCompletedRequest( CUriRequest *request );
+	void addCompletedRequest( CUriRequest * request );
 
 	std::mutex m_mutex;
 
-	std::vector< CUriRequest *> m_completedRequests;
+	std::vector< std::unique_ptr< CUriRequest > > m_completedRequests;
 
 	static std::unique_ptr< CUriRequestImpl > sm_impl;
 	static std::mutex sm_implMutex;

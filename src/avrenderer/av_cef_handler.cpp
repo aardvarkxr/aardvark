@@ -21,58 +21,18 @@
 #include <json/json.hpp>
 
 
-CStartGadgetRequestClient::CStartGadgetRequestClient( CAardvarkCefHandler *cefHandler )
-{
-	m_cefHandler = cefHandler;
-}
-
-void CStartGadgetRequestClient::OnRequestComplete( CefRefPtr<CefURLRequest> request ) 
-{
-	CefURLRequest::Status status = request->GetRequestStatus();
-	CefURLRequest::ErrorCode error_code = request->GetRequestError();
-	CefRefPtr<CefResponse> response = request->GetResponse();
-
-	m_cefHandler->onGadgetManifestReceived( error_code == ERR_NONE, m_downloadData );
-}
-
-void CStartGadgetRequestClient::OnUploadProgress( CefRefPtr<CefURLRequest> request,
-	int64 current,
-	int64 total ) 
-{
-}
-
-void CStartGadgetRequestClient::OnDownloadProgress( CefRefPtr<CefURLRequest> request,
-	int64 current,
-	int64 total ) 
-{
-}
-
-void CStartGadgetRequestClient::OnDownloadData( CefRefPtr<CefURLRequest> request,
-	const void* data,
-	size_t data_length ) 
-{
-	m_downloadData += std::string( static_cast<const char*>( data ), data_length );
-}
-
-bool CStartGadgetRequestClient::GetAuthCredentials( bool isProxy,
-	const CefString& host,
-	int port,
-	const CefString& realm,
-	const CefString& scheme,
-	CefRefPtr<CefAuthCallback> callback ) 
-{
-	return false;  // Not handled.
-}
-
-CAardvarkCefHandler::CAardvarkCefHandler( IApplication *application, const std::string & gadgetUri, const std::string & initialHook )
+CAardvarkCefHandler::CAardvarkCefHandler( IApplication *application, const std::string & gadgetUri, 
+	const std::string & initialHook, const std::string & persistenceUuid, 
+	const aardvark::EndpointAddr_t & epToNotify )
     : m_useViews( false ), m_isClosing(false) 
 {
+	m_epToNotify = epToNotify;
+
 	m_application = application;
-	m_client = std::make_unique<aardvark::CAardvarkClient>();
-	m_client->Start();
 
 	m_gadgetUri = tools::filterUriForInstall( gadgetUri );
 	m_initialHook = initialHook;
+	m_persistenceUuid = persistenceUuid;
 }
 
 
@@ -83,19 +43,18 @@ CAardvarkCefHandler::~CAardvarkCefHandler()
 // Called after creation to kick off the gadget
 void CAardvarkCefHandler::start()
 {
-	m_manifestRequestClient = new CStartGadgetRequestClient( this );
+	m_uriRequestHandler.requestUri( m_gadgetUri + "/gadget_manifest.json",
+		[this]( CUriRequestHandler::Result_t & result )
+	{
+		this->onGadgetManifestReceived( result.success, result.data );
+	} );
 
-	CefRefPtr<CefRequest> request = CefRequest::Create();
-	std::string gadgetManifestUri = m_gadgetUri + "/gadget_manifest.json";
-	request->SetURL( gadgetManifestUri );
-	request->SetMethod( "GET" );
-
-	m_manifestRequest = CefURLRequest::Create( request, m_manifestRequestClient, nullptr );
+	CefPostDelayedTask( TID_UI, base::Bind( &CAardvarkCefHandler::RunFrame, this ), 0 );
 }
 
 
 // Called when the manifest load is completed
-void CAardvarkCefHandler::onGadgetManifestReceived( bool success, const std::string & manifestData )
+void CAardvarkCefHandler::onGadgetManifestReceived( bool success, const std::vector< uint8_t > & manifestData )
 {
 	if ( !success )
 	{
@@ -115,7 +74,7 @@ void CAardvarkCefHandler::onGadgetManifestReceived( bool success, const std::str
 		return;
 	}
 
-	m_gadgetManifestString = manifestData;
+	m_gadgetManifestString = std::string( manifestData.begin(), manifestData.end() );
 
 	// Specify CEF browser settings here.
 	CefBrowserSettings browser_settings;
@@ -137,12 +96,19 @@ void CAardvarkCefHandler::onGadgetManifestReceived( bool success, const std::str
 
 	std::string fullUri = m_gadgetUri + "/index.html?initialHook=" + m_initialHook;
 
+	if ( m_epToNotify.type != aardvark::EEndpointType::Unknown )
+	{
+		fullUri += "&epToNotify=" + aardvark::endpointAddrToString( this->m_epToNotify );
+	}
+
+	if ( !m_persistenceUuid.empty() )
+	{
+		fullUri += "&persistenceUuid=" + m_persistenceUuid;
+	}
+
 	// Create the first browser window.
 	CefBrowserHost::CreateBrowser( window_info, this, fullUri, browser_settings,
 		NULL );
-
-	CefPostDelayedTask( TID_UI, base::Bind( &CAardvarkCefHandler::RunFrame, this ), 0 );
-	m_manifestRequest = nullptr;
 }
 
 
@@ -192,9 +158,6 @@ bool CAardvarkCefHandler::DoClose(CefRefPtr<CefBrowser> browser)
 
 	// Set a flag to indicate that the window close should be allowed.
 	m_isClosing = true;
-
-	m_client->Stop();
-	m_client = nullptr;
 
 	m_application->browserClosed( this );
 
@@ -257,8 +220,14 @@ void CAardvarkCefHandler::OnAcceleratedPaint( CefRefPtr<CefBrowser> browser,
 	const RectList& dirtyRects,
 	void* shared_handle )
 {
-	m_sharedTexture = shared_handle;
-	updateSceneGraphTextures();
+	if ( m_sharedTexture != shared_handle )
+	{
+		m_sharedTexture = shared_handle;
+		if ( m_wantsTexture )
+		{
+			updateSceneGraphTextures();
+		}
+	}
 }
 
 
@@ -285,8 +254,21 @@ bool CAardvarkCefHandler::OnProcessMessageReceived( CefRefPtr<CefBrowser> browse
 	{
 		std::string uri( message->GetArgumentList()->GetString( 0 ) );
 		std::string initialHook( message->GetArgumentList()->GetString( 1 ) );
+		std::string persistenceUuid( message->GetArgumentList()->GetString( 2 ) );
+		aardvark::EndpointAddr_t epToNotify;
+		epToNotify.type = ( aardvark::EEndpointType )message->GetArgumentList()->GetInt( 3 );
+		epToNotify.endpointId = ( uint32_t )message->GetArgumentList()->GetInt( 4 );
+		epToNotify.nodeId = ( uint32_t )message->GetArgumentList()->GetInt( 5 );
 
-		CAardvarkCefApp::instance()->startGadget( uri, initialHook );
+		CAardvarkCefApp::instance()->startGadget( uri, initialHook, persistenceUuid, epToNotify );
+	}
+	else if ( message->GetName() == "request_texture_info" )
+	{
+		m_wantsTexture = true;
+		if ( m_sharedTexture )
+		{
+			updateSceneGraphTextures();
+		}
 	}
 	else if ( message->GetName() == "mouse_event" )
 	{
@@ -338,30 +320,27 @@ void CAardvarkCefHandler::updateSceneGraphTextures()
 {
 	if ( !m_sharedTexture )
 	{
-		// if we don't have a shared texture yet, there's nothing to update
+		// if we don't have a shared texture or gadget yet, there's nothing to update
 		return;
 	}
 
-	if ( m_gadgets.empty() )
-	{
-		aardvark::avUpdateDxgiTextureForGadgets( &*m_client, nullptr, 0, m_gadgetManifest.m_width, m_gadgetManifest.m_height, m_sharedTexture, true );
-	}
-	else
-	{
-		aardvark::avUpdateDxgiTextureForGadgets( &*m_client, &m_gadgets[0], (uint32_t)m_gadgets.size(), m_gadgetManifest.m_width, m_gadgetManifest.m_height, m_sharedTexture, true );
-	}
+	CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "update_shared_texture" );
+	msg->GetArgumentList()->SetString( 0, std::to_string( (uint64_t)m_sharedTexture ) );
+	msg->GetArgumentList()->SetInt( 1, m_gadgetManifest.m_width );
+	msg->GetArgumentList()->SetInt( 2, m_gadgetManifest.m_height );
+	m_browser->SendProcessMessage( PID_RENDERER, msg );
 }
+
 
 void CAardvarkCefHandler::RunFrame()
 {
-	if ( m_client )
+	if ( !m_isClosing )
 	{
-		m_client->WaitScope().poll();
 		CefPostDelayedTask( TID_UI, base::Bind( &CAardvarkCefHandler::RunFrame, this ), 11 );
 	}
 
 	m_uriRequestHandler.doCefRequestWork();
-
+	m_uriRequestHandler.processResults();
 }
 
 

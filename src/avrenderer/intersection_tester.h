@@ -5,30 +5,32 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "ivrmanager.h"
+#include <aardvark/ivrmanager.h>
+#include <aardvark/aardvark_scene_graph.h>
 
 #include <vector>
 
-namespace aardvark
+struct PokerState_t
 {
-	class CAardvarkClient;
-}
+	aardvark::EndpointAddr_t pokerId;
+	std::vector<aardvark::PokerProximity_t> panels;
+};
 
 class CIntersectionTester
 {
 public:
 	CIntersectionTester( );
 
-	void addActivePanel( uint64_t globalPanelId, const glm::mat4 & matPanelFromUniverse, float zScale, EHand hand );
-	void addActivePoker( uint64_t globalPokerId, const glm::vec3 & posPokerInUniverse, EHand hand );
+	void addActivePanel( const aardvark::EndpointAddr_t & globalPanelId, const glm::mat4 & matPanelFromUniverse, float zScale, EHand hand );
+	void addActivePoker( const aardvark::EndpointAddr_t & globalPokerId, const glm::vec3 & posPokerInUniverse, EHand hand );
 
 	void reset();
-	void updatePokerProximity( aardvark::CAardvarkClient *client );
+	std::vector<PokerState_t> updatePokerProximity();
 
 private:
 	struct ActivePanel_t
 	{
-		uint64_t globalPanelId;
+		aardvark::EndpointAddr_t globalPanelId;
 		EHand hand;
 		glm::mat4 matPanelFromUniverse;
 		float zScale;
@@ -37,7 +39,7 @@ private:
 
 	struct ActivePoker_t
 	{
-		uint64_t globalPokerId;
+		aardvark::EndpointAddr_t globalPokerId;
 		EHand hand;
 		glm::vec3 pokerPosInUniverse;
 	};

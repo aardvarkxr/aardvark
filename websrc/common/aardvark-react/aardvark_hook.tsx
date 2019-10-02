@@ -1,13 +1,16 @@
 import { AvGadget } from './aardvark_gadget';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
-import { AvSceneContext, AvNodeType, AvGrabEventType, AvGrabEvent } from 'common/aardvark';
+import { AvNodeType, AvGrabEventType, AvGrabEvent, EVolumeType } from 'common/aardvark';
 import bind from 'bind-decorator';
+import { endpointAddrsMatch, EndpointAddr } from './aardvark_protocol';
 
 
 export enum HookHighlight
 {
 	None,
+	GrabInProgress,
 	InRange,
+	Occupied,
 }
 
 interface AvHookProps extends AvBaseNodeProps
@@ -19,13 +22,15 @@ interface AvHookProps extends AvBaseNodeProps
 export class AvHook extends AvBaseNode< AvHookProps, {} >
 {
 	m_lastHighlight = HookHighlight.None;
+	m_lastGrabbable: EndpointAddr = null;
 
-	public startNode( context:AvSceneContext )
+	public buildNode()
 	{
-		context.startCustomNode( this.m_nodeId, "hook" + this.m_nodeId, "Hook" );
-		context.setSphereVolume( this.props.radius );
+		AvGadget.instance().setGrabEventProcessor( this.m_nodeId, this.onGrabEvent );
 
-		AvGadget.instance().setGrabbableProcessor( this.m_nodeId, this.onGrabEvent );
+		let node = this.createNodeObject( AvNodeType.Hook, this.m_nodeId );
+		node.propVolume = { type: EVolumeType.Sphere, radius : this.props.radius };
+		return node;
 	}
 
 	@bind private onGrabEvent( evt: AvGrabEvent )
@@ -34,12 +39,33 @@ export class AvHook extends AvBaseNode< AvHookProps, {} >
 	
 		switch( evt.type )
 		{
+			case AvGrabEventType.StartGrab:
+				if( evt.grabberId.endpointId != AvGadget.instance().getEndpointId() 
+					&& ( !this.m_lastGrabbable || endpointAddrsMatch( this.m_lastGrabbable, evt.grabbableId ) ) )
+				{
+					newHighlight = HookHighlight.GrabInProgress;
+					this.m_lastGrabbable = null;
+				}
+				break;
+
+			case AvGrabEventType.EndGrab:
+				if( endpointAddrsMatch( evt.hookId, this.endpointAddr() ) )
+				{
+					newHighlight = HookHighlight.Occupied;
+					this.m_lastGrabbable = evt.grabbableId;
+				}
+				else
+				{
+					newHighlight = HookHighlight.None;
+				}
+				break;
+
 			case AvGrabEventType.EnterHookRange:
 				newHighlight = HookHighlight.InRange;
 				break;
 
 			case AvGrabEventType.LeaveHookRange:
-				newHighlight = HookHighlight.None;
+				newHighlight = HookHighlight.GrabInProgress;
 				break;
 		}
 

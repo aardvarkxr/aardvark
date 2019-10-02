@@ -1,5 +1,5 @@
 cmake_minimum_required ( VERSION 3.14)
-project( Aardvark VERSION 0.1
+project( Aardvark VERSION 0.2.0
 					DESCRIPTION "AR in VR"
 					LANGUAGES CXX)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
@@ -7,7 +7,6 @@ set(NAME Aardvark)
 
 
 
-set( CapnProto_DIR ${CMAKE_SOURCE_DIR}/packages/capnproto/lib/cmake/CapnProto  )
 set( Vulkan_LIBRARY ${CMAKE_SOURCE_DIR}/thirdparty/vulkan/libs/vulkan-1.lib  )
 set( Vulkan_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/thirdparty/vulkan  )
 

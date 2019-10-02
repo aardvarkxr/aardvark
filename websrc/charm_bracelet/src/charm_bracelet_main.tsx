@@ -3,58 +3,156 @@ import  * as ReactDOM from 'react-dom';
 
 import { AvGadget } from 'common/aardvark-react/aardvark_gadget';
 import { AvTransform } from 'common/aardvark-react/aardvark_transform';
-import { AvPanel } from 'common/aardvark-react/aardvark_panel';
 import bind from 'bind-decorator';
-import { HookHighlight, AvHook } from 'common/aardvark-react/aardvark_hook';
+import { AvGrabbable, HighlightType } from 'common/aardvark-react/aardvark_grabbable';
+import { AvStandardHook } from 'common/aardvark-react/aardvark_standard_hook';
+import { AvSphereHandle } from 'common/aardvark-react/aardvark_handles';
+import { AvModel } from 'common/aardvark-react/aardvark_model';
+import { endpointAddrToString } from 'common/aardvark-react/aardvark_protocol';
+import { AvGrabButton } from 'common/aardvark-react/aardvark_grab_button';
 
 
 interface CharmBraceletState
 {
-	hookHighlight: HookHighlight;
+	highlight: HighlightType;
+	charmCount: number;
+}
+
+interface CharmBraceletSettings
+{
+	charmCount: number;
+}
+
+interface CharmLocation
+{
+	x: number;
+	y: number;
+	z: number;
+	rot: number;
+}
+
+let charmLocations: { [charmCount: number]: CharmLocation[] } =
+{
+	1: [ { x: 0, y: 0.1, z: 0.1, rot: 0 } ],
+	2: [ { x: 0, y: 0.1, z: 0.1, rot: 0 }, { x: 0.1, y: 0.1, z: 0.1, rot: 0 } ],
+	3: [ 
+		{ x: 0, y: 0.1, z: 0.1, rot: 0 }, 
+		{ x: 0.1, y: 0.1, z: 0.1, rot: 0 }, 
+		{ x: -0.1, y: 0.1, z: 0.1, rot: 0 } 
+	],
+};
+
+let charmLocationMax = 0;
+for( let x in charmLocations )
+{
+	charmLocationMax = Math.max( parseInt( x ), charmLocationMax );
 }
 
 class CharmBracelet extends React.Component< {}, CharmBraceletState >
 {
+	private m_dirty = false;
+
 	constructor( props: any )
 	{
 		super( props );
 		this.state = 
 		{ 
-			hookHighlight: HookHighlight.None,
+			highlight: HighlightType.None,
+			charmCount: 1,
 		};
+
+		AvGadget.instance().registerForSettings( this.onSettingsReceived );
+		AvGadget.instance().listenForEditMode( this.onEditModeUpdated );
 	}
 
-	@bind public onHighlightHook( highlight: HookHighlight )
+	@bind onGrabbableHighlight( newHighlight: HighlightType )
 	{
-		this.setState( { hookHighlight: highlight } );
+		this.setState( { highlight: newHighlight } );
+	}
+
+	@bind onSettingsReceived( settings: CharmBraceletSettings )
+	{
+		this.setState( { charmCount: settings.charmCount })
+	}
+
+	@bind onPlus()
+	{
+		if( this.state.charmCount < charmLocationMax )
+		{
+			this.setState( { charmCount: this.state.charmCount + 1 } );
+			this.m_dirty = true;
+		}
+
+	}
+
+	@bind onMinus()
+	{
+		if( this.state.charmCount > 1 )
+		{
+			this.setState( { charmCount: this.state.charmCount - 1 } );
+			this.m_dirty = true;
+		}
+	}
+
+	@bind onEditModeUpdated()
+	{
+		if( !AvGadget.instance().editMode && this.m_dirty )
+		{
+			this.m_dirty = false;
+
+			let settings: CharmBraceletSettings =
+			{
+				charmCount: this.state.charmCount,
+			};
+			AvGadget.instance().saveSettings( settings );
+		}
+		this.forceUpdate();
+	}
+
+	private renderControls()
+	{
+		if( !AvGadget.instance().editMode )
+			return null;
+
+		return <div>
+			<AvTransform translateZ={0.2} translateY={0.1} translateX={ 0.05 }>
+				<AvGrabButton modelUri="https://aardvark.install/models/plus.glb" 
+					onTrigger={ this.onPlus } />
+			</AvTransform>
+			<AvTransform translateZ={0.2} translateY={0.1} translateX={ -0.05 }>
+				<AvGrabButton modelUri="https://aardvark.install/models/minus.glb" 
+					onTrigger={ this.onMinus } />
+			</AvTransform>
+		</div>
 	}
 
 	public render()
 	{
-		let sDivClasses:string;
-		switch( this.state.hookHighlight )
-		{
-			default:
-			case HookHighlight.None:
-				sDivClasses = "FullPage HookCircle NoHighlight";
-				break;
+		let grabbedMode = this.state.highlight == HighlightType.Grabbed;
+		let charms: JSX.Element[] = [];
 
-			case HookHighlight.InRange:
-				sDivClasses = "FullPage HookCircle InRangeHighlight";
-				break;
+		let locs = charmLocations[ this.state.charmCount ];
+		for( let i = 0; i < this.state.charmCount; i++ )
+		{
+			let loc = locs[ i ];
+			charms.push(
+				<AvTransform translateX={ loc.x } translateY={ loc.y } translateZ={ loc.z }  
+					key={ i }>
+					<AvStandardHook persistentName={ "hook" + i } />
+				</AvTransform>
+				);
 		}
 
 		return (
 			<div className="FullPage" >
-				<AvGadget name="Charm Bracelet">
-					<AvTransform translateY={ -0.2 } translateZ = {0.2}>
-						<AvHook updateHighlight= { this.onHighlightHook } radius={ 0.1 } />
-						<AvTransform uniformScale={ 0.1 }>
-							<AvPanel interactive={false} />
-						</AvTransform>
-					</AvTransform>
-				</AvGadget>
-				<div className={sDivClasses}><div className="PlusSign">+</div></div>
+				<div>
+					<AvGrabbable updateHighlight={ this.onGrabbableHighlight } >
+						<AvSphereHandle radius={0.1} />
+						{ charms }
+						{ grabbedMode && <AvModel uri="http://aardvark.install/models/bracelet.glb" /> }
+						{ this.renderControls() }
+					</AvGrabbable>
+				</div>
 			</div>
 		)
 	}

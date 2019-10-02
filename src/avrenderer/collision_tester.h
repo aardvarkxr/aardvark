@@ -1,7 +1,6 @@
 #pragma once
 
-#include "aardvark.capnp.h"
-#include "ivrmanager.h"
+#include <aardvark/ivrmanager.h>
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -9,49 +8,90 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include <vector>
+#include <unordered_map>
 #include <openvr.h>
+#include <aardvark/aardvark_scene_graph.h>
+#include <aardvark/irenderer.h>
 
-namespace aardvark
+struct GrabbableCollision_t
 {
-	class CAardvarkClient;
-}
+	aardvark::EndpointAddr_t grabbableId;
+	aardvark::EndpointAddr_t handleId;
+};
+
+struct GrabberCollisionState_t
+{
+	aardvark::EndpointAddr_t grabberGlobalId;
+	bool isPressed;
+	std::vector<GrabbableCollision_t> grabbables;
+	std::vector<aardvark::EndpointAddr_t> hooks;
+};
 
 class CCollisionTester
 {
 public:
 	CCollisionTester( );
 
-	void addGrabber_Sphere( uint64_t globalGrabberId, const glm::mat4 & grabberFromUniverse,
+	enum class VolumeType
+	{
+		Sphere,
+		Box
+	};
+	struct Volume_t
+	{
+		static Volume_t createSphere( const glm::mat4 & universeFromVolume, float radius );
+		static Volume_t createBox( const glm::mat4 & universeFromVolume, const AABB_t & box );
+		VolumeType type;
+		glm::mat4 universeFromVolume;
+		AABB_t box;
+		float radius;
+	};
+
+	void addGrabber_Sphere( const aardvark::EndpointAddr_t & globalGrabberId, const glm::mat4 & universeFromGrabber,
 		float radius, EHand hand, bool isPressed );
-	void addGrabbableHandle_Sphere( uint64_t globalGrabbableId, const glm::mat4 & universeFromHandle,
+	void addGrabbableHandle_Sphere( const aardvark::EndpointAddr_t & globalGrabbableId, 
+		const aardvark::EndpointAddr_t & globalHandleId, 
+		const glm::mat4 & universeFromHandle,
 		float radius, EHand hand );
 
-	void addHook_Sphere( uint64_t globalHookId, const glm::mat4 & universeFromHook,
+	void addGrabbableHandle( const aardvark::EndpointAddr_t & globalGrabbableId, 
+		const aardvark::EndpointAddr_t & globalHandleId, 
+		Volume_t volume, EHand hand );
+
+	void addGrabbableHandle_Box( const aardvark::EndpointAddr_t & globalGrabbableId,
+		const aardvark::EndpointAddr_t & globalHandleId,
+		const glm::mat4 & universeFromHandle,
+		const AABB_t & box, EHand hand );
+
+	void addHook_Sphere( const aardvark::EndpointAddr_t & globalHookId, const glm::mat4 & universeFromHook,
 		float radius, EHand hand );
+
+	void startGrab( const aardvark::EndpointAddr_t & globalGrabberId, const aardvark::EndpointAddr_t & globalGrabbableId );
+	void endGrab( const aardvark::EndpointAddr_t & globalGrabberId, const aardvark::EndpointAddr_t & globalGrabbableId );
 
 	void reset();
-	void updateGrabberIntersections( aardvark::CAardvarkClient *client );
+	std::vector< GrabberCollisionState_t > updateGrabberIntersections();
 
 private:
+
 	struct ActiveGrabber_t
 	{
-		uint64_t globalGrabberId;
+		aardvark::EndpointAddr_t globalGrabberId;
 		EHand hand;
 		bool isPressed;
-		glm::mat4 matGrabberFromUniverse;
-		float radius;
+		Volume_t volume;
 	};
 	std::vector<ActiveGrabber_t> m_activeGrabbers;
 
 	struct Handle_t
 	{
-		glm::mat4 universeFromHandle;
-		float radius;
+		aardvark::EndpointAddr_t globalHandleId;
+		Volume_t volume;
 	};
 
 	struct ActiveGrabbable_t
 	{
-		uint64_t globalGrabbableId;
+		aardvark::EndpointAddr_t globalGrabbableId;
 		EHand hand;
 		std::vector<Handle_t> handles;
 	};
@@ -59,12 +99,12 @@ private:
 
 	struct ActiveHook_t
 	{
-		uint64_t globalHookId;
+		aardvark::EndpointAddr_t globalHookId;
 		EHand hand;
-		glm::mat4 universeFromHook;
-		float radius;
+		Volume_t volume;
 	};
 	std::vector<ActiveHook_t> m_activeHooks;
 
+	std::unordered_map<aardvark::EndpointAddr_t, aardvark::EndpointAddr_t> m_activeGrabs;
 
 };

@@ -1,7 +1,7 @@
 import * as React from 'react';
 
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
-import { AvSceneContext, AvNodeType } from 'common/aardvark';
+import { AvNodeType } from 'common/aardvark';
 
 interface AvOriginProps extends AvBaseNodeProps
 {
@@ -10,9 +10,10 @@ interface AvOriginProps extends AvBaseNodeProps
 
 export class AvOrigin extends AvBaseNode< AvOriginProps, {} >
 {
-	public startNode( context:AvSceneContext )
+	public buildNode()
 	{
-		context.startNode( this.m_nodeId, "origin" + this.m_nodeId, AvNodeType.Origin );
-		context.setOriginPath( this.props.path );
+		let node = this.createNodeObject( AvNodeType.Origin, this.m_nodeId );
+		node.propOrigin = this.props.path;
+		return node;
 	}
 }

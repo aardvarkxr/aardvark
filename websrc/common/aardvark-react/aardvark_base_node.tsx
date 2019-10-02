@@ -1,7 +1,8 @@
 import * as React from 'react';
 
-import { Av, AvSceneContext } from 'common/aardvark';
+import { AvNode, AvNodeType, ENodeFlags } from 'common/aardvark';
 import { AvGadget } from './aardvark_gadget';
+import { EndpointAddr, EndpointType } from './aardvark_protocol';
 
 declare global 
 {
@@ -17,38 +18,114 @@ declare global
 
 export interface AvBaseNodeProps
 {
-	onIdAssigned?: ( id: number ) => void;
+	visible?: boolean; // defaults to true
+	persistentName?: string; // Set this if you need to store persistent references to this node
+	onIdAssigned?: ( addr: EndpointAddr ) => void;
+	editable?: boolean;
 }
 
 export interface IAvBaseNode
 {
 	m_nodeId: number;
-	pushNode( context: AvSceneContext ): void;
+	buildNode(): AvNode;
+	createNodeForNode(): AvNode;
+	grabInProgress( grabber: EndpointAddr ): void;
 }
 
 
-export abstract class AvBaseNode<TProps, TState> extends React.Component<TProps, TState> implements IAvBaseNode
+export abstract class AvBaseNode<TProps, TState> extends React.Component<TProps, TState> 
+	implements IAvBaseNode
 {
 	public m_nodeId: number;
+	private m_firstUpdate = true;
 
 	constructor( props: any )
 	{
 		super( props );
+	}
+
+	public abstract buildNode( ): AvNode;
+
+	public grabInProgress( grabber: EndpointAddr ):void
+	{
+		// nothing to do here, but some node types will need to do work
+	}
+
+	public createNodeForNode(): AvNode
+	{
+		if( this.m_firstUpdate )
+		{
+			this.m_firstUpdate = false;
+
+			if( this.baseProps && this.baseProps.onIdAssigned )
+			{
+				this.baseProps.onIdAssigned( this.endpointAddr() );
+			}
+	
+		}
+
+		return this.buildNode();
+	}
+
+	public componentWillMount()
+	{
 		AvGadget.instance().register( this );
 
-		if( props.onIdAssigned )
+		if( this.baseProps.onIdAssigned )
 		{
-			props.onIdAssigned( this.m_nodeId );
+			this.baseProps.onIdAssigned( this.endpointAddr() );
 		}
 	}
 
-	public pushNode( context: AvSceneContext ): void
+	public componentWillUnmount()
 	{
-		this.startNode( context );
+		AvGadget.instance().unregister( this );
+		this.m_firstUpdate = true;
 	}
 
-	abstract startNode( context: AvSceneContext ): void;
-	
+	protected createNodeObject( type: AvNodeType, nodeId: number ): AvNode
+	{
+		//console.log( `creating ${ AvNodeType[ type] } ${ nodeId }` );
+		let obj:AvNode =
+		{
+			type: type,
+			id: nodeId,
+			flags: this.getNodeFlags(),
+		};
+
+		if( this.baseProps.persistentName )
+		{
+			obj.persistentName = this.baseProps.persistentName;
+		}
+
+		return obj;
+	}
+
+	private get baseProps()
+	{
+		return this.props as AvBaseNodeProps;
+	}
+
+	public isVisible(): boolean
+	{
+		if( !this.baseProps || this.baseProps.visible == undefined )
+			return true;
+
+		return this.baseProps.visible;
+	}
+
+	protected getNodeFlags(): ENodeFlags
+	{
+		let flags:ENodeFlags = 0;
+		if( this.isVisible() )
+		{
+			flags |= ENodeFlags.Visible;
+		}
+
+		return flags;
+	}
+
+
 	public baseNodeRender( node: IAvBaseNode, children: React.ReactNode )
 	{
 		return (
@@ -61,6 +138,15 @@ export abstract class AvBaseNode<TProps, TState> extends React.Component<TProps,
 	public componentDidUpdate()
 	{
 		AvGadget.instance().markDirty();
+	}
+
+	public endpointAddr(): EndpointAddr
+	{
+		return {
+			type: EndpointType.Node,
+			endpointId: AvGadget.instance().getEndpointId(),
+			nodeId: this.m_nodeId,
+		}
 	}
 
 	public render()

@@ -20,8 +20,6 @@ add_executable(avrenderer
 	intersection_tester.cpp
 	intersection_tester.h
 	iapplication.h
-	irenderer.h
-	ivrmanager.h
 	javascript_object.cpp
 	javascript_object.h
 	javascript_renderer.cpp

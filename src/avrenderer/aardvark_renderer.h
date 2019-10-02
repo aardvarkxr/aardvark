@@ -16,18 +16,12 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "aardvark.capnp.h"
-
 #include "include/cef_sandbox_win.h"
 #include "av_cef_app.h"
 #include "av_cef_handler.h"
 #include "uri_request_handler.h"
-#include "irenderer.h"
+#include <aardvark/irenderer.h>
 
-#include <tools/capnprototools.h>
-
-#include <aardvark/aardvark_server.h>
-#include <aardvark/aardvark_client.h>
 #include <aardvark/aardvark_scene_graph.h>
 
 
@@ -41,7 +35,9 @@ public:
 
 	CVulkanRendererModelInstance( VulkanExample *renderer, const std::string & uri, std::shared_ptr< vkglTF::Model > model );
 	virtual void setUniverseFromModel( const glm::mat4 & universeFromModel ) override;
-	virtual void setOverrideTexture( AvSharedTextureInfo::Reader ) override;
+	virtual void setOverrideTexture( void *textureHandle, ETextureType type, ETextureFormat format,
+		uint32_t width, uint32_t height ) override;
+	virtual void setBaseColor( const glm::vec4 & color ) override;
 
 	void animate( float animationTimeElapsed );
 protected:
@@ -51,11 +47,12 @@ protected:
 	vkglTF::Transformable m_modelParent;
 
 	void *m_lastDxgiHandle = nullptr;
+	glm::vec4 m_lastBaseColor = { 0, 0, 0, 0 };
 	std::shared_ptr< vks::Texture2D > m_overrideTexture;
 };
 
 
-class VulkanExample : public VulkanExampleBase, public AvFrameListener::Server, public IRenderer
+class VulkanExample : public VulkanExampleBase, public IRenderer
 {
 	friend class CSceneListener;
 	friend CVulkanRendererModelInstance;
@@ -84,7 +81,9 @@ public:
 	vkglTF::Model m_skybox;
 
 	void loadAssets();
-	void UpdateDescriptorForScene( VkDescriptorSet descriptorSet, VkBuffer buffer, uint32_t bufferSize );
+	void UpdateDescriptorForScene( VkDescriptorSet descriptorSet,
+		VkBuffer buffer, uint32_t bufferSize,
+		VkBuffer paramsBuffer, uint32_t paramsBufferSize );
 	void setupDescriptors();
 	void setupDescriptorSetsForModel( std::shared_ptr<vkglTF::Model> pModel );
 	void preparePipelines();
@@ -112,15 +111,15 @@ public:
 	void submitEyeBuffers();
 
 	// ----------- IRenderer implementation -------------
-	virtual void init( HINSTANCE hInstance, IVrManager *vrManager, aardvark::CAardvarkClient *client ) override;
+	virtual void init( HINSTANCE hInstance, IVrManager *vrManager ) override;
 	virtual void runFrame( bool *shouldQuit, double frameTime ) override;
 	virtual std::unique_ptr<IModelInstance> createModelInstance( const std::string & uri ) override;
 	virtual void resetRenderList() override;
 	virtual void addToRenderList( IModelInstance *modelInstance ) override;
 	virtual void processRenderList() override;
+	virtual bool getModelBox( const std::string & uri, AABB_t *pBox ) override;
 
 protected:
-	aardvark::CAardvarkClient *m_pClient;
 	IVrManager *m_vrManager;
 
 	bool m_updateDescriptors = false;

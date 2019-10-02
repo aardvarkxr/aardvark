@@ -1,18 +1,21 @@
 import * as React from 'react';
 
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
-import { AvSceneContext, AvNodeType } from 'common/aardvark';
+import { AvNodeType, AvColor } from 'common/aardvark';
 
 interface AvModelProps extends AvBaseNodeProps
 {
 	uri: string;
+	color?: AvColor;
 }
 
 export class AvModel extends AvBaseNode< AvModelProps, {} >
 {
-	public startNode( context:AvSceneContext )
+	public buildNode()
 	{
-		context.startNode( this.m_nodeId, "model" + this.m_nodeId, AvNodeType.Model );
-		context.setModelUri( this.props.uri );
+		let node = this.createNodeObject( AvNodeType.Model, this.m_nodeId );
+		node.propModelUri = this.props.uri;
+		node.propColor = this.props.color;
+		return node;
 	}
 }

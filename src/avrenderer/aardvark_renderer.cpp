@@ -10,7 +10,7 @@
 #include <set>
 #include <algorithm>
 #include <filesystem>
-#include "ivrmanager.h"
+#include <aardvark/ivrmanager.h>
 
 #if defined(__ANDROID__)
 #define TINYGLTF_ANDROID_LOAD_FROM_ASSETS
@@ -46,43 +46,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 using namespace aardvark;
-
-void UpdateTransformable( std::shared_ptr<vkglTF::Transformable> pTransformable, AvTransform::Reader & transform )
-{
-	if ( transform.hasPosition() )
-	{
-		pTransformable->translation.x = transform.getPosition().getX();
-		pTransformable->translation.y = transform.getPosition().getY();
-		pTransformable->translation.z = transform.getPosition().getZ();
-	}
-	else
-	{
-		pTransformable->translation = glm::vec3( 0.f );
-	}
-
-	if ( transform.hasScale() )
-	{
-		pTransformable->scale.x = transform.getScale().getX();
-		pTransformable->scale.y = transform.getScale().getY();
-		pTransformable->scale.z = transform.getScale().getZ();
-	}
-	else
-	{
-		pTransformable->scale = glm::vec3( 1.f );
-	}
-
-	if ( transform.hasRotation() )
-	{
-		pTransformable->rotation.x = transform.getRotation().getX();
-		pTransformable->rotation.y = transform.getRotation().getY();
-		pTransformable->rotation.z = transform.getRotation().getZ();
-		pTransformable->rotation.w = transform.getRotation().getW();
-	}
-	else
-	{
-		pTransformable->rotation = glm::quat();
-	}
-}
 
 VulkanExample::VulkanExample()
 	: VulkanExampleBase()
@@ -458,9 +421,13 @@ void VulkanExample::loadAssets()
 
 }
 
-void VulkanExample::UpdateDescriptorForScene( VkDescriptorSet descriptorSet, VkBuffer buffer, uint32_t bufferSize )
+void VulkanExample::UpdateDescriptorForScene( VkDescriptorSet descriptorSet, 
+	VkBuffer buffer, uint32_t bufferSize,
+	VkBuffer paramsBuffer, uint32_t paramsBufferSize
+)
 {
 	VkDescriptorBufferInfo bufferInfo = { buffer, 0, bufferSize };
+	VkDescriptorBufferInfo paramBufferInfo = { paramsBuffer, 0, paramsBufferSize };
 
 	std::array<VkWriteDescriptorSet, 5> writeDescriptorSets{};
 
@@ -476,7 +443,7 @@ void VulkanExample::UpdateDescriptorForScene( VkDescriptorSet descriptorSet, VkB
 	writeDescriptorSets[1].descriptorCount = 1;
 	writeDescriptorSets[1].dstSet = descriptorSet;
 	writeDescriptorSets[1].dstBinding = 1;
-	writeDescriptorSets[1].pBufferInfo = &bufferInfo;
+	writeDescriptorSets[1].pBufferInfo = &paramBufferInfo;
 
 	writeDescriptorSets[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	writeDescriptorSets[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -518,7 +485,9 @@ void VulkanExample::setupDescriptors()
 			{
 				UpdateDescriptorForScene( descriptor->set(),
 					uniformBuffers[i].scene.buffer,
-					uniformBuffers[i].scene.size );
+					uniformBuffers[i].scene.size,
+					uniformBuffers[i].params.buffer,
+					uniformBuffers[i].params.size );
 			};
 
 			descriptorSets[i].scene = m_descriptorManager->createDescriptorSet( fnUpdateDescriptor, vks::EDescriptorLayout::Scene );
@@ -528,7 +497,9 @@ void VulkanExample::setupDescriptors()
 			{
 				UpdateDescriptorForScene( descriptor->set(),
 					uniformBuffers[i].leftEye.buffer,
-					uniformBuffers[i].leftEye.size );
+					uniformBuffers[i].leftEye.size,
+					uniformBuffers[i].params.buffer,
+					uniformBuffers[i].params.size );
 			};
 			descriptorSets[i].eye[vr::Eye_Left] = m_descriptorManager->createDescriptorSet( fnUpdateDescriptorLeftEye, vks::EDescriptorLayout::Scene );
 
@@ -537,7 +508,9 @@ void VulkanExample::setupDescriptors()
 			{
 				UpdateDescriptorForScene( descriptor->set(),
 					uniformBuffers[i].rightEye.buffer,
-					uniformBuffers[i].rightEye.size );
+					uniformBuffers[i].rightEye.size,
+					uniformBuffers[i].params.buffer,
+					uniformBuffers[i].params.size );
 			};
 			descriptorSets[i].eye[vr::Eye_Right] = m_descriptorManager->createDescriptorSet( fnUpdateDescriptorRightEye, vks::EDescriptorLayout::Scene );
 		}
@@ -1812,11 +1785,26 @@ void VulkanExample::generateCubemaps()
 void VulkanExample::prepareUniformBuffers()
 {
 	for ( auto &uniformBuffer : uniformBuffers ) {
-		uniformBuffer.scene.create( vulkanDevice, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, sizeof( shaderValuesScene ) );
-		uniformBuffer.skybox.create( vulkanDevice, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, sizeof( shaderValuesSkybox ) );
-		uniformBuffer.params.create( vulkanDevice, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, sizeof( shaderValuesParams ) );
-		uniformBuffer.leftEye.create( vulkanDevice, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, sizeof( shaderValuesLeftEye ) );
-		uniformBuffer.rightEye.create( vulkanDevice, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, sizeof( shaderValuesRightEye ) );
+		uniformBuffer.scene.create( vulkanDevice, 
+			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+			sizeof( shaderValuesScene ) );
+		uniformBuffer.skybox.create( vulkanDevice, 
+			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+			sizeof( shaderValuesSkybox ) );
+		uniformBuffer.params.create( vulkanDevice, 
+			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+			sizeof( shaderValuesParams ) );
+		uniformBuffer.leftEye.create( vulkanDevice, 
+			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+			sizeof( shaderValuesLeftEye ) );
+		uniformBuffer.rightEye.create( vulkanDevice, 
+			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+			sizeof( shaderValuesRightEye ) );
 	}
 	updateUniformBuffers();
 }
@@ -1855,14 +1843,17 @@ void VulkanExample::updateUniformBuffers()
 	shaderValuesLeftEye.matProjectionFromView = m_vargglesEyePerspectiveProjection;
 	shaderValuesLeftEye.matViewFromHmd = GetHMDMatrixPoseEye( vr::Eye_Left );
 	shaderValuesLeftEye.matHmdFromStage = m_vrManager->getHmdFromUniverse();
-	shaderValuesLeftEye.camPos = glm::vec3( 1, 0, 0 );
+
+	glm::mat4 stageFromView = glm::inverse( shaderValuesLeftEye.matViewFromHmd * shaderValuesLeftEye.matHmdFromStage );
+	shaderValuesLeftEye.camPos = glm::vec3( stageFromView * glm::vec4( 0, 0, 0, 1.f ) );
 
 	// right eye
 	//shaderValuesRightEye.matProjectionFromView = GetHMDMatrixProjectionEye( vr::Eye_Right );
 	shaderValuesRightEye.matProjectionFromView = m_vargglesEyePerspectiveProjection;
 	shaderValuesRightEye.matViewFromHmd = GetHMDMatrixPoseEye( vr::Eye_Right );
 	shaderValuesRightEye.matHmdFromStage = m_vrManager->getHmdFromUniverse();
-	shaderValuesRightEye.camPos = glm::vec3( 1, 0, 0 );
+	stageFromView = glm::inverse( shaderValuesRightEye.matViewFromHmd * shaderValuesRightEye.matHmdFromStage );
+	shaderValuesRightEye.camPos = glm::vec3( stageFromView * glm::vec4( 0, 0, 0, 1.f ) );
 }
 
 void VulkanExample::updateParams()
@@ -1872,7 +1863,8 @@ void VulkanExample::updateParams()
 		sin( glm::radians( lightSource.rotation.y ) ),
 		cos( glm::radians( lightSource.rotation.x ) ) * cos( glm::radians( lightSource.rotation.y ) ),
 		0.0f );
-	shaderValuesParams.debugViewInputs = 1;
+	shaderValuesParams.debugViewInputs = 0;
+	shaderValuesParams.debugViewEquation = 0;
 }
 
 void VulkanExample::windowResized()
@@ -1972,8 +1964,7 @@ std::shared_ptr<vkglTF::Model> VulkanExample::findOrLoadModel( std::string model
 
 	m_modelRequestsInProgress.insert( modelUri );
 
-	auto promUriLoad = m_uriRequests.requestUri( modelUri )
-		.then( [this, modelUri]( CUriRequestHandler::Result_t result )
+	m_uriRequests.requestUri( modelUri, [this, modelUri]( CUriRequestHandler::Result_t result )
 	{
 		m_modelRequestsInProgress.erase( modelUri );
 		if ( !result.success )
@@ -1997,9 +1988,6 @@ std::shared_ptr<vkglTF::Model> VulkanExample::findOrLoadModel( std::string model
 			}
 		}
 	} );
-
-		
-	m_pClient->addToTasks( std::move( promUriLoad ) );
 
 	return nullptr;
 }
@@ -2159,6 +2147,24 @@ void VulkanExample::processRenderList()
 	m_uriRequests.processResults();
 }
 
+bool VulkanExample::getModelBox( const std::string & uri, AABB_t *pBox ) 
+{
+	auto pModel = findOrLoadModel( uri );
+	if ( !pModel )
+	{
+		return false;
+	}
+
+	pBox->xMin = pModel->dimensions.min.x;
+	pBox->yMin = pModel->dimensions.min.y;
+	pBox->zMin = pModel->dimensions.min.z;
+	pBox->xMax = pModel->dimensions.max.x;
+	pBox->yMax = pModel->dimensions.max.y;
+	pBox->zMax = pModel->dimensions.max.z;
+	return true;
+}
+
+
 void VulkanExample::submitEyeBuffers()
 {
 	// Submit to OpenVR
@@ -2227,23 +2233,24 @@ void CVulkanRendererModelInstance::setUniverseFromModel( const glm::mat4 & unive
 	m_modelParent.matParentFromNode = universeFromModel;
 }
 
-void CVulkanRendererModelInstance::setOverrideTexture( AvSharedTextureInfo::Reader texture )
+void CVulkanRendererModelInstance::setOverrideTexture( void *textureHandle, ETextureType type, ETextureFormat format,
+	uint32_t width, uint32_t height )
 {
-	void *pvNewDxgiHandle = reinterpret_cast<void*>( texture.getSharedTextureHandle() );
+	void *pvNewDxgiHandle = textureHandle;
 	VkFormat textureFormat = VK_FORMAT_R8G8B8A8_UINT;
 	VkFormat viewTextureFormat = VK_FORMAT_R8G8B8A8_UNORM;
-	switch ( texture.getFormat() )
+	switch ( format )
 	{
 	default:
 		assert( false );
 		break;
 
-	case AvSharedTextureInfo::Format::R8G8B8A8:
+	case ETextureFormat::R8G8B8A8:
 		textureFormat = VK_FORMAT_R8G8B8A8_UINT;
 		viewTextureFormat = VK_FORMAT_R8G8B8A8_UNORM;
 		break;
 
-	case AvSharedTextureInfo::Format::B8G8R8A8:
+	case ETextureFormat::B8G8R8A8:
 		textureFormat = VK_FORMAT_B8G8R8A8_UINT;
 		viewTextureFormat = VK_FORMAT_B8G8R8A8_UNORM;
 		break;
@@ -2254,7 +2261,7 @@ void CVulkanRendererModelInstance::setOverrideTexture( AvSharedTextureInfo::Read
 		m_overrideTexture = std::make_shared<vks::Texture2D>();
 		m_overrideTexture->loadFromDxgiSharedHandle( pvNewDxgiHandle,
 			textureFormat, viewTextureFormat,
-			texture.getWidth(), texture.getHeight(),
+			width, height,
 			m_renderer->vulkanDevice, m_renderer->queue );
 
 		for ( auto & material : m_model->materials )
@@ -2268,6 +2275,23 @@ void CVulkanRendererModelInstance::setOverrideTexture( AvSharedTextureInfo::Read
 	}
 
 }
+
+void CVulkanRendererModelInstance::setBaseColor( const glm::vec4 & color )
+{
+	if ( m_lastBaseColor!= color )
+	{
+		m_lastBaseColor = color;
+
+		for ( auto & material : m_model->materials )
+		{
+			material.baseColorFactor = color;
+		}
+
+		m_renderer->setupDescriptorSetsForModel( m_model );
+	}
+}
+
+
 
 void CVulkanRendererModelInstance::animate( float animationTimeElapsed )
 {
@@ -2308,10 +2332,9 @@ void VulkanExample::runFrame( bool *shouldQuit, double frameTime )
 	updateFrameTime( frameTime );
 }
 
-void VulkanExample::init( HINSTANCE hInstance, IVrManager *vrManager, aardvark::CAardvarkClient *client )
+void VulkanExample::init( HINSTANCE hInstance, IVrManager *vrManager )
 {
 	m_vrManager = vrManager;
-	m_pClient = client;
 
 	initVulkan();
 	setupWindow( hInstance );

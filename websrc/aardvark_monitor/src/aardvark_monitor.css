@@ -1,0 +1,175 @@
+body, html
+{
+	background-color: lightskyblue;
+	height: 100%;
+}
+
+.Button 
+{
+	background-color: lightcoral;
+	font-size: 4rem;
+}
+
+.Label
+{
+	font-size: 4rem;
+}
+.Button:hover
+{
+	background-color: red;
+}
+
+.FullPage
+{
+	width: 100%;
+	height: 100%;
+}
+
+.NoGrabHighlight
+{
+	background-color: white;
+}
+
+.InRangeHighlight
+{
+	background-color: lightblue;
+}
+
+.GrabbedHighlight
+{
+	background-color: blue;
+}
+
+.Gadget
+{
+	background-color: lightblue;
+	border-color: darkblue;
+	border-width: 0.2rem;
+	border-style: solid;
+}
+
+.Renderer
+{
+	background-color: lightpink;
+	border-color: red;
+	border-width: 0.2rem;
+	border-style: solid;
+}
+
+.AvNode
+{
+	margin-left: 1rem;
+	border-color: grey;
+	border-style: dotted;
+}
+
+.AvNodeProperty
+{
+	margin-left: 0.5rem;
+	display: flex;
+	flex-direction: row;
+}
+
+.AvNodePropertyName
+{
+	display: flex;
+	margin-top: auto;
+	margin-bottom: auto;
+}
+
+.AvNodePropertyValue
+{
+	display: flex;
+	margin-left: 0.5rem;
+	margin-top: auto;
+	margin-bottom: auto;
+}
+
+.GrabEvent
+{
+	background-color: aquamarine;
+	padding: 0.5rem;
+}
+
+.GrabEventField
+{
+	margin-left: 1rem;
+}
+
+.MonitorContainer
+{
+	display: flex;
+	flex-direction: row;
+}
+
+.EndpointList,
+.EventList
+{
+	width: 50%;
+	flex-direction: column;
+}
+
+.Spinner
+{
+	display: flex;
+	flex-direction: row;
+}
+
+.SpinnerValue
+{
+	background-color: lightgray;
+	margin-left: 0.5rem;
+	margin-right: 0.5rem;
+	min-width: 2.5rem;
+	text-align: right;
+	font-family: monospace;
+	margin-top: auto;
+    margin-bottom: auto;
+}
+
+.SpinnerControls
+{
+	flex-direction: column;
+}
+
+.SpinnerButton
+{
+	height: 1rem;
+	width: 1rem;
+	margin: 1px;
+	outline: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+}
+
+.SpinnerButton path
+{
+	fill: green;
+}
+
+.SpinnerButton path:hover
+{
+	fill: #409040;
+}
+
+.TransformCopyButton
+{
+	background-color: gold;
+    outline: none;
+    width: fit-content;
+    padding: 2px;
+	border-style: solid;
+}
+
+.TransformCopyButton:hover
+{
+	background-color: goldenrod;
+}
+
+.TransformCopyInput
+{
+	opacity: 0.01;
+    height: 0;
+    z-index: -1;
+}
