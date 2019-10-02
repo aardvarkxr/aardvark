@@ -292,11 +292,12 @@ void VulkanExample::renderVarggles( uint32_t cbIndex, vks::RenderTarget target, 
 	const std::vector<VkDescriptorSet> descriptorsets = { descriptorSet };
 	vkCmdBindDescriptorSets( commandBuffers[cbIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, m_vargglesVulkanBindings.pipelinelayout, 0, static_cast<uint32_t>( descriptorsets.size() ), descriptorsets.data(), 0, NULL );
 
-	m_vrManager->getVargglesLookRotation(m_lookRotation);
+	m_vrManager->getVargglesLookRotation(m_lookRotation, m_hackRotation);
 
 	PushConstBlockVarggles pushConstVarggles{};
 	pushConstVarggles.halfFOVInRadians = (m_eyeFOV / 2.0f) * (M_PI / 180.0f);
 	pushConstVarggles.lookRotation = m_lookRotation;
+	pushConstVarggles.hackRotation = m_hackRotation;
 	vkCmdPushConstants( commandBuffers[cbIndex], m_vargglesVulkanBindings.pipelinelayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( PushConstBlockVarggles ), &pushConstVarggles);
 
 	vkCmdDraw( commandBuffers[cbIndex], 3, 1, 0, 0 );
@@ -797,9 +798,6 @@ void VulkanExample::preparePipelines()
 
 void VulkanExample::prepareVarggles()
 {
-	//m_vargglesEyeCam.type = Camera::CameraType::lookat;
-	//m_vargglesEyeCam.setPerspective(m_eyeFOV, 1.0f, 0.1f, 256.0f);
-
 	m_vargglesEyePerspectiveProjection = glm::perspective(m_eyeFOV, 1.0f, 0.1f, 256.0f);
 
 	// create left / right eye render target color image samplers
@@ -2184,10 +2182,10 @@ void VulkanExample::submitEyeBuffers()
 	vulkanData.m_nSampleCount = 1;
 
 	vr::Texture_t texture = { &vulkanData, vr::TextureType_Vulkan, vr::ColorSpace_Auto };
-	vr::VRCompositor()->Submit( vr::Eye_Left, &texture, &bounds );
+	//vr::VRCompositor()->Submit( vr::Eye_Left, &texture, &bounds );
 
 	vulkanData.m_nImage = (uint64_t)rightEyeRT.color.image;
-	vr::VRCompositor()->Submit( vr::Eye_Right, &texture, &bounds );
+	//vr::VRCompositor()->Submit( vr::Eye_Right, &texture, &bounds );
 }
 
 void VulkanExample::setOverlayTexture() {

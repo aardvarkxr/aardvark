@@ -10,6 +10,7 @@ layout (location = 0) out vec4 outColor;
 
 layout (push_constant) uniform Varggles {
 	mat4 lookRotation;
+	mat4 hackRotation;
 	float halfFOVInRadians;
 } varggles;
 
@@ -75,9 +76,10 @@ void main() {
 	}
 
 	// TODO PlutoVR: Fix alpha rendering in main renderer and remove this hack
-	outColor.a = 1.0;
+	outColor.a = 1.0 - outColor.a;
 
 	//outColor.rgb = cubeMapLookupDirection.xyz;
+	//outColor.a = 1.0;
 	//outColor.b = 0.0;
 	//outColor.rg = eyeUV.xy;
 }

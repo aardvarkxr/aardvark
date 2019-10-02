@@ -1,8 +1,8 @@
 #include "vrmanager.h"
 
+
 #include <iostream>
 #include <tools/pathtools.h>
-
 void CVRManager::init()
 {
 	initOpenVR();
@@ -68,9 +68,9 @@ glm::mat4 CVRManager::glmMatFromVrMat( const vr::HmdMatrix34_t & mat )
 void CVRManager::updateOpenVrPoses()
 {
 	vr::TrackedDevicePose_t rRenderPoses[vr::k_unMaxTrackedDeviceCount];
-	vr::TrackedDevicePose_t rGamePoses[vr::k_unMaxTrackedDeviceCount];
-	vr::VRCompositor()->WaitGetPoses( rRenderPoses, vr::k_unMaxTrackedDeviceCount, rGamePoses, vr::k_unMaxTrackedDeviceCount );
-
+	//vr::TrackedDevicePose_t rGamePoses[vr::k_unMaxTrackedDeviceCount];
+	//vr::VRCompositor()->WaitGetPoses( rRenderPoses, vr::k_unMaxTrackedDeviceCount, rGamePoses, vr::k_unMaxTrackedDeviceCount );
+/*
 	vr::TrackedDeviceIndex_t unLeftHand = vr::VRSystem()->GetTrackedDeviceIndexForControllerRole( vr::TrackedControllerRole_LeftHand );
 	if ( unLeftHand != vr::k_unTrackedDeviceIndexInvalid )
 	{
@@ -85,43 +85,122 @@ void CVRManager::updateOpenVrPoses()
 	m_hmdFromUniverse = glm::inverse( universeFromHmd );
 	m_universeFromOriginTransforms["/user/head"] = universeFromHmd;
 	m_universeFromOriginTransforms["/space/stage"] = glm::mat4( 1.f );
+*/
+
+	if (vr::VRCompositor()->CanRenderScene() == false)
+		return;
+
+	uint64_t newFrameIndex = 0;
+	float lastVSync = 0;
+
+	// TODO PLUTO: make a stopwatch class
+	//updatePoseTimer->Restart();
+
+	while (newFrameIndex == m_lastFrameIndex)
+	{
+		//auto hasTimedOut = updatePoseTimer->Elapsed() >= m_updatePosesTimeoutMillis;
+		auto hasTimedOut = false;
+		auto vsyncTimesAvailable = vr::VRSystem()->GetTimeSinceLastVsync(&lastVSync, &newFrameIndex);
+		if (vsyncTimesAvailable == false || hasTimedOut)
+			return;
+	}
+
+	if (m_lastFrameIndex + 1 < newFrameIndex)
+		m_framesSkipped++;
+
+	m_lastFrameIndex = newFrameIndex;
+
+
+	float secondsSinceLastVsync = 0;
+	uint64_t newLastFrame = 0;
+	vr::VRSystem()->GetTimeSinceLastVsync(&secondsSinceLastVsync, &newLastFrame);
+
+	vr::ETrackedPropertyError error = vr::ETrackedPropertyError::TrackedProp_NotYetAvailable;
+	float displayFrequency = vr::VRSystem()->GetFloatTrackedDeviceProperty(vr::k_unTrackedDeviceIndex_Hmd, vr::ETrackedDeviceProperty::Prop_DisplayFrequency_Float, &error);
+	float frameDuration = 1.0f / displayFrequency;
+	float vsyncToPhotons = vr::VRSystem()->GetFloatTrackedDeviceProperty(vr::k_unTrackedDeviceIndex_Hmd, vr::ETrackedDeviceProperty::Prop_SecondsFromVsyncToPhotons_Float, &error);
+
+	float predictedSecondsFromNow = frameDuration - secondsSinceLastVsync + vsyncToPhotons;
+
+	for (vr::TrackedDeviceIndex_t unDevice = 0; unDevice < vr::k_unMaxTrackedDeviceCount; unDevice++)
+	{
+		vr::ETrackedDeviceClass trackedDeviceClass = vr::VRSystem()->GetTrackedDeviceClass(unDevice);
+		if (trackedDeviceClass == vr::ETrackedDeviceClass::TrackedDeviceClass_HMD)
+		{
+			vr::VRSystem()->GetDeviceToAbsoluteTrackingPose(c_eTrackingOrigin, predictedSecondsFromNow, &rRenderPoses[vr::k_unTrackedDeviceIndex_Hmd], 1);
+			glm::mat4 universeFromHmd = glmMatFromVrMat(rRenderPoses[vr::k_unTrackedDeviceIndex_Hmd].mDeviceToAbsoluteTracking);
+			m_hmdFromUniverse = glm::inverse(universeFromHmd);
+			m_universeFromOriginTransforms["/user/head"] = universeFromHmd;
+		}
+		if (trackedDeviceClass == vr::ETrackedDeviceClass::TrackedDeviceClass_Controller)
+		{
+			vr::TrackedDeviceIndex_t unLeftHand = vr::VRSystem()->GetTrackedDeviceIndexForControllerRole(vr::TrackedControllerRole_LeftHand);
+			if (unLeftHand != vr::k_unTrackedDeviceIndexInvalid)
+			{
+				vr::VRSystem()->GetDeviceToAbsoluteTrackingPose(vr::TrackingUniverseStanding, 0, &rRenderPoses[unLeftHand], 1);
+				m_universeFromOriginTransforms["/user/hand/left"] = glmMatFromVrMat(rRenderPoses[unLeftHand].mDeviceToAbsoluteTracking );
+			}
+			vr::TrackedDeviceIndex_t unRightHand = vr::VRSystem()->GetTrackedDeviceIndexForControllerRole(vr::TrackedControllerRole_RightHand);
+			if (unRightHand != vr::k_unTrackedDeviceIndexInvalid)
+			{
+				vr::VRSystem()->GetDeviceToAbsoluteTrackingPose(vr::TrackingUniverseStanding, 0, &rRenderPoses[unRightHand], 1);
+				m_universeFromOriginTransforms["/user/hand/right"] = glmMatFromVrMat(rRenderPoses[unRightHand].mDeviceToAbsoluteTracking);
+			}
+		}
+
+	}
+	m_universeFromOriginTransforms["/space/stage"] = glm::mat4(1.f);
+
 
 	// TODO PlutoVR: throw out inversion after testing
 	calculateInverseHorizontalLook();
 }
 
-void CVRManager::calculateInverseHorizontalLook() 
+static void printMat(glm::mat4& e)
 {
-	// TODO PlutoVR: negate roll around +Z 
-	glm::vec3 right = m_universeFromOriginTransforms["/user/head"] * glm::vec4(1.0, 0.0, 0.0, 0.0);
-	
-
-	// project onto x / y plane
-	auto xComponent = glm::dot(glm::vec3(1.0, 0.0, 0.0), right);
-	auto yComponent = glm::dot(glm::vec3(0.0, 1.0, 0.0), right);
-	
-	auto xyRightNormalized = glm::normalize(glm::vec3(xComponent, yComponent, 0.0));
-
-	// get angle about forward
-	auto angleInRadians = glm::acos(glm::dot(glm::vec3(1.0, 0.0, 0.0), xyRightNormalized));
-
-	// get sign of angle w.r.t. xz plane
-	auto crossBetweenBoth = glm::cross(glm::vec3(1.0, 0.0, 0.0), xyRightNormalized);
-	if (glm::dot(glm::vec3(0.0, 0.0, 1.0), crossBetweenBoth) < 0)
-	{
-		angleInRadians = -angleInRadians;
+	std::cout << "===================" << std::endl;
+	for (int i = 0; i < 4; i++) {
+		std::cout << "( ";
+		for (int j = 0; j < 4; j++) {
+			std::cout << e[i][j] << " ";
+		}
+		std::cout << ")" << std::endl;
 	}
-
-	// get rotation matrix with inverse of that angle
-	//m_vargglesHorizontallyInvertedLook = glm::rotate(m_universeFromOriginTransforms["/user/head"], -angleInRadians * 2.f, glm::vec3(0.0, 1.0, 0.0));
-	//m_vargglesHorizontallyInvertedLook = glm::rotate(glm::mat4(1.0), -angleInRadians * 2.f, glm::vec3(0.0, 1.0, 0.0));
-	//m_vargglesHorizontallyInvertedLook = glm::rotate(glm::mat4(1.0), angleInRadians, glm::vec3(0.0, 1.0, 0.0));
+	std::cout << "===================" << std::endl;
 }
 
-void CVRManager::getVargglesLookRotation(glm::mat4& horizontalLooktransform)
+void CVRManager::calculateInverseHorizontalLook() 
 {
-	horizontalLooktransform = m_universeFromOriginTransforms["/user/head"];
-	//horizontalLooktransform = m_vargglesHorizontallyInvertedLook;
+	m_vargglesHorizontallyInvertedLook = m_universeFromOriginTransforms["/user/head"];
+	m_vargglesHack = glm::mat4(1.0f);
+
+	auto t = glm::translate(glm::mat4(1.0f), glm::vec3(1, 0, 0));
+
+	printMat(t);
+	
+	glm::mat4 e(
+		{ 1.f, 2.f, 3.f, 4.f },
+		{ 5.f, 6.f, 7.f, 8.f },
+		{ 9.f, 10.f, 11.f, 12.f },
+		{ 13.f, 14.f, 15.f, 16.f }
+	);
+
+	glm::mat4 b(
+		{ 11.f, 12.f, 13.f, 14.f },
+		{ 15.f, 16.f, 17.f, 18.f },
+		{ 19.f, 20.f, 21.f, 22.f },
+		{ 23.f, 24.f, 25.f, 26.f }
+	);
+
+	glm::mat4 m = e * b;
+
+	//printMat(m);
+}
+
+void CVRManager::getVargglesLookRotation(glm::mat4& horizontalLooktransform, glm::mat4& hack)
+{
+	horizontalLooktransform = m_vargglesHorizontallyInvertedLook;
+	hack = m_vargglesHack;
 }
 
 bool GetAction( vr::VRActionHandle_t action, vr::VRInputValueHandle_t whichHand )
@@ -196,7 +275,7 @@ void CVRManager::sentHapticEventForHand( EHand hand, float amplitude, float freq
 void CVRManager::initOpenVR()
 {
 	vr::EVRInitError vrErr;
-	vr::VR_Init(&vrErr, vr::VRApplication_Scene);
+	vr::VR_Init(&vrErr, vr::VRApplication_Overlay);
 	if (vrErr != vr::VRInitError_None)
 	{
 		std::cout << "FATAL: VR_Init failed" << std::endl;
