@@ -179,7 +179,7 @@ void CVRManager::calculateInverseHorizontalLook()
 
 	auto t = glm::translate(glm::mat4(1.0f), glm::vec3(1, 0, 0));
 
-	printMat(t);
+	//printMat(t);
 	
 	glm::mat4 e(
 		{ 1.f, 2.f, 3.f, 4.f },

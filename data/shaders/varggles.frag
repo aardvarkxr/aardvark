@@ -76,7 +76,7 @@ void main() {
 	}
 
 	// TODO PlutoVR: Fix alpha rendering in main renderer and remove this hack
-	outColor.a = 1.0 - outColor.a;
+	//outColor.a = 1.0 - outColor.a;
 
 	//outColor.rgb = cubeMapLookupDirection.xyz;
 	//outColor.a = 1.0;
