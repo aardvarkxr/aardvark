@@ -122,12 +122,12 @@ void CVRManager::updateOpenVrPoses()
 
 	float predictedSecondsFromNow = frameDuration - secondsSinceLastVsync + vsyncToPhotons;
 
+	vr::VRSystem()->GetDeviceToAbsoluteTrackingPose(c_eTrackingOrigin, predictedSecondsFromNow, &rRenderPoses[0], vr::k_unMaxTrackedDeviceCount);
 	for (vr::TrackedDeviceIndex_t unDevice = 0; unDevice < vr::k_unMaxTrackedDeviceCount; unDevice++)
 	{
 		vr::ETrackedDeviceClass trackedDeviceClass = vr::VRSystem()->GetTrackedDeviceClass(unDevice);
 		if (trackedDeviceClass == vr::ETrackedDeviceClass::TrackedDeviceClass_HMD)
 		{
-			vr::VRSystem()->GetDeviceToAbsoluteTrackingPose(c_eTrackingOrigin, predictedSecondsFromNow, &rRenderPoses[vr::k_unTrackedDeviceIndex_Hmd], 1);
 			glm::mat4 universeFromHmd = glmMatFromVrMat(rRenderPoses[vr::k_unTrackedDeviceIndex_Hmd].mDeviceToAbsoluteTracking);
 			m_hmdFromUniverse = glm::inverse(universeFromHmd);
 			m_universeFromOriginTransforms["/user/head"] = universeFromHmd;
@@ -137,20 +137,16 @@ void CVRManager::updateOpenVrPoses()
 			vr::TrackedDeviceIndex_t unLeftHand = vr::VRSystem()->GetTrackedDeviceIndexForControllerRole(vr::TrackedControllerRole_LeftHand);
 			if (unLeftHand != vr::k_unTrackedDeviceIndexInvalid)
 			{
-				vr::VRSystem()->GetDeviceToAbsoluteTrackingPose(vr::TrackingUniverseStanding, 0, &rRenderPoses[unLeftHand], 1);
 				m_universeFromOriginTransforms["/user/hand/left"] = glmMatFromVrMat(rRenderPoses[unLeftHand].mDeviceToAbsoluteTracking );
 			}
 			vr::TrackedDeviceIndex_t unRightHand = vr::VRSystem()->GetTrackedDeviceIndexForControllerRole(vr::TrackedControllerRole_RightHand);
 			if (unRightHand != vr::k_unTrackedDeviceIndexInvalid)
 			{
-				vr::VRSystem()->GetDeviceToAbsoluteTrackingPose(vr::TrackingUniverseStanding, 0, &rRenderPoses[unRightHand], 1);
 				m_universeFromOriginTransforms["/user/hand/right"] = glmMatFromVrMat(rRenderPoses[unRightHand].mDeviceToAbsoluteTracking);
 			}
 		}
-
 	}
 	m_universeFromOriginTransforms["/space/stage"] = glm::mat4(1.f);
-
 
 	// TODO PlutoVR: throw out inversion after testing
 	calculateInverseHorizontalLook();
@@ -168,6 +164,7 @@ static void printMat(glm::mat4& e)
 	}
 	std::cout << "===================" << std::endl;
 }
+
 
 void CVRManager::calculateInverseHorizontalLook() 
 {
