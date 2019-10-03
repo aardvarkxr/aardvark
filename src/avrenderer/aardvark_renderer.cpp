@@ -255,12 +255,11 @@ void VulkanExample::renderVarggles( uint32_t cbIndex, vks::RenderTarget target, 
 	const std::vector<VkDescriptorSet> descriptorsets = { descriptorSet };
 	vkCmdBindDescriptorSets( commandBuffers[cbIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, m_vargglesVulkanBindings.pipelinelayout, 0, static_cast<uint32_t>( descriptorsets.size() ), descriptorsets.data(), 0, NULL );
 
-	m_vrManager->getVargglesLookRotation(m_lookRotation, m_hackRotation);
+	m_vrManager->getVargglesLookRotation(m_vargglesLookRotation);
 
 	PushConstBlockVarggles pushConstVarggles{};
 	pushConstVarggles.halfFOVInRadians = (m_eyeFOV / 2.0f) * (M_PI / 180.0f);
-	pushConstVarggles.lookRotation = m_lookRotation;
-	pushConstVarggles.hackRotation = m_hackRotation;
+	pushConstVarggles.lookRotation = m_vargglesLookRotation;
 	vkCmdPushConstants( commandBuffers[cbIndex], m_vargglesVulkanBindings.pipelinelayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( PushConstBlockVarggles ), &pushConstVarggles);
 
 	vkCmdDraw( commandBuffers[cbIndex], 3, 1, 0, 0 );
@@ -1839,7 +1838,6 @@ void VulkanExample::updateUniformBuffers()
 	shaderValuesSkybox.matHmdFromStage = glm::mat4( glm::mat3( camera.matrices.view ) );
 
 	// left eye
-	//shaderValuesLeftEye.matProjectionFromView = GetHMDMatrixProjectionEye( vr::Eye_Left );
 	shaderValuesLeftEye.matProjectionFromView = m_vargglesEyePerspectiveProjection;
 	shaderValuesLeftEye.matViewFromHmd = GetHMDMatrixPoseEye( vr::Eye_Left );
 	shaderValuesLeftEye.matHmdFromStage = m_vrManager->getHmdFromUniverse();
@@ -1848,7 +1846,6 @@ void VulkanExample::updateUniformBuffers()
 	shaderValuesLeftEye.camPos = glm::vec3( stageFromView * glm::vec4( 0, 0, 0, 1.f ) );
 
 	// right eye
-	//shaderValuesRightEye.matProjectionFromView = GetHMDMatrixProjectionEye( vr::Eye_Right );
 	shaderValuesRightEye.matProjectionFromView = m_vargglesEyePerspectiveProjection;
 	shaderValuesRightEye.matViewFromHmd = GetHMDMatrixPoseEye( vr::Eye_Right );
 	shaderValuesRightEye.matHmdFromStage = m_vrManager->getHmdFromUniverse();

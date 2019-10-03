@@ -188,8 +188,7 @@ protected:
 	vks::RenderTarget leftEyeRT;
 	vks::RenderTarget rightEyeRT;
 	vks::RenderTarget vargglesRT;
-	glm::mat4 m_lookRotation;
-	glm::mat4 m_hackRotation;
+	glm::mat4 m_vargglesLookRotation;
 
 	uint32_t eyeWidth = 0;
 	uint32_t eyeHeight = 0;
@@ -253,7 +252,6 @@ protected:
 	struct PushConstBlockVarggles
 	{
 		glm::mat4 lookRotation;
-		glm::mat4 hackRotation;
 		float halfFOVInRadians;
 	};
 

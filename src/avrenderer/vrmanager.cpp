@@ -1,6 +1,5 @@
 #include "vrmanager.h"
 
-
 #include <iostream>
 #include <tools/pathtools.h>
 void CVRManager::init()
@@ -74,25 +73,6 @@ glm::mat4 CVRManager::glmMatFromVrMat( const vr::HmdMatrix34_t & mat )
 void CVRManager::updateOpenVrPoses()
 {
 	vr::TrackedDevicePose_t rRenderPoses[vr::k_unMaxTrackedDeviceCount];
-	//vr::TrackedDevicePose_t rGamePoses[vr::k_unMaxTrackedDeviceCount];
-	//vr::VRCompositor()->WaitGetPoses( rRenderPoses, vr::k_unMaxTrackedDeviceCount, rGamePoses, vr::k_unMaxTrackedDeviceCount );
-/*
-	vr::TrackedDeviceIndex_t unLeftHand = vr::VRSystem()->GetTrackedDeviceIndexForControllerRole( vr::TrackedControllerRole_LeftHand );
-	if ( unLeftHand != vr::k_unTrackedDeviceIndexInvalid )
-	{
-		m_universeFromOriginTransforms["/user/hand/left"] = glmMatFromVrMat( rRenderPoses[unLeftHand].mDeviceToAbsoluteTracking );
-	}
-	vr::TrackedDeviceIndex_t unRightHand = vr::VRSystem()->GetTrackedDeviceIndexForControllerRole( vr::TrackedControllerRole_RightHand );
-	if ( unRightHand != vr::k_unTrackedDeviceIndexInvalid )
-	{
-		m_universeFromOriginTransforms["/user/hand/right"] = glmMatFromVrMat( rRenderPoses[unRightHand].mDeviceToAbsoluteTracking );
-	}
-	glm::mat4 universeFromHmd = glmMatFromVrMat( rRenderPoses[vr::k_unTrackedDeviceIndex_Hmd].mDeviceToAbsoluteTracking );
-	m_hmdFromUniverse = glm::inverse( universeFromHmd );
-	m_universeFromOriginTransforms["/user/head"] = universeFromHmd;
-	m_universeFromOriginTransforms["/space/stage"] = glm::mat4( 1.f );
-*/
-
 	if (vr::VRCompositor()->CanRenderScene() == false)
 		return;
 
@@ -153,57 +133,11 @@ void CVRManager::updateOpenVrPoses()
 		}
 	}
 	m_universeFromOriginTransforms["/space/stage"] = glm::mat4(1.f);
-
-	// TODO PlutoVR: throw out inversion after testing
-	calculateInverseHorizontalLook();
+	m_vargglesLookRotation = glm::scale(m_hmdFromUniverse, glm::vec3(1, 1, -1));
 }
-
-static void printMat(glm::mat4& e)
+void CVRManager::getVargglesLookRotation(glm::mat4& horizontalLooktransform)
 {
-	std::cout << "===================" << std::endl;
-	for (int i = 0; i < 4; i++) {
-		std::cout << "( ";
-		for (int j = 0; j < 4; j++) {
-			std::cout << e[i][j] << " ";
-		}
-		std::cout << ")" << std::endl;
-	}
-	std::cout << "===================" << std::endl;
-}
-
-
-void CVRManager::calculateInverseHorizontalLook() 
-{
-	m_vargglesHorizontallyInvertedLook = m_universeFromOriginTransforms["/user/head"];
-	m_vargglesHack = glm::mat4(1.0f);
-
-	auto t = glm::translate(glm::mat4(1.0f), glm::vec3(1, 0, 0));
-
-	//printMat(t);
-	
-	glm::mat4 e(
-		{ 1.f, 2.f, 3.f, 4.f },
-		{ 5.f, 6.f, 7.f, 8.f },
-		{ 9.f, 10.f, 11.f, 12.f },
-		{ 13.f, 14.f, 15.f, 16.f }
-	);
-
-	glm::mat4 b(
-		{ 11.f, 12.f, 13.f, 14.f },
-		{ 15.f, 16.f, 17.f, 18.f },
-		{ 19.f, 20.f, 21.f, 22.f },
-		{ 23.f, 24.f, 25.f, 26.f }
-	);
-
-	glm::mat4 m = e * b;
-
-	//printMat(m);
-}
-
-void CVRManager::getVargglesLookRotation(glm::mat4& horizontalLooktransform, glm::mat4& hack)
-{
-	horizontalLooktransform = m_vargglesHorizontallyInvertedLook;
-	hack = m_vargglesHack;
+	horizontalLooktransform = m_vargglesLookRotation;
 }
 
 bool GetAction( vr::VRActionHandle_t action, vr::VRInputValueHandle_t whichHand )

@@ -18,7 +18,7 @@ public:
 	virtual void doInputWork() override;
 	virtual void setVargglesTexture(const vr::Texture_t *pTexture) override;
 	virtual glm::mat4 getHmdFromUniverse() override { return m_hmdFromUniverse; }
-	virtual void getVargglesLookRotation(glm::mat4 &horizontalLooktransform, glm::mat4& hack) override;
+	virtual void getVargglesLookRotation(glm::mat4 &horizontalLooktransform) override;
 
 	vr::VRInputValueHandle_t getDeviceForHand( EHand hand );
 	glm::mat4 glmMatFromVrMat( const vr::HmdMatrix34_t & mat );
@@ -58,9 +58,7 @@ protected:
 		}
 	};
 	vr::VROverlayHandle_t m_vargglesOverlay = vr::k_ulOverlayHandleInvalid;
-	glm::mat4 m_vargglesHorizontallyInvertedLook;
-	glm::mat4 m_vargglesHack;
-	bool m_bVargglesLookVectorIsValid = false;
+	glm::mat4 m_vargglesLookRotation;
 
 	uint64_t m_lastFrameIndex = 0;
 	int m_framesSkipped = 0;
