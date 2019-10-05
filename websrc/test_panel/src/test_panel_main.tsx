@@ -8,8 +8,7 @@ import { AvPanel } from 'common/aardvark-react/aardvark_panel';
 import bind from 'bind-decorator';
 import { AvGrabbable, HighlightType, GrabResponse } from 'common/aardvark-react/aardvark_grabbable';
 import { AvSphereHandle } from 'common/aardvark-react/aardvark_handles';
-import { AvGrabEvent } from 'common/aardvark';
-import { EndpointAddr } from 'common/aardvark-react/aardvark_protocol';
+import { EndpointAddr, AvGrabEvent } from 'common/aardvark-react/aardvark_protocol';
 
 
 interface TestPanelState

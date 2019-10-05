@@ -1,11 +1,17 @@
 import * as React from 'react';
 
-import { Av, AvPanelHandler, AvPokerHandler, AvPanelMouseEventType, 
-	AvGrabEventProcessor, AvGrabberProcessor, AvGrabEventType, AvGrabEvent, AvGadgetManifest, AvNode, AvNodeType, AvStartGadgetCallback, AvPanelMouseEvent, ENodeFlags, EHand } from 'common/aardvark';
-import { IAvBaseNode, AvBaseNode } from './aardvark_base_node';
+import { Av, AvStartGadgetCallback } from 'common/aardvark';
+import { IAvBaseNode } from './aardvark_base_node';
 import bind from 'bind-decorator';
 import { CGadgetEndpoint } from './gadget_endpoint';
-import { MessageType, MsgUpdateSceneGraph, EndpointAddr, MsgGrabberState, MsgGrabEvent, stringToEndpointAddr, MsgGadgetStarted, EndpointType, endpointAddrToString, MsgPokerProximity, MsgMouseEvent, MsgNodeHaptic, MsgMasterStartGadget, MsgSaveSettings, MsgSetEditMode } from './aardvark_protocol';
+import { MessageType, MsgUpdateSceneGraph, EndpointAddr, 
+	MsgGrabEvent, stringToEndpointAddr, MsgGadgetStarted, 
+	EndpointType, endpointAddrToString, MsgPokerProximity, 
+	MsgMouseEvent, MsgNodeHaptic, MsgMasterStartGadget, 
+	MsgSaveSettings, MsgSetEditMode, AvGadgetManifest, AvPanelHandler, 
+	AvPokerHandler, AvPanelMouseEventType, AvGrabEventProcessor, 
+	AvGrabEvent, AvNode, AvNodeType, AvPanelMouseEvent, ENodeFlags, 
+	EHand } from './aardvark_protocol';
 
 interface AvGadgetProps
 {

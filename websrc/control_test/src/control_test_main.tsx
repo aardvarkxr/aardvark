@@ -10,7 +10,7 @@ import { AvModel } from 'common/aardvark-react/aardvark_model';
 import { AvPanel } from 'common/aardvark-react/aardvark_panel';
 import { AvPanelAnchor } from 'common/aardvark-react/aardvark_panelanchor';
 import { AvTransformControl } from 'common/aardvark-react/aardvark_translate_control';
-import { AvNodeTransform } from 'common/aardvark';
+import { AvNodeTransform } from 'common/aardvark-react/aardvark_protocol';
 import { QuaternionToEulerAngles, RadiansToDegrees } from 'common/aardvark-react/aardvark_utils';
 
 

@@ -1,12 +1,11 @@
 import * as React from 'react';
 import { AvBaseNodeProps } from './aardvark_base_node';
-import { AvGrabEvent, Av, AvGadgetManifest } from 'common/aardvark';
 import bind from 'bind-decorator';
 import { HighlightType, GrabResponse, AvGrabbable } from './aardvark_grabbable';
 import { AvTransform } from './aardvark_transform';
 import { AvSphereHandle } from './aardvark_handles';
 import { AvModel } from './aardvark_model';
-import { EndpointAddr } from './aardvark_protocol';
+import { EndpointAddr, AvGrabEvent, AvGadgetManifest } from './aardvark_protocol';
 import { AvGadget } from './aardvark_gadget';
 
 

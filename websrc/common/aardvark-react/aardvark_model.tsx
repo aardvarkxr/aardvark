@@ -1,6 +1,6 @@
 import * as Color from 'color';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
-import { AvNodeType, AvColor } from 'common/aardvark';
+import { AvNodeType, AvColor } from './aardvark_protocol';
 
 interface AvModelProps extends AvBaseNodeProps
 {

@@ -1,7 +1,5 @@
-import * as React from 'react';
-
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
-import { AvNodeType } from 'common/aardvark';
+import { AvNodeType } from './aardvark_protocol';
 
 interface AvOriginProps extends AvBaseNodeProps
 {

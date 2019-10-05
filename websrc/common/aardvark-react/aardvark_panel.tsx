@@ -2,9 +2,10 @@ import * as React from 'react';
 
 import { AvGadget } from './aardvark_gadget';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
-import { AvNodeType, AvPanelMouseEvent, AvPanelMouseEventType, AvPanelHandler, Av, AvSharedTextureInfo } from 'common/aardvark';
+import { Av } from 'common/aardvark';
 import bind from 'bind-decorator';
-import { EndpointAddr } from './aardvark_protocol';
+import { AvNodeType, AvPanelMouseEvent, AvPanelMouseEventType, AvPanelHandler, 
+	AvSharedTextureInfo } from './aardvark_protocol';
 
 export interface AvPanelProps extends AvBaseNodeProps
 {

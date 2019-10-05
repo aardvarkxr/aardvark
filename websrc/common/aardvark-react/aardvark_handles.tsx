@@ -1,11 +1,11 @@
 import * as React from 'react';
 
-import { AvNodeType, EVolumeType, AvConstraint, AvGrabEvent, AvGrabEventType } from 'common/aardvark';
+import { AvNodeType, EVolumeType, AvConstraint, AvGrabEvent, 
+	EndpointAddr, AvGrabEventType } from './aardvark_protocol';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 import { HighlightType } from './aardvark_grabbable';
 import bind from 'bind-decorator';
 import { AvGadget } from './aardvark_gadget';
-import { EndpointAddr } from './aardvark_protocol';
 
 interface AvBaseHandleProps extends AvBaseNodeProps
 {

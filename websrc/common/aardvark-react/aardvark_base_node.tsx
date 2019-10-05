@@ -1,8 +1,8 @@
 import * as React from 'react';
 
-import { AvNode, AvNodeType, ENodeFlags } from 'common/aardvark';
 import { AvGadget } from './aardvark_gadget';
-import { EndpointAddr, EndpointType } from './aardvark_protocol';
+import { EndpointAddr, EndpointType, AvNode, 
+	AvNodeType, ENodeFlags } from './aardvark_protocol';
 
 declare global 
 {

@@ -8,12 +8,13 @@ import bind from 'bind-decorator';
 import { AvModel } from 'common/aardvark-react/aardvark_model';
 import { AvPoker } from 'common/aardvark-react/aardvark_poker';
 import { AvStandardHook } from 'common/aardvark-react/aardvark_standard_hook';
-import { Av, EHand, GrabberHighlight } from 'common/aardvark';
+import { Av } from 'common/aardvark';
 import { AvGrabButton } from 'common/aardvark-react/aardvark_grab_button';
 import { AvPanel } from 'common/aardvark-react/aardvark_panel';
 import { AvPanelAnchor } from 'common/aardvark-react/aardvark_panelanchor';
 import { AvGadgetSeed } from 'common/aardvark-react/aardvark_gadget_seed';
-import { EndpointAddr } from 'common/aardvark-react/aardvark_protocol';
+import { EndpointAddr, EHand, GrabberHighlight } 
+	from 'common/aardvark-react/aardvark_protocol';
 
 
 interface DefaultHandProps

@@ -1,4 +1,4 @@
-import { AvQuaternion } from 'common/aardvark';
+import { AvQuaternion } from './aardvark_protocol';
 import { quat, vec3 } from '@tlaukkan/tsm';
 
 export function assert( expr: boolean, msg?: string )

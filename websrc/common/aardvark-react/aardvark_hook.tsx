@@ -1,8 +1,8 @@
 import { AvGadget } from './aardvark_gadget';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
-import { AvNodeType, AvGrabEventType, AvGrabEvent, EVolumeType } from 'common/aardvark';
 import bind from 'bind-decorator';
-import { endpointAddrsMatch, EndpointAddr } from './aardvark_protocol';
+import { endpointAddrsMatch, EndpointAddr, AvNodeType, AvGrabEventType, 
+	AvGrabEvent, EVolumeType } from './aardvark_protocol';
 
 
 export enum HookHighlight

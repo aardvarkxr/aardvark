@@ -4,7 +4,7 @@ import bind from 'bind-decorator';
 import { AvModel } from 'common/aardvark-react/aardvark_model';
 import { HookHighlight, AvHook } from './aardvark_hook';
 import { AvGadget } from './aardvark_gadget';
-import { EHand } from 'common/aardvark';
+import { EHand } from './aardvark_protocol';
 
 
 interface StandardHookProps

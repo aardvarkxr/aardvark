@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import { AvNodeType } from 'common/aardvark';
+import { AvNodeType } from './aardvark_protocol';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 
 export class AvPanelAnchor extends AvBaseNode< AvBaseNodeProps, {} > 
