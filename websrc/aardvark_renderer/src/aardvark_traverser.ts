@@ -1,11 +1,11 @@
-import { CGrabStateProcessor } from './aardvark-react/grab_state_processor';
+import { CGrabStateProcessor } from 'common/aardvark-react/grab_state_processor';
 import { MsgUpdateSceneGraph, EndpointType, MsgGrabEvent, endpointAddrsMatch, MsgSetEditMode, EndpointAddr } from 'common/aardvark-react/aardvark_protocol';
-import { CRendererEndpoint } from './aardvark-react/renderer_endpoint';
+import { CRendererEndpoint } from 'common/aardvark-react/renderer_endpoint';
 import { Av, AvGrabEventType, AvNode, ENodeFlags, AvNodeTransform, AvConstraint } from 'common/aardvark';
-import { AvModelInstance, AvNodeType, EHand, EVolumeType, AvGrabEvent } from './aardvark';
+import { AvModelInstance, AvNodeType, EHand, EVolumeType, AvGrabEvent } from 'common/aardvark';
 import { mat4, vec3, quat, vec4, mat3 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
-import { endpointAddrToString, endpointAddrIsEmpty, MessageType, MsgNodeHaptic, MsgAttachGadgetToHook, MsgDetachGadgetFromHook } from './aardvark-react/aardvark_protocol';
+import { endpointAddrToString, endpointAddrIsEmpty, MessageType, MsgNodeHaptic, MsgAttachGadgetToHook, MsgDetachGadgetFromHook } from 'common/aardvark-react/aardvark_protocol';
 
 interface NodeData
 {

@@ -1,5 +1,5 @@
 import { Av } from 'common/aardvark'
-import { AvDefaultTraverser } from 'common/aardvark_traverser';
+import { AvDefaultTraverser } from './aardvark_traverser';
 
 console.log( "I'm a renderer!" );
 
