@@ -1,7 +1,7 @@
 import * as React from 'react';
-import { AvTransform } from 'common/aardvark-react/aardvark_transform';
+import { AvTransform } from './aardvark_transform';
 import bind from 'bind-decorator';
-import { AvModel } from 'common/aardvark-react/aardvark_model';
+import { AvModel } from './aardvark_model';
 import { HighlightType, AvGrabbable, GrabResponse } from './aardvark_grabbable';
 import { AvSphereHandle, AvModelBoxHandle } from './aardvark_handles';
 import { AvGrabEvent, AvConstraint, AvNodeTransform, AvColor } from './aardvark_protocol';

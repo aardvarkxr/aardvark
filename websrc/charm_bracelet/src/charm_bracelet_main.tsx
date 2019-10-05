@@ -1,15 +1,8 @@
 import * as React from 'react';
 import  * as ReactDOM from 'react-dom';
 
-import { AvGadget } from 'common/aardvark-react/aardvark_gadget';
-import { AvTransform } from 'common/aardvark-react/aardvark_transform';
 import bind from 'bind-decorator';
-import { AvGrabbable, HighlightType } from 'common/aardvark-react/aardvark_grabbable';
-import { AvStandardHook } from 'common/aardvark-react/aardvark_standard_hook';
-import { AvSphereHandle } from 'common/aardvark-react/aardvark_handles';
-import { AvModel } from 'common/aardvark-react/aardvark_model';
-import { endpointAddrToString } from 'common/aardvark-react/aardvark_protocol';
-import { AvGrabButton } from 'common/aardvark-react/aardvark_grab_button';
+import { AvGadget, AvTransform, AvGrabbable, HighlightType, AvStandardHook, AvSphereHandle, AvModel, AvGrabButton } from 'aardvark-react';
 
 
 interface CharmBraceletState

@@ -4,8 +4,8 @@ import { AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, AvGrabEvent,
 	MsgUpdateSceneGraph, EndpointAddr, endpointAddrToString, MsgGrabEvent, 
 	endpointAddrsMatch, MsgGrabberState, MsgGadgetStarted, MsgSetEndpointTypeResponse, 
 	MsgPokerProximity, MsgMouseEvent, MsgNodeHaptic, MsgSetEditMode, 
-	MsgDetachGadgetFromHook } from 'common/aardvark-react/aardvark_protocol';
-import { MessageType, EndpointType, MsgSetEndpointType, Envelope, MsgNewEndpoint, MsgLostEndpoint, parseEnvelope, MsgError } from 'common/aardvark-react/aardvark_protocol';
+	MsgDetachGadgetFromHook, MessageType, EndpointType, MsgSetEndpointType, Envelope, 
+	MsgNewEndpoint, MsgLostEndpoint, parseEnvelope, MsgError } from 'aardvark-react';
 import * as express from 'express';
 import * as http from 'http';
 import * as WebSocket from 'ws';

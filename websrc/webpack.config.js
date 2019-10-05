@@ -16,6 +16,11 @@ let defaults =
 				use: 'ts-loader',
 				exclude: /node_modules/
 			},
+			{ 
+				test: /\.js$/,
+				use: 'source-map-loader',
+				enforce: "pre"
+			},
 			{
 				test: /\.css$/,
 				use: 
@@ -132,7 +137,7 @@ module.exports =
 		],
 
 		mode: "development",
-		devtool: "source-map",
+		devtool: "inline-source-map",
 
 		resolve:
 		{

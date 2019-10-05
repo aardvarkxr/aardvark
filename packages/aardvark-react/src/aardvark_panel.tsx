@@ -2,7 +2,7 @@ import * as React from 'react';
 
 import { AvGadget } from './aardvark_gadget';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
-import { Av } from 'common/aardvark';
+import { Av } from './aardvark';
 import bind from 'bind-decorator';
 import { AvNodeType, AvPanelMouseEvent, AvPanelMouseEventType, AvPanelHandler, 
 	AvSharedTextureInfo } from './aardvark_protocol';

@@ -1,15 +1,9 @@
 import * as React from 'react';
 import  * as ReactDOM from 'react-dom';
 
-import { AvGadget } from 'common/aardvark-react/aardvark_gadget';
-import { AvOrigin } from 'common/aardvark-react/aardvark_origin';
-import { AvTransform } from 'common/aardvark-react/aardvark_transform';
-import { AvPanel } from 'common/aardvark-react/aardvark_panel';
 import bind from 'bind-decorator';
-import { AvGrabbable, HighlightType, GrabResponse } from 'common/aardvark-react/aardvark_grabbable';
-import { AvSphereHandle } from 'common/aardvark-react/aardvark_handles';
-import { EndpointAddr, AvGrabEvent } from 'common/aardvark-react/aardvark_protocol';
 
+import { AvGadget, AvTransform, AvPanel, AvGrabbable, HighlightType, GrabResponse, AvSphereHandle, EndpointAddr, AvGrabEvent } from 'aardvark-react';
 
 interface TestPanelState
 {

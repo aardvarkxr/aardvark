@@ -1,20 +1,10 @@
 import * as React from 'react';
 import  * as ReactDOM from 'react-dom';
-import { AvGadget, parseURL } from 'common/aardvark-react/aardvark_gadget';
-import { AvOrigin } from 'common/aardvark-react/aardvark_origin';
-import { AvTransform } from 'common/aardvark-react/aardvark_transform';
-import { AvGrabber } from 'common/aardvark-react/aardvark_grabber';
 import bind from 'bind-decorator';
-import { AvModel } from 'common/aardvark-react/aardvark_model';
-import { AvPoker } from 'common/aardvark-react/aardvark_poker';
-import { AvStandardHook } from 'common/aardvark-react/aardvark_standard_hook';
-import { Av } from 'common/aardvark';
-import { AvGrabButton } from 'common/aardvark-react/aardvark_grab_button';
-import { AvPanel } from 'common/aardvark-react/aardvark_panel';
-import { AvPanelAnchor } from 'common/aardvark-react/aardvark_panelanchor';
-import { AvGadgetSeed } from 'common/aardvark-react/aardvark_gadget_seed';
-import { EndpointAddr, EHand, GrabberHighlight } 
-	from 'common/aardvark-react/aardvark_protocol';
+import { AvGadget,AvOrigin, AvTransform, AvGrabber, AvModel, AvPoker, 
+	AvStandardHook, Av, AvGrabButton, AvPanel, AvPanelAnchor, AvGadgetSeed,
+	 EndpointAddr, EHand, GrabberHighlight } 
+	from 'aardvark-react';
 
 
 interface DefaultHandProps

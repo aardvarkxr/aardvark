@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import { Av, AvStartGadgetCallback } from 'common/aardvark';
+import { Av, AvStartGadgetCallback } from './aardvark';
 import { IAvBaseNode } from './aardvark_base_node';
 import bind from 'bind-decorator';
 import { CGadgetEndpoint } from './gadget_endpoint';

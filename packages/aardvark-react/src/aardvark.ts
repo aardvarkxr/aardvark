@@ -1,6 +1,6 @@
 import { AvGadgetManifest, AvPanelMouseEventType, EndpointAddr, 
 	MsgGrabberState, MsgPokerProximity, AvSharedTextureInfo, 
-	EHand } from './aardvark-react/aardvark_protocol';
+	EHand } from './aardvark_protocol';
 
 export interface AvTraversalRenderer
 {

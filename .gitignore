@@ -6,8 +6,9 @@ Release
 *.swp
 *.blend1
 ~*
-packages
 data/gadgets
 data/server
+packages/aardvark-react/lib
+node_modules
 
 
