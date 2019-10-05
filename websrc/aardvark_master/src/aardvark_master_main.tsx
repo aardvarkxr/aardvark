@@ -62,7 +62,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 	{
 		let modelColor = "#222288FF";
 		let highlightColor = "#FF0000FF";
-		let modelUri = "https://aardvark.install/models/sphere/sphere_unlit.glb";
+		let modelUri = "https://aardvark.install/models/sphere/sphere.glb";
 		switch( this.state.grabberHighlight )
 		{
 			case GrabberHighlight.NearHook:
