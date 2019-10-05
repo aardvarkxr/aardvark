@@ -1,4 +1,4 @@
-import { CGrabStateProcessor } from 'common/aardvark-react/grab_state_processor';
+import { CGrabStateProcessor } from './grab_state_processor';
 import { MsgUpdateSceneGraph, EndpointType, MsgGrabEvent, endpointAddrsMatch, MsgSetEditMode, EndpointAddr } from 'common/aardvark-react/aardvark_protocol';
 import { CRendererEndpoint } from 'common/aardvark-react/renderer_endpoint';
 import { Av, AvGrabEventType, AvNode, ENodeFlags, AvNodeTransform, AvConstraint } from 'common/aardvark';
