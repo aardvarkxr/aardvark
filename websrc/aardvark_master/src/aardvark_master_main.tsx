@@ -60,21 +60,23 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 	}
 	public render()
 	{
-		let modelUri = "https://aardvark.install/models/sphere/sphere.glb";
+		let modelColor = "#222288FF";
+		let highlightColor = "#FF0000FF";
+		let modelUri = "https://aardvark.install/models/sphere/sphere_unlit.glb";
 		switch( this.state.grabberHighlight )
 		{
 			case GrabberHighlight.NearHook:
 			case GrabberHighlight.Grabbed:
 			case GrabberHighlight.WaitingForConfirmation:
 			case GrabberHighlight.InRange:
-					modelUri = "https://aardvark.install/models/sphere/sphere_highlight.glb";
+					modelColor = highlightColor;
 					break;
 		}
 
 		// poker highlight takes priority
 		if( this.state.pokerHighlight )
 		{
-			modelUri = "https://aardvark.install/models/sphere/sphere_highlight.glb";
+			modelColor = highlightColor;
 		}
 
 		let originPath:string;
@@ -94,7 +96,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 		return (
 			<AvOrigin path={ originPath }>
 				<AvTransform uniformScale= { 0.01 } >
-					<AvModel uri={ modelUri }/>
+					<AvModel uri={ modelUri } color={ modelColor }/>
 				</AvTransform>
 
 				<AvPoker updateHighlight = { this.updatePokerHighlight } />
