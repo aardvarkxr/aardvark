@@ -12,10 +12,14 @@ This has also only been tested in debug.
 
 
 1. Open a command prompt to your cloned repro directory. I'll call that d:\aardvark below, but it can be wherever you like.
-2. Build web code
+2. Build aardvark-react package
+   1. cd d:\aardvark\packages\aardvark-react
+   2. npm install
+   3. npm run build
+2. Build gadget and server web code
    1. cd d:\aardvark\websrc
    2. npm install
-   3. npm run-script build
+   3. npm run build
 3. Unzip CEF libs (These are over the 100MB Github file size limit when unzipped)
    1. unzip d:\aardvark\src\thirdparty\cefbinary_72\Debug\libcef.zip
    2. unzip d:\aardvark\src\thirdparty\cefbinary_72\Debug\cef_sandbox.zip

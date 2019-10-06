@@ -5,7 +5,8 @@
   "main": "lib/index",
   "types": "lib/index",
   "scripts": {
-    "start": "webpack --watch --progress"
+    "start": "webpack --watch --progress",
+    "build": "webpack"
   },
   "author": "Aardvark Team",
   "license": "ISC",
