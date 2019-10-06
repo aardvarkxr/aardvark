@@ -788,7 +788,7 @@ export class AvDefaultTraverser
 								parentInfo.grabbableParentFromGrabbableOrigin, new mat4() );
 							parentFromGrabbableOrigin = parentInfo.grabbableParentFromGrabbableOrigin;
 						}
-						let grabbableOriginFromUniverse = universeFromParent.copy().inverse();
+						let grabbableOriginFromUniverse = universeFromGrabbableOrigin.copy().inverse();
 						
 						let grabberPositionInGrabbableOrigin = new vec3(
 							grabbableOriginFromUniverse.multiplyVec4( 
