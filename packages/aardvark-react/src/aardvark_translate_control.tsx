@@ -73,8 +73,8 @@ class AvTranslateArrow extends React.Component< TranslateArrowProps, TranslateAr
 
 interface BallHandleProps
 {
-	color: AvColor;
-	highlightColor: AvColor;
+	color: AvColor | string;
+	highlightColor: AvColor | string;
 	radius: number;
 }
 
@@ -98,7 +98,7 @@ class AvBallHandle extends React.Component< BallHandleProps, BallHandleState >
 	
 	public render()
 	{
-		let color: AvColor;
+		let color: AvColor | string;
 		switch( this.state.highlight )
 		{
 			case HighlightType.Grabbed:
@@ -107,6 +107,7 @@ class AvBallHandle extends React.Component< BallHandleProps, BallHandleState >
 				color = this.props.highlightColor;
 				break;
 			default:
+
 			case HighlightType.None:
 				color = this.props.color;
 				break;
@@ -118,7 +119,7 @@ class AvBallHandle extends React.Component< BallHandleProps, BallHandleState >
 								color={ color }/> }
 							{ this.props.children }
 					</AvTransform>
-					<AvSphereHandle radius={ this.props.radius } />
+					<AvSphereHandle radius={ this.props.radius } updateHighlight={ this.updateHighlight }/>
 				</div>;
 	}
 	
@@ -224,8 +225,8 @@ export class AvTransformControl extends React.Component< TransformControlProps, 
 		if( !this.props.general )
 			return null;
 
-		return ( <AvBallHandle radius = { 0.04 } color={ {r: 0.8, g: 0.8, b: 0 } }
-			highlightColor={ { r: 1, g: 1, b: 0 }} /> )
+		return ( <AvBallHandle radius = { 0.02 } color="#999900"
+			highlightColor="#FFFF00" /> )
 	}
 
 	public render()
