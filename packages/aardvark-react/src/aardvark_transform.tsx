@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import { AvNodeType } from './aardvark_protocol';
+import { AvNodeType, AvQuaternion } from './aardvark_protocol';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 import { quat, vec3 } from '@tlaukkan/tsm';
 
@@ -16,6 +16,7 @@ interface AvTransformProps extends AvBaseNodeProps
 	rotateX?:number;
 	rotateY?:number;
 	rotateZ?:number;
+	rotation?: AvQuaternion;
 }
 
 function quatFromAxisAngleDegrees( axis: vec3, deg?: number ): quat
@@ -61,7 +62,11 @@ export class AvTransform extends AvBaseNode< AvTransformProps, {} >
 				z: this.props.translateZ != null ? this.props.translateZ : 0,
 			}
 		}
-		if( this.props.rotateX != null || this.props.rotateY != null || this.props.rotateZ != null )
+		if( this.props.rotation )
+		{
+			node.propTransform.rotation = this.props.rotation;
+		}
+		else if( this.props.rotateX != null || this.props.rotateY != null || this.props.rotateZ != null )
 		{
 			let qx = quatFromAxisAngleDegrees( vec3.right, this.props.rotateX );
 			let qy = quatFromAxisAngleDegrees( vec3.up, this.props.rotateY );

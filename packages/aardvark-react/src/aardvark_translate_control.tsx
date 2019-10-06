@@ -133,6 +133,7 @@ interface TransformControlProps
 	rotate?: boolean;
 	translate?: boolean;
 	general?: boolean;
+	initialTransform?: AvNodeTransform;
 }
 
 interface TransformControlState
@@ -233,7 +234,7 @@ export class AvTransformControl extends React.Component< TransformControlProps, 
 	{
 		return (	
 			<AvGrabbable onTransformUpdated={ this.onTransformUpdated } 
-				preserveDropTransform={ true }>
+				preserveDropTransform={ true } initialTransform={ this.props.initialTransform }>
 				{ this.renderTranslate() }
 				{ this.renderGeneral() }
 				{ this.props.children }

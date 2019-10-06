@@ -3,6 +3,7 @@ import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 import bind from 'bind-decorator';
 import { EndpointAddr, AvNodeType, AvGrabEvent, AvGrabEventType, 
 	AvConstraint, AvNodeTransform, ENodeFlags } from './aardvark_protocol';
+import { AvTransform } from './aardvark_transform';
 
 export interface GrabResponse
 {
@@ -26,6 +27,7 @@ interface AvGrabbableProps extends AvBaseNodeProps
 	onTransformUpdated?: ( parentFromNode: AvNodeTransform, universeFromNode: AvNodeTransform ) => void;
 	constraint?: AvConstraint;
 	preserveDropTransform?: boolean;
+	initialTransform?: AvNodeTransform;
 }
 
 export class AvGrabbable extends AvBaseNode< AvGrabbableProps, {} >
@@ -39,6 +41,10 @@ export class AvGrabbable extends AvBaseNode< AvGrabbableProps, {} >
 		if( this.props.constraint )
 		{
 			node.propConstraint = this.props.constraint;
+		}
+		if( this.props.initialTransform )
+		{
+			node.propTransform = this.props.initialTransform;
 		}
 		if( this.props.onTransformUpdated )
 		{

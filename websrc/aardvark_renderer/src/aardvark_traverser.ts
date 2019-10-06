@@ -70,6 +70,41 @@ function nodeTransformFromMat4( m: mat4 ) : AvNodeTransform
 	return transform;
 }
 
+function nodeTransformToMat4( transform: AvNodeTransform ): mat4
+{
+	let vTrans: vec3;
+	if ( transform.position )
+	{
+		vTrans = new vec3( [ transform.position.x, transform.position.y, transform.position.z ] );
+	}
+	else
+	{
+		vTrans = new vec3( [ 0, 0, 0 ] );
+	}
+	let vScale: vec3;
+	if ( transform.scale )
+	{
+		vScale = new vec3( [ transform.scale.x, transform.scale.y, transform.scale.z ] );
+	}
+	else
+	{
+		vScale = new vec3( [ 1, 1, 1 ] );
+	}
+	let qRot: quat;
+	if ( transform.rotation )
+	{
+		qRot = new quat( [ transform.rotation.x, transform.rotation.y, transform.rotation.z, transform.rotation.w ] );
+	}
+	else
+	{
+		qRot = new quat( [ 0, 0, 0, 1 ] );
+	}
+
+	let mat = translateMat( vTrans ).multiply( qRot.toMat4() );
+	mat = mat.multiply( scaleMat( vScale ) ) ;
+	return mat;
+}
+
 
 interface TransformComputeFunction
 {
@@ -569,38 +604,7 @@ export class AvDefaultTraverser
 	{
 		if ( node.propTransform )
 		{
-			let transform = node.propTransform;
-
-			let vTrans: vec3;
-			if ( transform.position )
-			{
-				vTrans = new vec3( [ transform.position.x, transform.position.y, transform.position.z ] );
-			}
-			else
-			{
-				vTrans = new vec3( [ 0, 0, 0 ] );
-			}
-			let vScale: vec3;
-			if ( transform.scale )
-			{
-				vScale = new vec3( [ transform.scale.x, transform.scale.y, transform.scale.z ] );
-			}
-			else
-			{
-				vScale = new vec3( [ 1, 1, 1 ] );
-			}
-			let qRot: quat;
-			if ( transform.rotation )
-			{
-				qRot = new quat( [ transform.rotation.x, transform.rotation.y, transform.rotation.z, transform.rotation.w ] );
-			}
-			else
-			{
-				qRot = new quat( [ 0, 0, 0, 1 ] );
-			}
-
-			let mat = translateMat( vTrans ).multiply( qRot.toMat4() );
-			mat = mat.multiply( scaleMat( vScale ) ) ;
+			let mat = nodeTransformToMat4( node.propTransform );
 			this.updateTransform( node.globalId, defaultParent, mat, null );
 		}
 	}
@@ -719,6 +723,10 @@ export class AvDefaultTraverser
 			if( nodeData.lastParentFromNode )
 			{
 				this.updateTransform( node.globalId, defaultParent, nodeData.lastParentFromNode, null );
+			}
+			else if( node.propTransform )
+			{
+				this.updateTransform( node.globalId, defaultParent, nodeTransformToMat4( node.propTransform ), null );
 			}
 		}
 		else

@@ -2,7 +2,86 @@ import * as React from 'react';
 import  * as ReactDOM from 'react-dom';
 
 import bind from 'bind-decorator';
-import { AvGadget, AvTransform, AvGrabbable, HighlightType, AvStandardHook, AvSphereHandle, AvModel, AvGrabButton } from 'aardvark-react';
+import { AvGadget, AvTransform, AvGrabbable, HighlightType, AvStandardHook, AvSphereHandle, AvModel, AvGrabButton, AvNodeTransform, AvVector, AvQuaternion, AvTransformControl } from 'aardvark-react';
+
+
+interface CharmProps
+{
+	id: number;
+	initialSettings: CharmSettings;
+	setSettings( id: number, settings: CharmSettings ): void;
+}
+
+interface CharmState
+{
+	currentSettings?: CharmSettings;
+}
+
+interface CharmSettings
+{
+	translate?: AvVector;
+	rotation?: AvQuaternion;
+}
+
+class Charm extends React.Component< CharmProps, CharmState >
+{
+	constructor( props: any )
+	{
+		super( props );
+
+		this.state = 
+		{
+		};
+
+		AvGadget.instance().listenForEditMode( this.onEditModeUpdated );
+	}
+
+	@bind onEditModeUpdated()
+	{
+		this.forceUpdate();
+	}
+
+	@bind private onTransform( newTransform: AvNodeTransform ): void
+	{
+		let newSettings: CharmSettings = 
+		{
+			translate: newTransform.position,
+			rotation: newTransform.rotation,
+		}
+		this.setState( { currentSettings: newSettings } );
+		this.props.setSettings( this.props.id, newSettings );
+	}
+
+	private get settings(): CharmSettings
+	{
+		if( this.state.currentSettings )
+		{
+			return this.state.currentSettings;
+		}
+		else
+		{
+			return this.props.initialSettings;
+		}
+	}
+
+	render()
+	{
+		let editMode = AvGadget.instance().editMode;
+		let transform: AvNodeTransform = 
+		{
+			position: this.settings.translate,
+			rotation: this.settings.rotation,
+		};
+
+		return 	(
+			<AvTransformControl initialTransform={ transform }
+				onSetValue= { this.onTransform } 
+				translate={ editMode } rotate={ editMode } general={ editMode }
+				key={ this.props.id }>
+				<AvStandardHook persistentName={ "hook" + this.props.id } />
+			</AvTransformControl> );
+	}
+}
 
 
 interface CharmBraceletState
@@ -14,6 +93,7 @@ interface CharmBraceletState
 interface CharmBraceletSettings
 {
 	charmCount: number;
+	charms: { [id: number ]: CharmSettings };
 }
 
 interface CharmLocation
@@ -44,6 +124,7 @@ for( let x in charmLocations )
 class CharmBracelet extends React.Component< {}, CharmBraceletState >
 {
 	private m_dirty = false;
+	private m_charmSettings: { [ id: number ]: CharmSettings } = {};
 
 	constructor( props: any )
 	{
@@ -65,7 +146,12 @@ class CharmBracelet extends React.Component< {}, CharmBraceletState >
 
 	@bind onSettingsReceived( settings: CharmBraceletSettings )
 	{
-		this.setState( { charmCount: settings.charmCount })
+		if( !settings )
+		{
+			settings = { charmCount: 1, charms: {} };
+		}
+		this.setState( { charmCount: settings.charmCount } );
+		this.m_charmSettings = settings.charms;
 	}
 
 	@bind onPlus()
@@ -96,10 +182,17 @@ class CharmBracelet extends React.Component< {}, CharmBraceletState >
 			let settings: CharmBraceletSettings =
 			{
 				charmCount: this.state.charmCount,
+				charms: this.m_charmSettings,
 			};
 			AvGadget.instance().saveSettings( settings );
 		}
 		this.forceUpdate();
+	}
+
+	@bind setCharmSetting( id: number, settings: CharmSettings )
+	{
+		this.m_charmSettings[ id ] = settings;
+		this.m_dirty = true;
 	}
 
 	private renderControls()
@@ -128,12 +221,17 @@ class CharmBracelet extends React.Component< {}, CharmBraceletState >
 		for( let i = 0; i < this.state.charmCount; i++ )
 		{
 			let loc = locs[ i ];
-			charms.push(
-				<AvTransform translateX={ loc.x } translateY={ loc.y } translateZ={ loc.z }  
-					key={ i }>
-					<AvStandardHook persistentName={ "hook" + i } />
-				</AvTransform>
-				);
+			let initialSettings: CharmSettings = this.m_charmSettings[ i ];
+
+			if( !initialSettings )
+			{
+				initialSettings =
+				{
+					translate: { x: loc.x, y: loc.y, z: loc.z },
+				}	
+			}
+
+			charms.push( <Charm id={ i } initialSettings={ initialSettings } setSettings={ this.setCharmSetting } /> );
 		}
 
 		return (
