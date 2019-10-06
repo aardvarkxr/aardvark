@@ -40,7 +40,10 @@ This has also only been tested in debug.
    1. Pick "avrenderer" as the startup project in visual studio
    2. Start Debugging from the Debug menu
 
-**Debugging web stuff**
+**Debugging**
 
 You can use chrome dev tools on your gadgets by browsing to <a href="http://localhost:8042/">http://localhost:8042/</a> while Aardvark is running.
+
+You can see the active scene graphs of all gadgets with the monitor.
+You can find it in aardvark/data/gadgets/aardvark_monitor/index.html; just open that in your browser and will connect to the server on localhost.
 
