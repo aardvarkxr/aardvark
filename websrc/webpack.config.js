@@ -16,11 +16,6 @@ let defaults =
 				use: 'ts-loader',
 				exclude: /node_modules/
 			},
-			{ 
-				test: /\.js$/,
-				use: 'source-map-loader',
-				enforce: "pre"
-			},
 			{
 				test: /\.css$/,
 				use: 
