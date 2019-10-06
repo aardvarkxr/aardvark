@@ -182,7 +182,8 @@ interface NodeToNodeAnchor_t
 {
 	parentGlobalId: EndpointAddr;
 	handleGlobalId?: EndpointAddr;
-	parentFromNodeTransform: mat4;
+	grabberFromGrabbable: mat4;
+	grabbableParentFromGrabbableOrigin?: mat4;
 }
 
 interface AvNodeRoot
@@ -559,7 +560,7 @@ export class AvDefaultTraverser
 			this.m_nodeToNodeAnchors[ endpointAddrToString( node.globalId ) ] =
 			{
 				parentGlobalId: origin,
-				parentFromNodeTransform: mat4.identity,
+				grabberFromGrabbable: mat4.identity,
 			}
 		}
 	}
@@ -751,7 +752,7 @@ export class AvDefaultTraverser
 			{
 				// this is a simple grabbable that is transformed by its grabber directly
 				this.updateTransform( node.globalId, grabberTransform, 
-					parentInfo.parentFromNodeTransform, 
+					parentInfo.grabberFromGrabbable, 
 					( universeFromNode: mat4 ) =>
 					{
 						this.preserveTransform( node, parentInfo.parentGlobalId, defaultParent, 
@@ -768,50 +769,66 @@ export class AvDefaultTraverser
 					mat4.identity, null,
 					( universeFromParents: mat4[], unused: mat4) =>
 					{
-						let grabberFromGrabbable = parentInfo.parentFromNodeTransform;
+						// grabbable - the grabbable node itself
+						// parent - the grabbable node's parent in the scene graph
+						// grabber - the grabber node
+						// grabbable origin - the origin of the grabbable for purposes of constraints.
+						//		This may be the same as the parent, but if there was any kind of
+						//		previous grabbing and dragging of the grabbable, this would include that
+						//		previous transform. 
+						let grabberFromGrabbable = parentInfo.grabberFromGrabbable;
 						let grabPoint = grabberFromGrabbable.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) );
 						let universeFromGrabber = universeFromParents[1];
 						let universeFromParent = universeFromParents[0];
-						let parentFromUniverse = universeFromParent.copy().inverse();
+						let universeFromGrabbableOrigin = universeFromParent;
+						let parentFromGrabbableOrigin = mat4.identity;
+						if( parentInfo.grabbableParentFromGrabbableOrigin )
+						{
+							universeFromGrabbableOrigin = mat4.product( universeFromParent, 
+								parentInfo.grabbableParentFromGrabbableOrigin, new mat4() );
+							parentFromGrabbableOrigin = parentInfo.grabbableParentFromGrabbableOrigin;
+						}
+						let grabbableOriginFromUniverse = universeFromParent.copy().inverse();
 						
-						let grabberPositionInParent = new vec3(
-							parentFromUniverse.multiplyVec4( 
+						let grabberPositionInGrabbableOrigin = new vec3(
+							grabbableOriginFromUniverse.multiplyVec4( 
 								universeFromGrabber.multiplyVec4( grabPoint ) ).xyz );
 						
 						if( constraint.minX != undefined )
 						{
-							grabberPositionInParent.x = Math.max( constraint.minX, 
-								grabberPositionInParent.x );
+							grabberPositionInGrabbableOrigin.x = Math.max( constraint.minX, 
+								grabberPositionInGrabbableOrigin.x );
 						}
 						if( constraint.maxX  != undefined )
 						{
-							grabberPositionInParent.x = Math.min( constraint.maxX, 
-								grabberPositionInParent.x );
+							grabberPositionInGrabbableOrigin.x = Math.min( constraint.maxX, 
+								grabberPositionInGrabbableOrigin.x );
 						}
 						if( constraint.minY != undefined )
 						{
-							grabberPositionInParent.y = Math.max( constraint.minY, 
-								grabberPositionInParent.y );
+							grabberPositionInGrabbableOrigin.y = Math.max( constraint.minY, 
+								grabberPositionInGrabbableOrigin.y );
 						}
 						if( constraint.maxY != undefined )
 						{
-							grabberPositionInParent.y = Math.min( constraint.maxY, 
-								grabberPositionInParent.y );
+							grabberPositionInGrabbableOrigin.y = Math.min( constraint.maxY, 
+								grabberPositionInGrabbableOrigin.y );
 						}
 						if( constraint.minZ != undefined )
 						{
-							grabberPositionInParent.z = Math.max( constraint.minZ, 
-								grabberPositionInParent.z );
+							grabberPositionInGrabbableOrigin.z = Math.max( constraint.minZ, 
+								grabberPositionInGrabbableOrigin.z );
 						}
 						if( constraint.maxZ != undefined )
 						{
-							grabberPositionInParent.z = Math.min( constraint.maxZ, 
-								grabberPositionInParent.z );
+							grabberPositionInGrabbableOrigin.z = Math.min( constraint.maxZ, 
+								grabberPositionInGrabbableOrigin.z );
 						}
-						let parentFromNode = translateMat( grabberPositionInParent );
-						let universeFromNode = mat4.product( universeFromParent, parentFromNode, new mat4() );
+						let parentFromGrabbable = mat4.product( parentFromGrabbableOrigin, 
+							translateMat( grabberPositionInGrabbableOrigin ), new mat4() );
+						let universeFromNode = mat4.product( universeFromParent, parentFromGrabbable, new mat4() );
 						this.preserveTransform( node, parentInfo.parentGlobalId, defaultParent,
-							universeFromNode, parentFromNode );
+							universeFromNode, parentFromGrabbable );
 						return universeFromNode;
 					} );
 			}
@@ -985,11 +1002,19 @@ export class AvDefaultTraverser
 					this.m_endpoint.sendMessage( MessageType.DetachGadgetFromHook, msg );
 				}
 
+				let grabbableData = this.getNodeDataByEpa( grabEvent.grabbableId );
+				let grabbableParentFromGrabbableOrigin: mat4;
+				if( grabbableData && grabbableData.lastParentFromNode )
+				{
+					grabbableParentFromGrabbableOrigin = grabbableData.lastParentFromNode;
+				}
+
 				this.m_nodeToNodeAnchors[ grabbableIdStr ] = 
 				{
 					parentGlobalId: grabEvent.grabberId,
 					handleGlobalId: grabEvent.handleId,
-					parentFromNodeTransform: grabberFromGrabbable,
+					grabberFromGrabbable,
+					grabbableParentFromGrabbableOrigin, 
 				};
 				Av().renderer.startGrab( grabEvent.grabberId, grabEvent.grabbableId );
 				console.log( `telling collider about ${ endpointAddrToString( grabEvent.grabberId ) } `
@@ -1013,7 +1038,7 @@ export class AvDefaultTraverser
 					this.m_nodeToNodeAnchors[ endpointAddrToString( grabEvent.grabbableId ) ] = 
 					{
 						parentGlobalId: grabEvent.hookId,
-						parentFromNodeTransform: null,
+						grabberFromGrabbable: null,
 					};
 
 					let msg: MsgAttachGadgetToHook =
