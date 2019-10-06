@@ -92,7 +92,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 
 				<AvPoker updateHighlight = { this.updatePokerHighlight } />
 				<AvGrabber updateHighlight = { this.updateGrabberHighlight }
-					radius={0.001} />
+					radius={0.0} />
 				<AvStandardHook persistentName={ hookName } hand={ this.props.hand }/>
 				{ AvGadget.instance().getEditModeForHand( this.props.hand ) && <ControlPanel />}
 			</AvOrigin>
