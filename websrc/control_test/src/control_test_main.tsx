@@ -1,17 +1,8 @@
 import * as React from 'react';
 import  * as ReactDOM from 'react-dom';
 
-import { AvTransform } from 'common/aardvark-react/aardvark_transform';
 import bind from 'bind-decorator';
-import { AvSlider } from 'common/aardvark-react/aardvark_slider';
-import { AvGrabbable } from 'common/aardvark-react/aardvark_grabbable';
-import { AvSphereHandle } from 'common/aardvark-react/aardvark_handles';
-import { AvModel } from 'common/aardvark-react/aardvark_model';
-import { AvPanel } from 'common/aardvark-react/aardvark_panel';
-import { AvPanelAnchor } from 'common/aardvark-react/aardvark_panelanchor';
-import { AvTransformControl } from 'common/aardvark-react/aardvark_translate_control';
-import { AvNodeTransform } from 'common/aardvark';
-import { QuaternionToEulerAngles, RadiansToDegrees } from 'common/aardvark-react/aardvark_utils';
+import { AvTransform, AvSlider, AvGrabbable, AvSphereHandle, AvModel, AvPanel, AvPanelAnchor, AvTransformControl, AvNodeTransform, QuaternionToEulerAngles, RadiansToDegrees } from 'aardvark-react';
 
 
 interface ControlTestState

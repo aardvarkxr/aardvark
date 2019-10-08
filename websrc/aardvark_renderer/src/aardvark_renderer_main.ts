@@ -1,12 +1,9 @@
-import { Av } from 'common/aardvark'
-import { AvDefaultTraverser } from 'common/aardvark_traverser';
+import { Av } from 'aardvark-react'
+import { AvDefaultTraverser } from './aardvark_traverser';
 
 console.log( "I'm a renderer!" );
 
 let traverser = new AvDefaultTraverser();
 
-//Av().renderer.registerSceneProcessor( traverser.newSceneGraph );
 Av().renderer.registerTraverser( traverser.traverse );
-//Av().renderer.registerHapticProcessor( traverser.sendHapticEventForNode );
-//Av().renderer.registerGrabEventProcessor( traverser.grabEvent );
 

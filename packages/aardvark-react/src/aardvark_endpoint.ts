@@ -1,7 +1,5 @@
 import bind from 'bind-decorator';
-import { EndpointType, MessageType, EndpointAddr, Envelope, parseEnvelope, MsgSetEndpointType, MsgGetGadgetManifest, MsgGetGadgetManifestResponse, MsgGrabEvent, MsgSetEndpointTypeResponse } from './aardvark_protocol';
-import { AvGadgetManifest, AvGrabEvent } from 'common/aardvark';
-import { object } from 'prop-types';
+import { AvGadgetManifest, AvGrabEvent, EndpointType, MessageType, EndpointAddr, Envelope, parseEnvelope, MsgSetEndpointType, MsgGetGadgetManifest, MsgGetGadgetManifestResponse, MsgGrabEvent, MsgSetEndpointTypeResponse } from './aardvark_protocol';
 
 export interface MessageHandler
 {

@@ -1,10 +1,7 @@
-import * as React from 'react';
-
 import { AvGadget } from './aardvark_gadget';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
-import { AvNodeType, AvPanelMouseEvent, AvPanelMouseEventType, PokerProximity } from 'common/aardvark';
 import bind from 'bind-decorator';
-import { EndpointAddr, endpointAddrsMatch } from './aardvark_protocol';
+import { EndpointAddr, endpointAddrsMatch, AvNodeType, AvPanelMouseEventType, PokerProximity } from './aardvark_protocol';
 
 interface AvPokerProps extends AvBaseNodeProps
 {

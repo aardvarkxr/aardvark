@@ -1,19 +1,10 @@
 import * as React from 'react';
 import  * as ReactDOM from 'react-dom';
-import { AvGadget, parseURL } from 'common/aardvark-react/aardvark_gadget';
-import { AvOrigin } from 'common/aardvark-react/aardvark_origin';
-import { AvTransform } from 'common/aardvark-react/aardvark_transform';
-import { AvGrabber } from 'common/aardvark-react/aardvark_grabber';
 import bind from 'bind-decorator';
-import { AvModel } from 'common/aardvark-react/aardvark_model';
-import { AvPoker } from 'common/aardvark-react/aardvark_poker';
-import { AvStandardHook } from 'common/aardvark-react/aardvark_standard_hook';
-import { Av, EHand, GrabberHighlight } from 'common/aardvark';
-import { AvGrabButton } from 'common/aardvark-react/aardvark_grab_button';
-import { AvPanel } from 'common/aardvark-react/aardvark_panel';
-import { AvPanelAnchor } from 'common/aardvark-react/aardvark_panelanchor';
-import { AvGadgetSeed } from 'common/aardvark-react/aardvark_gadget_seed';
-import { EndpointAddr } from 'common/aardvark-react/aardvark_protocol';
+import { AvGadget,AvOrigin, AvTransform, AvGrabber, AvModel, AvPoker, 
+	AvStandardHook, Av, AvGrabButton, AvPanel, AvPanelAnchor, AvGadgetSeed,
+	 EndpointAddr, EHand, GrabberHighlight } 
+	from 'aardvark-react';
 
 
 interface DefaultHandProps
@@ -60,6 +51,8 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 	}
 	public render()
 	{
+		let modelColor = "#222288FF";
+		let highlightColor = "#FF0000FF";
 		let modelUri = "https://aardvark.install/models/sphere/sphere.glb";
 		switch( this.state.grabberHighlight )
 		{
@@ -67,14 +60,14 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 			case GrabberHighlight.Grabbed:
 			case GrabberHighlight.WaitingForConfirmation:
 			case GrabberHighlight.InRange:
-					modelUri = "https://aardvark.install/models/sphere/sphere_highlight.glb";
+					modelColor = highlightColor;
 					break;
 		}
 
 		// poker highlight takes priority
 		if( this.state.pokerHighlight )
 		{
-			modelUri = "https://aardvark.install/models/sphere/sphere_highlight.glb";
+			modelColor = highlightColor;
 		}
 
 		let originPath:string;
@@ -94,12 +87,12 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 		return (
 			<AvOrigin path={ originPath }>
 				<AvTransform uniformScale= { 0.01 } >
-					<AvModel uri={ modelUri }/>
+					<AvModel uri={ modelUri } color={ modelColor }/>
 				</AvTransform>
 
 				<AvPoker updateHighlight = { this.updatePokerHighlight } />
 				<AvGrabber updateHighlight = { this.updateGrabberHighlight }
-					radius={0.001} />
+					radius={0.0} />
 				<AvStandardHook persistentName={ hookName } hand={ this.props.hand }/>
 				{ AvGadget.instance().getEditModeForHand( this.props.hand ) && <ControlPanel />}
 			</AvOrigin>

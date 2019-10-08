@@ -1,10 +1,10 @@
 import * as React from 'react';
-import { AvTransform } from 'common/aardvark-react/aardvark_transform';
+import { AvTransform } from './aardvark_transform';
 import bind from 'bind-decorator';
-import { AvModel } from 'common/aardvark-react/aardvark_model';
+import { AvModel } from './aardvark_model';
 import { HighlightType, AvGrabbable, GrabResponse } from './aardvark_grabbable';
 import { AvSphereHandle, AvModelBoxHandle } from './aardvark_handles';
-import { AvGrabEvent, AvConstraint, AvNodeTransform, AvColor } from 'common/aardvark';
+import { AvGrabEvent, AvConstraint, AvNodeTransform, AvColor } from './aardvark_protocol';
 
 
 interface TranslateArrowProps
@@ -73,8 +73,8 @@ class AvTranslateArrow extends React.Component< TranslateArrowProps, TranslateAr
 
 interface BallHandleProps
 {
-	color: AvColor;
-	highlightColor: AvColor;
+	color: AvColor | string;
+	highlightColor: AvColor | string;
 	radius: number;
 }
 
@@ -98,7 +98,7 @@ class AvBallHandle extends React.Component< BallHandleProps, BallHandleState >
 	
 	public render()
 	{
-		let color: AvColor;
+		let color: AvColor | string;
 		switch( this.state.highlight )
 		{
 			case HighlightType.Grabbed:
@@ -107,6 +107,7 @@ class AvBallHandle extends React.Component< BallHandleProps, BallHandleState >
 				color = this.props.highlightColor;
 				break;
 			default:
+
 			case HighlightType.None:
 				color = this.props.color;
 				break;
@@ -118,7 +119,7 @@ class AvBallHandle extends React.Component< BallHandleProps, BallHandleState >
 								color={ color }/> }
 							{ this.props.children }
 					</AvTransform>
-					<AvSphereHandle radius={ this.props.radius } />
+					<AvSphereHandle radius={ this.props.radius } updateHighlight={ this.updateHighlight }/>
 				</div>;
 	}
 	
@@ -132,6 +133,7 @@ interface TransformControlProps
 	rotate?: boolean;
 	translate?: boolean;
 	general?: boolean;
+	initialTransform?: AvNodeTransform;
 }
 
 interface TransformControlState
@@ -224,15 +226,15 @@ export class AvTransformControl extends React.Component< TransformControlProps, 
 		if( !this.props.general )
 			return null;
 
-		return ( <AvBallHandle radius = { 0.04 } color={ {r: 0.8, g: 0.8, b: 0 } }
-			highlightColor={ { r: 1, g: 1, b: 0 }} /> )
+		return ( <AvBallHandle radius = { 0.02 } color="#999900"
+			highlightColor="#FFFF00" /> )
 	}
 
 	public render()
 	{
 		return (	
 			<AvGrabbable onTransformUpdated={ this.onTransformUpdated } 
-				preserveDropTransform={ true }>
+				preserveDropTransform={ true } initialTransform={ this.props.initialTransform }>
 				{ this.renderTranslate() }
 				{ this.renderGeneral() }
 				{ this.props.children }

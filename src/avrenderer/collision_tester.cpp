@@ -109,7 +109,7 @@ bool sphereBoxIntersect( const CCollisionTester::Volume_t & sphere, const CColli
 	float xDist = Max( Max( box.box.xMin - sphereCenter.x, sphereCenter.x - box.box.xMax ), 0.f );
 	float yDist = Max( Max( box.box.yMin - sphereCenter.y, sphereCenter.y - box.box.yMax ), 0.f );
 	float zDist = Max( Max( box.box.zMin - sphereCenter.z, sphereCenter.z - box.box.zMax ), 0.f );
-	return ( xDist * xDist + yDist * yDist + zDist * zDist ) < sphere.radius;
+	return ( xDist * xDist + yDist * yDist + zDist * zDist ) <= sphere.radius;
 }
 
 

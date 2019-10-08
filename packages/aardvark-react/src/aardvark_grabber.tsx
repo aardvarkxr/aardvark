@@ -1,8 +1,6 @@
-import * as React from 'react';
-
 import { AvGadget } from './aardvark_gadget';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
-import { AvNodeType, AvGrabEvent, EVolumeType, AvGrabEventType, GrabberHighlight } from 'common/aardvark';
+import { AvNodeType, AvGrabEvent, EVolumeType, AvGrabEventType, GrabberHighlight } from './aardvark_protocol';
 import bind from 'bind-decorator';
 
 

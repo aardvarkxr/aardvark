@@ -9,8 +9,9 @@
 			"request": "attach",
 			"name": "Attach to aardvark_renderer",
 			"sourceMaps": true,
+			"trace":"verbose",
 			"port": 8042,
-			"webRoot": "${workspaceFolder}"
+			"webRoot": "${workspaceFolder}",
 		},
 		{
 			"type": "chrome",
@@ -27,7 +28,8 @@
 			"name": "Attach to node",
 			"sourceMaps": true,
 			"port": 9229,
-			"protocol": "auto"
+			"protocol": "auto",
+			"outFiles": [ "${workspaceRoot}/myOutFiles/**/*.js",  "${workspaceRoot}/node_modules/**/*.js" ]
 		},
 		{
 			"type": "node",
