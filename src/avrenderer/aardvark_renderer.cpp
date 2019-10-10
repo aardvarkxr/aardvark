@@ -754,10 +754,10 @@ void VulkanExample::preparePipelines()
 	rasterizationStateCI.cullMode = VK_CULL_MODE_NONE;
 	blendAttachmentState.blendEnable = VK_TRUE;
 	blendAttachmentState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-	blendAttachmentState.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+	blendAttachmentState.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
 	blendAttachmentState.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 	blendAttachmentState.colorBlendOp = VK_BLEND_OP_ADD;
-	blendAttachmentState.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+	blendAttachmentState.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
 	blendAttachmentState.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
 	blendAttachmentState.alphaBlendOp = VK_BLEND_OP_ADD;
 	VK_CHECK_RESULT( vkCreateGraphicsPipelines( device, pipelineCache, 1, &pipelineCI, nullptr, &pipelines.pbrAlphaBlend ) );
