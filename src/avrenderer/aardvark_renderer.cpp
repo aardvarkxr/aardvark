@@ -1874,7 +1874,7 @@ void VulkanExample::prepare()
 
 	camera.type = Camera::CameraType::lookat;
 
-	camera.setPerspective( 0.45f, (float)width / (float)height, 0.1f, 256.0f );
+	camera.setPerspective( 45.0f, (float)width / (float)height, 0.1f, 256.0f );
 	camera.rotationSpeed = 0.25f;
 	camera.movementSpeed = 0.1f;
 	camera.setPosition( { 0.0f, 0.0f, 1.0f } );
