@@ -1,7 +1,8 @@
 #pragma once
 
 #include <unordered_map>
-
+#define GLM_FORCE_RADIANS
+#include <glm/gtc/matrix_transform.hpp>
 #include <aardvark/ivrmanager.h>
 
 class CVRManager : public IVrManager
@@ -14,14 +15,19 @@ public:
 	virtual void sentHapticEventForHand( EHand hand, float amplitude, float frequency, float duration ) override;
 	virtual void updateOpenVrPoses() override;
 	virtual void doInputWork() override;
+	virtual void setVargglesTexture(const vr::Texture_t *pTexture) override;
 	virtual glm::mat4 getHmdFromUniverse() override { return m_hmdFromUniverse; }
+	virtual void getVargglesLookRotation(glm::mat4 &horizontalLooktransform) override;
 
 	vr::VRInputValueHandle_t getDeviceForHand( EHand hand );
 	glm::mat4 glmMatFromVrMat( const vr::HmdMatrix34_t & mat );
+	void createAndPositionVargglesOverlay();
+	void destroyVargglesOverlay();
 
 	bool isGrabPressed( vr::VRInputValueHandle_t whichHand );
 	bool isEditPressed( vr::VRInputValueHandle_t whichHand );
 	void initOpenVR();
+	~CVRManager();
 
 protected:
 	vr::VRActionSetHandle_t m_actionSet = vr::k_ulInvalidActionSetHandle;
@@ -37,5 +43,24 @@ protected:
 
 	std::unordered_map<std::string, glm::mat4> m_universeFromOriginTransforms;
 	glm::mat4 m_hmdFromUniverse;
+
+	const char* k_pchVargglesOverlayKey = "aardvark.varggles";
+	const char* k_pchVargglesOverlayName = "varggles";
+	const float k_fOverlayWidthInMeters = 3.f;
+	const vr::ETrackingUniverseOrigin c_eTrackingOrigin = vr::TrackingUniverseStanding;
+	const vr::HmdMatrix34_t m_vargglesOverlayTransform{
+		{
+			{1, 0, 0, 0},
+			{0, 1, 0, 0},
+			{0, 0, 1, -1}
+		}
+	};
+
+	vr::VROverlayHandle_t m_vargglesOverlay = vr::k_ulOverlayHandleInvalid;
+	glm::mat4 m_vargglesLookRotation;
+
+	uint64_t m_lastFrameIndex = 0;
+	int m_framesSkipped = 0;
+	int64_t m_updatePosesTimeoutMillis = 10;
 };
 

@@ -5,6 +5,7 @@ Release
 *.user
 *.swp
 *.blend1
+*.stamp
 ~*
 data/gadgets
 data/server
