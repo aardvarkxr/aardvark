@@ -79,15 +79,12 @@ void CVRManager::updateOpenVrPoses()
 	uint64_t newFrameIndex = 0;
 	float lastVSync = 0;
 
-	// TODO PLUTO: make a stopwatch class
-	//updatePoseTimer->Restart();
-
 	while (newFrameIndex == m_lastFrameIndex)
 	{
-		//auto hasTimedOut = updatePoseTimer->Elapsed() >= m_updatePosesTimeoutMillis;
-		auto hasTimedOut = false;
-		auto vsyncTimesAvailable = vr::VRSystem()->GetTimeSinceLastVsync(&lastVSync, &newFrameIndex);
-		if (vsyncTimesAvailable == false || hasTimedOut)
+		auto vsyncTimesAvailable = vr::VRSystem()->GetTimeSinceLastVsync(
+			&lastVSync, &newFrameIndex);
+
+		if (vsyncTimesAvailable == false)
 			return;
 	}
 
@@ -95,33 +92,51 @@ void CVRManager::updateOpenVrPoses()
 		m_framesSkipped++;
 
 	m_lastFrameIndex = newFrameIndex;
-
-
 	float secondsSinceLastVsync = 0;
 	uint64_t newLastFrame = 0;
 	vr::VRSystem()->GetTimeSinceLastVsync(&secondsSinceLastVsync, &newLastFrame);
 
-	vr::ETrackedPropertyError error = vr::ETrackedPropertyError::TrackedProp_NotYetAvailable;
-	float displayFrequency = vr::VRSystem()->GetFloatTrackedDeviceProperty(vr::k_unTrackedDeviceIndex_Hmd, vr::ETrackedDeviceProperty::Prop_DisplayFrequency_Float, &error);
+	vr::ETrackedPropertyError error;
+	float displayFrequency = vr::VRSystem()->GetFloatTrackedDeviceProperty(
+		vr::k_unTrackedDeviceIndex_Hmd,
+		vr::ETrackedDeviceProperty::Prop_DisplayFrequency_Float,
+		&error);
+
 	float frameDuration = 1.0f / displayFrequency;
-	float vsyncToPhotons = vr::VRSystem()->GetFloatTrackedDeviceProperty(vr::k_unTrackedDeviceIndex_Hmd, vr::ETrackedDeviceProperty::Prop_SecondsFromVsyncToPhotons_Float, &error);
+	float vsyncToPhotons = vr::VRSystem()->GetFloatTrackedDeviceProperty(
+		vr::k_unTrackedDeviceIndex_Hmd, 
+		vr::ETrackedDeviceProperty::Prop_SecondsFromVsyncToPhotons_Float, 
+		&error);
 
 	float predictedSecondsFromNow = frameDuration - secondsSinceLastVsync + vsyncToPhotons;
+	vr::VRSystem()->GetDeviceToAbsoluteTrackingPose(
+		c_eTrackingOrigin, 
+		predictedSecondsFromNow, 
+		&rRenderPoses[0], 
+		vr::k_unMaxTrackedDeviceCount);
 
-	vr::VRSystem()->GetDeviceToAbsoluteTrackingPose(c_eTrackingOrigin, predictedSecondsFromNow, &rRenderPoses[0], vr::k_unMaxTrackedDeviceCount);
-	glm::mat4 universeFromHmd = glmMatFromVrMat(rRenderPoses[vr::k_unTrackedDeviceIndex_Hmd].mDeviceToAbsoluteTracking);
+	glm::mat4 universeFromHmd = glmMatFromVrMat(
+		rRenderPoses[vr::k_unTrackedDeviceIndex_Hmd].mDeviceToAbsoluteTracking);
+
 	m_hmdFromUniverse = glm::inverse(universeFromHmd);
 	m_universeFromOriginTransforms["/user/head"] = universeFromHmd;
 
-	vr::TrackedDeviceIndex_t unLeftHand = vr::VRSystem()->GetTrackedDeviceIndexForControllerRole(vr::TrackedControllerRole_LeftHand);
+	vr::TrackedDeviceIndex_t unLeftHand = vr::VRSystem()->GetTrackedDeviceIndexForControllerRole(
+		vr::TrackedControllerRole_LeftHand);
+
 	if (unLeftHand != vr::k_unTrackedDeviceIndexInvalid)
 	{
-		m_universeFromOriginTransforms["/user/hand/left"] = glmMatFromVrMat(rRenderPoses[unLeftHand].mDeviceToAbsoluteTracking );
+		m_universeFromOriginTransforms["/user/hand/left"] = glmMatFromVrMat(
+			rRenderPoses[unLeftHand].mDeviceToAbsoluteTracking );
 	}
-	vr::TrackedDeviceIndex_t unRightHand = vr::VRSystem()->GetTrackedDeviceIndexForControllerRole(vr::TrackedControllerRole_RightHand);
+
+	vr::TrackedDeviceIndex_t unRightHand = vr::VRSystem()->GetTrackedDeviceIndexForControllerRole(
+		vr::TrackedControllerRole_RightHand);
+
 	if (unRightHand != vr::k_unTrackedDeviceIndexInvalid)
 	{
-		m_universeFromOriginTransforms["/user/hand/right"] = glmMatFromVrMat(rRenderPoses[unRightHand].mDeviceToAbsoluteTracking);
+		m_universeFromOriginTransforms["/user/hand/right"] = glmMatFromVrMat(
+			rRenderPoses[unRightHand].mDeviceToAbsoluteTracking);
 	}
 
 	m_universeFromOriginTransforms["/space/stage"] = glm::mat4(1.f);
@@ -235,32 +250,49 @@ void CVRManager::initOpenVR()
 void CVRManager::createAndPositionVargglesOverlay()
 {
 	// create, early out if error
-	if (vr::VROverlay()->CreateOverlay(k_pchVargglesOverlayKey, k_pchVargglesOverlayName, &m_vargglesOverlay) != vr::VROverlayError_None)
+	if (vr::VROverlay()->CreateOverlay(
+			k_pchVargglesOverlayKey, 
+			k_pchVargglesOverlayName, 
+			&m_vargglesOverlay) 
+		!= vr::VROverlayError_None)
 	{
 		std::cout << "ERROR: CreateOverlay failed" << std::endl;
 		m_vargglesOverlay = vr::k_ulOverlayHandleInvalid;
 		return;
 	}
 
-	if (vr::VROverlay()->SetOverlayFlag(m_vargglesOverlay, vr::VROverlayFlags_Panorama, false) != vr::VROverlayError_None)
+	if (vr::VROverlay()->SetOverlayFlag(
+			m_vargglesOverlay, 
+			vr::VROverlayFlags_Panorama, 
+			false) 
+		!= vr::VROverlayError_None)
 	{
 		std::cout << "ERROR: StereoPanorama failed" << std::endl;
 		return;
 	}
 	
-	if (vr::VROverlay()->SetOverlayFlag(m_vargglesOverlay, vr::VROverlayFlags_StereoPanorama, true) != vr::VROverlayError_None)
+	if (vr::VROverlay()->SetOverlayFlag(
+			m_vargglesOverlay, 
+			vr::VROverlayFlags_StereoPanorama, 
+			true) 
+		!= vr::VROverlayError_None)
 	{
 		std::cout << "ERROR: StereoPanorama failed" << std::endl;
 		return;
 	}
 
-	if (vr::VROverlay()->SetOverlayWidthInMeters(m_vargglesOverlay, k_fOverlayWidthInMeters) != vr::VROverlayError_None)
+	if (vr::VROverlay()->SetOverlayWidthInMeters(m_vargglesOverlay, k_fOverlayWidthInMeters) 
+		!= vr::VROverlayError_None)
 	{
 		std::cout << "ERROR: SetOverlayWidth failed" << std::endl;
 		return;
 	}
 
-	if (vr::VROverlay()->SetOverlayTransformTrackedDeviceRelative(m_vargglesOverlay, vr::k_unTrackedDeviceIndex_Hmd, &m_vargglesOverlayTransform) != vr::VROverlayError_None)
+	if (vr::VROverlay()->SetOverlayTransformTrackedDeviceRelative(
+			m_vargglesOverlay, 
+			vr::k_unTrackedDeviceIndex_Hmd, 
+			&m_vargglesOverlayTransform) 
+		!= vr::VROverlayError_None)
 	{
 		std::cout << "ERROR: SetOverlayTransform failed" << std::endl;
 		return;

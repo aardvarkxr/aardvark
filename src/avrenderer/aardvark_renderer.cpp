@@ -61,7 +61,6 @@ VulkanExample::~VulkanExample() noexcept
 	vkDestroyPipeline(device, pipelines.skybox, nullptr);
 	vkDestroyPipeline(device, pipelines.pbr, nullptr);
 	vkDestroyPipeline(device, pipelines.pbrAlphaBlend, nullptr);
-	vkDestroyPipeline(device, pipelines.varggles, nullptr);
 
 	vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
 
@@ -101,7 +100,6 @@ void VulkanExample::renderNode( std::shared_ptr<vkglTF::Model> pModel, std::shar
 				? pModel->materials.back() : pModel->materials[primitive->materialIndex];
 			
 			if ( primitiveMaterial.alphaMode == alphaMode ) {
-
 				VkDescriptorSet descriptorSet;
 				switch ( eEye )
 				{

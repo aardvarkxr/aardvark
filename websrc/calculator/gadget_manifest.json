@@ -1,0 +1,6 @@
+{
+	"name" : "calculator",
+	"permissions" : [ "scenegraph" ],
+	"resolution": [ 256, 256 ],
+	"model" : "http://aardvark.install/models/calculator.glb"
+}

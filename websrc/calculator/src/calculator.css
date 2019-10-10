@@ -1,0 +1,47 @@
+body, html
+{
+	background-color: blue;
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+}
+
+.FullPage
+{
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+}
+
+.HookCircle
+{
+	border-radius: 50%;
+	border-width: 0.1rem;
+	border-style: solid;
+	width: 90%;
+	height: 90%;
+	font-size: 2rem;
+	margin: 1px;
+}
+
+.NoHighlight
+{
+	border-color: #88888888;
+	background-color: #88888855;
+}
+
+.InRangeHighlight
+{
+	border-color: #888888FF;
+	background-color: #888888AA;
+}
+
+.PlusSign
+{
+	margin: auto;
+	text-align: center;
+	font-size: 4rem;
+	color: purple;
+	width: 100%;
+	height: 100%;
+}

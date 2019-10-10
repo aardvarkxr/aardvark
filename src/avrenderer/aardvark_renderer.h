@@ -163,7 +163,6 @@ protected:
 		VkPipeline skybox;
 		VkPipeline pbr;
 		VkPipeline pbrAlphaBlend;
-		VkPipeline varggles;
 	} pipelines;
 
 	struct DescriptorSets {

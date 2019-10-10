@@ -1,9 +1,8 @@
 #pragma once
 
 #include <unordered_map>
-#include <cmath>
 #define GLM_FORCE_RADIANS
-#include <glm/gtc/matrix_transform.hpp> 
+#include <glm/gtc/matrix_transform.hpp>
 #include <aardvark/ivrmanager.h>
 
 class CVRManager : public IVrManager
@@ -23,7 +22,6 @@ public:
 	vr::VRInputValueHandle_t getDeviceForHand( EHand hand );
 	glm::mat4 glmMatFromVrMat( const vr::HmdMatrix34_t & mat );
 	void createAndPositionVargglesOverlay();
-	void calculateInverseHorizontalLook();
 	void destroyVargglesOverlay();
 
 	bool isGrabPressed( vr::VRInputValueHandle_t whichHand );
@@ -57,6 +55,7 @@ protected:
 			{0, 0, 1, -1}
 		}
 	};
+
 	vr::VROverlayHandle_t m_vargglesOverlay = vr::k_ulOverlayHandleInvalid;
 	glm::mat4 m_vargglesLookRotation;
 
