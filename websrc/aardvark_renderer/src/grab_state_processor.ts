@@ -113,10 +113,43 @@ export class CGrabStateProcessor
 		}
 	}
 
+	private findBestGrabbable( state: MsgGrabberState ): AvGrabbableCollision
+	{
+		if( !state.grabbables )
+		{
+			return null;
+		}
+		
+		let last: AvGrabbableCollision = null;
+		let best: AvGrabbableCollision = null;
+		for( let coll of state.grabbables )
+		{
+			if( endpointAddrsMatch( coll.handleId, this.m_lastHandle ) )
+			{
+				last = coll;
+			}
+
+			if( !best || best.proximityOnly && !coll.proximityOnly )
+			{
+				best = coll;
+			}
+		}
+
+		if( !last || last.proximityOnly && !best.proximityOnly )
+		{
+			return best;
+		}
+		else
+		{
+			return last;
+		}
+	}
+	
 	public onGrabberIntersections( state: MsgGrabberState )
 	{
+		let bestGrabbable = this.findBestGrabbable( state );
 		if( this.m_lastGrabbable && this.m_lastHighlight == GrabberHighlight.Grabbed
-			&& -1 == indexOfGrabbable( state.grabbables, this.m_lastGrabbable ) 
+			&& ( !bestGrabbable || !endpointAddrsMatch( this.m_lastGrabbable, bestGrabbable.grabbableId ) )
 			&& state.isPressed )
 		{
 			// The thing we think we're grabbing isn't in the grabbable list.
@@ -140,8 +173,8 @@ export class CGrabStateProcessor
 				if( !state.grabbables || state.grabbables.length == 0 )
 					break;
 
-				this.m_lastGrabbable = state.grabbables[0].grabbableId;
-				this.m_lastHandle = state.grabbables[0].handleId
+				this.m_lastGrabbable = bestGrabbable.grabbableId;
+				this.m_lastHandle = bestGrabbable.handleId
 				this.m_lastHighlight = GrabberHighlight.InRange;
 				
 				this.m_context.sendGrabEvent( 
@@ -157,9 +190,11 @@ export class CGrabStateProcessor
 
 			case GrabberHighlight.InRange:
 				assert( this.m_lastGrabbable != null );
-				if( -1 == indexOfGrabbable( state.grabbables, this.m_lastGrabbable ) )
+
+				if( !bestGrabbable || !endpointAddrsMatch( this.m_lastHandle, bestGrabbable.handleId ) )
 				{
 					// stop being in range.
+					// if we actually have mismatched grabbables, the new best will be picked next frame
 					this.m_context.sendGrabEvent( 
 						{
 							type: AvGrabEventType.LeaveRange,
@@ -174,9 +209,11 @@ export class CGrabStateProcessor
 					break;
 				}
 
-				if( !state.isPressed )
+				if( !state.isPressed || bestGrabbable.proximityOnly )
 				{
-					// if the user didn't press grab we have nothing else to do
+					// if the user didn't press grab we have nothing else to do.
+					// proximityOnly handles can't get grabbed, so wait until we
+					// get here with a "real" handle before moving on.
 					break;
 				}
 

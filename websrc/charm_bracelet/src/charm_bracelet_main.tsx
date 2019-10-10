@@ -77,7 +77,8 @@ class Charm extends React.Component< CharmProps, CharmState >
 			<AvTransformControl initialTransform={ transform }
 				onSetValue= { this.onTransform } 
 				translate={ editMode } rotate={ editMode } general={ editMode }
-				key={ this.props.id }>
+				key={ this.props.id }
+				minimizeUntilNearby={ true }>
 				<AvStandardHook persistentName={ "hook" + this.props.id } />
 			</AvTransformControl> );
 	}

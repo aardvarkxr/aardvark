@@ -4,7 +4,7 @@ import bind from 'bind-decorator';
 import { AvModel } from './aardvark_model';
 import { HighlightType, AvGrabbable, GrabResponse } from './aardvark_grabbable';
 import { AvSphereHandle, AvModelBoxHandle } from './aardvark_handles';
-import { AvGrabEvent, AvConstraint, AvNodeTransform, AvColor } from './aardvark_protocol';
+import { AvGrabEvent, AvConstraint, AvNodeTransform, AvColor, EndpointAddr, endpointAddrsMatch } from './aardvark_protocol';
 
 
 interface TranslateArrowProps
@@ -16,6 +16,7 @@ interface TranslateArrowProps
 	rotateZ?: number;
 	constraint: AvConstraint;
 	centerGap?: number;
+	minimized?: boolean;
 }
 
 interface TranslateArrowState
@@ -57,7 +58,8 @@ class AvTranslateArrow extends React.Component< TranslateArrowProps, TranslateAr
 
 		return <div>
 					<AvTransform 
-						rotateX={ this.props.rotateX } rotateY={ this.props.rotateY } rotateZ={ this.props.rotateZ }>
+						rotateX={ this.props.rotateX } rotateY={ this.props.rotateY } rotateZ={ this.props.rotateZ }
+						uniformScale={ this.props.minimized ? 0.3 : 1.0 }>
 						<AvTransform translateY={ this.props.centerGap }>
 							<AvModelBoxHandle uri="http://aardvark.install/models/arrow.glb" 
 								updateHighlight={ this.updateHighlight }
@@ -76,6 +78,7 @@ interface BallHandleProps
 	color: AvColor | string;
 	highlightColor: AvColor | string;
 	radius: number;
+	minimized?: boolean;
 }
 
 interface BallHandleState
@@ -113,8 +116,14 @@ class AvBallHandle extends React.Component< BallHandleProps, BallHandleState >
 				break;
 		}
 
+		let scale = this.props.radius;
+		if( this.props.minimized )
+		{
+			scale *= 0.3;
+		}
+
 		return <div>
-					<AvTransform uniformScale={ this.props.radius }>
+					<AvTransform uniformScale={ scale }>
 							<AvModel uri={ "http://aardvark.install/models/sphere/sphere.glb" }
 								color={ color }/> }
 							{ this.props.children }
@@ -134,10 +143,12 @@ interface TransformControlProps
 	translate?: boolean;
 	general?: boolean;
 	initialTransform?: AvNodeTransform;
+	minimizeUntilNearby?: boolean;
 }
 
 interface TransformControlState
 {
+	grabberInRange: boolean;
 }
 
 export class AvTransformControl extends React.Component< TransformControlProps, TransformControlState >
@@ -148,13 +159,13 @@ export class AvTransformControl extends React.Component< TransformControlProps, 
 
 		this.state = 
 		{ 
-			highlight: HighlightType.None,
+			grabberInRange: false,
 		};
 	}
 
-	@bind updateHighlight( newHighlight: HighlightType )
+	@bind onUpdateHighlight( newHighlight: HighlightType, handleAddr: EndpointAddr )
 	{
-		this.setState( { highlight: newHighlight } );
+		this.setState( { grabberInRange: newHighlight != HighlightType.None } );
 	}
 
 	@bind onGrabRequest( event: AvGrabEvent )
@@ -190,6 +201,7 @@ export class AvTransformControl extends React.Component< TransformControlProps, 
 				color={ { r: 0.8, g: 0, b: 0 } }
 				highlightColor={ { r: 1, g: 0, b: 0 } }
 				centerGap={ centerGap }
+				minimized={ this.props.minimizeUntilNearby && !this.state.grabberInRange }
 				constraint= 
 				{ {
 					minX: 0, maxX: 0,
@@ -201,6 +213,7 @@ export class AvTransformControl extends React.Component< TransformControlProps, 
 				color={ { r: 0, g: 0.8, b: 0 } }
 				highlightColor={ { r: 0, g: 1, b: 0 } }
 				centerGap={ centerGap }
+				minimized={ this.props.minimizeUntilNearby && !this.state.grabberInRange }
 				constraint= 
 				{ {
 					minX: 0, maxX: 0,
@@ -212,6 +225,7 @@ export class AvTransformControl extends React.Component< TransformControlProps, 
 				color={ { r: 0, g: 0, b: 0.8 } }
 				highlightColor={ { r: 0, g: 0, b: 1 } }
 				centerGap={ centerGap }
+				minimized={ this.props.minimizeUntilNearby && !this.state.grabberInRange }
 				constraint= 
 				{ {
 					minX: -100, maxX: 100,
@@ -227,6 +241,7 @@ export class AvTransformControl extends React.Component< TransformControlProps, 
 			return null;
 
 		return ( <AvBallHandle radius = { 0.02 } color="#999900"
+			minimized={ this.props.minimizeUntilNearby && !this.state.grabberInRange }
 			highlightColor="#FFFF00" /> )
 	}
 
@@ -234,10 +249,13 @@ export class AvTransformControl extends React.Component< TransformControlProps, 
 	{
 		return (	
 			<AvGrabbable onTransformUpdated={ this.onTransformUpdated } 
-				preserveDropTransform={ true } initialTransform={ this.props.initialTransform }>
+				preserveDropTransform={ true } initialTransform={ this.props.initialTransform }
+				updateHighlight={ this.onUpdateHighlight } >
 				{ this.renderTranslate() }
 				{ this.renderGeneral() }
 				{ this.props.children }
+				{ this.props.minimizeUntilNearby &&
+					<AvSphereHandle radius={ 0.22 } proximityOnly={ true }/> }
 			</AvGrabbable> );
 	}
 }

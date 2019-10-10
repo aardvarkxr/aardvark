@@ -1,7 +1,7 @@
 import * as React from 'react';
 
 import { AvNodeType, EVolumeType, AvConstraint, AvGrabEvent, 
-	EndpointAddr, AvGrabEventType } from './aardvark_protocol';
+	EndpointAddr, AvGrabEventType, ENodeFlags } from './aardvark_protocol';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 import { HighlightType } from './aardvark_grabbable';
 import bind from 'bind-decorator';
@@ -11,6 +11,7 @@ interface AvBaseHandleProps extends AvBaseNodeProps
 {
 	updateHighlight?: ( highlightType: HighlightType ) => void;
 	constraint?: AvConstraint;
+	proximityOnly?: boolean;
 }
 
 interface AvBaseHandleState
@@ -25,6 +26,20 @@ export abstract class AvBaseHandle<TProps, TState> extends AvBaseNode<TProps, TS
 	protected get handleProps()
 	{
 		return this.props as AvBaseHandleProps;
+	}
+
+	protected buildBaseHandle()
+	{
+		let node = this.createNodeObject( AvNodeType.Handle, this.m_nodeId );
+		node.propConstraint = this.handleProps.constraint;
+		AvGadget.instance().setGrabEventProcessor( this.m_nodeId, this.onGrabEvent );
+
+		if( this.handleProps.proximityOnly )
+		{
+			node.flags |= ENodeFlags.NotifyProximityWithoutGrab;
+		}
+
+		return node;
 	}
 
 	@bind protected onGrabEvent( evt: AvGrabEvent )
@@ -91,10 +106,8 @@ export class AvSphereHandle extends AvBaseHandle< AvSphereHandleProps, {} >
 {
 	public buildNode()
 	{
-		let node = this.createNodeObject( AvNodeType.Handle, this.m_nodeId );
+		let node = this.buildBaseHandle();
 		node.propVolume = { type: EVolumeType.Sphere, radius : this.props.radius };
-		node.propConstraint = this.props.constraint;
-		AvGadget.instance().setGrabEventProcessor( this.m_nodeId, this.onGrabEvent );
 		return node;
 	}
 }
@@ -108,10 +121,8 @@ export class AvModelBoxHandle extends AvBaseHandle< AvModelBoxHandleProps, {} >
 {
 	public buildNode()
 	{
-		let node = this.createNodeObject( AvNodeType.Handle, this.m_nodeId );
+		let node = this.buildBaseHandle();
 		node.propVolume = { type: EVolumeType.ModelBox, uri : this.props.uri };
-		node.propConstraint = this.props.constraint;
-		AvGadget.instance().setGrabEventProcessor( this.m_nodeId, this.onGrabEvent );
 		return node;
 	}
 }

@@ -22,7 +22,7 @@ export enum HighlightType
 
 interface AvGrabbableProps extends AvBaseNodeProps
 {
-	updateHighlight?: ( highlightType: HighlightType ) => void;
+	updateHighlight?: ( highlightType: HighlightType, handleAddr: EndpointAddr ) => void;
 	onGrabRequest?: ( event: AvGrabEvent ) => Promise<GrabResponse>;
 	onTransformUpdated?: ( parentFromNode: AvNodeTransform, universeFromNode: AvNodeTransform ) => void;
 	constraint?: AvConstraint;
@@ -32,7 +32,8 @@ interface AvGrabbableProps extends AvBaseNodeProps
 
 export class AvGrabbable extends AvBaseNode< AvGrabbableProps, {} >
 {
-	m_lastHighlight = HighlightType.None;
+	private m_lastHighlight = HighlightType.None;
+	private m_lastHandle: EndpointAddr = null;
 
 	public buildNode()
 	{
@@ -63,7 +64,7 @@ export class AvGrabbable extends AvBaseNode< AvGrabbableProps, {} >
 		this.m_lastHighlight = HighlightType.Grabbed;
 		if( this.props.updateHighlight )
 		{
-			this.props.updateHighlight( this.m_lastHighlight );
+			this.props.updateHighlight( this.m_lastHighlight, this.m_lastHandle );
 		}
 	}
 
@@ -72,32 +73,39 @@ export class AvGrabbable extends AvBaseNode< AvGrabbableProps, {} >
 //		console.log( `Grab event ${ AvGrabEventType[ evt.type ] }` );
 
 		// by default, don't change the highlight
-		var newHighlight = this.m_lastHighlight;
+		let newHighlight = this.m_lastHighlight;
+		let newHandle = this.m_lastHandle;
 
 		switch( evt.type )
 		{
 			case AvGrabEventType.EnterRange:
 				newHighlight = HighlightType.InRange;
+				newHandle = evt.handleId;
 				break;
 
 			case AvGrabEventType.LeaveRange:
 				newHighlight = HighlightType.None;
+				newHandle = null;
 				break;
 
 			case AvGrabEventType.StartGrab:
 				newHighlight = HighlightType.Grabbed;
+				newHandle = evt.handleId;
 				break;
 
 			case AvGrabEventType.EndGrab:
 				newHighlight = HighlightType.InRange;
+				newHandle = evt.handleId;
 				break;
 
 			case AvGrabEventType.EnterHookRange:
 				newHighlight = HighlightType.InHookRange;
+				newHandle = evt.handleId;
 				break;
 
 			case AvGrabEventType.LeaveHookRange:
 				newHighlight = HighlightType.Grabbed;
+				newHandle = evt.handleId;
 				break;
 
 			case AvGrabEventType.RequestGrab:
@@ -172,9 +180,10 @@ export class AvGrabbable extends AvBaseNode< AvGrabbableProps, {} >
 		if( newHighlight != this.m_lastHighlight )
 		{
 			this.m_lastHighlight = newHighlight;
+			this.m_lastHandle = newHandle;
 			if( this.props.updateHighlight )
 			{
-				this.props.updateHighlight( this.m_lastHighlight );
+				this.props.updateHighlight( this.m_lastHighlight, newHandle );
 			}
 		}
 	}

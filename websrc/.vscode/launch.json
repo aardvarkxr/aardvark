@@ -9,7 +9,7 @@
 			"request": "attach",
 			"name": "Attach to aardvark_renderer",
 			"sourceMaps": true,
-			"trace":"verbose",
+			//"trace":"verbose",
 			"port": 8042,
 			"webRoot": "${workspaceFolder}",
 		},

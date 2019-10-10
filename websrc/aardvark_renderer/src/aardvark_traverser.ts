@@ -14,6 +14,7 @@ interface NodeData
 	grabberProcessor?: CGrabStateProcessor;
 	lastParentFromNode?: mat4;
 	constraint?: AvConstraint;
+	proximityOnly?: boolean;
 }
 
 function translateMat( t: vec3)
@@ -387,6 +388,19 @@ export class AvDefaultTraverser
 						},
 						grabberEpa: state.grabberId
 					} );
+			}
+
+			// figure out which handles are only here to detect proximity
+			if( state.grabbables )
+			{
+				for( let intersection of state.grabbables )
+				{
+					let handleData = this.getNodeDataByEpa( intersection.handleId );
+					if( handleData && handleData.proximityOnly )
+					{
+						intersection.proximityOnly = true;
+					}
+				}
 			}
 
 			nodeData.grabberProcessor.onGrabberIntersections( state );
@@ -887,10 +901,15 @@ export class AvDefaultTraverser
 			return;
 		}
 	
+		let nodeData = this.getNodeData( node );
+
 		if( node.propConstraint )
 		{
-			let nodeData = this.getNodeData( node );
 			nodeData.constraint = node.propConstraint;
+		}
+		if( 0 != ( node.flags & ENodeFlags.NotifyProximityWithoutGrab ) )
+		{
+			nodeData.proximityOnly = true;
 		}
 
 		let grabbableGlobalId = this.m_currentGrabbableGlobalId;
