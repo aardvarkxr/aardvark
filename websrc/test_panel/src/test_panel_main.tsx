@@ -92,7 +92,8 @@ class TestPanel extends React.Component< {}, TestPanelState >
 			<div className={ sDivClasses } >
 				<div>
 					<AvGrabbable updateHighlight={ this.onHighlightGrabbable }
-						onGrabRequest={ this.onGrabRequest }>
+						onGrabRequest={ this.onGrabRequest }
+						dropOnHooks={ true }>
 						<AvSphereHandle radius={0.1} />
 						
 						<AvTransform uniformScale={ scale }>

@@ -1,5 +1,5 @@
 import { EndpointAddr, indexOfEndpointAddrs, endpointAddrsMatch, MsgGrabberState,
-	AvGrabEvent, AvGrabEventType, GrabberHighlight, AvGrabbableCollision } 
+	AvGrabEvent, AvGrabEventType, GrabberHighlight, AvGrabbableCollision, ENodeFlags } 
 	from 'aardvark-react';
 import { assert } from 'aardvark-react';
 
@@ -20,6 +20,11 @@ function indexOfGrabbable( grabbables: AvGrabbableCollision[], grabbableId: Endp
 		}
 	}
 	return -1;
+}
+
+function isProximityOnly( handle: AvGrabbableCollision ): boolean
+{
+	return 0 != ( handle.handleFlags & ENodeFlags.NotifyProximityWithoutGrab );
 }
 
 export class CGrabStateProcessor
@@ -129,13 +134,13 @@ export class CGrabStateProcessor
 				last = coll;
 			}
 
-			if( !best || best.proximityOnly && !coll.proximityOnly )
+			if( !best || isProximityOnly( best ) && !isProximityOnly( coll ) )
 			{
 				best = coll;
 			}
 		}
 
-		if( !last || last.proximityOnly && !best.proximityOnly )
+		if( !last || isProximityOnly( last ) && !isProximityOnly( best ) )
 		{
 			return best;
 		}
@@ -209,7 +214,7 @@ export class CGrabStateProcessor
 					break;
 				}
 
-				if( !state.isPressed || bestGrabbable.proximityOnly )
+				if( !state.isPressed || isProximityOnly( bestGrabbable ) )
 				{
 					// if the user didn't press grab we have nothing else to do.
 					// proximityOnly handles can't get grabbed, so wait until we
@@ -250,7 +255,8 @@ export class CGrabStateProcessor
 				break;
 				
 			case GrabberHighlight.Grabbed:
-				if( -1 == indexOfGrabbable( state.grabbables, this.m_lastGrabbable ) )
+				let lastGrabbableIndex = indexOfGrabbable( state.grabbables, this.m_lastGrabbable );
+				if( -1 == lastGrabbableIndex )
 				{
 					// cancel grabbing
 					console.log( "Ending grab of " + this.m_lastGrabbable 
@@ -267,7 +273,9 @@ export class CGrabStateProcessor
 					break;
 				}
 
-				if( state.hooks && state.hooks.length > 0 )
+				let lastGrabbableCollision = state.grabbables[ lastGrabbableIndex ];
+				if( state.hooks && state.hooks.length > 0 
+					&& 0 != ( lastGrabbableCollision.grabbableFlags & ENodeFlags.AllowDropOnHooks ) )
 				{
 					// we handle hooks before dropping in case we got the
 					// unpress and the hook in the same update

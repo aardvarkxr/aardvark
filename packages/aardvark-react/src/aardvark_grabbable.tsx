@@ -28,6 +28,7 @@ interface AvGrabbableProps extends AvBaseNodeProps
 	constraint?: AvConstraint;
 	preserveDropTransform?: boolean;
 	initialTransform?: AvNodeTransform;
+	dropOnHooks?: boolean;
 }
 
 export class AvGrabbable extends AvBaseNode< AvGrabbableProps, {} >
@@ -55,6 +56,11 @@ export class AvGrabbable extends AvBaseNode< AvGrabbableProps, {} >
 		{
 			node.flags |= ENodeFlags.PreserveGrabTransform;
 		}
+		if( this.props.dropOnHooks )
+		{
+			node.flags |= ENodeFlags.AllowDropOnHooks;
+		}
+		
 		return node;
 	}
 

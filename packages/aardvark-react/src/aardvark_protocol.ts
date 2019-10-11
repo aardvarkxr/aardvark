@@ -396,7 +396,8 @@ export interface AvGrabbableCollision
 {
 	grabbableId: EndpointAddr;
 	handleId: EndpointAddr;
-	proximityOnly?: boolean;
+	handleFlags: number;
+	grabbableFlags: number;
 }
 
 export interface AvVector
@@ -440,10 +441,11 @@ export interface AvVolume
 
 export enum ENodeFlags
 {
-	Visible 				= 1 << 0,
-	PreserveGrabTransform 	= 1 << 1,
-	NotifyOnTransformChange	= 1 << 2,
-	NotifyProximityWithoutGrab = 1 << 3,
+	Visible 					= 1 << 0,
+	PreserveGrabTransform 		= 1 << 1,
+	NotifyOnTransformChange		= 1 << 2,
+	NotifyProximityWithoutGrab 	= 1 << 3,
+	AllowDropOnHooks  			= 1 << 4,
 }
 
 export interface AvConstraint

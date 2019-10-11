@@ -238,7 +238,8 @@ class CharmBracelet extends React.Component< {}, CharmBraceletState >
 		return (
 			<div className="FullPage" >
 				<div>
-					<AvGrabbable updateHighlight={ this.onGrabbableHighlight } >
+					<AvGrabbable updateHighlight={ this.onGrabbableHighlight } 
+						dropOnHooks={ true }>
 						<AvSphereHandle radius={0.1} />
 						{ charms }
 						{ grabbedMode && <AvModel uri="http://aardvark.install/models/bracelet.glb" /> }
