@@ -645,8 +645,8 @@ void VulkanExample::preparePipelines()
 	depthStencilStateCI.depthTestEnable = VK_FALSE;
 	depthStencilStateCI.depthWriteEnable = VK_FALSE;
 	depthStencilStateCI.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
-	depthStencilStateCI.front = depthStencilStateCI.back;
 	depthStencilStateCI.back.compareOp = VK_COMPARE_OP_ALWAYS;
+	depthStencilStateCI.front = depthStencilStateCI.back;
 
 	VkPipelineViewportStateCreateInfo viewportStateCI{};
 	viewportStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -753,12 +753,13 @@ void VulkanExample::preparePipelines()
 
 	rasterizationStateCI.cullMode = VK_CULL_MODE_NONE;
 	blendAttachmentState.blendEnable = VK_TRUE;
+	depthStencilStateCI.depthWriteEnable = VK_FALSE;
 	blendAttachmentState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 	blendAttachmentState.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
 	blendAttachmentState.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 	blendAttachmentState.colorBlendOp = VK_BLEND_OP_ADD;
 	blendAttachmentState.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-	blendAttachmentState.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+	blendAttachmentState.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
 	blendAttachmentState.alphaBlendOp = VK_BLEND_OP_ADD;
 	VK_CHECK_RESULT( vkCreateGraphicsPipelines( device, pipelineCache, 1, &pipelineCI, nullptr, &pipelines.pbrAlphaBlend ) );
 	for ( auto shaderStage : shaderStages ) {
