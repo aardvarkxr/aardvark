@@ -546,9 +546,8 @@ class CGadgetData
 
 	public updateSceneGraph( root: AvNode ) 
 	{
-		this.m_root = root;
-
 		let firstUpdate = this.m_root == null;
+		this.m_root = root;
 		this.processSceneGraph( firstUpdate );
 
 		if( firstUpdate )
