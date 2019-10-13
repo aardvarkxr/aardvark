@@ -920,6 +920,8 @@ class CEndpoint
 			{
 				msgResponse.settings = settings;
 			}
+
+			msgResponse.persistenceUuid = this.m_gadgetData.getPersistenceUuid();
 		}
 
 

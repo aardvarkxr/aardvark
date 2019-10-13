@@ -57,6 +57,7 @@ export class AvGadget
 	m_manifest: AvGadgetManifest = null;
 	m_actualGadgetUri: string = null;
 	m_editMode: { [hand:number]: boolean } = {};
+	private m_persistenceUuid: string;
 	private m_epToNotify: EndpointAddr = null;
 	private m_firstSceneGraph: boolean = true;
 	private m_mainGrabbable: AvNode = null;
@@ -92,12 +93,13 @@ export class AvGadget
 			console.log( "This gadget wants to notify " + endpointAddrToString(this.m_epToNotify ) );
 		}
 
+		this.m_persistenceUuid = params[ "persistenceUuid" ];
 		this.m_endpoint = new CGadgetEndpoint( this.m_actualGadgetUri, 
 			params["initialHook"], params[ "persistenceUuid" ], 
 			this.onEndpointOpen );
 	}
 
-	@bind public onEndpointOpen( settings: any )
+	@bind public onEndpointOpen( settings: any, persistenceUuid: string )
 	{
 		this.m_endpoint.getGadgetManifest( this.m_actualGadgetUri )
 		.then( ( manifest: AvGadgetManifest ) =>
@@ -116,6 +118,14 @@ export class AvGadget
 		if( this.m_onSettingsReceived )
 		{
 			this.m_onSettingsReceived( settings );
+		}
+
+		if( persistenceUuid != this.m_persistenceUuid )
+		{
+			history.pushState( 
+				{ gadgetUri: this.m_actualGadgetUri, persistenceUuid },
+				"", 
+				this.m_actualGadgetUri + "/index.html?persistenceUuid=" + persistenceUuid );
 		}
 	}
 

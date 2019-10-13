@@ -8,7 +8,7 @@ export interface MessageHandler
 
 export interface OpenHandler
 {
-	( settings: any ):void;
+	( settings: any, persistenceUuid?: string ):void;
 }
 
 interface PendingGadgetManifestLoad
@@ -88,7 +88,7 @@ export class CAardvarkEndpoint
 		this.m_endpointId = m.endpointId;
 		if( this.m_handshakeComplete )
 		{
-			this.m_handshakeComplete( m.settings );
+			this.m_handshakeComplete( m.settings, m.persistenceUuid );
 		}
 	}
 

@@ -158,6 +158,7 @@ export interface MsgSetEndpointTypeResponse
 {
 	endpointId: number;
 	settings?: any;
+	persistenceUuid?: string;
 }
 
 export interface MsgNewEndpoint
