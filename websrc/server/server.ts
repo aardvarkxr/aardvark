@@ -393,7 +393,35 @@ class CDispatcher
 		}
 	}
 
-	public tellMasterToStartGadget( uri: string, initalHook: string, persistenceUuid: string )
+	public startOrRehookGadget( uri: string, initialHook: string, persistenceUuid: string )
+	{
+		// see if this gadget already exists
+		let gadget = this.m_gadgetsByUuid[ persistenceUuid ];
+		if( !gadget )
+		{
+			this.tellMasterToStartGadget( uri, initialHook, persistenceUuid );
+			return;
+		}
+
+		// tell the gadget to move to the newly available hook
+		let gadgetData = gadget.getGadgetData();
+		let hookParts = parsePersistentHookPath( initialHook );
+		if( hookParts )
+		{
+			let hook = this.findHook( hookParts );
+			if( hook )
+			{
+				gadgetData.setHook( hook );
+			}
+		}
+		else
+		{
+			gadgetData.setHook( initialHook );
+		}
+		gadgetData.sendSceneGraphToRenderer( false, true );
+	}
+
+	public tellMasterToStartGadget( uri: string, initialHook: string, persistenceUuid: string )
 	{
 		if( !this.m_gadgetsByUuid[ persistenceUuid ] )
 		{
@@ -401,7 +429,7 @@ class CDispatcher
 			let msg: MsgMasterStartGadget =
 			{
 				uri: uri,
-				initialHook: initalHook,
+				initialHook: initialHook,
 				persistenceUuid: persistenceUuid,
 			} 
 
@@ -509,6 +537,7 @@ class CGadgetData
 	public getHookNodes() { return this.m_hookNodes; }
 	public getPersistenceUuid() { return this.m_persistenceUuid; }
 	public isMaster() { return this.m_persistenceUuid == "master"; }
+	public setHook( newHook: string | EndpointAddr ) { this.m_hook = newHook; }
 
 	public getHookNodeByPersistentName( hookPersistentName: string )
 	{
@@ -524,10 +553,10 @@ class CGadgetData
 	}
 
 
-	public processSceneGraph( firstUpdate: boolean )
+	public sendSceneGraphToRenderer( firstUpdate: boolean, forceResendHook?: boolean )
 	{
 		let hookToSend = this.m_hook;
-		if( !firstUpdate )
+		if( !firstUpdate && !forceResendHook )
 		{
 			// Only send endpoint hooks once so the main grabbable
 			// can actually be grabbed.
@@ -548,7 +577,7 @@ class CGadgetData
 	{
 		let firstUpdate = this.m_root == null;
 		this.m_root = root;
-		this.processSceneGraph( firstUpdate );
+		this.sendSceneGraphToRenderer( firstUpdate );
 
 		if( firstUpdate )
 		{
@@ -593,10 +622,10 @@ class CGadgetData
 			{
 				let gadgetHook = persistence.getGadgetHook( gadget.uuid );
 				let hookParts = parsePersistentHookPath( gadgetHook )
-				if( !hookParts && this.isMaster() 
-					|| hookParts && hookParts.gadgetUuid == this.getPersistenceUuid() )
+				if( ( !hookParts && this.isMaster() )
+					|| ( hookParts && hookParts.gadgetUuid == this.getPersistenceUuid() ) )
 				{
-					this.m_dispatcher.tellMasterToStartGadget( gadget.uri, gadgetHook, gadget.uuid );
+					this.m_dispatcher.startOrRehookGadget( gadget.uri, gadgetHook, gadget.uuid );
 				}
 			}
 		}
@@ -692,7 +721,7 @@ class CGadgetData
 		{
 			delete this.m_transformOverrides[ nodeId.nodeId ];
 		}
-		this.processSceneGraph( false );
+		this.sendSceneGraphToRenderer( false );
 	}
 
 }
@@ -923,7 +952,6 @@ class CEndpoint
 
 			msgResponse.persistenceUuid = this.m_gadgetData.getPersistenceUuid();
 		}
-
 
 		this.sendMessage( MessageType.SetEndpointTypeResponse, msgResponse );
 		

@@ -316,7 +316,6 @@ export class AvDefaultTraverser
 		}
 
 		this.m_inFrameTraversal = true;
-		this.m_handDeviceForNode = {};
 		this.m_currentHand = EHand.Invalid;
 		this.m_currentVisibility = true;
 		this.m_currentGrabbableGlobalId = null;
