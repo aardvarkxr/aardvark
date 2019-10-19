@@ -27,7 +27,7 @@ public:
 	bool isGrabPressed( vr::VRInputValueHandle_t whichHand );
 	bool isEditPressed( vr::VRInputValueHandle_t whichHand );
 	void initOpenVR();
-	~CVRManager();
+	virtual ~CVRManager();
 
 protected:
 	vr::VRActionSetHandle_t m_actionSet = vr::k_ulInvalidActionSetHandle;

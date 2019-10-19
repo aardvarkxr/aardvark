@@ -23,6 +23,7 @@ inline bool isSameHand( EHand h1, EHand h2 )
 class IVrManager
 {
 public:
+	virtual ~IVrManager() {}
 	virtual void init() = 0;
 	virtual bool getUniverseFromOrigin( const std::string & originPath, glm::mat4 *universeFromOrigin ) = 0;
 	virtual bool isGrabPressed( EHand hand ) = 0;
