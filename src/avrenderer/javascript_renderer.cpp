@@ -8,10 +8,20 @@ using aardvark::EndpointAddr_t;
 
 extern CefRefPtr<CefV8Value> grabEventToCefEvent( const aardvark::GrabEvent_t & grabEvent );
 
-CJavascriptModelInstance::CJavascriptModelInstance( std::unique_ptr<IModelInstance> modelInstance )
+CJavascriptModelInstance::CJavascriptModelInstance( std::unique_ptr<IModelInstance> modelInstance, 
+	std::shared_ptr<IRenderer> renderer )
 {
 	m_modelInstance = std::move( modelInstance );
+	m_renderer = renderer;
 }
+
+CJavascriptModelInstance::~CJavascriptModelInstance()
+{
+	// make sure the model goes away before the renderer
+	m_modelInstance = nullptr;
+	m_renderer = nullptr;
+}
+
 
 bool mat4FromJavascript( CefRefPtr<CefV8Value> arg, glm::mat4 *out )
 {
@@ -625,7 +635,7 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 		{
 			JsObjectPtr<CJavascriptModelInstance> newModelInstance =
 				CJavascriptObjectWithFunctions::create<CJavascriptModelInstance>(
-					std::move( modelInstance ) );
+					std::move( modelInstance ), m_renderer );
 			retval = newModelInstance.object;
 		}
 	} );

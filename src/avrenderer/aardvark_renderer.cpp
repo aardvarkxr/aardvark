@@ -2224,6 +2224,11 @@ CVulkanRendererModelInstance::CVulkanRendererModelInstance(
 	m_model->parent = &m_modelParent;
 }
 
+CVulkanRendererModelInstance::~CVulkanRendererModelInstance()
+{
+
+}
+
 void CVulkanRendererModelInstance::setUniverseFromModel( const glm::mat4 & universeFromModel )
 {
 	m_modelParent.matParentFromNode = universeFromModel;

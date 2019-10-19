@@ -592,6 +592,13 @@ VulkanExampleBase::~VulkanExampleBase()
 		vkDestroyDebugReportCallback(instance, debugReportCallback, nullptr);
 	}
 	vkDestroyInstance(instance, nullptr);
+
+	if ( window )
+	{
+		DestroyWindow( window );
+		UnregisterClassA( name.c_str(), windowInstance );
+	}
+
 #if defined(_DIRECT2DISPLAY)
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
 	wl_shell_surface_destroy(shell_surface);

@@ -13,13 +13,14 @@ class CJavascriptModelInstance : public CJavascriptObjectWithFunctions
 {
 	friend class CJavascriptRenderer;
 public:
-	CJavascriptModelInstance( std::unique_ptr<IModelInstance> modelInstance );
+	CJavascriptModelInstance( std::unique_ptr<IModelInstance> modelInstance, std::shared_ptr<IRenderer> renderer );
+	virtual ~CJavascriptModelInstance();
 	virtual bool init( CefRefPtr<CefV8Value > container ) override;
 
 	IModelInstance *getModelInstance() { return m_modelInstance.get(); }
 
 protected:
-
+	std::shared_ptr<IRenderer> m_renderer;
 	std::unique_ptr<IModelInstance> m_modelInstance;
 };
 
@@ -36,7 +37,7 @@ public:
 
 
 protected:
-	std::unique_ptr<IRenderer> m_renderer;
+	std::shared_ptr<IRenderer> m_renderer;
 	std::unique_ptr<IVrManager> m_vrManager;
 
 	CefRefPtr< CefV8Value > m_jsTraverser;
