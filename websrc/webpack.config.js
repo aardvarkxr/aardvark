@@ -134,6 +134,16 @@ module.exports =
 		mode: "development",
 		devtool: "inline-source-map",
 
+		plugins:
+		[
+			new CopyPlugin(
+				[
+					{ from: './node_modules/node/bin/node.exe', to: 'bin/node.exe' },
+				]
+				),
+	
+			],
+
 		resolve:
 		{
 			extensions: [ '.ts', '.tsx', '.js' ],
