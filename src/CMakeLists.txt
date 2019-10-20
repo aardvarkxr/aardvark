@@ -17,6 +17,10 @@ set( OpenVR_BIN_DIR ${CMAKE_SOURCE_DIR}/thirdparty/openvr/bin/win64 )
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
 
+set( TinyProcessLibrary_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/thirdparty/tiny-process-library )
+set( TinyProcessLibrary_LIB_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/thirdparty/tiny-process-library/$<CONFIG> )
+
+message ( "tpl" $TinyProcessLibrary_LIB_DIR )
 set( CEF_ROOT ${CMAKE_SOURCE_DIR}/thirdparty/cefbinary_72 )
 find_package( CEF )
 
@@ -37,5 +41,6 @@ add_subdirectory(tests)
 add_subdirectory(gltfpbr_base)
 add_subdirectory(avrenderer)
 add_subdirectory(thirdparty/cefbinary_72/libcef_dll )
+add_subdirectory(thirdparty/tiny-process-library )
 
 

@@ -8,6 +8,8 @@ add_executable(avrenderer
 	aardvark_renderer.cpp
 	aardvark_renderer.h
 	avrenderer_main.cpp
+	avserver.cpp
+	avserver.h
 	av_cef_app.cpp
 	av_cef_app.h
 	av_cef_handler_win.cpp
@@ -87,3 +89,6 @@ if(OS_WINDOWS)
   COPY_FILES("${CEF_TARGET}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "${CEF_TARGET_OUT_DIR}")
 endif()
 
+target_include_directories( avrenderer PRIVATE ${TinyProcessLibrary_INCLUDE_DIR} )
+target_link_directories( avrenderer PRIVATE ${TinyProcessLibrary_LIB_DIR} )
+target_link_libraries( avrenderer tiny-process-library )
