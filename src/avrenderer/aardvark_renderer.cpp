@@ -558,7 +558,8 @@ void VulkanExample::setupDescriptorSetsForModel( std::shared_ptr<vkglTF::Model> 
 {
 	for ( auto &material : pModel->materials )
 	{
-		material.descriptorSet = m_descriptorManager->createDescriptorSet( [this, material]( vks::VulkanDevice *vulkanDevice, vks::CDescriptorSet *desc )
+		material.descriptorSet = m_descriptorManager->createDescriptorSet( 
+			[this, material]( vks::VulkanDevice *vulkanDevice, vks::CDescriptorSet *desc )
 		{
 			std::vector<VkDescriptorImageInfo> imageDescriptors =
 			{

@@ -216,6 +216,7 @@ namespace vkglTF
 		};
 
 		~Mesh() {
+			descriptorManager->freeUniformBufferDescriptorSet( uniformBuffer.descriptor );
 			vkDestroyBuffer(device->logicalDevice, uniformBuffer.buffer, nullptr);
 			vkFreeMemory(device->logicalDevice, uniformBuffer.memory, nullptr);
 		}

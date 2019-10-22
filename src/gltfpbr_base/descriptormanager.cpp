@@ -28,9 +28,9 @@ CDescriptorManager::~CDescriptorManager()
 
 bool CDescriptorManager::init()
 {
-	static const uint32_t k_unUniformBufferDescriptorCount = 1024;
-	static const uint32_t k_unImageSamplerDescriptorCount = 1024;
-	static const uint32_t k_unMaxSets = 1024;
+	static const uint32_t k_unUniformBufferDescriptorCount = 4096;
+	static const uint32_t k_unImageSamplerDescriptorCount = 4096;
+	static const uint32_t k_unMaxSets = 4096;
 
 	std::array<VkDescriptorPoolSize, 2 > poolSizes = 
 	{
@@ -111,12 +111,72 @@ CDescriptorSet *CDescriptorManager::createUniformBufferDescriptorSet( VkBuffer b
 
 CDescriptorSet *CDescriptorManager::createDescriptorSet( FnUpdateDescriptor fnUpdate, EDescriptorLayout eLayout )
 {
-	auto desc = std::make_unique<CDescriptorSet>( getLayout( eLayout ), fnUpdate );
-	desc->createDescriptor( m_vulkanDevice, m_descriptorPool );
-	CDescriptorSet *pRetVal = desc.get();
-	m_generalDescriptors.push_back( std::move( desc ) );
-	return pRetVal;
+	auto freeList = getFreeList( eLayout );
+	if ( !freeList )
+		return nullptr;
+
+	if ( !freeList->empty() )
+	{
+		std::unique_ptr< CDescriptorSet > desc = std::move( freeList->front() );
+		freeList->pop_front();
+
+		CDescriptorSet *pRetVal = desc.get();
+		m_generalDescriptors.push_back( std::move( desc ) );
+		pRetVal->m_fnUpdate = fnUpdate;
+		fnUpdate( m_vulkanDevice, pRetVal );
+		return pRetVal;
+	}
+	else
+	{
+		auto desc = std::make_unique<CDescriptorSet>( eLayout, getLayout( eLayout ), fnUpdate );
+		desc->createDescriptor( m_vulkanDevice, m_descriptorPool );
+		CDescriptorSet *pRetVal = desc.get();
+		m_generalDescriptors.push_back( std::move( desc ) );
+		return pRetVal;
+	}
 }
+
+
+std::list<std::unique_ptr< CDescriptorSet>> * CDescriptorManager::getFreeList( EDescriptorLayout layoutType )
+{
+	switch ( layoutType )
+	{
+	case EDescriptorLayout::Node:
+		return &m_nodeFreeList;
+		break;
+
+	case EDescriptorLayout::Material:
+		return &m_materialFreeList;
+		break;
+
+	case EDescriptorLayout::Scene:
+		return &m_sceneFreeList;
+		break;
+
+	default:
+		assert( false );
+		return nullptr;
+	}
+}
+
+
+void CDescriptorManager::freeUniformBufferDescriptorSet( CDescriptorSet *descriptorSet )
+{
+	std::list<std::unique_ptr<CDescriptorSet>> * freeList = getFreeList( descriptorSet->m_layoutType );
+
+	std::unique_ptr< CDescriptorSet > ptr;
+	auto i = std::find_if( m_generalDescriptors.begin(), m_generalDescriptors.end(), 
+		[descriptorSet]( std::unique_ptr< CDescriptorSet > & item )
+		{
+			return item.get() == descriptorSet;
+		} );
+	if ( i != m_generalDescriptors.end() )
+	{
+		freeList->push_back( std::move( *i ) );
+		m_generalDescriptors.erase( i );
+	}
+}
+
 
 VkDescriptorSetLayout CDescriptorManager::getLayout( EDescriptorLayout eLayout )
 {
@@ -146,10 +206,11 @@ void CDescriptorManager::updateDescriptors()
 // CDescriptorSet
 // ========================
 
-CDescriptorSet::CDescriptorSet( VkDescriptorSetLayout layout, FnUpdateDescriptor fnUpdate)
+CDescriptorSet::CDescriptorSet( EDescriptorLayout layoutType, VkDescriptorSetLayout layout, FnUpdateDescriptor fnUpdate)
 {
 	m_fnUpdate = fnUpdate;
 	m_layout = layout;
+	m_layoutType = layoutType;
 }
 
 

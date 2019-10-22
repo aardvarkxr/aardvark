@@ -15,6 +15,7 @@ interface NodeData
 	lastParentFromNode?: mat4;
 	constraint?: AvConstraint;
 	lastFlags?: ENodeFlags;
+	lastFrameUsed: number;
 }
 
 function translateMat( t: vec3)
@@ -248,6 +249,7 @@ export class AvDefaultTraverser
 	private m_editableNodesForHand: { [ hand: number ]: AvNode[] } = {}
 	private m_grabEventsToProcess: AvGrabEvent[] = [];
 	private m_grabEventTimer: number = -1;
+	private m_frameNumber: number = 1;
 
 	constructor()
 	{
@@ -325,6 +327,7 @@ export class AvDefaultTraverser
 		this.m_editableNodesForHand[ EHand.Left ] = [];
 		this.m_editableNodesForHand[ EHand.Right ] = [];
 		this.clearHooksInUse();
+		this.m_frameNumber++;
 
 		for ( let gadgetId in this.m_roots )
 		{
@@ -347,6 +350,8 @@ export class AvDefaultTraverser
 		this.updateEditMode( EHand.Right );
 		this.updateGrabberIntersections();
 		this.updatePokerProximity();
+
+		this.cleanupOldNodeData();
 	}
 
 	private updateEditMode( hand: EHand )
@@ -461,11 +466,33 @@ export class AvDefaultTraverser
 		let nodeIdStr = endpointAddrToString( nodeGlobalId );
 		if( !this.m_nodeData.hasOwnProperty( nodeIdStr ) )
 		{
-			this.m_nodeData[ nodeIdStr] = {};
+			let nodeData = { lastFrameUsed: this.m_frameNumber };
+			this.m_nodeData[ nodeIdStr] = nodeData;
+			return nodeData;
 		}
-		return this.m_nodeData[ nodeIdStr ];
+		else
+		{
+			let nodeData = this.m_nodeData[ nodeIdStr ];
+			nodeData.lastFrameUsed = this.m_frameNumber;
+			return nodeData;	
+		}
 	}
 
+	cleanupOldNodeData()
+	{
+		let keys = Object.keys( this.m_nodeData );
+		let frameToDeleteBefore = this.m_frameNumber - 2;
+		for( let nodeIdStr of keys )
+		{
+			let nodeData = this.m_nodeData[ nodeIdStr ];
+			if( nodeData.lastFrameUsed < frameToDeleteBefore )
+			{
+				delete this.m_nodeData[ nodeIdStr ];
+			}
+		}
+	}
+
+	
 	traverseSceneGraph( root: AvNodeRoot ): void
 	{
 		if( root.root )

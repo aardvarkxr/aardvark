@@ -30,6 +30,7 @@ namespace vks
 
 		CDescriptorSet *createUniformBufferDescriptorSet( VkBuffer buffer, uint32_t bufferSize );
 		CDescriptorSet *createDescriptorSet( FnUpdateDescriptor fnUpdate, EDescriptorLayout eLayout );
+		void freeUniformBufferDescriptorSet( CDescriptorSet *descriptorSet );
 
 		VkDescriptorSetLayout getLayout( EDescriptorLayout eLayout );
 
@@ -37,11 +38,17 @@ namespace vks
 
 	private:
 
+		std::list<std::unique_ptr< CDescriptorSet>> * getFreeList( EDescriptorLayout layoutType );
+
 		VkDescriptorPool m_descriptorPool = nullptr;
 		VulkanDevice *m_vulkanDevice = nullptr;
 		VkDescriptorSetLayout m_layoutScene;
 		VkDescriptorSetLayout m_layoutMaterial;
 		VkDescriptorSetLayout m_layoutNode;
+
+		std::list<std::unique_ptr<CDescriptorSet>> m_sceneFreeList;
+		std::list<std::unique_ptr<CDescriptorSet>> m_materialFreeList;
+		std::list<std::unique_ptr<CDescriptorSet>> m_nodeFreeList;
 
 		std::list<std::unique_ptr<CDescriptorSet>> m_uniformBuffers;
 		std::list<std::unique_ptr<CDescriptorSet>> m_generalDescriptors;
@@ -55,11 +62,12 @@ namespace vks
 		VkDescriptorSet set() const { return m_descriptorSet; }
 
 	public:
-		CDescriptorSet( VkDescriptorSetLayout layout, FnUpdateDescriptor fnUpdate );
+		CDescriptorSet( EDescriptorLayout layoutType, VkDescriptorSetLayout layout, FnUpdateDescriptor fnUpdate );
 
 		void createDescriptor( VulkanDevice *vulkanDevice, VkDescriptorPool pool );
 
 	protected:
+		EDescriptorLayout m_layoutType;
 		VkDescriptorSetLayout m_layout;
 		FnUpdateDescriptor m_fnUpdate;
 		VkDescriptorSet m_descriptorSet;
