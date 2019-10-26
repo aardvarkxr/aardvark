@@ -5,12 +5,12 @@ import { AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, AvGrabEvent,
 	endpointAddrsMatch, MsgGrabberState, MsgGadgetStarted, MsgSetEndpointTypeResponse, 
 	MsgPokerProximity, MsgMouseEvent, MsgNodeHaptic, MsgSetEditMode, 
 	MsgDetachGadgetFromHook, MessageType, EndpointType, MsgSetEndpointType, Envelope, 
-	MsgNewEndpoint, MsgLostEndpoint, parseEnvelope, MsgError } from 'aardvark-react';
+	MsgNewEndpoint, MsgLostEndpoint, parseEnvelope, MsgError, AardvarkPort } from 'aardvark-react';
 import * as express from 'express';
 import * as http from 'http';
 import * as WebSocket from 'ws';
 import bind from 'bind-decorator';
-import axios, { AxiosResponse } from 'axios';
+import axios, { AxiosResponse } from 'axios';1
 import * as fs from 'fs';
 import * as path from 'path';
 import { URL } from 'url';
@@ -1161,4 +1161,4 @@ if( path.basename( p ) == "websrc" )
 	process.chdir( "../data" );
 }
 
-let server = new CServer( Number( process.env.PORT ) || 8999 );
+let server = new CServer( Number( process.env.PORT ) || AardvarkPort );

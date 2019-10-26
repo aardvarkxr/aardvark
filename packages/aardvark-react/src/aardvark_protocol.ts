@@ -1,4 +1,6 @@
 
+export const AardvarkPort = 23842;
+
 export enum MessageType
 {
 	// initialization messages. These are the only messages that 

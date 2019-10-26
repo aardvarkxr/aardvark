@@ -1,5 +1,5 @@
 import bind from 'bind-decorator';
-import { AvGadgetManifest, AvGrabEvent, EndpointType, MessageType, EndpointAddr, Envelope, parseEnvelope, MsgSetEndpointType, MsgGetGadgetManifest, MsgGetGadgetManifestResponse, MsgGrabEvent, MsgSetEndpointTypeResponse } from './aardvark_protocol';
+import { AvGadgetManifest, AvGrabEvent, EndpointType, MessageType, EndpointAddr, Envelope, parseEnvelope, MsgSetEndpointType, MsgGetGadgetManifest, MsgGetGadgetManifestResponse, MsgGrabEvent, MsgSetEndpointTypeResponse, AardvarkPort } from './aardvark_protocol';
 
 export interface MessageHandler
 {
@@ -42,7 +42,7 @@ export class CAardvarkEndpoint
 
 	@bind private connectToServer()
 	{
-		this.m_ws = new WebSocket( "ws://localhost:8999" );
+		this.m_ws = new WebSocket( "ws://localhost:" + AardvarkPort );
 		this.m_ws.onopen = this.m_realOpenHandler;
 		this.m_ws.onmessage = this.onMessage;
 		this.m_ws.onclose = this.onClose;
