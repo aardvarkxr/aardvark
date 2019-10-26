@@ -30,6 +30,10 @@ export enum MessageType
 	MasterStartGadget = 309, // tells master to start a gadget
 	SaveSettings = 310,
 	SetEditMode = 311,
+
+	// System messages
+	GetInstalledGadgets = 400,
+	GetInstalledGadgetsResponse = 401,
 }
 
 export enum EndpointType
@@ -289,6 +293,16 @@ export interface MsgOverrideTransform
 {
 	nodeId: EndpointAddr;
 	transform: AvNodeTransform;
+}
+
+
+export interface MsgGetInstalledGadgets
+{
+}
+
+export interface MsgGetInstalledGadgetsResponse
+{
+	installedGadgets: string[];
 }
 
 

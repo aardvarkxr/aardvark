@@ -11,7 +11,9 @@ import { MessageType, MsgUpdateSceneGraph, EndpointAddr,
 	MsgSaveSettings, MsgSetEditMode, AvGadgetManifest, AvPanelHandler, 
 	AvPokerHandler, AvPanelMouseEventType, AvGrabEventProcessor, 
 	AvGrabEvent, AvNode, AvNodeType, AvPanelMouseEvent, ENodeFlags, 
-	EHand } from './aardvark_protocol';
+	EHand, 
+	MsgGetInstalledGadgets,
+	MsgGetInstalledGadgetsResponse} from './aardvark_protocol';
 
 interface AvGadgetProps
 {
@@ -153,6 +155,22 @@ export class AvGadget
 	public loadManifest( gadgetUri: string ) : Promise<AvGadgetManifest>
 	{
 		return this.m_endpoint.getGadgetManifest( gadgetUri );
+	}
+
+	public getInstalledGadgets(): Promise< string[] >
+	{
+		let m: MsgGetInstalledGadgets = {};
+		this.m_endpoint.sendMessage( MessageType.GetInstalledGadgets, m );
+		console.log( "Requesting installed gadgets" );
+
+		return new Promise<string[]>( ( resolve, reject ) =>
+		{
+			this.m_endpoint.waitForResponse( MessageType.GetInstalledGadgetsResponse, 
+				( type: MessageType, resp: MsgGetInstalledGadgetsResponse ) =>
+				{
+					resolve( resp.installedGadgets );
+				});
+		});
 	}
 
 	public register( node: IAvBaseNode )

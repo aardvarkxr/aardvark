@@ -5,7 +5,8 @@ import { AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, AvGrabEvent,
 	endpointAddrsMatch, MsgGrabberState, MsgGadgetStarted, MsgSetEndpointTypeResponse, 
 	MsgPokerProximity, MsgMouseEvent, MsgNodeHaptic, MsgSetEditMode, 
 	MsgDetachGadgetFromHook, MessageType, EndpointType, MsgSetEndpointType, Envelope, 
-	MsgNewEndpoint, MsgLostEndpoint, parseEnvelope, MsgError, AardvarkPort } from 'aardvark-react';
+	MsgNewEndpoint, MsgLostEndpoint, parseEnvelope, MsgError, AardvarkPort,
+	MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse } from 'aardvark-react';
 import * as express from 'express';
 import * as http from 'http';
 import * as WebSocket from 'ws';
@@ -617,7 +618,7 @@ class CGadgetData
 				}
 			}
 
-			let gadgetsToStart = persistence.getGadgets();
+			let gadgetsToStart = persistence.getActiveGadgets();
 			for( let gadget of gadgetsToStart )
 			{
 				let gadgetHook = persistence.getGadgetHook( gadget.uuid );
@@ -786,6 +787,8 @@ class CEndpoint
 		});
 
 		this.registerEnvelopeHandler( MessageType.OverrideTransform, this.onOverrideTransform );
+
+		this.registerEnvelopeHandler( MessageType.GetInstalledGadgets, this.onGetInstalledGadgets );
 	}
 
 	public getId() { return this.m_id; }
@@ -1060,6 +1063,15 @@ class CEndpoint
 		let ep = this.m_dispatcher.getGadgetEndpoint( m.nodeId.endpointId );
 		let gadgetData = ep.getGadgetData();
 		gadgetData.overrideTransform( m.nodeId, m.transform );
+	}
+
+	@bind private onGetInstalledGadgets( env: Envelope, m: MsgGetInstalledGadgets )
+	{
+		let resp: MsgGetInstalledGadgetsResponse =
+		{
+			installedGadgets: persistence.getInstalledGadgets()
+		}
+		this.sendMessage( MessageType.GetInstalledGadgetsResponse, resp );
 	}
 
 	public sendMessage( type: MessageType, msg: any, target: EndpointAddr = undefined, sender:EndpointAddr = undefined  )

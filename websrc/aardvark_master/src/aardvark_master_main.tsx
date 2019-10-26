@@ -103,6 +103,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 interface ControlPanelState
 {
 	active: boolean;
+	installedGadgets?: string[];
 }
 
 class ControlPanel extends React.Component< {}, ControlPanelState >
@@ -116,6 +117,12 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		{ 
 			active: false,
 		};
+
+		AvGadget.instance().getInstalledGadgets()
+		.then( ( installedGadgets: string[] ) =>
+		{
+			this.setState( { installedGadgets } );
+		} );
 	}
 
 	@bind onActivateControlPanel()
@@ -123,22 +130,26 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		this.setState( { active: !this.state.active } );
 	}
 
-	private renderGadgetSeed( uri: string )
-	{
-		return <div className="GadgetSeed">
-			<AvPanelAnchor>
-				<AvGadgetSeed uri={ uri } />
-			</AvPanelAnchor>
-		</div>;
-	}
-
 	private renderGadgetSeedList()
 	{
-		return <div className="GadgetSeedContainer">
-			{ this.renderGadgetSeed( "https://aardvark.install/gadgets/test_panel") }
-			{ this.renderGadgetSeed( "https://aardvark.install/gadgets/charm_bracelet") }
-			{ this.renderGadgetSeed( "https://aardvark.install/gadgets/control_test") }
-		</div>;
+		if( !this.state.installedGadgets )
+		{
+			return <div>No Gadgets installed.</div>;
+		}
+		else
+		{
+			let seeds: JSX.Element[] = [];
+			for( let gadget of this.state.installedGadgets )
+			{
+				seeds.push( 
+					<div className="GadgetSeed">
+						<AvPanelAnchor>
+							<AvGadgetSeed key="gadget" uri={ gadget } />
+						</AvPanelAnchor>
+					</div> );
+			}
+			return <div className="GadgetSeedContainer">{ seeds }</div>;
+		}
 	}
 
 	public renderPanel()

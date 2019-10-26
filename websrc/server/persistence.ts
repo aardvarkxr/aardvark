@@ -16,9 +16,18 @@ export interface StoredGadget
 	uuid: string;
 }
 
+const AardvarkStateFormat = 1;
+
+export interface AardvarkState
+{
+	format: number;
+	activeGadgets: { [uuid:string]: GadgetPersistence };
+	installedGadgets: string[];
+}
+
 class CPersistenceManager
 {
-	private m_gadgets: { [uuid:string]: GadgetPersistence } = {};
+	private m_state: AardvarkState;
 	private m_writeTimer: NodeJS.Timeout = null;
 
 	constructor()
@@ -44,32 +53,32 @@ class CPersistenceManager
 	public createGadgetPersistence( gadgetUri: string ): string
 	{
 		let id = uuid();
-		this.m_gadgets[ id ] = { uri: gadgetUri };
+		this.m_state.activeGadgets[ id ] = { uri: gadgetUri };
 		this.markDirty();
 		return id;
 	}
 
 	public destroyGadgetPersistence( gadgetUri: string, uuid: string )
 	{
-		if( this.m_gadgets[ uuid ] )
+		if( this.m_state.activeGadgets[ uuid ] )
 		{
-			if( this.m_gadgets[uuid].uri == gadgetUri )
+			if( this.m_state.activeGadgets[uuid].uri == gadgetUri )
 			{
-				delete this.m_gadgets[uuid];
+				delete this.m_state.activeGadgets[uuid];
 				this.markDirty();
 			}
 			else
 			{
-				throw `Mismatched gadget uri ${ gadgetUri} vs ${ this.m_gadgets[uuid].uri }`;
+				throw `Mismatched gadget uri ${ gadgetUri} vs ${ this.m_state.activeGadgets[uuid].uri }`;
 			}
 		}
 	}
 
 	public getGadgetHook( uuid: string ): string
 	{
-		if( this.m_gadgets[ uuid ] )
+		if( this.m_state.activeGadgets[ uuid ] )
 		{
-			return this.m_gadgets[ uuid ].hook;
+			return this.m_state.activeGadgets[ uuid ].hook;
 		}
 		else
 		{
@@ -79,9 +88,9 @@ class CPersistenceManager
 
 	public getGadgetSettings( uuid: string ): any
 	{
-		if( this.m_gadgets[ uuid ] )
+		if( this.m_state.activeGadgets[ uuid ] )
 		{
-			return this.m_gadgets[ uuid ].settings;
+			return this.m_state.activeGadgets[ uuid ].settings;
 		}
 		else
 		{
@@ -91,23 +100,23 @@ class CPersistenceManager
 
 	public setGadgetHook( uuid: string, hook: string )
 	{
-		if( !this.m_gadgets[ uuid ] )
+		if( !this.m_state.activeGadgets[ uuid ] )
 		{
 			throw "unknown persistence uuid";
 		}
 
-		this.m_gadgets[ uuid ].hook = hook;
+		this.m_state.activeGadgets[ uuid ].hook = hook;
 		this.markDirty();
 	}
 
 	public setGadgetSettings( uuid: string, settings: any )
 	{
-		if( !this.m_gadgets[ uuid ] )
+		if( !this.m_state.activeGadgets[ uuid ] )
 		{
 			throw "unknown persistence uuid";
 		}
 
-		this.m_gadgets[ uuid ].settings = settings;
+		this.m_state.activeGadgets[ uuid ].settings = settings;
 		this.markDirty();
 	}
 
@@ -129,7 +138,7 @@ class CPersistenceManager
 		}
 
 		console.log( `Saved state to ${ this.statePath }` );
-		fs.writeFileSync( this.statePath, JSON.stringify( this.m_gadgets, null, 2 ) );
+		fs.writeFileSync( this.statePath, JSON.stringify( this.m_state, null, 2 ) );
 	}
 
 	public readNow()
@@ -137,35 +146,77 @@ class CPersistenceManager
 		try
 		{
 			let previousState = fs.readFileSync( this.statePath, 'utf8' );
-			this.m_gadgets = JSON.parse( previousState );
+			this.m_state = JSON.parse( previousState );
+
+			if( this.m_state.format != AardvarkStateFormat )
+			{
+				throw `Inappropriate state format ${this.m_state.format}`;
+			}
 
 			console.log( `Read state from ${ this.statePath } for `
-				+ `${ Object.keys( this.m_gadgets ).length } gadgets` );
+				+ `${ Object.keys( this.m_state.activeGadgets ).length } active gadgets` );
 		}
 		catch( e )
 		{
 			console.log( "Failed to read state file. Using default start" );
 
-			this.m_gadgets[ "master" ] =
+			this.m_state =
 			{
-				uri: "https://aardvark.install/gadgets/aardvark_master",
+				format: AardvarkStateFormat,
+				activeGadgets: 
+				{
+					"master" : { uri: "https://aardvark.install/gadgets/aardvark_master" },
+				},
+				installedGadgets: 
+				[
+					"https://aardvark.install/gadgets/test_panel",
+					"https://aardvark.install/gadgets/charm_bracelet",
+					"https://aardvark.install/gadgets/control_test",
+				],
 			}
 		}
 	}
 
-	public getGadgets() : StoredGadget[]
+	public getActiveGadgets() : StoredGadget[]
 	{
 		let res: StoredGadget[] = [];
-		for( let uuid in this.m_gadgets )
+		for( let uuid in this.m_state.activeGadgets )
 		{
 			res.push(
 				{
-					uri: this.m_gadgets[uuid ].uri,
+					uri: this.m_state.activeGadgets[uuid ].uri,
 					uuid,
 				}
 			);
 		}
 		return res;
+	}
+
+	public getInstalledGadgets() : string[]
+	{
+		return this.m_state.installedGadgets;
+	}
+
+	public addInstalledGadget( gadgetUri: string )
+	{
+		if( !this.m_state.installedGadgets.includes( gadgetUri ) )
+		{
+			this.m_state.installedGadgets.push( gadgetUri );
+			this.markDirty();
+		}
+	}
+
+	public removeInstalledGadget( gadgetUri: string )
+	{
+		if( this.m_state.installedGadgets.includes( gadgetUri ) )
+		{
+			this.m_state.installedGadgets = 
+				this.m_state.installedGadgets.filter( ( value: string ) =>
+				{
+					return value == gadgetUri;
+				});
+			this.markDirty();
+		}
 	}
 }
 

@@ -26,6 +26,7 @@ export class CAardvarkEndpoint
 	private m_realOpenHandler: OpenHandler = null;
 	private m_handshakeComplete: OpenHandler = null;
 	private m_endpointId: number = null;
+	private m_queuedMessages: Envelope[] = [];
 	private m_pendingManifestLoads: { [gadgetUri: string ]: PendingGadgetManifestLoad[] } = {};
 
 	constructor( openHandler: OpenHandler, handshakeComplete: OpenHandler, defaultHandler: MessageHandler = null )
@@ -90,6 +91,13 @@ export class CAardvarkEndpoint
 		{
 			this.m_handshakeComplete( m.settings, m.persistenceUuid );
 		}
+
+		// send all the messages that were queued while we were waiting to connect
+		for( let env of this.m_queuedMessages )
+		{
+			this.m_ws.send( JSON.stringify( env ) );
+		}
+		this.m_queuedMessages = [];
 	}
 
 	public sendMessage( type: MessageType, msg: any )
@@ -103,7 +111,15 @@ export class CAardvarkEndpoint
 			env.payload = JSON.stringify( msg );
 		}
 
-		this.m_ws.send( JSON.stringify( env ) );
+		if( !this.m_endpointId && type != MessageType.SetEndpointType )
+		{
+			console.log( `Queueing message of type ${ MessageType[ type ] } to be sent when we connect` );
+			this.m_queuedMessages.push( env );
+		}
+		else
+		{
+			this.m_ws.send( JSON.stringify( env ) );
+		}
 	}
 
 	public sendGrabEvent( event: AvGrabEvent )
