@@ -1,0 +1,24 @@
+{
+	"compilerOptions": 
+	{
+		"outDir": "./lib/",
+		"baseUrl": ".",
+		"noImplicitAny": true,
+		"module": "commonjs",
+		"target": "es2015",
+		"jsx": "react",
+		"sourceMap": true,
+		"experimentalDecorators": true,
+		"allowSyntheticDefaultImports": true,
+		"importHelpers": true,
+		"declaration": true,
+		"declarationMap": true,
+		"rootDir": "./src",
+		"paths" :
+		{
+			"common/*" : [ "common/*" ],
+			"*" : [ "node_modules/@types/*", "node_modules/*", "*" ]
+		},
+		"moduleResolution" : "node"
+	}
+}

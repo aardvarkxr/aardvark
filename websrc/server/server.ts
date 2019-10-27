@@ -1,3 +1,4 @@
+import { StoredGadget } from 'aardvark-shared';
 import { AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, AvGrabEvent, 
 	AvGrabEventType, MsgAttachGadgetToHook, MsgMasterStartGadget, MsgSaveSettings, 
 	MsgOverrideTransform, MsgGetGadgetManifest, MsgGetGadgetManifestResponse, 
@@ -16,7 +17,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { URL } from 'url';
 import * as fileUrl from 'file-url';
-import { persistence, StoredGadget } from './persistence';
+import { persistence } from './persistence';
 
 let g_localInstallPathUri = fileUrl( path.resolve( process.cwd() ));
 console.log( "Data directory is", g_localInstallPathUri );

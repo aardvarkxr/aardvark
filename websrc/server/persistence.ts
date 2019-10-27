@@ -1,29 +1,9 @@
+import { AardvarkState, StoredGadget, readPersistentState } from 'aardvark-shared';
 import { v4 as uuid } from 'uuid';
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
 
-interface GadgetPersistence
-{
-	uri: string;
-	hook?: string;
-	settings?: any;
-}
-
-export interface StoredGadget
-{
-	uri: string;
-	uuid: string;
-}
-
-const AardvarkStateFormat = 1;
-
-export interface AardvarkState
-{
-	format: number;
-	activeGadgets: { [uuid:string]: GadgetPersistence };
-	installedGadgets: string[];
-}
 
 class CPersistenceManager
 {
@@ -143,38 +123,7 @@ class CPersistenceManager
 
 	public readNow()
 	{
-		try
-		{
-			let previousState = fs.readFileSync( this.statePath, 'utf8' );
-			this.m_state = JSON.parse( previousState );
-
-			if( this.m_state.format != AardvarkStateFormat )
-			{
-				throw `Inappropriate state format ${this.m_state.format}`;
-			}
-
-			console.log( `Read state from ${ this.statePath } for `
-				+ `${ Object.keys( this.m_state.activeGadgets ).length } active gadgets` );
-		}
-		catch( e )
-		{
-			console.log( "Failed to read state file. Using default start" );
-
-			this.m_state =
-			{
-				format: AardvarkStateFormat,
-				activeGadgets: 
-				{
-					"master" : { uri: "https://aardvark.install/gadgets/aardvark_master" },
-				},
-				installedGadgets: 
-				[
-					"https://aardvark.install/gadgets/test_panel",
-					"https://aardvark.install/gadgets/charm_bracelet",
-					"https://aardvark.install/gadgets/control_test",
-				],
-			}
-		}
+		this.m_state = readPersistentState( this.statePath );
 	}
 
 	public getActiveGadgets() : StoredGadget[]
@@ -213,7 +162,7 @@ class CPersistenceManager
 			this.m_state.installedGadgets = 
 				this.m_state.installedGadgets.filter( ( value: string ) =>
 				{
-					return value == gadgetUri;
+					return value != gadgetUri;
 				});
 			this.markDirty();
 		}

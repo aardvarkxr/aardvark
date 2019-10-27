@@ -1,0 +1,26 @@
+{
+  "name": "aardvark-cli",
+  "version": "0.1.0",
+  "description": "Various command line utilities for Aardvark",
+  "main": "./lib/avcmd.js",
+  "bin": {
+    "avcmd": "./lib/avcmd.js"
+  },
+  "dependencies": {
+    "aardvark-shared": "file:../aardvark-shared",
+    "commander": "^3.0.2",
+    "path": "^0.12.7",
+    "tslib": "^1.10.0"
+  },
+  "devDependencies": {
+    "@types/node": "^12.11.7",
+    "ts-node": "^8.4.1",
+    "typescript": "^3.6.4"
+  },
+  "scripts": {
+    "deploy": "npm run build && npm i -g",
+    "build": "tsc -p ."
+  },
+  "author": "Aardvark Team",
+  "license": "BSD-3-Clause"
+}

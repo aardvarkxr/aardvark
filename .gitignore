@@ -9,7 +9,9 @@ Release
 ~*
 data/gadgets
 data/server
+packages/aardvark-cli/lib
 packages/aardvark-react/lib
+packages/aardvark-shared/lib
 node_modules
 
 
