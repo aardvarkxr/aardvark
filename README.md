@@ -16,26 +16,35 @@ This has also only been tested in debug.
    1. cd d:\aardvark\packages\aardvark-react
    2. npm install
    3. npm run build
-3. Build gadget and server web code
+3. Build aardvark-shared package
+   1. cd d:\aardvark\packages\aardvark-shared
+   2. npm install
+   3. npm run build
+4. Build aardvark-cli package
+   1. cd d:\aardvark\packages\aardvark-cli
+   2. npm install
+   3. npm run build
+   4. npm install -g   (This is optional, but it'll let you use avcmd as a standalone command)
+5. Build gadget and server web code
    1. cd d:\aardvark\websrc
    2. npm install
    3. npm run build
-4. Unzip CEF libs (These are over the 100MB Github file size limit when unzipped)
+6. Unzip CEF libs (These are over the 100MB Github file size limit when unzipped)
    1. unzip d:\aardvark\src\thirdparty\cefbinary_72\Debug\libcef.zip
    2. unzip d:\aardvark\src\thirdparty\cefbinary_72\Debug\cef_sandbox.zip
    3. unzip d:\aardvark\src\thirdparty\cefbinary_72\Release\libcef.zip
-5. Build aardvark C++ code
+7. Build aardvark C++ code
    1. cd d:\aardvark\src
    2. mkdir build
    3. cd build
    4. cmake -G "Visual Studio 15 2017 Win64" .. 
    5. Open Aardvark.sln 
    6. Build in debug
-6. Make symlinks from the Aardvark build to the data directory
+8. Make symlinks from the Aardvark build to the data directory
    1. Open an administrator command prompt
    2. cd to d:\aardvark\src
    3. makelinks.bat build
-7. Run it!
+9. Run it!
    1. Open a command prompt in d:\aardvark\data and run "node server\server_bundle.js"
    1. Pick "avrenderer" as the startup project in visual studio
    2. Start Debugging from the Debug menu
