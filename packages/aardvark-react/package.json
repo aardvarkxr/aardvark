@@ -6,7 +6,8 @@
   "types": "lib/index",
   "scripts": {
     "start": "webpack --watch --progress",
-    "build": "webpack"
+    "build": "webpack",
+    "builddoc": "npx styleguidist build"
   },
   "author": "Aardvark Team",
   "license": "ISC",
@@ -14,6 +15,8 @@
     "@types/color": "^3.0.0",
     "@types/react": "^16.8.22",
     "@types/react-dom": "^16.8.4",
+    "react-docgen-typescript": "^1.15.1",
+    "react-styleguidist": "^10.1.0",
     "ts-loader": "^6.2.0",
     "tslib": "^1.10.0",
     "typescript": "^3.5.2",
