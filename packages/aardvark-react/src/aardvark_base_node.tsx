@@ -18,9 +18,28 @@ declare global
 
 export interface AvBaseNodeProps
 {
-	visible?: boolean; // defaults to true
-	persistentName?: string; // Set this if you need to store persistent references to this node
+	/** Controls whether or not this node and its children are visible. 
+	 * If retaining the state of a node is important as it comes and goes,
+	 * use the visible prop instead of omitting the node from the render function. 
+	 * This allows the renderer to retain the node's state even when you don't want it
+	 * to draw.
+	 * 
+	 * @default true
+	 */
+	visible?: boolean;
+
+	/** The persistent name of this node when saving the user's state. 
+	 * For AvHook and AvGrabbable nodes, this is required to associate persistent
+	 * state with the same hook or grabbable from run to run.
+	 */
+	persistentName?: string;
+
+	/** Set this prop to be notified when the node is assigned its endpoint address.
+	 * This is not necessary for most nodes.
+	 */
 	onIdAssigned?: ( addr: EndpointAddr ) => void;
+
+	/** @ignore */
 	editable?: boolean;
 }
 

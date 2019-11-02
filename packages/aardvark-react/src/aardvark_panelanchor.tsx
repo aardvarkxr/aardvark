@@ -3,6 +3,10 @@ import * as React from 'react';
 import { AvNodeType } from './aardvark_protocol';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 
+/** Sets the transform of its children to the center of the panel anchor's DOM node
+ * in its parent AvPanel. This is useful for drawing models and other nodes in a 
+ * reasonable position relative to text on a panel.
+ */
 export class AvPanelAnchor extends AvBaseNode< AvBaseNodeProps, {} > 
 {
 	private m_ref = React.createRef<HTMLDivElement>();

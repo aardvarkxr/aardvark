@@ -9,8 +9,23 @@ import { AvGadget } from './aardvark_gadget';
 
 interface AvBaseHandleProps extends AvBaseNodeProps
 {
+	/** This callback is called when the handle's highlight state changes.
+	 * Implement it to provide per-handle highlighting. UpdateHighlight on
+	 * the containing AvGrabbable will also be called.
+	 */
 	updateHighlight?: ( highlightType: HighlightType ) => void;
+
+	/** The transform constraint on this handle. 
+	 * 
+	 * @default no constraint
+	 */
 	constraint?: AvConstraint;
+
+	/** If this property is true, the handle will enter the InRange highlight
+	 * type, but will never actually be grabbed.
+	 * 
+	 * @default false
+	 */
 	proximityOnly?: boolean;
 }
 
@@ -99,9 +114,13 @@ export abstract class AvBaseHandle<TProps, TState> extends AvBaseNode<TProps, TS
 
 interface AvSphereHandleProps extends AvBaseHandleProps
 {
+	/** The radius of the sphere for this handle */
 	radius: number;
 }
 
+/** This is spherical grabbable handle. It must be contained
+ * inside an AvGrabbable node.
+ */
 export class AvSphereHandle extends AvBaseHandle< AvSphereHandleProps, {} > 
 {
 	public buildNode()
@@ -114,9 +133,13 @@ export class AvSphereHandle extends AvBaseHandle< AvSphereHandleProps, {} >
 
 interface AvModelBoxHandleProps extends AvBaseHandleProps
 {
+	/** The URI of the GLTF model to use to define the bounding box for this handle. */
 	uri: string;
 }
 
+/** This is grabbable handle whose grab region is defined by the bounding box
+ * of a model. It must be contained inside an AvGrabbable node.
+ */
 export class AvModelBoxHandle extends AvBaseHandle< AvModelBoxHandleProps, {} > 
 {
 	public buildNode()

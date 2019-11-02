@@ -5,11 +5,23 @@ import { endpointAddrsMatch, EndpointAddr, AvNodeType, AvGrabEventType,
 	AvGrabEvent, EVolumeType } from './aardvark_protocol';
 
 
+/** The highlight states that a hook can be in. */
 export enum HookHighlight
 {
+	/** The hook is not highlighted. Usually hooks are
+	 * invisible in this state.
+	 */
 	None,
+
+	/** There is a grab in progress. The hook should make
+	 * itself visible.
+	 */
 	GrabInProgress,
+
+	/** The grab in progress is in range of this hook. */
 	InRange,
+
+	/** The hook is occupied by a grabbable. */
 	Occupied,
 }
 
@@ -19,6 +31,9 @@ interface AvHookProps extends AvBaseNodeProps
 	radius: number;
 }
 
+/** This node is a point in space where a grabbable can be attached at
+ * the end of a grab operation.
+ */
 export class AvHook extends AvBaseNode< AvHookProps, {} >
 {
 	m_lastHighlight = HookHighlight.None;

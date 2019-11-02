@@ -21,7 +21,7 @@ interface AvGadgetProps
 	onSettingsReceived?: ( settings: any ) => void;
 }
 
-export function parseURL(url: string) 
+function parseURL(url: string) 
 {
     var parser = document.createElement('a'),
         searchObject: {[ key: string ]: string } = {},
@@ -45,6 +45,7 @@ interface EditModeListener
 	(): void;
 }
 
+/** The singleton gadget object for the browser. */
 export class AvGadget
 {
 	private static s_instance:AvGadget = null;
@@ -131,6 +132,10 @@ export class AvGadget
 		}
 	}
 
+	/** Returns the AvGadget singleton.
+	 * 
+	 * @public
+	 */
 	public static instance()
 	{
 		if( !AvGadget.s_instance )
@@ -140,6 +145,10 @@ export class AvGadget
 		return AvGadget.s_instance;
 	}
 
+	/** Returns the name of the gadget. 
+	 * 
+	 * @public
+	*/
 	public getName()
 	{
 		if( this.m_manifest )
@@ -152,11 +161,20 @@ export class AvGadget
 		}
 	}
 
+	/** Loads a gadget manifest by gadget URI.
+	 * 
+	 * @returns a promise that will resolve to the specified gadget's manifest
+	 * @public
+	 */
 	public loadManifest( gadgetUri: string ) : Promise<AvGadgetManifest>
 	{
 		return this.m_endpoint.getGadgetManifest( gadgetUri );
 	}
 
+	/** Returns a list of all the installed gadget's URIs. 
+	 * 
+	 * @public
+	*/
 	public getInstalledGadgets(): Promise< string[] >
 	{
 		let m: MsgGetInstalledGadgets = {};
@@ -312,6 +330,11 @@ export class AvGadget
 		}
 	}
 
+	/** Returns true if the gadget is in edit mode for the 
+	 * specified hand.
+	 * 
+	 * @public
+	 */
 	public getEditModeForHand( hand: EHand )
 	{
 		if( hand == undefined )
@@ -500,6 +523,11 @@ export class AvGadget
 		Av().startGadget( uri, initialHook, "", epToNotify );
 	} 
 
+	/** Persists the gadget's settings. These weill be passed to the gadget 
+	 * via the callback registered with registerForSettings whenever the 
+	 * gadget is reloaded.
+	 * @public
+	 */
 	public saveSettings( settings: any )
 	{
 		let msg: MsgSaveSettings =
@@ -510,6 +538,10 @@ export class AvGadget
 		this.m_endpoint.sendMessage( MessageType.SaveSettings, msg );
 	}
 
+	/** The callback registered with this function will be invoked when
+	 * the gadget's settings are reloaded from the server.
+	 * @public
+	 */
 	public registerForSettings( callback: ( settings: any ) => void )
 	{
 		this.m_onSettingsReceived = callback;

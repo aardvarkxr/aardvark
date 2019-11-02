@@ -5,9 +5,13 @@ import { EndpointAddr, endpointAddrsMatch, AvNodeType, AvPanelMouseEventType, Po
 
 interface AvPokerProps extends AvBaseNodeProps
 {
+	/** This callback is called when the highlight state of the poker changes because
+	 * of its proximity to a panel.
+	 */
 	updateHighlight?: (shouldHighlight: boolean ) => void;
 }
 
+/** Defines a node that interacts with panels like a mouse cursor. */
 export class AvPoker extends AvBaseNode< AvPokerProps, {} >
 {
 	m_lastActivePanel:EndpointAddr = null;

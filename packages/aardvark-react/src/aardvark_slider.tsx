@@ -9,10 +9,28 @@ import { AvGrabEvent, AvConstraint, AvNodeTransform } from './aardvark_protocol'
 
 interface SliderProps
 {
+	/** This callback is called when the slider thumb moves. */
 	onSetValue: ( newValue: number[] ) => void;
+
+	/** The model URI of the slider thumb */
 	modelUri?: string;
+
+	/** The slider will be allowed to move between -rangeX/2 and +rangeX/2 on the X axis.
+	 * 
+	 * @default 0
+	 */
 	rangeX?: number;
+
+	/** The slider will be allowed to move between -rangeY/2 and +rangeY/2 on the Y axis.
+	 * 
+	 * @default 0
+	 */
 	rangeY?: number;
+
+	/** The slider will be allowed to move between -rangeZ/2 and +rangeZ/2 on the Z axis.
+	 * 
+	 * @default 0
+	 */
 	rangeZ?: number;
 }
 

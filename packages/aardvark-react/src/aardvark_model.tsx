@@ -4,10 +4,18 @@ import { AvNodeType, AvColor } from './aardvark_protocol';
 
 interface AvModelProps extends AvBaseNodeProps
 {
+	/** The URI of the GLTF model to use for this model. */
 	uri: string;
+
+	/** The color tint to apply to this model when it is
+	 * displayed.
+	 * 
+	 * @default no tint
+	 */
 	color?: AvColor | string;
 }
 
+/** Causes a GLTF model to be drawn at the specified location in the transform hierarchy. */
 export class AvModel extends AvBaseNode< AvModelProps, {} >
 {
 	public buildNode()

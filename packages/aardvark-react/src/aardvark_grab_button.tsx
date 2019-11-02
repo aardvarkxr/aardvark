@@ -9,8 +9,19 @@ import { AvGrabEvent } from './aardvark_protocol';
 
 interface GrabButtonProps
 {
+	/** The onTrigger callback is called when the grab button is grabbed. */
 	onTrigger: () => void;
+
+	/** The URI of the GLTF model to use for this grab button. Exactly one
+	 * of modelUri and radius must be specified. If modelUri is specified,
+	 * the bounding box of the model will also be used as the grabbable
+	 * region for the button.
+	 */
 	modelUri?: string;
+
+	/** The radius of the sphere that defines the grabbable handle for this 
+	 * grab button. Exactly one of modelUri and radius must be specified.
+	 */
 	radius?: number;
 }
 
@@ -19,6 +30,7 @@ interface GrabButtonState
 	highlight: HighlightType;
 }
 
+/** This node is a control that signals when it is grabbed. */
 export class AvGrabButton extends React.Component< GrabButtonProps, GrabButtonState >
 {
 	constructor( props: any )

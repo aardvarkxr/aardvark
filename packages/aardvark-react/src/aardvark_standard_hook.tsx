@@ -9,7 +9,15 @@ import { EHand } from './aardvark_protocol';
 
 interface StandardHookProps
 {
+	/** The persistent name of this node when saving the user's state. 
+	 * For AvHook and AvGrabbable nodes, this is required to associate persistent
+	 * state with the same hook or grabbable from run to run.
+	 */
 	persistentName: string;
+
+	/** The hand that this hook is parented to. This is used to determine whether or
+	 * not the hook should be visible based on that hand's edit mode.
+	 */
 	hand?: EHand;
 }
 
@@ -18,6 +26,9 @@ interface StandardHookState
 	highlight: HookHighlight;
 }
 
+/** A hook for attaching grabbables to that uses a standard plus-in-circle icon and is made visible
+ * whenever its parent hand is in edit mode.
+ */
 export class AvStandardHook extends React.Component< StandardHookProps, StandardHookState >
 {
 	private m_editModeHandle = 0;

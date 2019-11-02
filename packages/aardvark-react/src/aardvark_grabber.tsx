@@ -6,10 +6,24 @@ import bind from 'bind-decorator';
 
 interface AvGrabberProps extends AvBaseNodeProps
 {
+	/** This callback is called when the grabber's highlight state
+	 * has changed.
+	 * 
+	 * @default grabber will not highlight
+	 */
 	updateHighlight?: ( highlightType: GrabberHighlight ) => void;
+
+	/** The radius of the grabber. The grabber must be within this
+	 * radius of a grabbable's handle's volume in order to interact with it.
+	 */
 	radius: number;
 }
 
+/** Defines a grabber, which can be used to interact with grabbables.
+ * This node will cause grab highlight updates when it enters the
+ * volume of grabbable handles, and respond to the grab button on 
+ * whatever hand it is parented to.
+ */
 export class AvGrabber extends AvBaseNode< AvGrabberProps, {} >
 {
 	public buildNode()

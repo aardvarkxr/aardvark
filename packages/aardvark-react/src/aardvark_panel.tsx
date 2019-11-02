@@ -9,7 +9,8 @@ import { AvNodeType, AvPanelMouseEvent, AvPanelMouseEventType, AvPanelHandler,
 
 export interface AvPanelProps extends AvBaseNodeProps
 {
-	/** Set this to true to cause the panel to be interacted with by pokers. (Default is false) */
+	/** Set this to true to cause the panel to be interacted with by pokers. 
+	 * @default false */
 	interactive: boolean;
 
 	/** By default poker events will turn into mouse events to the browser that can be processed
@@ -21,8 +22,9 @@ export interface AvPanelProps extends AvBaseNodeProps
 
 /**
  * AvPanel outputs a 1m x 1m quad with the contents of the containing browser as its texture.
- * To change the size of the resulting quad, use [[AvTransform]].
+ * To change the size of the resulting quad, use [AvTransform](#aardvarktransform).
  * 
+ * @see See [AvPoker](#aardvarkpoker)
  */
 export class AvPanel extends AvBaseNode< AvPanelProps, {} >
 {

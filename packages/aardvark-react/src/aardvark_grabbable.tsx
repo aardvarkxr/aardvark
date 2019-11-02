@@ -12,25 +12,78 @@ export interface GrabResponse
 	proxyHandleGlobalId?: EndpointAddr;
 }
 
+/** This enum defines the possible highlight states of an AvGrabbable. 
+*/
 export enum HighlightType
 {
+	/** Nothing interesting is going on with the grabbable. */
 	None = 0,
+
+	/** There is a grabber within grabbing range of the grabbable. */
 	InRange = 1,
+
+	/** There is a grabber actively grabbing the grabbable. */
 	Grabbed = 2,
+
+	/** The grabbed grabbable is within drop range of a hook. */
 	InHookRange = 3,
 }
 
 interface AvGrabbableProps extends AvBaseNodeProps
 {
+	/** This callback is called whenever the highlight state of the grabbable is updated. 
+	 * Use this to change models, apply scale, animate, color tint, or however else you 
+	 * want to indicate grabber proximity and grab state to the user. If this callback is
+	 * not specified, the grabbable will not highlight.
+	 * 
+	 * @default no highlight
+	 */
 	updateHighlight?: ( highlightType: HighlightType, handleAddr: EndpointAddr ) => void;
+
+	/** This callback allows the grabbable's owner to override the default behavior
+	 * when the grabbable is grabbed. If this is not specified, the grabbable's transform
+	 * will be updated to match the grabber whenever it is grabbed.
+	 * 
+	 * @default grabbing moves the grabbable
+	 */
 	onGrabRequest?: ( event: AvGrabEvent ) => Promise<GrabResponse>;
+
+	/** This callback allows the grabbables owner to respond when the transform for the
+	 * grabbable has been updated as the result of being grabbed.
+	 */
 	onTransformUpdated?: ( parentFromNode: AvNodeTransform, universeFromNode: AvNodeTransform ) => void;
+
+	/** Defines the constraints to apply to the transform of the grabbable after it has been 
+	 * grabbed.
+	 * 
+	 * @default No constraints
+	 */
 	constraint?: AvConstraint;
+
+	/** If this prop is true, the grabbable will stay wherever it was dropped at the end of a 
+	 * grab.
+	 * 
+	 * @default false
+	 */
 	preserveDropTransform?: boolean;
+
+	/** The initial transform of the grabbable before it has been grabbed. 
+	 * 
+	 * @default identity transform
+	 */
 	initialTransform?: AvNodeTransform;
+
+	/** If this prop is true the grabbable can be attached to hooks by dropping on them.
+	 * 
+	 * @default false
+	 */
 	dropOnHooks?: boolean;
 }
 
+/** This is a node that can be grabbed. Depending on how it is configured, the node
+ * may be reparented to the grabber, or it may just call back the owner with its 
+ * updated grab state.
+ */
 export class AvGrabbable extends AvBaseNode< AvGrabbableProps, {} >
 {
 	private m_lastHighlight = HighlightType.None;

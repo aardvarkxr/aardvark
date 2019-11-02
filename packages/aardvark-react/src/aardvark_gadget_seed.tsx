@@ -11,6 +11,10 @@ import { AvGadget } from './aardvark_gadget';
 
 interface AvGadgetSeedProps extends AvBaseNodeProps
 {
+	/** The URI of the gadget for which this node is a seed. 
+	 * Gadget URIs are everything up to but not including the 
+	 * "/gadget_manifest.json" part of the path.
+	*/
 	uri: string;
 }
 
@@ -19,6 +23,9 @@ interface AvGadgetSeedState
 	grabbableHighlight: HighlightType;
 }
 
+/** A grabbable control that causes the grabber to grab a new
+ * instance of a gadget instead of the control itself. 
+ */
 export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSeedState >
 {
 	private m_manifest: AvGadgetManifest = null;

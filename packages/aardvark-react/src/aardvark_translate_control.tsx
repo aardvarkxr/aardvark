@@ -137,12 +137,49 @@ class AvBallHandle extends React.Component< BallHandleProps, BallHandleState >
 
 interface TransformControlProps
 {
+	/** The callback is invoked whenever the transform for the control is updated,
+	 * which will happen continuously during a grab of any of the control's handles.
+	 */
 	onSetValue: ( newValue: AvNodeTransform ) => void;
+
+	/** If this prop is true, the transform control will display handles that 
+	 * allow the user to apply a scale.
+	 * This is not yet implemented.
+	 * 
+	 * @default false
+	 */
 	scale?: boolean;
+
+	/** If this prop is true, the transform control will display handles that 
+	 * allow the user to apply strict yaw, pitch, and roll rotations.
+	 * This is not yet implemented.
+	 * 
+	 * @default false
+	 */
 	rotate?: boolean;
+
+	/** If this prop is true, the transform control will display handles that 
+	 * allow the user to apply strict X, Y, and Z translations.
+	 *
+	 * @default false
+	 */
 	translate?: boolean;
+
+	/** If this prop is true, the transform control will display a handle that
+	 * allows the users to apply a general translation and/or rotation.
+	 * 
+	 * @default false
+	 */
 	general?: boolean;
+
+	/** The starting transform of the control */
 	initialTransform?: AvNodeTransform;
+
+	/** If this prop is true, the control will be shown in a minimized form until 
+	 * the user moves a grabber close to it
+	 * 
+	 * @default false
+	 */
 	minimizeUntilNearby?: boolean;
 }
 
@@ -151,6 +188,7 @@ interface TransformControlState
 	grabberInRange: boolean;
 }
 
+/** Displays a control that allows the user to control the transform of all child nodes.  */
 export class AvTransformControl extends React.Component< TransformControlProps, TransformControlState >
 {
 	constructor( props: any )

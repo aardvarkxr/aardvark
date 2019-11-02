@@ -6,16 +6,78 @@ import { quat, vec3 } from '@tlaukkan/tsm';
 
 interface AvTransformProps extends AvBaseNodeProps
 {
+	/** The uniform scale to apply to all children. If uniformScale is specified, 
+	 * scaleX, scaleY, and scaleZ must be undefined.
+	 * 
+	 * @default 1.0
+	 */
 	uniformScale?:number;
+
+	/** The scale on the X axis to apply to all children. Must be left undefined
+	 * if uniformScale is specified.
+	 * 
+	 * @default 1.0
+	 */
 	scaleX?:number;
+
+	/** The scale on the Y axis to apply to all children. Must be left undefined
+	 * if uniformScale is specified.
+	 * 
+	 * @default 1.0
+	 */
 	scaleY?:number;
+
+	/** The scale on the Z axis to apply to all children. Must be left undefined
+	 * if uniformScale is specified.
+	 * 
+	 * @default 1.0
+	 */
 	scaleZ?:number;
+
+	/** The translation on the X axis to apply to all children.
+	 * 
+	 * @default 0
+	 */
 	translateX?:number;
+
+	/** The translation on the Y axis to apply to all children.
+	 * 
+	 * @default 0
+	 */
 	translateY?:number;
+
+	/** The translation on the Z axis to apply to all children.
+	 * 
+	 * @default 0
+	 */
 	translateZ?:number;
+
+	/** The rotation around the X axis (pitch) to apply to all children.
+	 * If rotation is specified as a quaternio, this must be undefined.
+	 * 
+	 * @default 0
+	 */
 	rotateX?:number;
+
+	/** The rotation around the Y axis (yaw) to apply to all children.
+	 * If rotation is specified as a quaternio, this must be undefined.
+	 * 
+	 * @default 0
+	 */
 	rotateY?:number;
+
+	/** The rotation around the Z axis (roll) to apply to all children.
+	 * If rotation is specified as a quaternio, this must be undefined.
+	 * 
+	 * @default 0
+	 */
 	rotateZ?:number;
+
+	/** The rotation to apply to all children, specified as a 
+	 * quaternion.
+	 * 
+	 * @default none
+	 */
 	rotation?: AvQuaternion;
 }
 
@@ -27,6 +89,7 @@ function quatFromAxisAngleDegrees( axis: vec3, deg?: number ): quat
 	return quat.fromAxisAngle( axis, deg * Math.PI / 180 );
 }
 
+/** Applies a static transform to all children. */
 export class AvTransform extends AvBaseNode< AvTransformProps, {} > 
 {
 	public buildNode()
