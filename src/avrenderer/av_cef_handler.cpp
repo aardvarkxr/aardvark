@@ -270,6 +270,10 @@ bool CAardvarkCefHandler::OnProcessMessageReceived( CefRefPtr<CefBrowser> browse
 			updateSceneGraphTextures();
 		}
 	}
+	else if ( message->GetName() == "request_close" )
+	{
+		browser->GetHost()->CloseBrowser( true );
+	}
 	else if ( message->GetName() == "mouse_event" )
 	{
 		CefMouseEvent cefEvent;

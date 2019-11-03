@@ -217,6 +217,11 @@ bool CAardvarkObject::init( CefRefPtr<CefV8Value> container )
 		} );
 	}
 
+	RegisterFunction( container, "closeBrowser", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		m_handler->requestClose();
+	} );
+
 	if ( hasPermission( "renderer" ) )
 	{
 		m_renderer = CJavascriptObjectWithFunctions::create<CJavascriptRenderer>( m_handler );
@@ -411,3 +416,9 @@ void CAardvarkRenderProcessHandler::requestTextureInfo()
 	sendBrowserMessage( msg );
 }
 
+
+void CAardvarkRenderProcessHandler::requestClose()
+{
+	CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "request_close" );
+	sendBrowserMessage( msg );
+}

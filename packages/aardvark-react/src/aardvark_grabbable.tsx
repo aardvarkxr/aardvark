@@ -61,7 +61,9 @@ interface AvGrabbableProps extends AvBaseNodeProps
 	constraint?: AvConstraint;
 
 	/** If this prop is true, the grabbable will stay wherever it was dropped at the end of a 
-	 * grab.
+	 * grab. If preserveDropTransform is false for the root grabbable of a gadget, that gadget
+	 * will not be able to be dropped in the world, and will be destroyed when dropped anywhere
+	 * other than a hook
 	 * 
 	 * @default false
 	 */

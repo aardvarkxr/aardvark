@@ -5,7 +5,7 @@ import { endpointAddrToString, endpointAddrIsEmpty, MessageType, MsgNodeHaptic,
 	MsgAttachGadgetToHook, MsgDetachGadgetFromHook, AvGrabEventType, AvNode, 
 	ENodeFlags, AvNodeTransform, AvConstraint, AvNodeType, EHand, EVolumeType, 
 	AvGrabEvent, MsgUpdateSceneGraph, EndpointType, MsgGrabEvent, endpointAddrsMatch, 
-	MsgSetEditMode, EndpointAddr, CRendererEndpoint, Av, AvModelInstance } from 'aardvark-react';
+	MsgSetEditMode, EndpointAddr, CRendererEndpoint, Av, AvModelInstance, MsgDestroyGadget } from 'aardvark-react';
 
 interface NodeData
 {
@@ -463,6 +463,11 @@ export class AvDefaultTraverser
 
 	getNodeDataByEpa( nodeGlobalId: EndpointAddr ): NodeData
 	{
+		if( !nodeGlobalId )
+		{
+			return null;
+		}
+
 		let nodeIdStr = endpointAddrToString( nodeGlobalId );
 		if( !this.m_nodeData.hasOwnProperty( nodeIdStr ) )
 		{
@@ -1030,6 +1035,8 @@ export class AvDefaultTraverser
 	@bind
 	public grabEvent( grabEvent: AvGrabEvent )
 	{
+		let grabbableData = this.getNodeDataByEpa( grabEvent.grabbableId );
+		let grabbableFlags = grabbableData ? grabbableData.lastFlags : 0;
 		switch( grabEvent.type )
 		{
 			case AvGrabEventType.StartGrab:
@@ -1069,7 +1076,6 @@ export class AvDefaultTraverser
 					this.m_endpoint.sendMessage( MessageType.DetachGadgetFromHook, msg );
 				}
 
-				let grabbableData = this.getNodeDataByEpa( grabEvent.grabbableId );
 				let grabbableParentFromGrabbableOrigin: mat4;
 				if( grabbableData && grabbableData.lastParentFromNode )
 				{
@@ -1116,8 +1122,18 @@ export class AvDefaultTraverser
 
 					this.m_endpoint.sendMessage( MessageType.AttachGadgetToHook, msg );
 				}
+				else if( ( grabbableFlags & ENodeFlags.PreserveGrabTransform ) == 0 )
+				{
+					let msg: MsgDestroyGadget =
+					{
+						gadgetId: grabEvent.grabbableId.endpointId,
+					}
+
+					this.m_endpoint.sendMessage( MessageType.DestroyGadget, msg );
+				}
 				else
 				{
+
 					// we're dropping into open space
 					delete this.m_nodeToNodeAnchors[ endpointAddrToString( grabEvent.grabbableId ) ];
 				}

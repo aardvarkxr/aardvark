@@ -41,6 +41,7 @@ public:
 		const aardvark::EndpointAddr_t & epToNotify );
 	void requestUri( const std::string & uri, std::function<void( CUriRequestHandler::Result_t & result ) > callback );
 	void requestTextureInfo();
+	void requestClose();
 
 	void runFrame();
 private:

@@ -75,6 +75,9 @@ export interface Aardvark
 	startGadget( uri: string, initialHook: string, persistenceUuid: string, epToNotify: EndpointAddr ): void;
 	getGadgetManifest( uri: string, callback: AvGadgetManifestCallback ): void;
 
+	/** Destroys the current browser. */
+	closeBrowser(): void;
+
 	// requires renderer permissions
 	renderer: AvRenderer;
 }

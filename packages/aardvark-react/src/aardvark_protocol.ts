@@ -30,10 +30,16 @@ export enum MessageType
 	MasterStartGadget = 309, // tells master to start a gadget
 	SaveSettings = 310,
 	SetEditMode = 311,
+	DestroyGadget = 312,
 
 	// System messages
 	GetInstalledGadgets = 400,
 	GetInstalledGadgetsResponse = 401,
+}
+
+export enum WebSocketCloseCodes
+{
+	UserDestroyedGadget = 4701,
 }
 
 export enum EndpointType
@@ -305,6 +311,10 @@ export interface MsgGetInstalledGadgetsResponse
 	installedGadgets: string[];
 }
 
+export interface MsgDestroyGadget
+{
+	gadgetId: number;
+}
 
 export interface PokerProximity
 {

@@ -1,5 +1,5 @@
 import bind from 'bind-decorator';
-import { AvGadgetManifest, AvGrabEvent, EndpointType, MessageType, EndpointAddr, Envelope, parseEnvelope, MsgSetEndpointType, MsgGetGadgetManifest, MsgGetGadgetManifestResponse, MsgGrabEvent, MsgSetEndpointTypeResponse, AardvarkPort } from './aardvark_protocol';
+import { AvGadgetManifest, AvGrabEvent, EndpointType, MessageType, EndpointAddr, Envelope, parseEnvelope, MsgSetEndpointType, MsgGetGadgetManifest, MsgGetGadgetManifestResponse, MsgGrabEvent, MsgSetEndpointTypeResponse, AardvarkPort, WebSocketCloseCodes } from './aardvark_protocol';
 
 export interface MessageHandler
 {
@@ -173,11 +173,20 @@ export class CAardvarkEndpoint
 		}
 	}
 
-	@bind onClose()
+	@bind onClose( ev: CloseEvent )
 	{
-		// The socket closed from the other end. Schedule a reconnect for when
-		// the server comes back up
-		window.setTimeout( this.connectToServer, 2000 );
+		if( ev.code == WebSocketCloseCodes.UserDestroyedGadget )
+		{
+			// The user asked to destroy this gadget. Just close with as little additional
+			// work as possible
+			window.close();
+		}
+		else
+		{
+			// The socket closed from the other end. Schedule a reconnect for when
+			// the server comes back up
+			window.setTimeout( this.connectToServer, 2000 );
+		}
 	}
 }
 

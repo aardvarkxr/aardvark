@@ -7,7 +7,7 @@ import { AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, AvGrabEvent,
 	MsgPokerProximity, MsgMouseEvent, MsgNodeHaptic, MsgSetEditMode, 
 	MsgDetachGadgetFromHook, MessageType, EndpointType, MsgSetEndpointType, Envelope, 
 	MsgNewEndpoint, MsgLostEndpoint, parseEnvelope, MsgError, AardvarkPort,
-	MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse } from 'aardvark-react';
+	MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgDestroyGadget, WebSocketCloseCodes } from 'aardvark-react';
 import * as express from 'express';
 import * as http from 'http';
 import * as WebSocket from 'ws';
@@ -473,6 +473,7 @@ class CGadgetData
 	private m_dispatcher: CDispatcher = null;
 	private m_hookNodes:HookNodeData[] = [];
 	private m_transformOverrides: { [ nodeId: number ]: AvNodeTransform } = {}
+	private m_gadgetBeingDestroyed = false;
 
 	constructor( ep: CEndpoint, uri: string, initialHook: string, persistenceUuid:string,
 		dispatcher: CDispatcher )
@@ -540,6 +541,7 @@ class CGadgetData
 	public getPersistenceUuid() { return this.m_persistenceUuid; }
 	public isMaster() { return this.m_persistenceUuid == "master"; }
 	public setHook( newHook: string | EndpointAddr ) { this.m_hook = newHook; }
+	public isBeingDestroyed() { return this.m_gadgetBeingDestroyed; }
 
 	public getHookNodeByPersistentName( hookPersistentName: string )
 	{
@@ -577,6 +579,11 @@ class CGadgetData
 
 	public updateSceneGraph( root: AvNode ) 
 	{
+		if( this.m_gadgetBeingDestroyed )
+		{
+			return;
+		}
+
 		let firstUpdate = this.m_root == null;
 		this.m_root = root;
 		this.sendSceneGraphToRenderer( firstUpdate );
@@ -715,6 +722,11 @@ class CGadgetData
 	
 	public overrideTransform( nodeId: EndpointAddr, transform: AvNodeTransform )
 	{
+		if( this.m_gadgetBeingDestroyed )
+		{
+			return;
+		}
+
 		if( transform )
 		{
 			this.m_transformOverrides[ nodeId.nodeId ] = transform;
@@ -726,7 +738,13 @@ class CGadgetData
 		this.sendSceneGraphToRenderer( false );
 	}
 
+	public destroyPersistence()
+	{
+		this.m_gadgetBeingDestroyed = true;
+		persistence.destroyGadgetPersistence( this.m_gadgetUri, this.m_persistenceUuid );
+	}
 }
+
 
 interface EnvelopeHandler
 {
@@ -790,6 +808,7 @@ class CEndpoint
 		this.registerEnvelopeHandler( MessageType.OverrideTransform, this.onOverrideTransform );
 
 		this.registerEnvelopeHandler( MessageType.GetInstalledGadgets, this.onGetInstalledGadgets );
+		this.registerEnvelopeHandler( MessageType.DestroyGadget, this.onDestroyGadget );
 	}
 
 	public getId() { return this.m_id; }
@@ -1053,7 +1072,7 @@ class CEndpoint
 
 	@bind private onSaveSettings( env: Envelope, m: MsgSaveSettings )
 	{
-		if( this.m_gadgetData )
+		if( this.m_gadgetData && !this.m_gadgetData.isBeingDestroyed() )
 		{
 			persistence.setGadgetSettings( this.m_gadgetData.getPersistenceUuid(), m.settings );
 		}
@@ -1073,6 +1092,27 @@ class CEndpoint
 			installedGadgets: persistence.getInstalledGadgets()
 		}
 		this.sendMessage( MessageType.GetInstalledGadgetsResponse, resp );
+	}
+
+	@bind private onDestroyGadget( env: Envelope, m: MsgDestroyGadget )
+	{
+		let ep = this.m_dispatcher.getGadgetEndpoint( m.gadgetId );
+		if( !ep )
+		{
+			console.log( `Request to destroy gadget ${ m.gadgetId }, which does not exist` );
+			return;
+		}
+
+		ep.startDestroyGadget();
+	}
+
+	private startDestroyGadget()
+	{
+		if( this.m_gadgetData )
+		{
+			this.m_gadgetData.destroyPersistence();
+		}
+		this.m_ws.close( WebSocketCloseCodes.UserDestroyedGadget );
 	}
 
 	public sendMessage( type: MessageType, msg: any, target: EndpointAddr = undefined, sender:EndpointAddr = undefined  )
