@@ -19,7 +19,7 @@ import { URL } from 'url';
 import * as fileUrl from 'file-url';
 import { persistence } from './persistence';
 
-let g_localInstallPathUri = fileUrl( path.resolve( process.cwd(), "data" ));
+let g_localInstallPathUri = fileUrl( path.resolve( path.dirname( __filename ), ".." ));
 console.log( "Data directory is", g_localInstallPathUri );
 
 function fixupUriForLocalInstall( originalUri: string ):URL

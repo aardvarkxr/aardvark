@@ -120,6 +120,11 @@ module.exports =
 				},
 			]
 		},
+		node:
+		{
+			__dirname: false,
+			__filename: false,
+		},
 
 		// Workaround for ws module trying to require devDependencies
 		externals: 
