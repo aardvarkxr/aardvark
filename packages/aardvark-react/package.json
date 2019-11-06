@@ -15,6 +15,7 @@
     "@types/color": "^3.0.0",
     "@types/react": "^16.8.22",
     "@types/react-dom": "^16.8.4",
+    "jss": "^9.7.0",
     "react-docgen-typescript": "^1.15.1",
     "react-styleguidist": "^10.1.0",
     "ts-loader": "^6.2.0",
