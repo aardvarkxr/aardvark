@@ -12,14 +12,6 @@ This has also only been tested in debug.
 
 
 1. Open a command prompt to your cloned repro directory. I'll call that d:\aardvark below, but it can be wherever you like.
-2. Build aardvark-react package
-   1. cd d:\aardvark\packages\aardvark-react
-   2. npm install
-   3. npm run build
-3. Build aardvark-shared package
-   1. cd d:\aardvark\packages\aardvark-shared
-   2. npm install
-   3. npm run build
 4. Build aardvark-cli package
    1. cd d:\aardvark\packages\aardvark-cli
    2. npm install
@@ -48,6 +40,9 @@ This has also only been tested in debug.
    1. Open a command prompt in d:\aardvark\data and run "node server\server_bundle.js"
    1. Pick "avrenderer" as the startup project in visual studio
    2. Start Debugging from the Debug menu
+
+Note: aardvark-react and aardvark-shared have been split out into their own repos under the "aardvarkxr" org and are published to NPM. Those will just
+be installed via the "npm install" commands above like any other packages.
 
 **Debugging**
 
