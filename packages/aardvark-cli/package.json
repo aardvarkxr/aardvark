@@ -7,7 +7,7 @@
     "avcmd": "./lib/avcmd.js"
   },
   "dependencies": {
-    "aardvark-shared": "file:../aardvark-shared",
+    "@aardvarkxr/aardvark-shared": "^0.0.1",
     "commander": "^3.0.2",
     "path": "^0.12.7",
     "tslib": "^1.10.0"

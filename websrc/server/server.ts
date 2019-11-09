@@ -1,4 +1,4 @@
-import { StoredGadget } from 'aardvark-shared';
+import { StoredGadget } from '@aardvarkxr/aardvark-shared';
 import { AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, AvGrabEvent, 
 	AvGrabEventType, MsgAttachGadgetToHook, MsgMasterStartGadget, MsgSaveSettings, 
 	MsgOverrideTransform, MsgGetGadgetManifest, MsgGetGadgetManifestResponse, 
@@ -7,7 +7,7 @@ import { AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, AvGrabEvent,
 	MsgPokerProximity, MsgMouseEvent, MsgNodeHaptic, MsgSetEditMode, 
 	MsgDetachGadgetFromHook, MessageType, EndpointType, MsgSetEndpointType, Envelope, 
 	MsgNewEndpoint, MsgLostEndpoint, parseEnvelope, MsgError, AardvarkPort,
-	MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgDestroyGadget, WebSocketCloseCodes } from 'aardvark-react';
+	MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgDestroyGadget, WebSocketCloseCodes } from '@aardvarkxr/aardvark-react';
 import * as express from 'express';
 import * as http from 'http';
 import * as WebSocket from 'ws';

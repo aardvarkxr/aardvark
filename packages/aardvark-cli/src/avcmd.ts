@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { AardvarkState, getStandardAardvarkPath, getStandardPersistencePath, readPersistentState, writePersistentState } from 'aardvark-shared';
+import { getStandardAardvarkPath, getStandardPersistencePath, readPersistentState, writePersistentState } from '@aardvarkxr/aardvark-shared';
 import * as fs from 'fs';
 
 let program = require( 'commander' );

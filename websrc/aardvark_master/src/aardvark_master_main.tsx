@@ -4,7 +4,7 @@ import bind from 'bind-decorator';
 import { AvGadget,AvOrigin, AvTransform, AvGrabber, AvModel, AvPoker, 
 	AvStandardHook, Av, AvGrabButton, AvPanel, AvPanelAnchor, AvGadgetSeed,
 	 EndpointAddr, EHand, GrabberHighlight } 
-	from 'aardvark-react';
+	from '@aardvarkxr/aardvark-react';
 
 
 interface DefaultHandProps

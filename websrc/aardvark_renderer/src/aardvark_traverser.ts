@@ -5,7 +5,7 @@ import { endpointAddrToString, endpointAddrIsEmpty, MessageType, MsgNodeHaptic,
 	MsgAttachGadgetToHook, MsgDetachGadgetFromHook, AvGrabEventType, AvNode, 
 	ENodeFlags, AvNodeTransform, AvConstraint, AvNodeType, EHand, EVolumeType, 
 	AvGrabEvent, MsgUpdateSceneGraph, EndpointType, MsgGrabEvent, endpointAddrsMatch, 
-	MsgSetEditMode, EndpointAddr, CRendererEndpoint, Av, AvModelInstance, MsgDestroyGadget } from 'aardvark-react';
+	MsgSetEditMode, EndpointAddr, CRendererEndpoint, Av, AvModelInstance, MsgDestroyGadget } from '@aardvarkxr/aardvark-react';
 
 interface NodeData
 {

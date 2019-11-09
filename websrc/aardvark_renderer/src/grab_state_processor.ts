@@ -1,7 +1,7 @@
 import { EndpointAddr, indexOfEndpointAddrs, endpointAddrsMatch, MsgGrabberState,
 	AvGrabEvent, AvGrabEventType, GrabberHighlight, AvGrabbableCollision, ENodeFlags } 
-	from 'aardvark-react';
-import { assert } from 'aardvark-react';
+	from '@aardvarkxr/aardvark-react';
+import { assert } from '@aardvarkxr/aardvark-react';
 
 
 interface GrabContext

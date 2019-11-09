@@ -1,4 +1,4 @@
-import { AardvarkState, StoredGadget, readPersistentState } from 'aardvark-shared';
+import { AardvarkState, StoredGadget, readPersistentState } from '@aardvarkxr/aardvark-shared';
 import { v4 as uuid } from 'uuid';
 import * as os from 'os';
 import * as path from 'path';
