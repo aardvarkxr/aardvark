@@ -1,7 +1,10 @@
 import * as React from 'react';
 import  * as ReactDOM from 'react-dom';
 import { CMonitorEndpoint } from '@aardvarkxr/aardvark-react';
-import { EndpointType, MessageType, EndpointAddr, MsgNewEndpoint, MsgLostEndpoint, MsgUpdateSceneGraph, AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, AvVector, AvQuaternion, AvGrabEvent, AvGrabEventType, endpointAddrToString, MsgGrabEvent, MsgPokerProximity, MsgOverrideTransform } from '@aardvarkxr/aardvark-react';
+import { EndpointType, MessageType, EndpointAddr, MsgNewEndpoint, MsgLostEndpoint, 
+	MsgUpdateSceneGraph, AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, 
+	AvVector, AvQuaternion, AvGrabEvent, AvGrabEventType, endpointAddrToString, 
+	MsgGrabEvent, MsgPokerProximity, MsgOverrideTransform } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import { observable, ObservableMap, action, observe, computed } from 'mobx';
 import { observer } from 'mobx-react';

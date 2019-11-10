@@ -2,7 +2,8 @@ import * as React from 'react';
 import  * as ReactDOM from 'react-dom';
 
 import bind from 'bind-decorator';
-import { AvGadget, AvTransform, AvGrabbable, HighlightType, AvStandardHook, AvSphereHandle, AvModel, AvGrabButton, AvNodeTransform, AvVector, AvQuaternion, AvTransformControl } from '@aardvarkxr/aardvark-react';
+import { AvGadget, AvTransform, AvGrabbable, HighlightType, AvStandardHook, AvSphereHandle, AvModel, AvGrabButton, AvTransformControl } from '@aardvarkxr/aardvark-react';
+import { AvNodeTransform, AvVector, AvQuaternion } from '@aardvarkxr/aardvark-shared';
 
 
 interface CharmProps

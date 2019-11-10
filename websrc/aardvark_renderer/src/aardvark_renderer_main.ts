@@ -1,4 +1,4 @@
-import { Av } from '@aardvarkxr/aardvark-react'
+import { Av } from '@aardvarkxr/aardvark-shared'
 import { AvDefaultTraverser } from './aardvark_traverser';
 
 console.log( "I'm a renderer!" );

@@ -1,6 +1,7 @@
 {
 	"name" : "charm bracelet",
 	"permissions" : [ "scenegraph" ],
-	"resolution": [ 128, 128 ],
+	"width": 16,
+	"height": 16,
 	"model" : "http://aardvark.install/models/bracelet.glb"
 }

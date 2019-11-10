@@ -2,10 +2,9 @@ import * as React from 'react';
 import  * as ReactDOM from 'react-dom';
 import bind from 'bind-decorator';
 import { AvGadget,AvOrigin, AvTransform, AvGrabber, AvModel, AvPoker, 
-	AvStandardHook, Av, AvGrabButton, AvPanel, AvPanelAnchor, AvGadgetSeed,
-	 EndpointAddr, EHand, GrabberHighlight } 
+	AvStandardHook, AvGrabButton, AvPanel, AvPanelAnchor, AvGadgetSeed } 
 	from '@aardvarkxr/aardvark-react';
-
+import { Av, EndpointAddr, EHand, GrabberHighlight } from '@aardvarkxr/aardvark-shared'
 
 interface DefaultHandProps
 {

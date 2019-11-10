@@ -3,7 +3,9 @@ import  * as ReactDOM from 'react-dom';
 
 import bind from 'bind-decorator';
 
-import { AvGadget, AvTransform, AvPanel, AvGrabbable, HighlightType, GrabResponse, AvSphereHandle, EndpointAddr, AvGrabEvent } from '@aardvarkxr/aardvark-react';
+import { AvGadget, AvTransform, AvPanel, AvGrabbable, HighlightType, GrabResponse, AvSphereHandle } from '@aardvarkxr/aardvark-react';
+import { EndpointAddr, AvGrabEvent } from '@aardvarkxr/aardvark-shared';
+
 
 interface TestPanelState
 {
