@@ -2,6 +2,8 @@
 
 import { getStandardAardvarkPath, getStandardPersistencePath, readPersistentState, writePersistentState } from '@aardvarkxr/aardvark-shared';
 import * as fs from 'fs';
+import fileUrl from 'file-url';
+import isUrl from 'is-url';
 
 let program = require( 'commander' );
 
@@ -25,6 +27,12 @@ program
 		let dirty = false;
 		for( let gadgetUrl of urls )
 		{
+			if( !isUrl( gadgetUrl ) )
+			{
+				// turn paths into URLs
+				gadgetUrl = fileUrl( gadgetUrl );
+			}
+
 			if( state.installedGadgets.includes( gadgetUrl ) )
 			{
 				console.log( `Gadget is already installed: ${ gadgetUrl }` );
@@ -58,6 +66,12 @@ program
 		let dirty = false;
 		for( let gadgetUrl of urls )
 		{
+			if( !isUrl( gadgetUrl ) )
+			{
+				// turn paths into URLs
+				gadgetUrl = fileUrl( gadgetUrl );
+			}
+
 			if( !state.installedGadgets.includes( gadgetUrl ) )
 			{
 				console.log( `Gadget is not installed: ${ gadgetUrl }` );
