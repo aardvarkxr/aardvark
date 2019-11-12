@@ -1,3 +1,4 @@
+import { g_localInstallPathUri, parsePersistentHookPath, HookPathParts, getJSONFromUri, buildPersistentHookPath } from './serverutils';
 import { StoredGadget } from '@aardvarkxr/aardvark-shared';
 import { AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, AvGrabEvent, 
 	AvGrabEventType, MsgAttachGadgetToHook, MsgMasterStartGadget, MsgSaveSettings, 
@@ -12,107 +13,14 @@ import * as express from 'express';
 import * as http from 'http';
 import * as WebSocket from 'ws';
 import bind from 'bind-decorator';
-import axios, { AxiosResponse } from 'axios';1
-import * as fs from 'fs';
 import * as path from 'path';
 import { URL } from 'url';
 import * as fileUrl from 'file-url';
 import { persistence } from './persistence';
+import isUrl from 'is-url';
 
-let g_localInstallPathUri = fileUrl( path.resolve( path.dirname( __filename ), ".." ));
 console.log( "Data directory is", g_localInstallPathUri );
 
-function fixupUriForLocalInstall( originalUri: string ):URL
-{
-	let lowerUri = originalUri.toLowerCase();
-
-	let httpPrefix = "http://aardvark.install";
-	let httpsPrefix = "https://aardvark.install";
-
-	if ( lowerUri.indexOf( httpPrefix ) == 0 )
-	{
-		return new URL( g_localInstallPathUri + originalUri.slice( httpPrefix.length ) );
-	}
-	else
-	{
-		if ( lowerUri.indexOf( httpsPrefix ) == 0 )
-		{
-			return new URL( g_localInstallPathUri + originalUri.slice( httpsPrefix.length ) );
-		}
-	}
-
-	return new URL( originalUri );
-}
-
-function getJSONFromUri( uri: string ): Promise< any >
-{
-	return new Promise<any>( ( resolve, reject ) =>
-	{
-		try
-		{
-			let url = fixupUriForLocalInstall( uri );
-			if( url.protocol == "file:" )
-			{
-				fs.readFile( url, "utf8", (err: NodeJS.ErrnoException, data: string ) =>
-				{
-					if( err )
-					{
-						reject( err );
-					}
-					else
-					{
-						resolve( JSON.parse( data ) );
-					}
-				});
-			}
-			else
-			{
-				let promRequest = axios.get( url.toString() )
-				.then( (value: AxiosResponse ) =>
-				{
-					resolve( value.data );
-				} )
-				.catch( (reason: any ) =>
-				{
-					reject( reason );
-				});
-			}
-		}
-		catch( e )
-		{
-			reject( e );
-		}
-	} );
-}
-
-
-function buildPersistentHookPath( gadgetUuid: string, hookPersistentName: string )
-{
-	return "/gadget/" + gadgetUuid + "/" + hookPersistentName;
-}
-
-interface HookPathParts
-{
-	gadgetUuid: string;
-	hookPersistentName: string;
-}
-
-function parsePersistentHookPath( path: string ): HookPathParts
-{
-	let re = new RegExp( "^/gadget/(.*)/(.*)$" );
-	let match = re.exec( path );
-	if( !match )
-	{
-		// this probably isn't a gadget hook path
-		return null;
-	}
-
-	return (
-		{ 
-			gadgetUuid: match[1],
-			hookPersistentName: match[2],
-		} );
-}
 
 interface GadgetToStart
 {
@@ -696,6 +604,15 @@ class CGadgetData
 				}
 				break;
 		
+			case AvNodeType.Model:
+				if( !isUrl( node.propModelUri ) )
+				{
+					node.propModelUri = this.m_gadgetUri + "/" + node.propModelUri;
+				}
+				break;
+
+			default:
+				// many node types need no processing
 		}
 
 		if( node.children )
@@ -903,6 +820,12 @@ class CEndpoint
 				manifest: jsonManifest as AvGadgetManifest,
 				gadgetUri: m.gadgetUri,
 			}
+
+			if( !isUrl( response.manifest.model ) )
+			{
+				response.manifest.model = m.gadgetUri + "/" + response.manifest.model;
+			}
+
 			this.sendMessage( MessageType.GetGadgetManifestResponse, response );
 		})
 		.catch( (reason:any ) =>

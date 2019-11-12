@@ -3,6 +3,7 @@ import { v4 as uuid } from 'uuid';
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
+import { fixupUriForLocalInstall } from './serverutils';
 
 
 class CPersistenceManager
@@ -42,14 +43,16 @@ class CPersistenceManager
 	{
 		if( this.m_state.activeGadgets[ uuid ] )
 		{
-			if( this.m_state.activeGadgets[uuid].uri == gadgetUri )
+			let stateUri = fixupUriForLocalInstall( this.m_state.activeGadgets[uuid].uri );
+			let fixedGadgetUri = fixupUriForLocalInstall( gadgetUri );
+			if( stateUri.toString() == fixedGadgetUri.toString() )
 			{
 				delete this.m_state.activeGadgets[uuid];
 				this.markDirty();
 			}
 			else
 			{
-				throw `Mismatched gadget uri ${ gadgetUri} vs ${ this.m_state.activeGadgets[uuid].uri }`;
+				throw `Mismatched gadget uri ${ fixedGadgetUri.toString()} vs ${ stateUri.toString() }`;
 			}
 		}
 	}

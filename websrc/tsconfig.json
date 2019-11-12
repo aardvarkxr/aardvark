@@ -10,6 +10,7 @@
 		"jsx": "react",
 		"allowJs": true,
 		"experimentalDecorators": true,
+		"allowSyntheticDefaultImports": true,
 		"importHelpers": true,
 		"paths" :
 		{
