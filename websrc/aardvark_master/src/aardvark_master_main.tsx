@@ -194,7 +194,7 @@ class MasterControls extends React.Component< {}, {} >
 	public render()
 	{
 		return (
-			<div>
+			<div className="FullPage">
 				<DefaultHand hand={ EHand.Left } />
 				<DefaultHand hand={ EHand.Right } />
 				<ControlPanel />
