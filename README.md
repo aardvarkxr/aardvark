@@ -1,50 +1,96 @@
-**Aardvark is not ready**
+# Aardvark is not ready
 
 Aardvark is not far enough along for you to use it in any kind of production project.
 This release is intended to gather feedback and foster further development, but there is still a ways to go before the API is stable.
 Expect future releases to break compatibility with existing gadgets.
 
-**How To Build**
+# Getting Started
 
+## Building avrenderer
+
+Because release builds are not yet available for avrenderer or its components, you have to build that first. 
 All of this has been tested on Windows 10 with VS2017.
 Other platforms (including other versions of Windows) and other compilers are left as an exercise to the reader.)
 This has also only been tested in debug.
 
+Follow these steps:
 
 1. Open a command prompt to your cloned repro directory. I'll call that d:\aardvark below, but it can be wherever you like.
-4. Build aardvark-cli package
-   1. cd d:\aardvark\packages\aardvark-cli
-   2. npm install
-   3. npm run build
-   4. npm install -g   (This is optional, but it'll let you use avcmd as a standalone command)
-5. Build gadget and server web code
+2. Build web code
    1. cd d:\aardvark\websrc
    2. npm install
    3. npm run build
-6. Unzip CEF libs (These are over the 100MB Github file size limit when unzipped)
+3. Unzip CEF libs (These are over the 100MB Github file size limit when unzipped)
    1. unzip d:\aardvark\src\thirdparty\cefbinary_72\Debug\libcef.zip
    2. unzip d:\aardvark\src\thirdparty\cefbinary_72\Debug\cef_sandbox.zip
    3. unzip d:\aardvark\src\thirdparty\cefbinary_72\Release\libcef.zip
-7. Build aardvark C++ code
+4. Build aardvark C++ code
    1. cd d:\aardvark\src
    2. mkdir build
    3. cd build
    4. cmake -G "Visual Studio 15 2017 Win64" .. 
    5. Open Aardvark.sln 
    6. Build in debug
-8. Make symlinks from the Aardvark build to the data directory
+5. Make symlinks from the Aardvark build to the data directory
    1. Open an administrator command prompt
    2. cd to d:\aardvark\src
    3. makelinks.bat build
-9. Run it!
+6. Run it!
    1. Open a command prompt in d:\aardvark\data and run "node server\server_bundle.js"
    1. Pick "avrenderer" as the startup project in visual studio
    2. Start Debugging from the Debug menu
 
-Note: aardvark-react and aardvark-shared have been split out into their own repos under the "aardvarkxr" org and are published to NPM. Those will just
-be installed via the "npm install" commands above like any other packages.
+## Installing useful tools
 
-**Debugging**
+	npm install -g @aardvarkxr/aardvark-cli
+
+This will install "avcmd" globally, and in your path. You can do several useful things with this command. 
+
+**avcmd install <path or url>**
+
+Adds the gadget at the path or URL to the control panel that appears under the gear icon.
+Make sure <path>/gadget_manifest.json or <url>/gadget_manifest.json is valid otherwise things will break when you create the gadget.
+
+You will need to restart avrenderer (including the server if you're running that on its own) to see the change.
+
+
+**avcmd uninstall <path or url>**
+
+Removes the gadget from the control panel.
+
+You will need to restart avrenderer (including the server if you're running that on its own) to see the change.
+
+
+**avcmd list**
+
+Lists the gadgets that are currently installed.
+
+
+**avcmd reset**
+
+Resets the gadget list to the default examples.
+
+
+## Making your first gadget
+
+CD to an empty directory and type:
+	npm init @aardvarkxr
+
+This will install the @aardvarkxr/create script and then run it.
+Answer the prompts to set up your gadget.
+
+Then run:
+	npm install
+	npm run build
+
+After that you probably want to install your gadget with:
+	avcmd install dist
+
+
+You can open your gadget directory in Visual Studio Code to aid in react/aardvark development.
+
+
+## Debugging
 
 You can use chrome dev tools on your gadgets by browsing to <a href="http://localhost:8042/">http://localhost:8042/</a> while Aardvark is running.
 
@@ -52,4 +98,5 @@ You can see the active scene graphs of all gadgets with the monitor.
 You can find it in aardvark/data/gadgets/aardvark_monitor/index.html; just open that in your browser and will connect to the server on localhost.
 
 If you want to run the server outside of avrenderer, you can do so. Just run it from the root Aardvark directory (i.e. the one that contains data). If you want to work on the server scripts themselves, you can run "nodemon --inspect data\server\server_bundle.js" to enable attaching the debugger and auto-restarts when the server bundle changes.
+
 
