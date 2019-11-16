@@ -4,12 +4,15 @@ import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
 import { fixupUriForLocalInstall } from './serverutils';
+import bind from 'bind-decorator';
 
 
 class CPersistenceManager
 {
 	private m_state: AardvarkState;
 	private m_writeTimer: NodeJS.Timeout = null;
+	private m_pendingFileReload: NodeJS.Timeout = null;
+	private m_lastWriteTime: number = 0;
 
 	constructor()
 	{
@@ -19,6 +22,8 @@ class CPersistenceManager
 		}
 
 		this.readNow();
+
+		fs.watch( this.statePath, this.onStateFileChanged )
 	}
 
 	public get path(): string
@@ -29,6 +34,25 @@ class CPersistenceManager
 	public get statePath(): string
 	{
 		return path.join( this.path, "state.json" );
+	}
+
+	@bind private onStateFileChanged( event: string, filename: string )
+	{
+		let timeSinceLastWrite = Date.now() - this.m_lastWriteTime;
+		if( !this.m_pendingFileReload && timeSinceLastWrite > 1000 )
+		{
+			this.m_pendingFileReload = setTimeout( ()=>
+			{
+				this.m_pendingFileReload = null;
+				this.reload();
+			}, 500 );
+		}
+	}
+
+	public reload()
+	{
+		console.log( "Reloading state.json" );
+		this.readNow();
 	}
 
 	public createGadgetPersistence( gadgetUri: string ): string
@@ -120,6 +144,7 @@ class CPersistenceManager
 			this.m_writeTimer = null;
 		}
 
+		this.m_lastWriteTime = Date.now();
 		console.log( `Saved state to ${ this.statePath }` );
 		fs.writeFileSync( this.statePath, JSON.stringify( this.m_state, null, 2 ) );
 	}
