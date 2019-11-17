@@ -6,9 +6,16 @@ Expect future releases to break compatibility with existing gadgets.
 
 # Getting Started
 
-## Building avrenderer
+## Use a released build
 
-Because release builds are not yet available for avrenderer or its components, you have to build that first. 
+If you just want to make gadgets, your best bet is to use a <a href="https://github.com/JoeLudwig/aardvark/releases">released build</a>.
+Just download the latest release, unzip it, and run avrenderer.exe.
+
+If you need to do any development work from the source, you may want to run a local build following the instructions below.
+
+
+## Building Locally
+
 All of this has been tested on Windows 10 with VS2017.
 Other platforms (including other versions of Windows) and other compilers are left as an exercise to the reader.)
 This has also only been tested in debug.
