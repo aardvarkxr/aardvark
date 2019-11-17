@@ -8,6 +8,7 @@ const zlib = require( 'zlib' );
 let webDir = path.resolve( __dirname, 'websrc' );
 let srcDir = path.resolve( __dirname, 'src' );
 let dataDir = path.resolve( __dirname, 'data' );
+let bldDir = path.resolve( srcDir, "build" );
 
 let verbose = false;
 for( let arg of process.argv )
@@ -99,7 +100,6 @@ function ensureDirExists( dir )
 
 async function cppBuild()
 {
-	let bldDir = path.resolve( srcDir, "build" );
 	ensureDirExists( bldDir );
 
 	runCommand( "cmake", ["-G", "\"Visual Studio 15 2017 Win64\"", ".."],
@@ -119,14 +119,58 @@ async function cppBuild()
 		bldDir, 30, "C++ Build" );
 }
 
+async function copyDir( from, to )
+{
+	ensureDirExists( to );
+	let fromDir = fs.opendirSync( from );
+	let ent
+	while( ent = fromDir.readSync() )
+	{
+		if ( verbose )
+		{
+			console.log( "Copying", ent.name );
+		}
+
+		let fromPath = path.resolve( from, ent.name );
+		let toPath = path.resolve( to, ent.name );
+		if( ent.isDirectory() )
+		{
+			copyDir( fromPath, toPath );
+		}
+		else if( ent.isFile() )
+		{
+			fs.copyFileSync( fromPath, toPath );
+		}
+	}
+
+
+}
+
+async function copyRelease()
+{
+	console.log( '++ starting release copy' );
+	let startTime = Date.now();
+
+	let outDir = path.resolve( __dirname, "release" );
+
+	let inDir = path.resolve( bldDir, "avrenderer/Release" );
+	copyDir( inDir, outDir );
+	copyDir( dataDir, path.resolve( outDir, "data" ) );
+
+
+	let elapsedTime = ( Date.now() - startTime ) / 1000;
+	console.log(`-- finished release copy (Elapsed time ${elapsedTime} seconds)` );
+}
+
 
 async function runBuild()
 {
 
-	//runCommand( "npm", ["install"], webDir, 60, "npm install" );
-	//runCommand( "npm", ["run", "build"], webDir, 30, "web build" );
-	//unzipCef();
+	runCommand( "npm", ["install"], webDir, 60, "npm install" );
+	runCommand( "npm", ["run", "build"], webDir, 30, "web build" );
+	unzipCef();
 	cppBuild();
+	copyRelease();
 
 	console.log( "build finished" );
 }
