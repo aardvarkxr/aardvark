@@ -121,16 +121,16 @@ async function cppBuild()
 
 async function copyDir( from, to )
 {
+	if ( verbose )
+	{
+		console.log( `Copying ${ from } to ${ to }` );
+	}
+
 	ensureDirExists( to );
 	let fromDir = fs.opendirSync( from );
 	let ent
 	while( ent = fromDir.readSync() )
 	{
-		if ( verbose )
-		{
-			console.log( "Copying", ent.name );
-		}
-
 		let fromPath = path.resolve( from, ent.name );
 		let toPath = path.resolve( to, ent.name );
 		if( ent.isDirectory() )
@@ -142,8 +142,7 @@ async function copyDir( from, to )
 			fs.copyFileSync( fromPath, toPath );
 		}
 	}
-
-
+	fromDir.closeSync();
 }
 
 async function copyRelease()
@@ -168,9 +167,9 @@ async function runBuild()
 
 	runCommand( "npm", ["install"], webDir, 60, "npm install" );
 	runCommand( "npm", ["run", "build"], webDir, 30, "web build" );
-	unzipCef();
-	cppBuild();
-	copyRelease();
+	await unzipCef();
+	await cppBuild();
+	await copyRelease();
 
 	console.log( "build finished" );
 }
