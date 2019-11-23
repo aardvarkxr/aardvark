@@ -1,3 +1,4 @@
+import { CRendererEndpoint } from '@aardvarkxr/aardvark-react';
 import { CGrabStateProcessor } from './grab_state_processor';
 import { mat4, vec3, quat, vec4, mat3 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
@@ -6,7 +7,7 @@ import { endpointAddrToString, endpointAddrIsEmpty, MessageType, MsgNodeHaptic,
 	ENodeFlags, AvNodeTransform, AvConstraint, AvNodeType, EHand, EVolumeType, 
 	AvGrabEvent, MsgUpdateSceneGraph, EndpointType, MsgGrabEvent, endpointAddrsMatch, 
 	MsgSetEditMode, EndpointAddr, Av, AvModelInstance, MsgDestroyGadget } from '@aardvarkxr/aardvark-shared';
-import { CRendererEndpoint } from '@aardvarkxr/aardvark-react';
+import { computeUniverseFromLine, nodeTransformToMat4, translateMat, nodeTransformFromMat4, vec3MultiplyAndAdd } from './traverser_utils';
 
 interface NodeData
 {
@@ -19,94 +20,6 @@ interface NodeData
 	lastFrameUsed: number;
 }
 
-function translateMat( t: vec3)
-{
-	let m = new mat4();
-	m.setIdentity();
-	m.translate( t );
-	return m;
-}
-
-function scaleMat( s: vec3)
-{
-	let m = new mat4();
-	m.setIdentity();
-	m.scale( s );
-	return m;
-}
-
-function getRowFromMat( m: mat4, n: number ) : vec3 
-{
-	let row = m.row( n );
-	return new vec3( [ row[ 0 ], row[ 1 ],row[ 2 ], ] );
-}
-
-function nodeTransformFromMat4( m: mat4 ) : AvNodeTransform
-{
-	let transform: AvNodeTransform = {};
-	let pos = m.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) );
-	if( pos.x != 0 || pos.y != 0 || pos.z != 0 )
-	{
-		transform.position = { x: pos.x, y: pos.y, z: pos.z };
-	}
-
-	let xScale = getRowFromMat( m, 0 ).length();
-	let yScale = getRowFromMat( m, 1 ).length();
-	let zScale = getRowFromMat( m, 2 ).length();
-	if( xScale != 1 || yScale != 1 || zScale != 1 )
-	{
-		transform.scale = { x : xScale, y: yScale, z: zScale };
-	}
-
-	let rotMat = new mat3( 
-		[
-			m.at( 0 + 0 ) / xScale, m.at( 0 + 1 ) / xScale, m.at( 0 + 2 ) / xScale,
-			m.at( 4 + 0 ) / yScale, m.at( 4 + 1 ) / yScale, m.at( 4 + 2 ) / yScale,
-			m.at( 8 + 0 ) / zScale, m.at( 8 + 1 ) / zScale, m.at( 8 + 2 ) / zScale,
-		] );
-	let rot = rotMat.toQuat();
-	if( rot.x != 0 || rot.y != 0 || rot.z != 0 )
-	{
-		transform.rotation = { x: rot.x, y: rot.y, z: rot.z, w: rot.w };
-	}
-
-	return transform;
-}
-
-function nodeTransformToMat4( transform: AvNodeTransform ): mat4
-{
-	let vTrans: vec3;
-	if ( transform.position )
-	{
-		vTrans = new vec3( [ transform.position.x, transform.position.y, transform.position.z ] );
-	}
-	else
-	{
-		vTrans = new vec3( [ 0, 0, 0 ] );
-	}
-	let vScale: vec3;
-	if ( transform.scale )
-	{
-		vScale = new vec3( [ transform.scale.x, transform.scale.y, transform.scale.z ] );
-	}
-	else
-	{
-		vScale = new vec3( [ 1, 1, 1 ] );
-	}
-	let qRot: quat;
-	if ( transform.rotation )
-	{
-		qRot = new quat( [ transform.rotation.x, transform.rotation.y, transform.rotation.z, transform.rotation.w ] );
-	}
-	else
-	{
-		qRot = new quat( [ 0, 0, 0, 1 ] );
-	}
-
-	let mat = translateMat( vTrans ).multiply( qRot.toMat4() );
-	mat = mat.multiply( scaleMat( vScale ) ) ;
-	return mat;
-}
 
 
 interface TransformComputeFunction
@@ -589,6 +502,14 @@ export class AvDefaultTraverser
 				this.traverseHook( node, defaultParent );
 				break;
 			
+			case AvNodeType.Line:
+				this.traverseLine( node, defaultParent );
+				break;
+			
+			case AvNodeType.PanelIntersection:
+				this.traversePanelIntersection( node, defaultParent );
+				break;
+			
 			default:
 				throw "Invalid node type";
 			}
@@ -1032,6 +953,84 @@ export class AvDefaultTraverser
 			}
 		} );
 	}
+
+	traverseLine( node: AvNode, defaultParent: PendingTransform )
+	{
+		if( !node.propEndAddr )
+		{
+			return;
+		}
+
+		let lineEndTransform = this.getTransform( node.propEndAddr );
+		let thickness = node.propThickness === undefined ? 0.003 : node.propThickness;
+		this.updateTransformWithCompute( node.globalId,
+			[ defaultParent, lineEndTransform ],
+			mat4.identity, null,
+			( [ universeFromStart, universeFromEnd ]: mat4[], unused: mat4) =>
+			{
+				let nodeData = this.getNodeData( node );
+
+				if ( !nodeData.modelInstance )
+				{
+					const cylinderUrl = "http://aardvark.install/models/cylinder.glb";
+					nodeData.modelInstance = Av().renderer.createModelInstance( cylinderUrl );
+					if ( nodeData.modelInstance )
+					{
+						nodeData.lastModelUri = cylinderUrl;
+					}
+				}
+		
+				if ( nodeData.modelInstance )
+				{
+					if( node.propColor )
+					{
+						let alpha = ( node.propColor.a == undefined ) ? 1 : node.propColor.a;
+						nodeData.modelInstance.setBaseColor( 
+							[ node.propColor.r, node.propColor.g, node.propColor.b, alpha ] );
+					}
+		
+					let startPos = new vec3( universeFromStart.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) ).xyz );
+					let endPos = new vec3( universeFromEnd.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) ).xyz );
+					let lineVector = new vec3( endPos.xyz );
+					lineVector.subtract( startPos );
+					let lineLength = lineVector.length();
+					lineVector.normalize();
+
+					let startGap = node.propStartGap ? node.propStartGap : 0;
+					let endGap = node.propEndGap ? node.propEndGap : 0;
+					if( startGap + endGap < lineLength )
+					{
+						let actualStart = vec3MultiplyAndAdd( startPos, lineVector, startGap );
+						let actualEnd = vec3MultiplyAndAdd( endPos, lineVector, -endGap );
+						let universeFromLine = 	computeUniverseFromLine( actualStart, actualEnd, thickness ); 
+
+						nodeData.modelInstance.setUniverseFromModelTransform( universeFromLine.all() );
+						this.m_renderList.push( nodeData.modelInstance );
+					}
+
+				}
+		
+				return new mat4();
+			} );
+	}
+
+	traversePanelIntersection( node: AvNode, defaultParent: PendingTransform )
+	{
+		if( !node.propEndAddr )
+		{
+			return;
+		}
+
+		let panelTransform = this.getTransform( node.propEndAddr );
+		this.updateTransformWithCompute( node.globalId,
+			[ defaultParent, panelTransform ],
+			mat4.identity, null,
+			( [ universeFromNode, universeFromPanel ]: mat4[], unused: mat4) =>
+			{
+				return new mat4();
+			} );
+	}
+
 
 	@bind
 	public grabEvent( grabEvent: AvGrabEvent )
