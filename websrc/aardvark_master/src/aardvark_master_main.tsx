@@ -1,8 +1,8 @@
 import * as React from 'react';
 import  * as ReactDOM from 'react-dom';
 import bind from 'bind-decorator';
-import { AvGadget,AvOrigin, AvTransform, AvGrabber, AvModel, AvPoker, 
-	AvStandardHook, AvGrabButton, AvPanel, AvPanelAnchor, AvGadgetSeed } 
+import { AvGadget,AvOrigin, AvTransform, AvGrabber, AvModel, AvPoker, AvPanelIntersection,
+	AvLine,	AvStandardHook, AvGrabButton, AvPanel, AvPanelAnchor, AvGadgetSeed } 
 	from '@aardvarkxr/aardvark-react';
 import { Av, EndpointAddr, EHand, GrabberHighlight } from '@aardvarkxr/aardvark-shared'
 
@@ -15,6 +15,7 @@ interface DefaultHandState
 {
 	grabberHighlight: GrabberHighlight;
 	pokerHighlight: boolean;
+	currentPanel: EndpointAddr;
 }
 
 class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
@@ -29,6 +30,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 		{ 
 			grabberHighlight: GrabberHighlight.None,
 			pokerHighlight: false,
+			currentPanel: null,
 		};
 
 		this.m_editModeHandle = AvGadget.instance().listenForEditModeWithComponent( this )
@@ -39,9 +41,9 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 		this.setState( { grabberHighlight: newHighlight } );
 	}
 
-	@bind updatePokerHighlight( newHighlight: boolean )
+	@bind updatePokerHighlight( newHighlight: boolean, newPanel: EndpointAddr )
 	{
-		this.setState( { pokerHighlight: newHighlight } );
+		this.setState( { pokerHighlight: newHighlight, currentPanel: newPanel } );
 	}
 
 	componentWillUnmount()
@@ -89,7 +91,14 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 					<AvModel uri={ modelUri } color={ modelColor }/>
 				</AvTransform>
 
-				<AvPoker updateHighlight = { this.updatePokerHighlight } />
+				<AvPoker updateHighlight = { this.updatePokerHighlight } >
+					{ this.state.pokerHighlight && 
+						<>
+							<AvPanelIntersection id="panel_highlight" panelId={ this.state.currentPanel }/>
+							<AvLine endId="panel_highlight" color="yellow"/>
+						</>
+					}
+				</AvPoker>
 				<AvGrabber updateHighlight = { this.updateGrabberHighlight }
 					radius={0.0} />
 				<AvStandardHook persistentName={ hookName } hand={ this.props.hand }/>
@@ -159,7 +168,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		return <AvTransform rotateX={ 45 } translateZ={ -0.1 }>
 				<AvTransform uniformScale={0.25}>
 					<AvTransform translateZ={ -0.55 }>
-						<AvPanel interactive={true}>
+						<AvPanel interactive={false}>
 							<div className="FullPage" >
 								<h1>This is the control panel</h1>
 								{ this.renderGadgetSeedList() }

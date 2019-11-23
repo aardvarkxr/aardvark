@@ -389,6 +389,7 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 			const PokerState_t & pokerState = res[pokerIndex];
 			CefRefPtr<CefV8Value> out = CefV8Value::CreateObject( nullptr, nullptr );
 			out->SetValue( "pokerId", endpointAddrToJs( pokerState.pokerId ), V8_PROPERTY_ATTRIBUTE_NONE );
+			out->SetValue( "isPressed", CefV8Value::CreateBool( pokerState.isPressed ), V8_PROPERTY_ATTRIBUTE_NONE );
 
 			CefRefPtr<CefV8Value> panels = CefV8Value::CreateArray( (int)pokerState.panels.size() );
 			for ( size_t panelIndex = 0; panelIndex < pokerState.panels.size(); panelIndex++ )
@@ -713,8 +714,10 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 		pokerInUniverse.y = arguments[1]->GetValue( 1 )->GetDoubleValue();
 		pokerInUniverse.z = arguments[1]->GetValue( 2 )->GetDoubleValue();
 
-		m_intersections.addActivePoker( pokerId, pokerInUniverse, (EHand)arguments[2]->GetIntValue() );
+		EHand hand = (EHand)arguments[2]->GetIntValue();
+		m_intersections.addActivePoker( pokerId, pokerInUniverse, hand, m_vrManager->isGrabPressed( hand ) );
 	} );
+
 
 	RegisterFunction( container, "startGrab", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
