@@ -1027,7 +1027,17 @@ export class AvDefaultTraverser
 			mat4.identity, null,
 			( [ universeFromNode, universeFromPanel ]: mat4[], unused: mat4) =>
 			{
-				return new mat4();
+				let nodePos = universeFromNode.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) );
+				let panelFromUniverse = universeFromPanel.copy().inverse();
+				let intersectionPos = panelFromUniverse.multiplyVec4( nodePos );
+				intersectionPos.y = 0; // zero out distance from the panel
+				intersectionPos = universeFromPanel.multiplyVec4( intersectionPos );
+
+				let result = universeFromPanel.all();
+				result[12] = intersectionPos.x;
+				result[13] = intersectionPos.y;
+				result[14] = intersectionPos.z;
+				return new mat4( result );
 			} );
 	}
 
