@@ -1,6 +1,6 @@
 {
   "name": "@aardvarkxr/aardvark-cli",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Various command line utilities for Aardvark",
   "main": "./lib/avcmd.js",
   "bin": {
@@ -10,7 +10,7 @@
     "lib"
   ],
   "dependencies": {
-    "@aardvarkxr/aardvark-shared": "^0.0.4",
+    "@aardvarkxr/aardvark-shared": "^0.0.5",
     "commander": "^3.0.2",
     "file-url": "^3.0.0",
     "is-url": "^1.2.4",
@@ -27,6 +27,7 @@
   },
   "scripts": {
     "deploy": "npm run build && npm i -g",
+    "start": "tsc -p . --watch",
     "build": "tsc -p ."
   },
   "author": "Aardvark Team",

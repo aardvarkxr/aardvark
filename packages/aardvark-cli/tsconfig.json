@@ -8,6 +8,7 @@
 	  "rootDir": "src",
 	  "strict": true,
 	  "types": ["node"],
+	  "sourceMap": true,
 	  "experimentalDecorators": true,
 	  "allowSyntheticDefaultImports": true,
 	  "importHelpers": true,
