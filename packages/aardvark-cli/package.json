@@ -10,7 +10,7 @@
     "lib"
   ],
   "dependencies": {
-    "@aardvarkxr/aardvark-shared": "^0.0.5",
+    "@aardvarkxr/aardvark-shared": "^0.0.7",
     "commander": "^3.0.2",
     "file-url": "^3.0.0",
     "is-url": "^1.2.4",

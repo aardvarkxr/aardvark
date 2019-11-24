@@ -34,7 +34,7 @@
   },
   "dependencies": {
     "@aardvarkxr/aardvark-react": "^0.0.5",
-    "@aardvarkxr/aardvark-shared": "^0.0.5",
+    "@aardvarkxr/aardvark-shared": "^0.0.7",
     "@tlaukkan/tsm": "^0.8.5",
     "@types/is-url": "^1.2.28",
     "@types/uuid": "^3.4.5",
