@@ -388,7 +388,7 @@ void VulkanExample::loadAssets()
 	textures.empty.loadFromFile( assetpath + "textures/empty.ktx", VK_FORMAT_R8G8B8A8_UNORM, vulkanDevice, queue );
 
 	std::string sceneFile = assetpath + "models/DamagedHelmet/glTF-Embedded/DamagedHelmet.gltf";
-	std::string envMapFile = assetpath + "environments/papermill.ktx";
+	std::string envMapFile = assetpath + "environments/softboxes_hdr16f_cube.ktx";
 	for ( size_t i = 0; i < args.size(); i++ ) {
 		if ( std::string( args[i] ).find( ".gltf" ) != std::string::npos ) {
 			std::ifstream file( args[i] );
