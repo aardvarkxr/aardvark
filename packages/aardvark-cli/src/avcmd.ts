@@ -136,6 +136,26 @@ program
 			}
 		}
 
+		if( !state.activeGadgets )
+		{
+			console.log( "No active gadgets" );
+		}
+		else
+		{
+			for( let uuid in state.activeGadgets )
+			{
+				let gadgetState = state.activeGadgets[ uuid ];
+				console.log( `\t${ uuid }: ${gadgetState.uri}` );
+				if( gadgetState.hook )
+				{
+					console.log( `\t\t${ gadgetState.hook }: ${gadgetState.uri}` );
+				}
+				if( gadgetState.settings )
+				{
+					console.log( `\t\t${ JSON.stringify( gadgetState.settings, undefined, "\t" ) }` );
+				}
+			}
+		}
 		showHelp = false;
 	})
 	
