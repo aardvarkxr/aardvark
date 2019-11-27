@@ -711,7 +711,12 @@ export class AvDefaultTraverser
 			}
 			else if( node.propTransform )
 			{
-				this.updateTransform( node.globalId, defaultParent, nodeTransformToMat4( node.propTransform ), null );
+				let parentFromNode = nodeTransformToMat4( node.propTransform );
+				this.updateTransform( node.globalId, defaultParent, parentFromNode, 
+					( universeFromNode: mat4 ) =>
+					{
+						this.preserveTransform( node, null, defaultParent, universeFromNode, parentFromNode );
+					} );
 			}
 		}
 		else
