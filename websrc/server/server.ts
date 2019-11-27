@@ -1137,4 +1137,13 @@ if( path.basename( p ) == "websrc" )
 	process.chdir( "../data" );
 }
 
-let server = new CServer( Number( process.env.PORT ) || AardvarkPort );
+let server:CServer;
+
+async function startup()
+{
+	server = new CServer( Number( process.env.PORT ) || AardvarkPort );
+	await persistence.init();
+}
+
+startup();
+
