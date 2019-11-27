@@ -1,6 +1,6 @@
 {
   "name": "@aardvarkxr/aardvark-cli",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Various command line utilities for Aardvark",
   "main": "./lib/avcmd.js",
   "bin": {
