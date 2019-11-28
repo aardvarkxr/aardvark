@@ -37,6 +37,7 @@ let defaults =
 
 	resolve:
 	{
+		modules:[ path.resolve( __dirname, 'node_modules' ) ],
 		extensions: [ '.ts', '.tsx', '.js' ],
 		alias: 
 		{
@@ -153,6 +154,7 @@ module.exports =
 
 		resolve:
 		{
+			modules:[ path.resolve( __dirname, 'node_modules' ) ],
 			extensions: [ '.ts', '.tsx', '.js' ],
 			alias: 
 			{
