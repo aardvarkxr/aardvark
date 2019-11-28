@@ -513,6 +513,7 @@ export interface AvNode
 	propThickness?: number;
 	propStartGap?: number;
 	propEndGap?: number;
+	propScaleToFit?: AvVector;
 }
 
 export enum EHand

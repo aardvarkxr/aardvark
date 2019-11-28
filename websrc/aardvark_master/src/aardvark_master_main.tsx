@@ -152,7 +152,8 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 				seeds.push( 
 					<div className="GadgetSeed">
 						<AvPanelAnchor>
-							<AvGadgetSeed key="gadget" uri={ gadget } />
+							<AvGadgetSeed key="gadget" uri={ gadget } 
+								radius={ 0.1 }/>
 						</AvPanelAnchor>
 					</div> );
 			}

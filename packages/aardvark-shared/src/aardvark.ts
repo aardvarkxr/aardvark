@@ -19,12 +19,23 @@ export interface AvModelInstance
 }
 
 
+interface AABB
+{
+	xMin: number;
+	xMax: number;
+	yMin: number;
+	yMax: number;
+	zMin: number;
+	zMax: number;
+}
+
 interface AvRenderer
 {
 	registerTraverser( traverser: AvTraversalRenderer ): void;
 	renderList( renderList: AvModelInstance[] ): void,
 	createModelInstance( uri: string): AvModelInstance;
 	getUniverseFromOriginTransform( origin: string ): number[];
+	getAABBForModel( uri: string ): AABB;
 
 	registerHapticProcessor( hapticProcessor: AvHapticProcessor ) : void;
 	sendHapticEventForHand( hand: EHand, amplitude: number, frequency: number, duration: number ): void;

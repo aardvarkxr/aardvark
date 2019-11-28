@@ -1,6 +1,6 @@
 import * as Color from 'color';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
-import { AvNodeType, AvColor } from '@aardvarkxr/aardvark-shared';
+import { AvNodeType, AvColor, AvVector } from '@aardvarkxr/aardvark-shared';
 
 interface AvModelProps extends AvBaseNodeProps
 {
@@ -13,6 +13,17 @@ interface AvModelProps extends AvBaseNodeProps
 	 * @default no tint
 	 */
 	color?: AvColor | string;
+
+	/** Causes the model to be uniformly scaled up or down so
+	 * that its bounding box touches at least one of the -x, +x,
+	 * -y, +y, -z, or +z planes. Any axis that is 0 or unspecified
+	 * will not be considered when computing the scale for the model.
+	 * 
+	 * This scaling happens inside any transforms on parent nodes.
+	 * 
+	 * @default No scaling
+	 */
+	scaleToFit?: AvVector;
 }
 
 /** Causes a GLTF model to be drawn at the specified location in the transform hierarchy. */
@@ -22,6 +33,7 @@ export class AvModel extends AvBaseNode< AvModelProps, {} >
 	{
 		let node = this.createNodeObject( AvNodeType.Model, this.m_nodeId );
 		node.propModelUri = this.props.uri;
+		node.propScaleToFit = this.props.scaleToFit;
 		let color: AvColor;
 		if( typeof this.props.color === "string" )
 		{

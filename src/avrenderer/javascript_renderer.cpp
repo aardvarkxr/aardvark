@@ -612,6 +612,38 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 		}
 	} );
 
+	RegisterFunction( container, "getAABBForModel", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 1 )
+		{
+			exception = "Invalid arguments";
+			return;
+		}	
+
+		if ( !arguments[0]->IsString() )
+		{
+			exception = "argument must be the url of a model";
+			return;
+		}
+
+		AABB_t box;
+
+		if ( !m_renderer->getModelBox( arguments[0]->GetStringValue(), &box ) )
+		{
+			retval = CefV8Value::CreateNull();
+		}
+		else
+		{
+			retval = CefV8Value::CreateObject( nullptr, nullptr );
+			retval->SetValue( "xMin", CefV8Value::CreateDouble( box.xMin ), V8_PROPERTY_ATTRIBUTE_NONE );
+			retval->SetValue( "xMax", CefV8Value::CreateDouble( box.xMax ), V8_PROPERTY_ATTRIBUTE_NONE );
+			retval->SetValue( "yMin", CefV8Value::CreateDouble( box.yMin ), V8_PROPERTY_ATTRIBUTE_NONE );
+			retval->SetValue( "yMax", CefV8Value::CreateDouble( box.yMax ), V8_PROPERTY_ATTRIBUTE_NONE );
+			retval->SetValue( "zMin", CefV8Value::CreateDouble( box.zMin ), V8_PROPERTY_ATTRIBUTE_NONE );
+			retval->SetValue( "zMax", CefV8Value::CreateDouble( box.zMax ), V8_PROPERTY_ATTRIBUTE_NONE );
+		}
+	} );
+
 	RegisterFunction( container, "createModelInstance", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
 		if ( arguments.size() != 1 )

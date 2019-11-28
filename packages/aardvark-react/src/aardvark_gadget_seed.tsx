@@ -5,7 +5,7 @@ import { HighlightType, GrabResponse, AvGrabbable } from './aardvark_grabbable';
 import { AvTransform } from './aardvark_transform';
 import { AvSphereHandle } from './aardvark_handles';
 import { AvModel } from './aardvark_model';
-import { EndpointAddr, AvGrabEvent, AvGadgetManifest, endpointAddrIsEmpty } from '@aardvarkxr/aardvark-shared';
+import { EndpointAddr, AvGrabEvent, AvGadgetManifest, endpointAddrIsEmpty, AvVector } from '@aardvarkxr/aardvark-shared';
 import { AvGadget } from './aardvark_gadget';
 
 
@@ -16,6 +16,14 @@ interface AvGadgetSeedProps extends AvBaseNodeProps
 	 * "/gadget_manifest.json" part of the path.
 	*/
 	uri: string;
+
+	/** Size in meters of the gadget seed. This will control both
+	 * the active area and the scale of the gadget's model, at least
+	 * for gadget models that are centered around the origin.
+	 * 
+	 * @default 0.1
+	 */
+	radius?: number;
 }
 
 interface AvGadgetSeedState
@@ -101,24 +109,27 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 		if( !this.m_manifest )
 			return null;
 
+		let radius = this.props.radius ? this.props.radius : 0.1;
+
 		let scale:number;
 		switch( this.state.grabbableHighlight )
 		{
 			case HighlightType.None:
-				scale = 0.2;
+				scale = 1.0;
 				break;
 
 			default:
-				scale = 0.25;
+				scale = 1.25;
 				break;
 		}
 		return (
 			<AvGrabbable updateHighlight={ this.onHighlightGrabbable }
 				onGrabRequest={ this.onGrabRequest }>
-				<AvSphereHandle radius={0.1} />
+				<AvSphereHandle radius={ radius } />
 				
 				<AvTransform uniformScale={ scale }>
-					<AvModel uri= { this.m_manifest.model }/>
+					<AvModel uri= { this.m_manifest.model } 
+						scaleToFit={ { x: radius, y: radius, z: radius } }/>
 				</AvTransform>
 			</AvGrabbable>
 		);

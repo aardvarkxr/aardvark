@@ -7,7 +7,7 @@ import { endpointAddrToString, endpointAddrIsEmpty, MessageType, MsgNodeHaptic,
 	ENodeFlags, AvNodeTransform, AvConstraint, AvNodeType, EHand, EVolumeType, 
 	AvGrabEvent, MsgUpdateSceneGraph, EndpointType, MsgGrabEvent, endpointAddrsMatch, 
 	MsgSetEditMode, EndpointAddr, Av, AvModelInstance, MsgDestroyGadget } from '@aardvarkxr/aardvark-shared';
-import { computeUniverseFromLine, nodeTransformToMat4, translateMat, nodeTransformFromMat4, vec3MultiplyAndAdd } from './traverser_utils';
+import { computeUniverseFromLine, nodeTransformToMat4, translateMat, nodeTransformFromMat4, vec3MultiplyAndAdd, scaleAxisToFit, scaleMat, minIgnoringNulls } from './traverser_utils';
 
 interface NodeData
 {
@@ -621,9 +621,36 @@ export class AvDefaultTraverser
 					[ node.propColor.r, node.propColor.g, node.propColor.b, alpha ] );
 			}
 
+			let internalScale = 1;
+			if( node.propScaleToFit )
+			{
+				let aabb = Av().renderer.getAABBForModel( node.propModelUri );
+				if( !aabb )
+				{
+					// if we were told to scale the model, but it isn't loaded at this point,
+					// abort drawing it so we don't have one frame of a wrongly-scaled model
+					// as it loads in.
+					return;
+				}
+
+				let possibleScale = minIgnoringNulls(
+					scaleAxisToFit( node.propScaleToFit.x, aabb.xMin, aabb.xMax ),
+					scaleAxisToFit( node.propScaleToFit.y, aabb.yMin, aabb.yMax ),
+					scaleAxisToFit( node.propScaleToFit.z, aabb.zMin, aabb.zMax ) );
+				if( possibleScale != null )
+				{
+					internalScale = possibleScale;
+				}
+			}
+
 			this.updateTransform( node.globalId, defaultParent, mat4.identity,
 				( universeFromNode: mat4 ) =>
 			{
+				if( internalScale != 1 )
+				{
+					let scaledNodeFromModel = scaleMat( new vec3( [ internalScale, internalScale, internalScale ] ) );
+					universeFromNode = new mat4( universeFromNode.all() ).multiply( scaledNodeFromModel );
+				}
 				nodeData.modelInstance.setUniverseFromModelTransform( universeFromNode.all() );
 				this.m_renderList.push( nodeData.modelInstance );
 			} );
