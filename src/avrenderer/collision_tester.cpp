@@ -86,10 +86,13 @@ void CCollisionTester::reset()
 bool spheresIntersect( const CCollisionTester::Volume_t & v1, const CCollisionTester::Volume_t &v2 )
 {
 	glm::vec4 zero( 0, 0, 0, 1.f );
+	glm::vec4 one( 1.f, 0, 0, 0.f );
 	glm::vec3 v1Center( v1.universeFromVolume * zero );
 	glm::vec3 v2Center( v2.universeFromVolume * zero );
+	float v1Radius = glm::length( v1.universeFromVolume * one ) * v1.radius;
+	float v2Radius = glm::length( v2.universeFromVolume * one ) * v2.radius;
 	float dist = glm::length( v1Center - v2Center );
-	return dist < ( v1.radius + v2.radius );
+	return dist < ( v1Radius + v2Radius );
 }
 
 template<typename T>
