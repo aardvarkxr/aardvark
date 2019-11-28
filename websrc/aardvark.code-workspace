@@ -2,6 +2,12 @@
 	"folders": [
 		{
 			"path": "."
+		},
+		{
+			"path": "E:\\homedev\\aardvark\\packages\\aardvark-shared\\src"
+		},
+		{
+			"path": "E:\\homedev\\aardvark\\packages\\aardvark-react\\src"
 		}
 	],
 	"settings": {}
