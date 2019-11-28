@@ -40,7 +40,9 @@ let defaults =
 		extensions: [ '.ts', '.tsx', '.js' ],
 		alias: 
 		{
-			"common" : path.resolve( __dirname, "./common" )
+			"common" : path.resolve( __dirname, "./common" ),
+			"@aardvarkxr/aardvark-shared" : path.resolve( __dirname, "../packages/aardvark-shared/src/index.ts" ),
+			"@aardvarkxr/aardvark-react" : path.resolve( __dirname, "../packages/aardvark-react/src/index.ts" )
 		}
 	},
 
@@ -154,7 +156,9 @@ module.exports =
 			extensions: [ '.ts', '.tsx', '.js' ],
 			alias: 
 			{
-				"common" : path.resolve( __dirname, "./common" )
+				"common" : path.resolve( __dirname, "./common" ),
+				"@aardvarkxr/aardvark-shared" : path.resolve( __dirname, "../packages/aardvark-shared/src/index.ts" ),
+				"@aardvarkxr/aardvark-react" : path.resolve( __dirname, "../packages/aardvark-react/src/index.ts" )
 			}
 		},	
 	}

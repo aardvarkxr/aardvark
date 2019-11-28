@@ -33,8 +33,6 @@
     "webpack-node-externals": "^1.7.2"
   },
   "dependencies": {
-    "@aardvarkxr/aardvark-react": "^0.0.6",
-    "@aardvarkxr/aardvark-shared": "^0.0.8",
     "@tlaukkan/tsm": "^0.8.5",
     "@types/is-url": "^1.2.28",
     "@types/uuid": "^3.4.5",
