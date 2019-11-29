@@ -52,6 +52,23 @@ bool mat4FromJavascript( CefRefPtr<CefV8Value> arg, glm::mat4 *out )
 	return true;
 }
 
+bool aabbFromJavascript( CefRefPtr<CefV8Value> arg, AABB_t *out )
+{
+	if ( !arg->IsObject() )
+	{
+		return false;
+	}
+
+	out->xMin = (float)arg->GetValue( "xMin" )->GetDoubleValue();
+	out->xMax = (float)arg->GetValue( "xMax" )->GetDoubleValue();
+	out->yMin = (float)arg->GetValue( "yMin" )->GetDoubleValue();
+	out->yMax = (float)arg->GetValue( "yMax" )->GetDoubleValue();
+	out->zMin = (float)arg->GetValue( "zMin" )->GetDoubleValue();
+	out->zMax = (float)arg->GetValue( "zMax" )->GetDoubleValue();
+
+	return true;
+}
+
 bool CJavascriptModelInstance::init( CefRefPtr<CefV8Value > container )
 {
 	RegisterFunction( container, "setUniverseFromModelTransform", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
@@ -577,6 +594,46 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 			hookGlobalId,
 			universeFromHandle,
 			arguments[2]->GetDoubleValue(),
+			(EHand)arguments[3]->GetIntValue() );
+	} );
+
+	RegisterFunction( container, "addHook_Aabb", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 4 )
+		{
+			exception = "Invalid arguments";
+			return;
+		}
+
+		EndpointAddr_t hookGlobalId;
+		if ( !endpointAddrFromJs( arguments[0], &hookGlobalId ) )
+		{
+			exception = "argument must be an endpoint address";
+			return;
+		}
+
+		glm::mat4 universeFromHandle;
+		if ( !mat4FromJavascript( arguments[1], &universeFromHandle ) )
+		{
+			exception = "second argument must be an array of 16 numbers";
+			return;
+		}
+
+		AABB_t aabb;
+		if( !aabbFromJavascript( arguments[2], &aabb ) )
+		{
+			exception = "third argument must be an AABB";
+		}
+
+		if ( !arguments[3]->IsInt() )
+		{
+			exception = "fourth argument must be a number (and hand enum value)";
+		}
+
+		m_collisions.addHook_Aabb(
+			hookGlobalId,
+			universeFromHandle,
+			aabb,
 			(EHand)arguments[3]->GetIntValue() );
 	} );
 

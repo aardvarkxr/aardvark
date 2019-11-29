@@ -25,11 +25,38 @@ export enum HookHighlight
 	Occupied,
 }
 
+
 interface AvHookProps extends AvBaseNodeProps
 {
+	/** The updateHighlight function will be called whenever the highlight state
+	 * of a hook changes.
+	 */
 	updateHighlight?: ( highlightType: HookHighlight ) => void;
-	radius: number;
+
+	/** For spherical hooks, this is the radius of the hook. If any AABB
+	 * dimension is specified, this is ignore.
+	*/
+	radius?: number;
+
+	/** Minimum x value for axis-aligned bounding box hook volumes. */
+	xMin?: number;
+
+	/** Maximum x value for axis-aligned bounding box hook volumes. */
+	xMax?: number;
+
+	/** Minimum y value for axis-aligned bounding box hook volumes. */
+	yMin?: number;
+
+	/** Maximum y value for axis-aligned bounding box hook volumes. */
+	yMax?: number;
+
+	/** Minimum z value for axis-aligned bounding box hook volumes. */
+	zMin?: number;
+
+	/** Maximum z value for axis-aligned bounding box hook volumes. */
+	zMax?: number;
 }
+
 
 /** This node is a point in space where a grabbable can be attached at
  * the end of a grab operation.
@@ -44,7 +71,33 @@ export class AvHook extends AvBaseNode< AvHookProps, {} >
 		AvGadget.instance().setGrabEventProcessor( this.m_nodeId, this.onGrabEvent );
 
 		let node = this.createNodeObject( AvNodeType.Hook, this.m_nodeId );
-		node.propVolume = { type: EVolumeType.Sphere, radius : this.props.radius };
+
+		if( this.props.xMin || this.props.xMax 
+			|| this.props.yMin || this.props.yMax 
+			|| this.props.zMin || this.props.zMax )
+		{
+			node.propVolume = 
+			{ 
+				type: EVolumeType.AABB, 
+				aabb:
+				{
+					xMin: this.props.xMin,
+					xMax: this.props.xMax,
+					yMin: this.props.yMin,
+					yMax: this.props.yMax,
+					zMin: this.props.zMin,
+					zMax: this.props.zMax,
+				},
+			};
+		}
+		else
+		{
+			node.propVolume = 
+			{ 
+				type: EVolumeType.Sphere, 
+				radius : this.props.radius ? this.props.radius : 0.1, 
+			};
+		}
 		return node;
 	}
 

@@ -980,6 +980,9 @@ export class AvDefaultTraverser
 				case EVolumeType.Sphere:
 					Av().renderer.addHook_Sphere( hookGlobalId, universeFromNode.all(), node.propVolume.radius, hand );
 					break;
+				case EVolumeType.AABB:
+					Av().renderer.addHook_Aabb( hookGlobalId, universeFromNode.all(), node.propVolume.aabb, hand );
+					break;
 				default:
 					throw "unsupported volume type";
 			}

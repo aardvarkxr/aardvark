@@ -65,6 +65,8 @@ public:
 
 	void addHook_Sphere( const aardvark::EndpointAddr_t & globalHookId, const glm::mat4 & universeFromHook,
 		float radius, EHand hand );
+	void addHook_Aabb( const aardvark::EndpointAddr_t & globalHookId, const glm::mat4 & universeFromHook,
+		const AABB_t & aabb, EHand hand );
 
 	void startGrab( const aardvark::EndpointAddr_t & globalGrabberId, const aardvark::EndpointAddr_t & globalGrabbableId );
 	void endGrab( const aardvark::EndpointAddr_t & globalGrabberId, const aardvark::EndpointAddr_t & globalGrabbableId );

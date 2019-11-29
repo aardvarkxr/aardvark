@@ -75,6 +75,12 @@ void CCollisionTester::addHook_Sphere( const aardvark::EndpointAddr_t & globalHo
 	m_activeHooks.push_back( { globalHookId, hand, Volume_t::createSphere( universeFromHook, radius ) } );
 }
 
+void CCollisionTester::addHook_Aabb( const aardvark::EndpointAddr_t & globalHookId, const glm::mat4 & universeFromHook,
+	const AABB_t & aabb, EHand hand )
+{
+	m_activeHooks.push_back( { globalHookId, hand, Volume_t::createBox( universeFromHook, aabb ) } );
+}
+
 
 void CCollisionTester::reset()
 {

@@ -2,7 +2,7 @@ import * as React from 'react';
 import  * as ReactDOM from 'react-dom';
 import bind from 'bind-decorator';
 import { AvGadget,AvOrigin, AvTransform, AvGrabber, AvModel, AvPoker, AvPanelIntersection,
-	AvLine,	AvStandardHook, AvGrabButton, AvPanel, AvPanelAnchor, AvGadgetSeed } 
+	AvLine,	AvStandardHook, AvGrabButton, AvPanel, AvPanelAnchor, AvGadgetSeed, AvStandardBoxHook } 
 	from '@aardvarkxr/aardvark-react';
 import { Av, EndpointAddr, EHand, GrabberHighlight } from '@aardvarkxr/aardvark-shared'
 
@@ -101,7 +101,11 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 				</AvPoker>
 				<AvGrabber updateHighlight = { this.updateGrabberHighlight }
 					radius={0.0} />
-				<AvStandardHook persistentName={ hookName } hand={ this.props.hand }/>
+				<AvStandardBoxHook persistentName={ hookName } hand={ this.props.hand }
+					xMin={-0.1} xMax={0.1}
+					yMin={-0.1} yMax={0.5}
+					zMin={-0.3} zMax={0.1}
+					/>
 				{ AvGadget.instance().getEditModeForHand( this.props.hand ) && <ControlPanel />}
 			</AvOrigin>
 		);

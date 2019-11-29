@@ -1,6 +1,7 @@
 import { AvGadgetManifest, AvPanelMouseEventType, EndpointAddr, 
 	MsgGrabberState, MsgPokerProximity, AvSharedTextureInfo, 
-	EHand } from './aardvark_protocol';
+	EHand, 
+	AABB as Aabb} from './aardvark_protocol';
 
 export interface AvTraversalRenderer
 {
@@ -19,23 +20,13 @@ export interface AvModelInstance
 }
 
 
-interface AABB
-{
-	xMin: number;
-	xMax: number;
-	yMin: number;
-	yMax: number;
-	zMin: number;
-	zMax: number;
-}
-
 interface AvRenderer
 {
 	registerTraverser( traverser: AvTraversalRenderer ): void;
 	renderList( renderList: AvModelInstance[] ): void,
 	createModelInstance( uri: string): AvModelInstance;
 	getUniverseFromOriginTransform( origin: string ): number[];
-	getAABBForModel( uri: string ): AABB;
+	getAABBForModel( uri: string ): Aabb;
 
 	registerHapticProcessor( hapticProcessor: AvHapticProcessor ) : void;
 	sendHapticEventForHand( hand: EHand, amplitude: number, frequency: number, duration: number ): void;
@@ -53,6 +44,7 @@ interface AvRenderer
 		universeFromHandle: number[], uri: string, hand: EHand ): void;
 	addGrabber_Sphere( grabberGlobalId: EndpointAddr, universeFromGrabber: number[], radius: number, hand: EHand ): void;
 	addHook_Sphere( hookGlobalId: EndpointAddr, universeFromGrabber: number[], radius: number, hand: EHand  ): void;
+	addHook_Aabb( hookGlobalId: EndpointAddr, universeFromGrabber: number[], aabb: Aabb, hand: EHand  ): void;
 
 	startGrab( grabberGlobalId: EndpointAddr, grabbableGlobalId: EndpointAddr  ): void;
 	endGrab( grabberGlobalId: EndpointAddr, grabbableGlobalId: EndpointAddr  ): void;

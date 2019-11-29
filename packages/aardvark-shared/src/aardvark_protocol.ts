@@ -453,8 +453,19 @@ export enum EVolumeType
 
 	Sphere = 0,
 	ModelBox = 1,
+	AABB = 1,
 };
 
+
+export interface AABB
+{
+	xMin: number;
+	xMax: number;
+	yMin: number;
+	yMax: number;
+	zMin: number;
+	zMax: number;
+}
 
 export interface AvVolume
 {
@@ -462,6 +473,7 @@ export interface AvVolume
 
 	radius?: number;
 	uri?: string;
+	aabb?: AABB;
 }
 
 export enum ENodeFlags
