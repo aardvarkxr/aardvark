@@ -146,9 +146,9 @@ program
 			{
 				let gadgetState = state.activeGadgets[ uuid ];
 				console.log( `\t${ uuid }: ${gadgetState.uri}` );
-				if( gadgetState.hook )
+				if( gadgetState.hookPath )
 				{
-					console.log( `\t\t${ gadgetState.hook }: ${gadgetState.uri}` );
+					console.log( `\t\t${ gadgetState.hookPath }: ${gadgetState.uri}` );
 				}
 				if( gadgetState.settings )
 				{
