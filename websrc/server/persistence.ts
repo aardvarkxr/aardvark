@@ -1,9 +1,9 @@
-import { AardvarkState, StoredGadget, readPersistentState, AvGadgetManifest } from '@aardvarkxr/aardvark-shared';
+import { AardvarkState, StoredGadget, readPersistentState, AvGadgetManifest, AvNodeTransform } from '@aardvarkxr/aardvark-shared';
 import { v4 as uuid } from 'uuid';
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
-import { fixupUriForLocalInstall, getJSONFromUri } from './serverutils';
+import { fixupUriForLocalInstall, HookPathParts, buildPersistentHookPath, getJSONFromUri } from './serverutils';
 import bind from 'bind-decorator';
 
 
@@ -94,11 +94,11 @@ class CPersistenceManager
 		}
 	}
 
-	public getGadgetHook( uuid: string ): string
+	public getGadgetHookPath( uuid: string ): string
 	{
 		if( this.m_state.activeGadgets[ uuid ] )
 		{
-			return this.m_state.activeGadgets[ uuid ].hook;
+			return this.m_state.activeGadgets[ uuid ].hookPath;
 		}
 		else
 		{
@@ -118,14 +118,20 @@ class CPersistenceManager
 		}
 	}
 
-	public setGadgetHook( uuid: string, hook: string )
+	public setGadgetHook( uuid: string, hook: string, hookFromGadget: AvNodeTransform )
+	{
+		let hookPath = buildPersistentHookPath( uuid, hook, hookFromGadget );
+		this.setGadgetHookPath( uuid, hookPath );
+	}
+
+	public setGadgetHookPath( uuid: string, hookPath: string )
 	{
 		if( !this.m_state.activeGadgets[ uuid ] )
 		{
 			throw "unknown persistence uuid";
 		}
 
-		this.m_state.activeGadgets[ uuid ].hook = hook;
+		this.m_state.activeGadgets[ uuid ].hookPath = hookPath;
 		this.markDirty();
 	}
 

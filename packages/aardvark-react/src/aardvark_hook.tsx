@@ -2,7 +2,7 @@ import { AvGadget } from './aardvark_gadget';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 import bind from 'bind-decorator';
 import { endpointAddrsMatch, EndpointAddr, AvNodeType, AvGrabEventType, 
-	AvGrabEvent, EVolumeType } from '@aardvarkxr/aardvark-shared';
+	AvGrabEvent, EVolumeType, ENodeFlags } from '@aardvarkxr/aardvark-shared';
 
 
 /** The highlight states that a hook can be in. */
@@ -32,6 +32,13 @@ interface AvHookProps extends AvBaseNodeProps
 	 * of a hook changes.
 	 */
 	updateHighlight?: ( highlightType: HookHighlight ) => void;
+
+	/** If this field is true dropping grabbables on the hook will preserve the 
+	 * transform between the grabbable and the hook at the time of the drop. 
+	 * 
+	 * @default false
+	 */
+	preserveDropTransform?: boolean;
 
 	/** For spherical hooks, this is the radius of the hook. If any AABB
 	 * dimension is specified, this is ignore.
@@ -72,6 +79,11 @@ export class AvHook extends AvBaseNode< AvHookProps, {} >
 
 		let node = this.createNodeObject( AvNodeType.Hook, this.m_nodeId );
 
+		if( this.props.preserveDropTransform )
+		{
+			node.flags |= ENodeFlags.PreserveGrabTransform;
+		}
+		
 		if( this.props.xMin || this.props.xMax 
 			|| this.props.yMin || this.props.yMax 
 			|| this.props.zMin || this.props.zMax )

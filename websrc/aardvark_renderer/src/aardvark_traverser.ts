@@ -142,6 +142,7 @@ interface AvNodeRoot
 	gadgetId: number;
 	root: AvNode;
 	hook?: string | EndpointAddr;
+	hookFromGadget?: AvNodeTransform;
 }
 
 export class AvDefaultTraverser
@@ -201,6 +202,7 @@ export class AvDefaultTraverser
 				gadgetId: sender.endpointId,
 				root: m.root,
 				hook: m.hook,
+				hookFromGadget: m.hookFromGadget,
 			}
 		}
 	}
@@ -304,6 +306,7 @@ export class AvDefaultTraverser
 						{ 
 							this.sendGrabEvent( event );
 						},
+						getUniverseFromNode: this.getLastUniverseFromNode,
 						grabberEpa: state.grabberId
 					} );
 			}
@@ -441,9 +444,9 @@ export class AvDefaultTraverser
 					&& root.root.id != 0 )
 				{
 					// grabbable nodes are what need their origin set
-					this.setHookOrigin( root.hook, root.root );
+					this.setHookOrigin( root.hook, root.root, root.hookFromGadget );
 				}
-				this.setHookOrigin( root.hook, rootNode );
+				this.setHookOrigin( root.hook, rootNode, root.hookFromGadget );
 			}
 
 			this.traverseNode( rootNode, null );
@@ -550,7 +553,7 @@ export class AvDefaultTraverser
 	}
 
 
-	setHookOrigin( origin: string | EndpointAddr, node: AvNode )
+	setHookOrigin( origin: string | EndpointAddr, node: AvNode, hookFromGrabbable?: AvNodeTransform )
 	{
 		if( typeof origin === "string" )
 		{
@@ -577,10 +580,15 @@ export class AvDefaultTraverser
 		}
 		else if( origin != null )
 		{
+			let grabberFromGrabbable = mat4.identity;
+			if( hookFromGrabbable )
+			{
+				grabberFromGrabbable = nodeTransformToMat4( hookFromGrabbable );
+			}
 			this.m_nodeToNodeAnchors[ endpointAddrToString( node.globalId ) ] =
 			{
 				parentGlobalId: origin,
-				grabberFromGrabbable: mat4.identity,
+				grabberFromGrabbable,
 			}
 		}
 	}
@@ -1152,8 +1160,7 @@ export class AvDefaultTraverser
 				Av().renderer.endGrab( grabEvent.grabberId, grabEvent.grabbableId );
 				if( !endpointAddrIsEmpty( grabEvent.hookId ) )
 				{
-					// we're dropping onto a hook
-					this.m_nodeToNodeAnchors[ endpointAddrToString( grabEvent.grabbableId ) ] = 
+					let anchor: NodeToNodeAnchor_t =
 					{
 						parentGlobalId: grabEvent.hookId,
 						grabberFromGrabbable: null,
@@ -1164,6 +1171,17 @@ export class AvDefaultTraverser
 						grabbableNodeId: grabEvent.grabbableId,
 						hookNodeId: grabEvent.hookId,
 					}
+
+					// we're dropping onto a hook
+					let hookData = this.getNodeDataByEpa( grabEvent.hookId );
+					if( hookData.lastFlags & ENodeFlags.PreserveGrabTransform )
+					{
+						// this hook wants to retain the relative transform
+						anchor.grabberFromGrabbable = nodeTransformToMat4( grabEvent.hookFromGrabbable );
+						msg.hookFromGrabbable = grabEvent.hookFromGrabbable;
+					}
+
+					this.m_nodeToNodeAnchors[ endpointAddrToString( grabEvent.grabbableId ) ] = anchor;
 
 					this.m_endpoint.sendMessage( MessageType.AttachGadgetToHook, msg );
 				}
@@ -1258,6 +1276,19 @@ export class AvDefaultTraverser
 		this.m_hooksInUse = [];
 	}
 
+	@bind
+	private getLastUniverseFromNode( nodeAddr: EndpointAddr ): mat4
+	{
+		let nodeGlobalId = endpointAddrToString( nodeAddr );
+		if( !this.m_lastFrameUniverseFromNodeTransforms.hasOwnProperty( nodeGlobalId ) )
+		{
+			return mat4.identity;
+		}
+		else
+		{
+			return this.m_lastFrameUniverseFromNodeTransforms[ nodeGlobalId ];
+		}
+	}
 }
 
 

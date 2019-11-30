@@ -1,3 +1,4 @@
+import { AvTransform } from './../../aardvark-react/src/aardvark_transform';
 
 export const AardvarkPort = 23842;
 
@@ -202,6 +203,7 @@ export interface MsgUpdateSceneGraph
 {
 	root?: AvNode;
 	hook?: string|EndpointAddr;
+	hookFromGadget?: AvNodeTransform;
 }
 
 export interface MsgGrabberState
@@ -269,6 +271,7 @@ export interface MsgAttachGadgetToHook
 {
 	grabbableNodeId: EndpointAddr;
 	hookNodeId: EndpointAddr;
+	hookFromGrabbable?: AvNodeTransform;
 }
 
 export interface MsgDetachGadgetFromHook
@@ -410,6 +413,7 @@ export interface AvGrabEvent
 	highlight?: GrabberHighlight;
 	parentFromNode?: AvNodeTransform;
 	universeFromNode?: AvNodeTransform;
+	hookFromGrabbable?: AvNodeTransform;
 }
 
 export interface AvGrabEventProcessor

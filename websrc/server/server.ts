@@ -1,6 +1,5 @@
 import { g_localInstallPathUri, parsePersistentHookPath, HookPathParts, getJSONFromUri, buildPersistentHookPath } from './serverutils';
-import { StoredGadget } from '@aardvarkxr/aardvark-shared';
-import { AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, AvGrabEvent, 
+import { StoredGadget, AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, AvGrabEvent, 
 	AvGrabEventType, MsgAttachGadgetToHook, MsgMasterStartGadget, MsgSaveSettings, 
 	MsgOverrideTransform, MsgGetGadgetManifest, MsgGetGadgetManifestResponse, 
 	MsgUpdateSceneGraph, EndpointAddr, endpointAddrToString, MsgGrabEvent, 
@@ -14,8 +13,6 @@ import * as http from 'http';
 import * as WebSocket from 'ws';
 import bind from 'bind-decorator';
 import * as path from 'path';
-import { URL } from 'url';
-import * as fileUrl from 'file-url';
 import { persistence } from './persistence';
 import isUrl from 'is-url';
 
@@ -199,7 +196,7 @@ class CDispatcher
 		}
 	}
 
-	public updateGadgetSceneGraph( gadgetId: number, root: AvNode, hook: string | EndpointAddr )
+	public updateGadgetSceneGraph( gadgetId: number, root: AvNode, hook: string | GadgetHookAddr )
 	{
 		let env = this.buildUpdateSceneGraphMessage( gadgetId, root, hook );
 		this.sendToAllEndpointsOfType( EndpointType.Monitor, env );
@@ -207,13 +204,26 @@ class CDispatcher
 	}
 
 	private buildUpdateSceneGraphMessage( gadgetId: number, root: AvNode, 
-		hook: string | EndpointAddr ): Envelope
+		hook: string | GadgetHookAddr ): Envelope
 	{
 		let msg: MsgUpdateSceneGraph = 
 		{
 			root,
-			hook,
 		};
+
+		if( hook )
+		{
+			if( typeof hook === "string" )
+			{
+				msg.hook = hook;
+			}
+			else
+			{
+				msg.hook = hook.hookAddr;
+				msg.hookFromGadget = hook.hookFromGadget;
+			}	
+		}
+		
 		return (
 		{
 			type: MessageType.UpdateSceneGraph,
@@ -290,12 +300,12 @@ class CDispatcher
 		}
 	}
 
-	public getPersistentNodePath( hookId: EndpointAddr )
+	public getPersistentNodePath( hookId: EndpointAddr, hookFromGadget: AvNodeTransform )
 	{
 		let gadget = this.getGadgetEndpoint( hookId.endpointId );
 		if( gadget )
 		{
-			return gadget.getGadgetData().getPersistentNodePath( hookId );
+			return gadget.getGadgetData().getPersistentNodePath( hookId, hookFromGadget );
 		}
 		else
 		{
@@ -303,30 +313,30 @@ class CDispatcher
 		}
 	}
 
-	public startOrRehookGadget( uri: string, initialHook: string, persistenceUuid: string )
+	public startOrRehookGadget( uri: string, initialHookPath: string, persistenceUuid: string )
 	{
 		// see if this gadget already exists
 		let gadget = this.m_gadgetsByUuid[ persistenceUuid ];
 		if( !gadget )
 		{
-			this.tellMasterToStartGadget( uri, initialHook, persistenceUuid );
+			this.tellMasterToStartGadget( uri, initialHookPath, persistenceUuid );
 			return;
 		}
 
 		// tell the gadget to move to the newly available hook
 		let gadgetData = gadget.getGadgetData();
-		let hookParts = parsePersistentHookPath( initialHook );
+		let hookParts = parsePersistentHookPath( initialHookPath );
 		if( hookParts )
 		{
-			let hook = this.findHook( hookParts );
-			if( hook )
+			let hookAddr = this.findHook( hookParts );
+			if( hookAddr )
 			{
-				gadgetData.setHook( hook );
+				gadgetData.setHook( { ...hookParts, hookAddr } );
 			}
 		}
 		else
 		{
-			gadgetData.setHook( initialHook );
+			gadgetData.setHook( initialHookPath );
 		}
 		gadgetData.sendSceneGraphToRenderer( false, true );
 	}
@@ -368,13 +378,18 @@ interface HookNodeData
 	persistentName: string;
 }
 
+interface GadgetHookAddr extends HookPathParts
+{
+	hookAddr: EndpointAddr;
+}
+
 class CGadgetData
 {
 	private m_gadgetUri: string;
 	private m_ep: CEndpoint;
 	private m_manifest: AvGadgetManifest = null;
 	private m_root: AvNode = null;
-	private m_hook: string | EndpointAddr = null;
+	private m_hook: string | GadgetHookAddr = null;
 	private m_mainGrabbable: EndpointAddr = null;
 	private m_mainHandle: EndpointAddr = null;
 	private m_persistenceUuid: string = null;
@@ -390,7 +405,7 @@ class CGadgetData
 		{
 			if( !initialHook )
 			{
-				initialHook = persistence.getGadgetHook( persistenceUuid );
+				initialHook = persistence.getGadgetHookPath( persistenceUuid );
 			}
 
 			this.m_persistenceUuid = persistenceUuid;
@@ -400,7 +415,7 @@ class CGadgetData
 			this.m_persistenceUuid = persistence.createGadgetPersistence( uri );
 			if( initialHook )
 			{
-				persistence.setGadgetHook( this.m_persistenceUuid, initialHook );
+				persistence.setGadgetHook( this.m_persistenceUuid, initialHook, null );
 			}
 		}
 
@@ -423,7 +438,11 @@ class CGadgetData
 			}
 			else
 			{
-				this.m_hook = hookAddr;
+				this.m_hook = 
+				{
+					...hookInfo,
+					hookAddr  
+				};
 			}
 		}
 
@@ -448,7 +467,7 @@ class CGadgetData
 	public getHookNodes() { return this.m_hookNodes; }
 	public getPersistenceUuid() { return this.m_persistenceUuid; }
 	public isMaster() { return this.m_persistenceUuid == "master"; }
-	public setHook( newHook: string | EndpointAddr ) { this.m_hook = newHook; }
+	public setHook( newHook: string | GadgetHookAddr ) { this.m_hook = newHook; }
 	public isBeingDestroyed() { return this.m_gadgetBeingDestroyed; }
 
 	public getHookNodeByPersistentName( hookPersistentName: string )
@@ -513,7 +532,7 @@ class CGadgetData
 					let event: AvGrabEvent =
 					{
 						type: AvGrabEventType.EndGrab,
-						hookId: this.m_hook,
+						hookId: this.m_hook.hookAddr,
 						grabbableId: this.m_mainGrabbable,
 						handleId: this.m_mainHandle,
 					};
@@ -529,7 +548,7 @@ class CGadgetData
 						payloadUnpacked: msg,
 					}
 
-					this.m_dispatcher.forwardToEndpoint( this.m_hook, env );
+					this.m_dispatcher.forwardToEndpoint( this.m_hook.hookAddr, env );
 					this.m_dispatcher.forwardToEndpoint( this.m_mainGrabbable, env );
 				}
 			}
@@ -537,12 +556,12 @@ class CGadgetData
 			let gadgetsToStart = persistence.getActiveGadgets();
 			for( let gadget of gadgetsToStart )
 			{
-				let gadgetHook = persistence.getGadgetHook( gadget.uuid );
-				let hookParts = parsePersistentHookPath( gadgetHook )
+				let gadgetHookPath = persistence.getGadgetHookPath( gadget.uuid );
+				let hookParts = parsePersistentHookPath( gadgetHookPath )
 				if( ( !hookParts && this.isMaster() )
 					|| ( hookParts && hookParts.gadgetUuid == this.getPersistenceUuid() ) )
 				{
-					this.m_dispatcher.startOrRehookGadget( gadget.uri, gadgetHook, gadget.uuid );
+					this.m_dispatcher.startOrRehookGadget( gadget.uri, gadgetHookPath, gadget.uuid );
 				}
 			}
 		}
@@ -624,13 +643,14 @@ class CGadgetData
 		}
 	}
 
-	public getPersistentNodePath( hookId: EndpointAddr )
+	public getPersistentNodePath( hookId: EndpointAddr, hookFromGadget: AvNodeTransform )
 	{
 		for( let hookData of this.m_hookNodes )
 		{
 			if( hookData.epa.nodeId == hookId.nodeId )
 			{
-				return buildPersistentHookPath( this.m_persistenceUuid, hookData.persistentName );
+				return buildPersistentHookPath( this.m_persistenceUuid, hookData.persistentName, 
+					hookFromGadget );
 			}
 		}
 		return null;
@@ -966,7 +986,7 @@ class CEndpoint
 	@bind private onAttachGadgetToHook( env: Envelope, m: MsgAttachGadgetToHook )
 	{
 		let gadget = this.m_dispatcher.getGadgetEndpoint( m.grabbableNodeId.endpointId );
-		gadget.attachToHook( m.hookNodeId );
+		gadget.attachToHook( m.hookNodeId, m.hookFromGrabbable );
 	}
 
 	@bind private onDetachGadgetFromHook( env: Envelope, m: MsgDetachGadgetFromHook )
@@ -975,9 +995,9 @@ class CEndpoint
 		gadget.detachFromHook( m.hookNodeId );
 	}
 
-	private attachToHook( hookId: EndpointAddr )
+	private attachToHook( hookId: EndpointAddr, hookFromGrabbable: AvNodeTransform )
 	{
-		let hookPath = this.m_dispatcher.getPersistentNodePath( hookId );
+		let hookPath = this.m_dispatcher.getPersistentNodePath( hookId, hookFromGrabbable );
 		if( !hookPath )
 		{
 			console.log( `can't attach ${ this.m_id } to `
@@ -985,12 +1005,12 @@ class CEndpoint
 			return;
 		}
 
-		persistence.setGadgetHook( this.m_gadgetData.getPersistenceUuid(), hookPath );
+		persistence.setGadgetHookPath( this.m_gadgetData.getPersistenceUuid(), hookPath );
 	}
 
 	private detachFromHook( hookId: EndpointAddr )
 	{
-		persistence.setGadgetHook( this.m_gadgetData.getPersistenceUuid(), null );
+		persistence.setGadgetHook( this.m_gadgetData.getPersistenceUuid(), null, null );
 	}
 
 	@bind private onSaveSettings( env: Envelope, m: MsgSaveSettings )

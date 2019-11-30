@@ -1,8 +1,9 @@
+import { AvNodeTransform } from './aardvark_protocol';
 
 interface GadgetPersistence
 {
 	uri: string;
-	hook?: string;
+	hookPath?: string;
 	settings?: any;
 }
 
