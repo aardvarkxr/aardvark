@@ -1,5 +1,3 @@
-import { AvTransform } from './../../aardvark-react/src/aardvark_transform';
-
 export const AardvarkPort = 23842;
 
 export enum MessageType
