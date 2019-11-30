@@ -40,6 +40,12 @@ interface AvHookProps extends AvBaseNodeProps
 	 */
 	preserveDropTransform?: boolean;
 
+	/** If this field is true any number of grabbables can be dropped on the hook.
+	 * 
+	 * @default false
+	 */
+	allowMultipleDrops?: boolean;
+
 	/** For spherical hooks, this is the radius of the hook. If any AABB
 	 * dimension is specified, this is ignore.
 	*/
@@ -82,6 +88,10 @@ export class AvHook extends AvBaseNode< AvHookProps, {} >
 		if( this.props.preserveDropTransform )
 		{
 			node.flags |= ENodeFlags.PreserveGrabTransform;
+		}
+		if( this.props.allowMultipleDrops )
+		{
+			node.flags |= ENodeFlags.AllowMultipleDrops;
 		}
 		
 		if( this.props.xMin || this.props.xMax 

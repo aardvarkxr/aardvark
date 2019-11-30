@@ -1258,6 +1258,12 @@ export class AvDefaultTraverser
 
 	private isHookInUse( nodeId: EndpointAddr )
 	{
+		let hookData = this.getNodeDataByEpa( nodeId );
+		if( hookData && hookData.lastFlags & ENodeFlags.AllowMultipleDrops )
+		{
+			return false;
+		}
+		
 		for( let hookId of this.m_hooksInUse )
 		{
 			if( endpointAddrsMatch( nodeId, hookId ) )

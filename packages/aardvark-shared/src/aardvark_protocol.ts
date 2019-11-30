@@ -487,6 +487,7 @@ export enum ENodeFlags
 	NotifyOnTransformChange		= 1 << 2,
 	NotifyProximityWithoutGrab 	= 1 << 3,
 	AllowDropOnHooks  			= 1 << 4,
+	AllowMultipleDrops			= 1 << 5,
 }
 
 export interface AvConstraint

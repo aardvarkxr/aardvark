@@ -188,6 +188,7 @@ export class AvStandardBoxHook extends React.Component< StandardBoxHookProps, St
 		return <>
 				<AvHook updateHighlight={ this.updateHookHighlight } 
 					preserveDropTransform={ true }
+					allowMultipleDrops={ true }
 					xMin={ this.props.xMin } xMax={ this.props.xMax }
 					yMin={ this.props.yMin } yMax={ this.props.yMax }
 					zMin={ this.props.zMin } zMax={ this.props.zMax }
