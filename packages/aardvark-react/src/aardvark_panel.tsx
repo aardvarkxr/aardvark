@@ -11,7 +11,7 @@ export interface AvPanelProps extends AvBaseNodeProps
 {
 	/** Set this to true to cause the panel to be interacted with by pokers. 
 	 * @default false */
-	interactive: boolean;
+	interactive?: boolean;
 
 	/** By default poker events will turn into mouse events to the browser that can be processed
 	 * by the normal HTML/Javacript mouse processing. Set a custom mouse handler if you need

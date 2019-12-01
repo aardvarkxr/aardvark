@@ -4,7 +4,8 @@ import bind from 'bind-decorator';
 import { AvModel } from './aardvark_model';
 import { HookHighlight, AvHook } from './aardvark_hook';
 import { AvGadget } from './aardvark_gadget';
-import { EHand } from '@aardvarkxr/aardvark-shared';
+import { EHand, EndpointAddr } from '@aardvarkxr/aardvark-shared';
+import { AvLine } from './aardvark_line';
 
 
 interface StandardHookProps
@@ -24,6 +25,7 @@ interface StandardHookProps
 interface StandardHookState
 {
 	highlight: HookHighlight;
+	grabbableAddr: EndpointAddr;
 }
 
 /** A hook for attaching grabbables to that uses a standard plus-in-circle icon and is made visible
@@ -40,6 +42,7 @@ export class AvStandardHook extends React.Component< StandardHookProps, Standard
 		this.state = 
 		{ 
 			highlight: HookHighlight.None,
+			grabbableAddr: null,
 		};
 
 		this.m_editModeHandle = AvGadget.instance().listenForEditModeWithComponent( this )
@@ -50,9 +53,13 @@ export class AvStandardHook extends React.Component< StandardHookProps, Standard
 		AvGadget.instance().unlistenForEditMode( this.m_editModeHandle );
 	}
 
-	@bind updateHookHighlight( newHighlight: HookHighlight )
+	@bind updateHookHighlight( newHighlight: HookHighlight, grabbableAddr: EndpointAddr )
 	{
-		this.setState( { highlight: newHighlight } );
+		this.setState( 
+			{ 
+				highlight: newHighlight,
+				grabbableAddr,
+			} );
 	}
 
 	public renderModel()
@@ -130,6 +137,7 @@ export class AvStandardBoxHook extends React.Component< StandardBoxHookProps, St
 		this.state = 
 		{ 
 			highlight: HookHighlight.None,
+			grabbableAddr: null,
 		};
 
 		this.m_editModeHandle = AvGadget.instance().listenForEditModeWithComponent( this )
@@ -140,9 +148,13 @@ export class AvStandardBoxHook extends React.Component< StandardBoxHookProps, St
 		AvGadget.instance().unlistenForEditMode( this.m_editModeHandle );
 	}
 
-	@bind updateHookHighlight( newHighlight: HookHighlight )
+	@bind updateHookHighlight( newHighlight: HookHighlight, grabbableAddr: EndpointAddr )
 	{
-		this.setState( { highlight: newHighlight } );
+		this.setState( 
+			{ 
+				highlight: newHighlight,
+				grabbableAddr,
+			} );
 	}
 
 	public renderModel()
@@ -182,6 +194,19 @@ export class AvStandardBoxHook extends React.Component< StandardBoxHookProps, St
 		}
 	}
 
+	private renderLine()
+	{
+		console.log( "renderLine called", this.state.highlight, this.state.grabbableAddr );
+		if( !this.state.grabbableAddr || this.state.highlight != HookHighlight.InRange )
+		{
+			return null;
+		}
+		else
+		{
+			return <AvLine endId={ this.state.grabbableAddr } color="lightgreen"
+				startGap={ 0.02 } endGap={ 0.04 } thickness={ 0.002 }/>
+		}
+	}
 
 	public render()
 	{
@@ -193,7 +218,8 @@ export class AvStandardBoxHook extends React.Component< StandardBoxHookProps, St
 					yMin={ this.props.yMin } yMax={ this.props.yMax }
 					zMin={ this.props.zMin } zMax={ this.props.zMax }
 					persistentName={ this.props.persistentName } />
-				{ this.renderModel() }
+				{ /*this.renderModel() */}
+				{ this.renderLine() }
 			</>;
 	}
 }

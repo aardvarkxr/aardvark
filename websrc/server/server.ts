@@ -223,7 +223,7 @@ class CDispatcher
 				msg.hookFromGadget = hook.hookFromGadget;
 			}	
 		}
-		
+
 		return (
 		{
 			type: MessageType.UpdateSceneGraph,
@@ -762,7 +762,15 @@ class CEndpoint
 		let handler = this.m_envelopeHandlers[ env.type as number ];
 		if( handler )
 		{
-			handler( env, env.payloadUnpacked );
+			try
+			{
+				handler( env, env.payloadUnpacked );
+			}
+			catch( e )
+			{
+				console.log( `Error processing message of type ${ MessageType[ env.type ] } `
+					+ `from ${ endpointAddrToString( env.sender ) }`)
+			}
 			return true;
 		}
 		else

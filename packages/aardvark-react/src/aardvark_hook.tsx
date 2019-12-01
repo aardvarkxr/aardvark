@@ -31,7 +31,7 @@ interface AvHookProps extends AvBaseNodeProps
 	/** The updateHighlight function will be called whenever the highlight state
 	 * of a hook changes.
 	 */
-	updateHighlight?: ( highlightType: HookHighlight ) => void;
+	updateHighlight?: ( highlightType: HookHighlight, grabbableEpa: EndpointAddr ) => void;
 
 	/** If this field is true dropping grabbables on the hook will preserve the 
 	 * transform between the grabbable and the hook at the time of the drop. 
@@ -77,6 +77,7 @@ interface AvHookProps extends AvBaseNodeProps
 export class AvHook extends AvBaseNode< AvHookProps, {} >
 {
 	m_lastHighlight = HookHighlight.None;
+	m_lastGrabbableInRange: EndpointAddr = null;
 	m_lastGrabbable: EndpointAddr = null;
 
 	public buildNode()
@@ -130,12 +131,8 @@ export class AvHook extends AvBaseNode< AvHookProps, {} >
 		switch( evt.type )
 		{
 			case AvGrabEventType.StartGrab:
-				if( evt.grabberId.endpointId != AvGadget.instance().getEndpointId() 
-					&& ( !this.m_lastGrabbable || endpointAddrsMatch( this.m_lastGrabbable, evt.grabbableId ) ) )
-				{
-					newHighlight = HookHighlight.GrabInProgress;
-					this.m_lastGrabbable = null;
-				}
+				newHighlight = HookHighlight.GrabInProgress;
+				this.m_lastGrabbable = null;
 				break;
 
 			case AvGrabEventType.EndGrab:
@@ -152,10 +149,14 @@ export class AvHook extends AvBaseNode< AvHookProps, {} >
 
 			case AvGrabEventType.EnterHookRange:
 				newHighlight = HookHighlight.InRange;
+				this.m_lastGrabbableInRange = evt.grabbableId;
+				console.log( "Setting lastGrabbableInProgress", evt.grabbableId );
 				break;
 
 			case AvGrabEventType.LeaveHookRange:
 				newHighlight = HookHighlight.GrabInProgress;
+				console.log( "Clearing lastGrabbableInProgress", evt.grabbableId );
+				this.m_lastGrabbableInRange = null;
 				break;
 		}
 
@@ -164,7 +165,8 @@ export class AvHook extends AvBaseNode< AvHookProps, {} >
 			this.m_lastHighlight = newHighlight;
 			if( this.props.updateHighlight )
 			{
-				this.props.updateHighlight( this.m_lastHighlight );
+				console.log( "Updating hook highlight", this.m_lastHighlight, this.m_lastGrabbableInRange);
+				this.props.updateHighlight( this.m_lastHighlight, this.m_lastGrabbableInRange );
 			}
 		}
 	}

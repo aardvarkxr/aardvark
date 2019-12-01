@@ -1,6 +1,6 @@
 import * as Color from 'color';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
-import { AvNodeType, AvColor } from '@aardvarkxr/aardvark-shared';
+import { AvNodeType, AvColor, EndpointAddr } from '@aardvarkxr/aardvark-shared';
 import { AvGadget } from './aardvark_gadget';
 
 interface AvLineProps extends AvBaseNodeProps
@@ -14,13 +14,13 @@ interface AvLineProps extends AvBaseNodeProps
 
 	/** The thickness of the line in meters.
 	 * 
-	 * @default 0.01
+	 * @default 0.003
 	 */
 	thickness?: number;
 
-	/** ID of the end point of this segment. 
+	/** ID or address of the end point of this segment. 
 	*/
-	endId: string;
+	endId: string | EndpointAddr;
 
 	/** Distance in meters to leave as a gap between the
 	 * start point and the start of the actual line.
@@ -61,7 +61,14 @@ export class AvLine extends AvBaseNode< AvLineProps, {} >
 			color = this.props.color
 		}
 		node.propColor = color;
-		node.propEndAddr = AvGadget.instance().getEndpointAddressForId( this.props.endId );
+		if( typeof this.props.endId === "string" )
+		{
+			node.propEndAddr = AvGadget.instance().getEndpointAddressForId( this.props.endId );
+		}
+		else
+		{
+			node.propEndAddr = this.props.endId;
+		}
 		node.propThickness = this.props.thickness;
 		node.propStartGap = this.props.startGap;
 		node.propEndGap = this.props.endGap;
