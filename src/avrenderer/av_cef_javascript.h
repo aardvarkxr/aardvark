@@ -28,6 +28,7 @@ public:
 		CefRefPtr<CefFrame> frame,
 		CefRefPtr<CefV8Context> context ) override;
 	virtual bool OnProcessMessageReceived( CefRefPtr<CefBrowser> browser,
+		CefRefPtr<CefFrame> frame,
 		CefProcessId source_process,
 		CefRefPtr<CefProcessMessage> message ) override;
 	virtual void OnBrowserDestroyed( CefRefPtr<CefBrowser> browser ) override;

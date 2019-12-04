@@ -46,6 +46,7 @@ public:
 	virtual CefRefPtr<CefLoadHandler> GetLoadHandler() override { return this; }
 	virtual CefRefPtr<CefRenderHandler> GetRenderHandler() override { return this; }
 	virtual bool OnProcessMessageReceived( CefRefPtr<CefBrowser> browser,
+		CefRefPtr<CefFrame> frame,
 		CefProcessId source_process,
 		CefRefPtr<CefProcessMessage> message ) override;
 	virtual CefRefPtr<CefRequestHandler> GetRequestHandler() override { return this; }

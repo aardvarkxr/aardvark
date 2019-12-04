@@ -64,6 +64,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 
 	while ( !app->wantsToQuit() )
 	{
+		app->runFrame();
 		std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
 	}
 

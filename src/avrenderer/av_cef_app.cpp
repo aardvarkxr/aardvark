@@ -139,6 +139,15 @@ CAardvarkCefApp* CAardvarkCefApp::instance()
 	return g_instance;
 }
 
+void CAardvarkCefApp::runFrame()
+{
+	if ( m_quitRequested && !m_quitHandled )
+	{
+		m_quitHandled = true;
+		CloseAllBrowsers( true );
+	}
+}
+
 bool CAardvarkCefApp::wantsToQuit()
 {
 	return m_browsers.empty() && m_quitRequested;
@@ -146,7 +155,6 @@ bool CAardvarkCefApp::wantsToQuit()
 
 void CAardvarkCefApp::quitRequested()
 {
-	CloseAllBrowsers( true );
 	m_quitRequested = true;
 }
 

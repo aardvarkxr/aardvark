@@ -41,10 +41,12 @@ public:
 	virtual void browserClosed( CAardvarkCefHandler *handler ) override;
 
 	bool wantsToQuit();
+	void runFrame();
 private:
 
 	CefRefPtr<CefRenderProcessHandler> m_renderProcessHandler;
 	bool m_quitRequested = false;
+	bool m_quitHandled = false;
 
 	std::vector< CefRefPtr<CAardvarkCefHandler> > m_browsers;
 

@@ -121,7 +121,7 @@ void CAardvarkCefHandler::onGadgetManifestReceived( bool success, const std::vec
 	fullUri += sArgs;
 
 	// Create the first browser window.
-	CefBrowserHost::CreateBrowser( window_info, this, fullUri, browser_settings,
+	CefBrowserHost::CreateBrowser( window_info, this, fullUri, browser_settings, nullptr,
 		NULL );
 }
 
@@ -168,6 +168,7 @@ void CAardvarkCefHandler::OnAfterCreated(CefRefPtr<CefBrowser> browser)
 
 bool CAardvarkCefHandler::DoClose(CefRefPtr<CefBrowser> browser) 
 {
+	OutputDebugStringA( "DoClose\n" );
 	CEF_REQUIRE_UI_THREAD();
 
 	// Set a flag to indicate that the window close should be allowed.
@@ -182,6 +183,7 @@ bool CAardvarkCefHandler::DoClose(CefRefPtr<CefBrowser> browser)
 
 void CAardvarkCefHandler::OnBeforeClose(CefRefPtr<CefBrowser> browser) 
 {
+	OutputDebugStringA( "OnBeforeClose\n" );
 	CEF_REQUIRE_UI_THREAD();
 	m_browser = nullptr;
 }
@@ -246,6 +248,7 @@ void CAardvarkCefHandler::OnAcceleratedPaint( CefRefPtr<CefBrowser> browser,
 
 
 bool CAardvarkCefHandler::OnProcessMessageReceived( CefRefPtr<CefBrowser> browser,
+	CefRefPtr<CefFrame> frame,
 	CefProcessId source_process,
 	CefRefPtr<CefProcessMessage> message )
 {
@@ -373,6 +376,10 @@ void CAardvarkCefHandler::triggerClose( bool forceClose )
 		return;
 	}
 
+	if ( forceClose )
+		OutputDebugStringA( "triggerClose( true )\n" );
+	else
+		OutputDebugStringA( "triggerClose( false )\n");
 	m_browser->GetHost()->CloseBrowser( forceClose );
 }
 
