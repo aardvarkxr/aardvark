@@ -5,7 +5,8 @@ import * as fileUrl from 'file-url';
 import axios, { AxiosResponse } from 'axios';import { AvNodeTransform } from '@aardvarkxr/aardvark-shared';
 1
 
-export let g_localInstallPathUri = fileUrl( path.resolve( path.dirname( __filename ), ".." ));
+export let g_localInstallPath = path.resolve( path.dirname( __filename ), ".." );
+export let g_localInstallPathUri = fileUrl( g_localInstallPath );
 
 export function fixupUriForLocalInstall( originalUri: string ):URL
 {

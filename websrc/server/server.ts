@@ -1,4 +1,5 @@
-import { g_localInstallPathUri, parsePersistentHookPath, HookPathParts, getJSONFromUri, buildPersistentHookPath } from './serverutils';
+import { g_localInstallPathUri, g_localInstallPath,	parsePersistentHookPath, 
+	HookPathParts, getJSONFromUri, buildPersistentHookPath } from './serverutils';
 import { StoredGadget, AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, AvGrabEvent, 
 	AvGrabEventType, MsgAttachGadgetToHook, MsgMasterStartGadget, MsgSaveSettings, 
 	MsgOverrideTransform, MsgGetGadgetManifest, MsgGetGadgetManifestResponse, 
@@ -1134,7 +1135,8 @@ class CEndpoint
 
 class CServer
 {
-	private m_server = http.createServer( express() );
+	private m_app = express();
+	private m_server = http.createServer( this.m_app );
 	private m_wss:WebSocket.Server = null;
 	private m_nextEndpointId = 27;
 	private m_dispatcher = new CDispatcher;
@@ -1148,6 +1150,8 @@ class CServer
 
 			this.m_wss.on('connection', this.onConnection );
 		} );
+
+		this.m_app.use( "/gadgets", express.static( path.resolve( g_localInstallPath, "gadgets" ) ) );
 	}
 
 	@bind onConnection( ws: WebSocket )
