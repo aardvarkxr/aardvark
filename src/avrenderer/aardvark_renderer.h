@@ -69,7 +69,8 @@ public:
 	VulkanExample();
 	~VulkanExample() noexcept;
 
-	void renderNode( std::shared_ptr<vkglTF::Model> pModel, std::shared_ptr<vkglTF::Node> node, uint32_t cbIndex, vkglTF::Material::AlphaMode alphaMode, EEye eEye );
+	void renderNode( std::shared_ptr<vkglTF::Model> pModel, std::shared_ptr<vkglTF::Node> node, uint32_t cbIndex, 
+		vkglTF::Material::AlphaMode alphaMode, bool doubleSided, EEye eEye );
 
 	void recordCommandBuffers( uint32_t cbIndex );
 	void renderSceneToTarget( uint32_t cbIndex, vks::RenderTarget target, uint32_t targetWidth, uint32_t targetHeight, EEye eEye );
@@ -77,7 +78,8 @@ public:
 
 	void renderScene( uint32_t cbIndex, VkRenderPass targetRenderPass, VkFramebuffer targetFrameBuffer, uint32_t targetWidth, uint32_t targetHeight, EEye eEye );
 
-	void recordCommandsForModels( VkCommandBuffer currentCB, uint32_t i, vkglTF::Material::AlphaMode eAlphaMode, EEye eEye );
+	void recordCommandsForModels( VkCommandBuffer currentCB, uint32_t i, vkglTF::Material::AlphaMode eAlphaMode, 
+		bool doubleSided, EEye eEye );
 	void loadEnvironment( std::string filename );
 
 	vkglTF::Model m_skybox;
@@ -164,7 +166,9 @@ protected:
 	struct Pipelines {
 		VkPipeline skybox;
 		VkPipeline pbr;
+		VkPipeline pbrDoubleSided;
 		VkPipeline pbrAlphaBlend;
+		VkPipeline pbrAlphaBlendDoubleSided;
 	} pipelines;
 
 	struct DescriptorSets {

@@ -89,6 +89,7 @@ namespace vkglTF
 	struct Material {		
 		enum AlphaMode{ ALPHAMODE_OPAQUE, ALPHAMODE_MASK, ALPHAMODE_BLEND };
 		AlphaMode alphaMode = ALPHAMODE_OPAQUE;
+		bool doubleSided = false;
 		float alphaCutoff = 1.0f;
 		float metallicFactor = 1.0f;
 		float roughnessFactor = 1.0f;
@@ -907,6 +908,10 @@ namespace vkglTF
 				if (mat.additionalValues.find("emissiveFactor") != mat.additionalValues.end()) {
 					material.emissiveFactor = glm::vec4(glm::make_vec3(mat.additionalValues["emissiveFactor"].ColorFactor().data()), 1.0);
 					material.emissiveFactor = glm::vec4(0.0f);
+				}
+				if ( mat.additionalValues.find( "doubleSided" ) != mat.additionalValues.end() )
+				{
+					material.doubleSided = mat.additionalValues["doubleSided"].bool_value;
 				}
 
 				// Extensions
