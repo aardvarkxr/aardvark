@@ -134,3 +134,29 @@ export function vec3MultiplyAndAdd( base: vec3, direction: vec3, distance: numbe
 		]
 	)
 }
+
+export function scaleAxisToFit( limit: number, min: number, max: number ): number
+{
+	let extent = Math.max( -min, max );
+	if( extent <= 0 )
+	{
+		return null;
+	}
+	else
+	{
+		return limit / extent;
+	}
+}
+
+export function minIgnoringNulls( ...values: number[] )
+{
+	let noNulls = values.filter( ( v:number) => { return v != null; } );
+	if( noNulls )
+	{
+		return Math.min( ...noNulls );
+	}
+	else
+	{
+		return null;
+	}
+}

@@ -94,17 +94,31 @@ void CAardvarkCefHandler::onGadgetManifestReceived( bool success, const std::vec
 
 	browser_settings.windowless_frame_rate = 90;
 
-	std::string fullUri = m_gadgetUri + "/index.html?initialHook=" + m_initialHook;
+	std::string fullUri = m_gadgetUri + "/index.html";
 
+	std::map<std::string, std::string> mapArgs;
+
+	if ( !m_initialHook.empty() )
+	{
+		mapArgs["initialHook"] = m_initialHook;
+	}
 	if ( m_epToNotify.type != aardvark::EEndpointType::Unknown )
 	{
-		fullUri += "&epToNotify=" + aardvark::endpointAddrToString( this->m_epToNotify );
+		mapArgs["epToNotify"] = aardvark::endpointAddrToString( this->m_epToNotify );
 	}
 
 	if ( !m_persistenceUuid.empty() )
 	{
-		fullUri += "&persistenceUuid=" + m_persistenceUuid;
+		mapArgs["persistenceUuid"] = m_persistenceUuid;
 	}
+
+	std::string sArgs;
+	for ( auto & i : mapArgs )
+	{
+		sArgs += sArgs.empty() ? "?" : "&";
+		sArgs += i.first +  "=" + i.second;
+	}
+	fullUri += sArgs;
 
 	// Create the first browser window.
 	CefBrowserHost::CreateBrowser( window_info, this, fullUri, browser_settings,

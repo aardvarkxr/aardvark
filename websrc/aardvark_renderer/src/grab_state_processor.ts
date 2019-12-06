@@ -2,11 +2,14 @@ import { EndpointAddr, indexOfEndpointAddrs, endpointAddrsMatch, MsgGrabberState
 	AvGrabEvent, AvGrabEventType, GrabberHighlight, AvGrabbableCollision, ENodeFlags } 
 	from '@aardvarkxr/aardvark-shared';
 import { assert } from '@aardvarkxr/aardvark-react';
+import { mat4 } from '@tlaukkan/tsm';
+import { nodeTransformFromMat4 } from './traverser_utils';
 
 
 interface GrabContext
 {
 	sendGrabEvent( event: AvGrabEvent ): void;
+	getUniverseFromNode( nodeAddr: EndpointAddr ): mat4;
 	grabberEpa: EndpointAddr;
 }
 
@@ -341,6 +344,12 @@ export class CGrabStateProcessor
 							handleId: this.m_lastHandle,
 							hookId: this.m_lastHook,
 						});
+
+					let universeFromGrabbable = this.m_context.getUniverseFromNode( this.m_lastGrabbable );
+					let universeFromHook = this.m_context.getUniverseFromNode( this.m_lastHook );
+					let hookFromUniverse = universeFromHook.copy( new mat4( ) ).inverse();
+					let hookFromGrabbable = hookFromUniverse.multiply( universeFromGrabbable );
+
 					this.m_context.sendGrabEvent( 
 						{
 							type: AvGrabEventType.EndGrab,
@@ -349,6 +358,7 @@ export class CGrabStateProcessor
 							grabbableId: this.m_lastGrabbable,
 							handleId: this.m_lastHandle,
 							hookId: this.m_lastHook,
+							hookFromGrabbable: nodeTransformFromMat4( hookFromGrabbable ),
 						});
 					this.m_lastHighlight = GrabberHighlight.InRange;
 					break;

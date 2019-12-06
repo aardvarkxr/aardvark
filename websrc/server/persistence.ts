@@ -1,9 +1,9 @@
-import { AardvarkState, StoredGadget, readPersistentState } from '@aardvarkxr/aardvark-shared';
+import { AardvarkState, StoredGadget, readPersistentState, AvGadgetManifest, AvNodeTransform } from '@aardvarkxr/aardvark-shared';
 import { v4 as uuid } from 'uuid';
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
-import { fixupUriForLocalInstall } from './serverutils';
+import { fixupUriForLocalInstall, HookPathParts, buildPersistentHookPath, getJSONFromUri } from './serverutils';
 import bind from 'bind-decorator';
 
 
@@ -16,6 +16,10 @@ class CPersistenceManager
 
 	constructor()
 	{
+	}
+
+	public async init()
+	{
 		if( !fs.existsSync( this.path ) )
 		{
 			fs.mkdirSync( this.path );
@@ -23,7 +27,16 @@ class CPersistenceManager
 
 		this.readNow();
 
-		fs.watch( this.statePath, this.onStateFileChanged )
+		try 
+		{
+			fs.watch( this.statePath, this.onStateFileChanged );
+		}
+		catch( e )
+		{
+			// if we couldn't watch it's probably because the file didn't exist. Make it exist
+			this.writeNow();
+			fs.watch( this.statePath, this.onStateFileChanged );
+		}
 	}
 
 	public get path(): string
@@ -51,7 +64,7 @@ class CPersistenceManager
 
 	public reload()
 	{
-		console.log( "Reloading state.json" );
+		console.log( "Reloading because of external state.json change" );
 		this.readNow();
 	}
 
@@ -69,23 +82,23 @@ class CPersistenceManager
 		{
 			let stateUri = fixupUriForLocalInstall( this.m_state.activeGadgets[uuid].uri );
 			let fixedGadgetUri = fixupUriForLocalInstall( gadgetUri );
-			if( stateUri.toString() == fixedGadgetUri.toString() )
+			//if( stateUri.toString() == fixedGadgetUri.toString() )
 			{
 				delete this.m_state.activeGadgets[uuid];
 				this.markDirty();
 			}
-			else
-			{
-				throw `Mismatched gadget uri ${ fixedGadgetUri.toString()} vs ${ stateUri.toString() }`;
-			}
+			// else
+			// {
+			// 	throw `Mismatched gadget uri ${ fixedGadgetUri.toString()} vs ${ stateUri.toString() }`;
+			// }
 		}
 	}
 
-	public getGadgetHook( uuid: string ): string
+	public getGadgetHookPath( uuid: string ): string
 	{
 		if( this.m_state.activeGadgets[ uuid ] )
 		{
-			return this.m_state.activeGadgets[ uuid ].hook;
+			return this.m_state.activeGadgets[ uuid ].hookPath;
 		}
 		else
 		{
@@ -105,14 +118,20 @@ class CPersistenceManager
 		}
 	}
 
-	public setGadgetHook( uuid: string, hook: string )
+	public setGadgetHook( uuid: string, hook: string, hookFromGadget: AvNodeTransform )
+	{
+		let hookPath = buildPersistentHookPath( uuid, hook, hookFromGadget );
+		this.setGadgetHookPath( uuid, hookPath );
+	}
+
+	public setGadgetHookPath( uuid: string, hookPath: string )
 	{
 		if( !this.m_state.activeGadgets[ uuid ] )
 		{
 			throw "unknown persistence uuid";
 		}
 
-		this.m_state.activeGadgets[ uuid ].hook = hook;
+		this.m_state.activeGadgets[ uuid ].hookPath = hookPath;
 		this.markDirty();
 	}
 
@@ -149,10 +168,36 @@ class CPersistenceManager
 		fs.writeFileSync( this.statePath, JSON.stringify( this.m_state, null, 2 ) );
 	}
 
-	public readNow()
+
+	public async readNow()
 	{
 		this.m_state = readPersistentState( this.statePath );
+
+		// make sure all installed startAutomatically gadgets
+		// are in the active list
+		for( let installedGadget of this.m_state.installedGadgets )
+		{
+			let manifest = await getJSONFromUri( installedGadget + "/gadget_manifest.json" ) as AvGadgetManifest;
+			if( manifest.startAutomatically )
+			{
+				let foundOne = false;
+				for( let uuid in this.m_state.activeGadgets )
+				{
+					if( this.m_state.activeGadgets[ uuid ].uri == installedGadget )
+					{
+						foundOne = true;
+						break;
+					}
+				}
+
+				if( !foundOne )
+				{
+					this.createGadgetPersistence( installedGadget );
+				}
+			}
+		}
 	}
+
 
 	public getActiveGadgets() : StoredGadget[]
 	{

@@ -7,7 +7,7 @@ import { endpointAddrToString, endpointAddrIsEmpty, MessageType, MsgNodeHaptic,
 	ENodeFlags, AvNodeTransform, AvConstraint, AvNodeType, EHand, EVolumeType, 
 	AvGrabEvent, MsgUpdateSceneGraph, EndpointType, MsgGrabEvent, endpointAddrsMatch, 
 	MsgSetEditMode, EndpointAddr, Av, AvModelInstance, MsgDestroyGadget } from '@aardvarkxr/aardvark-shared';
-import { computeUniverseFromLine, nodeTransformToMat4, translateMat, nodeTransformFromMat4, vec3MultiplyAndAdd } from './traverser_utils';
+import { computeUniverseFromLine, nodeTransformToMat4, translateMat, nodeTransformFromMat4, vec3MultiplyAndAdd, scaleAxisToFit, scaleMat, minIgnoringNulls } from './traverser_utils';
 
 interface NodeData
 {
@@ -142,6 +142,7 @@ interface AvNodeRoot
 	gadgetId: number;
 	root: AvNode;
 	hook?: string | EndpointAddr;
+	hookFromGadget?: AvNodeTransform;
 }
 
 export class AvDefaultTraverser
@@ -201,6 +202,7 @@ export class AvDefaultTraverser
 				gadgetId: sender.endpointId,
 				root: m.root,
 				hook: m.hook,
+				hookFromGadget: m.hookFromGadget,
 			}
 		}
 	}
@@ -304,6 +306,7 @@ export class AvDefaultTraverser
 						{ 
 							this.sendGrabEvent( event );
 						},
+						getUniverseFromNode: this.getLastUniverseFromNode,
 						grabberEpa: state.grabberId
 					} );
 			}
@@ -441,9 +444,9 @@ export class AvDefaultTraverser
 					&& root.root.id != 0 )
 				{
 					// grabbable nodes are what need their origin set
-					this.setHookOrigin( root.hook, root.root );
+					this.setHookOrigin( root.hook, root.root, root.hookFromGadget );
 				}
-				this.setHookOrigin( root.hook, rootNode );
+				this.setHookOrigin( root.hook, rootNode, root.hookFromGadget );
 			}
 
 			this.traverseNode( rootNode, null );
@@ -550,7 +553,7 @@ export class AvDefaultTraverser
 	}
 
 
-	setHookOrigin( origin: string | EndpointAddr, node: AvNode )
+	setHookOrigin( origin: string | EndpointAddr, node: AvNode, hookFromGrabbable?: AvNodeTransform )
 	{
 		if( typeof origin === "string" )
 		{
@@ -577,10 +580,15 @@ export class AvDefaultTraverser
 		}
 		else if( origin != null )
 		{
+			let grabberFromGrabbable = mat4.identity;
+			if( hookFromGrabbable )
+			{
+				grabberFromGrabbable = nodeTransformToMat4( hookFromGrabbable );
+			}
 			this.m_nodeToNodeAnchors[ endpointAddrToString( node.globalId ) ] =
 			{
 				parentGlobalId: origin,
-				grabberFromGrabbable: mat4.identity,
+				grabberFromGrabbable,
 			}
 		}
 	}
@@ -621,9 +629,36 @@ export class AvDefaultTraverser
 					[ node.propColor.r, node.propColor.g, node.propColor.b, alpha ] );
 			}
 
+			let internalScale = 1;
+			if( node.propScaleToFit )
+			{
+				let aabb = Av().renderer.getAABBForModel( node.propModelUri );
+				if( !aabb )
+				{
+					// if we were told to scale the model, but it isn't loaded at this point,
+					// abort drawing it so we don't have one frame of a wrongly-scaled model
+					// as it loads in.
+					return;
+				}
+
+				let possibleScale = minIgnoringNulls(
+					scaleAxisToFit( node.propScaleToFit.x, aabb.xMin, aabb.xMax ),
+					scaleAxisToFit( node.propScaleToFit.y, aabb.yMin, aabb.yMax ),
+					scaleAxisToFit( node.propScaleToFit.z, aabb.zMin, aabb.zMax ) );
+				if( possibleScale != null )
+				{
+					internalScale = possibleScale;
+				}
+			}
+
 			this.updateTransform( node.globalId, defaultParent, mat4.identity,
 				( universeFromNode: mat4 ) =>
 			{
+				if( internalScale != 1 )
+				{
+					let scaledNodeFromModel = scaleMat( new vec3( [ internalScale, internalScale, internalScale ] ) );
+					universeFromNode = new mat4( universeFromNode.all() ).multiply( scaledNodeFromModel );
+				}
 				nodeData.modelInstance.setUniverseFromModelTransform( universeFromNode.all() );
 				this.m_renderList.push( nodeData.modelInstance );
 			} );
@@ -711,7 +746,12 @@ export class AvDefaultTraverser
 			}
 			else if( node.propTransform )
 			{
-				this.updateTransform( node.globalId, defaultParent, nodeTransformToMat4( node.propTransform ), null );
+				let parentFromNode = nodeTransformToMat4( node.propTransform );
+				this.updateTransform( node.globalId, defaultParent, parentFromNode, 
+					( universeFromNode: mat4 ) =>
+					{
+						this.preserveTransform( node, null, defaultParent, universeFromNode, parentFromNode );
+					} );
 			}
 		}
 		else
@@ -948,6 +988,9 @@ export class AvDefaultTraverser
 				case EVolumeType.Sphere:
 					Av().renderer.addHook_Sphere( hookGlobalId, universeFromNode.all(), node.propVolume.radius, hand );
 					break;
+				case EVolumeType.AABB:
+					Av().renderer.addHook_Aabb( hookGlobalId, universeFromNode.all(), node.propVolume.aabb, hand );
+					break;
 				default:
 					throw "unsupported volume type";
 			}
@@ -1117,8 +1160,7 @@ export class AvDefaultTraverser
 				Av().renderer.endGrab( grabEvent.grabberId, grabEvent.grabbableId );
 				if( !endpointAddrIsEmpty( grabEvent.hookId ) )
 				{
-					// we're dropping onto a hook
-					this.m_nodeToNodeAnchors[ endpointAddrToString( grabEvent.grabbableId ) ] = 
+					let anchor: NodeToNodeAnchor_t =
 					{
 						parentGlobalId: grabEvent.hookId,
 						grabberFromGrabbable: null,
@@ -1129,6 +1171,17 @@ export class AvDefaultTraverser
 						grabbableNodeId: grabEvent.grabbableId,
 						hookNodeId: grabEvent.hookId,
 					}
+
+					// we're dropping onto a hook
+					let hookData = this.getNodeDataByEpa( grabEvent.hookId );
+					if( hookData.lastFlags & ENodeFlags.PreserveGrabTransform )
+					{
+						// this hook wants to retain the relative transform
+						anchor.grabberFromGrabbable = nodeTransformToMat4( grabEvent.hookFromGrabbable );
+						msg.hookFromGrabbable = grabEvent.hookFromGrabbable;
+					}
+
+					this.m_nodeToNodeAnchors[ endpointAddrToString( grabEvent.grabbableId ) ] = anchor;
 
 					this.m_endpoint.sendMessage( MessageType.AttachGadgetToHook, msg );
 				}
@@ -1205,6 +1258,12 @@ export class AvDefaultTraverser
 
 	private isHookInUse( nodeId: EndpointAddr )
 	{
+		let hookData = this.getNodeDataByEpa( nodeId );
+		if( hookData && hookData.lastFlags & ENodeFlags.AllowMultipleDrops )
+		{
+			return false;
+		}
+		
 		for( let hookId of this.m_hooksInUse )
 		{
 			if( endpointAddrsMatch( nodeId, hookId ) )
@@ -1223,6 +1282,19 @@ export class AvDefaultTraverser
 		this.m_hooksInUse = [];
 	}
 
+	@bind
+	private getLastUniverseFromNode( nodeAddr: EndpointAddr ): mat4
+	{
+		let nodeGlobalId = endpointAddrToString( nodeAddr );
+		if( !this.m_lastFrameUniverseFromNodeTransforms.hasOwnProperty( nodeGlobalId ) )
+		{
+			return mat4.identity;
+		}
+		else
+		{
+			return this.m_lastFrameUniverseFromNodeTransforms[ nodeGlobalId ];
+		}
+	}
 }
 
 

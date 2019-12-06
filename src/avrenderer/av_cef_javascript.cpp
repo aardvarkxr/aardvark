@@ -123,7 +123,8 @@ bool CAardvarkObject::init( CefRefPtr<CefV8Value> container )
 				exception = "Invalid url argument";
 				return;
 			}
-			if ( !arguments[1]->IsString() )
+			if ( !arguments[1]->IsString() && !arguments[1]->IsBool()
+				&& !arguments[1]->IsUndefined() )
 			{
 				exception = "Invalid hook argument";
 				return;
@@ -139,7 +140,8 @@ bool CAardvarkObject::init( CefRefPtr<CefV8Value> container )
 				epToNotify.type = aardvark::EEndpointType::Unknown;
 			}
 
-			m_handler->requestStartGadget( arguments[0]->GetStringValue(), arguments[1]->GetStringValue(), 
+			std::string sHook = arguments[1]->IsString() ? arguments[1]->GetStringValue() : "";
+			m_handler->requestStartGadget( arguments[0]->GetStringValue(), sHook, 
 				arguments[2]->GetStringValue(), epToNotify );
 		} );
 

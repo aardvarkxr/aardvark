@@ -60,7 +60,9 @@ VulkanExample::~VulkanExample() noexcept
 {
 	vkDestroyPipeline(device, pipelines.skybox, nullptr);
 	vkDestroyPipeline(device, pipelines.pbr, nullptr);
-	vkDestroyPipeline(device, pipelines.pbrAlphaBlend, nullptr);
+	vkDestroyPipeline( device, pipelines.pbrDoubleSided, nullptr );
+	vkDestroyPipeline( device, pipelines.pbrAlphaBlend, nullptr );
+	vkDestroyPipeline(device, pipelines.pbrAlphaBlendDoubleSided, nullptr);
 
 	vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
 
@@ -91,7 +93,8 @@ VulkanExample::~VulkanExample() noexcept
 	textures.empty.destroy();
 }
 
-void VulkanExample::renderNode( std::shared_ptr<vkglTF::Model> pModel, std::shared_ptr<vkglTF::Node> node, uint32_t cbIndex, vkglTF::Material::AlphaMode alphaMode, EEye eEye )
+void VulkanExample::renderNode( std::shared_ptr<vkglTF::Model> pModel, std::shared_ptr<vkglTF::Node> node, uint32_t cbIndex, 
+	vkglTF::Material::AlphaMode alphaMode, bool doubleSided, EEye eEye )
 {
 	if ( node->mesh ) {
 		// Render mesh primitives
@@ -99,7 +102,7 @@ void VulkanExample::renderNode( std::shared_ptr<vkglTF::Model> pModel, std::shar
 			vkglTF::Material & primitiveMaterial = primitive->materialIndex >= pModel->materials.size()
 				? pModel->materials.back() : pModel->materials[primitive->materialIndex];
 			
-			if ( primitiveMaterial.alphaMode == alphaMode ) {
+			if ( primitiveMaterial.alphaMode == alphaMode && primitiveMaterial.doubleSided == doubleSided ) {
 				VkDescriptorSet descriptorSet;
 				switch ( eEye )
 				{
@@ -185,7 +188,7 @@ void VulkanExample::renderNode( std::shared_ptr<vkglTF::Model> pModel, std::shar
 
 	};
 	for ( auto child : node->children ) {
-		renderNode( pModel, child, cbIndex, alphaMode, eEye );
+		renderNode( pModel, child, cbIndex, alphaMode, doubleSided, eEye );
 	}
 }
 
@@ -326,21 +329,29 @@ void VulkanExample::renderScene( uint32_t cbIndex, VkRenderPass targetRenderPass
 	//	models.skybox.draw(currentCB);
 	//}
 
-//		if( !bDebug )
 	vkCmdBindPipeline( currentCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines.pbr );
 
-	recordCommandsForModels( currentCB, cbIndex, vkglTF::Material::ALPHAMODE_OPAQUE, eEye );
-	recordCommandsForModels( currentCB, cbIndex, vkglTF::Material::ALPHAMODE_MASK, eEye );
+	recordCommandsForModels( currentCB, cbIndex, vkglTF::Material::ALPHAMODE_OPAQUE, false, eEye );
+	recordCommandsForModels( currentCB, cbIndex, vkglTF::Material::ALPHAMODE_MASK, false, eEye );
+
+	vkCmdBindPipeline( currentCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines.pbrDoubleSided );
+
+	recordCommandsForModels( currentCB, cbIndex, vkglTF::Material::ALPHAMODE_OPAQUE, true, eEye );
+	recordCommandsForModels( currentCB, cbIndex, vkglTF::Material::ALPHAMODE_MASK, true, eEye );
 
 	// Transparent primitives
 	// TODO: Correct depth sorting
 	vkCmdBindPipeline( currentCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines.pbrAlphaBlend );
-	recordCommandsForModels( currentCB, cbIndex, vkglTF::Material::ALPHAMODE_BLEND, eEye );
+	recordCommandsForModels( currentCB, cbIndex, vkglTF::Material::ALPHAMODE_BLEND, false, eEye );
+
+	vkCmdBindPipeline( currentCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines.pbrAlphaBlendDoubleSided );
+	recordCommandsForModels( currentCB, cbIndex, vkglTF::Material::ALPHAMODE_BLEND, true, eEye );
 
 	vkCmdEndRenderPass( currentCB );
 }
 
-void VulkanExample::recordCommandsForModels( VkCommandBuffer currentCB, uint32_t i, vkglTF::Material::AlphaMode eAlphaMode, EEye eEye )
+void VulkanExample::recordCommandsForModels( VkCommandBuffer currentCB, uint32_t i, vkglTF::Material::AlphaMode eAlphaMode, 
+	bool bDoubleSided, EEye eEye )
 {
 	for ( auto pModel : m_modelsToRender )
 	{
@@ -352,7 +363,7 @@ void VulkanExample::recordCommandsForModels( VkCommandBuffer currentCB, uint32_t
 		}
 
 		for ( auto node : pModel->m_model->nodes ) {
-			renderNode( pModel->m_model, node, i, eAlphaMode, eEye );
+			renderNode( pModel->m_model, node, i, eAlphaMode, bDoubleSided, eEye );
 		}
 	}
 }
@@ -753,6 +764,9 @@ void VulkanExample::preparePipelines()
 	VK_CHECK_RESULT( vkCreateGraphicsPipelines( device, pipelineCache, 1, &pipelineCI, nullptr, &pipelines.pbr ) );
 
 	rasterizationStateCI.cullMode = VK_CULL_MODE_NONE;
+	VK_CHECK_RESULT( vkCreateGraphicsPipelines( device, pipelineCache, 1, &pipelineCI, nullptr, &pipelines.pbrDoubleSided ) );
+
+	rasterizationStateCI.cullMode = VK_CULL_MODE_BACK_BIT;
 	blendAttachmentState.blendEnable = VK_TRUE;
 	depthStencilStateCI.depthWriteEnable = VK_FALSE;
 	blendAttachmentState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
@@ -763,6 +777,10 @@ void VulkanExample::preparePipelines()
 	blendAttachmentState.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
 	blendAttachmentState.alphaBlendOp = VK_BLEND_OP_ADD;
 	VK_CHECK_RESULT( vkCreateGraphicsPipelines( device, pipelineCache, 1, &pipelineCI, nullptr, &pipelines.pbrAlphaBlend ) );
+
+	rasterizationStateCI.cullMode = VK_CULL_MODE_NONE;
+	VK_CHECK_RESULT( vkCreateGraphicsPipelines( device, pipelineCache, 1, &pipelineCI, nullptr, &pipelines.pbrAlphaBlendDoubleSided ) );
+
 	for ( auto shaderStage : shaderStages ) {
 		vkDestroyShaderModule( device, shaderStage.module, nullptr );
 	}

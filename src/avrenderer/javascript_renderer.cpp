@@ -52,6 +52,23 @@ bool mat4FromJavascript( CefRefPtr<CefV8Value> arg, glm::mat4 *out )
 	return true;
 }
 
+bool aabbFromJavascript( CefRefPtr<CefV8Value> arg, AABB_t *out )
+{
+	if ( !arg->IsObject() )
+	{
+		return false;
+	}
+
+	out->xMin = (float)arg->GetValue( "xMin" )->GetDoubleValue();
+	out->xMax = (float)arg->GetValue( "xMax" )->GetDoubleValue();
+	out->yMin = (float)arg->GetValue( "yMin" )->GetDoubleValue();
+	out->yMax = (float)arg->GetValue( "yMax" )->GetDoubleValue();
+	out->zMin = (float)arg->GetValue( "zMin" )->GetDoubleValue();
+	out->zMax = (float)arg->GetValue( "zMax" )->GetDoubleValue();
+
+	return true;
+}
+
 bool CJavascriptModelInstance::init( CefRefPtr<CefV8Value > container )
 {
 	RegisterFunction( container, "setUniverseFromModelTransform", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
@@ -580,6 +597,46 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 			(EHand)arguments[3]->GetIntValue() );
 	} );
 
+	RegisterFunction( container, "addHook_Aabb", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 4 )
+		{
+			exception = "Invalid arguments";
+			return;
+		}
+
+		EndpointAddr_t hookGlobalId;
+		if ( !endpointAddrFromJs( arguments[0], &hookGlobalId ) )
+		{
+			exception = "argument must be an endpoint address";
+			return;
+		}
+
+		glm::mat4 universeFromHandle;
+		if ( !mat4FromJavascript( arguments[1], &universeFromHandle ) )
+		{
+			exception = "second argument must be an array of 16 numbers";
+			return;
+		}
+
+		AABB_t aabb;
+		if( !aabbFromJavascript( arguments[2], &aabb ) )
+		{
+			exception = "third argument must be an AABB";
+		}
+
+		if ( !arguments[3]->IsInt() )
+		{
+			exception = "fourth argument must be a number (and hand enum value)";
+		}
+
+		m_collisions.addHook_Aabb(
+			hookGlobalId,
+			universeFromHandle,
+			aabb,
+			(EHand)arguments[3]->GetIntValue() );
+	} );
+
 	RegisterFunction( container, "getUniverseFromOriginTransform", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
 		if ( arguments.size() != 1 )
@@ -609,6 +666,38 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 		else
 		{
 			retval = CefV8Value::CreateNull();
+		}
+	} );
+
+	RegisterFunction( container, "getAABBForModel", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 1 )
+		{
+			exception = "Invalid arguments";
+			return;
+		}	
+
+		if ( !arguments[0]->IsString() )
+		{
+			exception = "argument must be the url of a model";
+			return;
+		}
+
+		AABB_t box;
+
+		if ( !m_renderer->getModelBox( arguments[0]->GetStringValue(), &box ) )
+		{
+			retval = CefV8Value::CreateNull();
+		}
+		else
+		{
+			retval = CefV8Value::CreateObject( nullptr, nullptr );
+			retval->SetValue( "xMin", CefV8Value::CreateDouble( box.xMin ), V8_PROPERTY_ATTRIBUTE_NONE );
+			retval->SetValue( "xMax", CefV8Value::CreateDouble( box.xMax ), V8_PROPERTY_ATTRIBUTE_NONE );
+			retval->SetValue( "yMin", CefV8Value::CreateDouble( box.yMin ), V8_PROPERTY_ATTRIBUTE_NONE );
+			retval->SetValue( "yMax", CefV8Value::CreateDouble( box.yMax ), V8_PROPERTY_ATTRIBUTE_NONE );
+			retval->SetValue( "zMin", CefV8Value::CreateDouble( box.zMin ), V8_PROPERTY_ATTRIBUTE_NONE );
+			retval->SetValue( "zMax", CefV8Value::CreateDouble( box.zMax ), V8_PROPERTY_ATTRIBUTE_NONE );
 		}
 	} );
 
