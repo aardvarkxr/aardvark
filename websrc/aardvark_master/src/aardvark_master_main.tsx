@@ -1,10 +1,10 @@
 import * as React from 'react';
 import  * as ReactDOM from 'react-dom';
 import bind from 'bind-decorator';
-import { AvGadget,AvOrigin, AvTransform, AvGrabber, AvModel, AvPoker, AvPanelIntersection,
+import { AvGadget, AvOrigin, AvTransform, AvGrabber, AvModel, AvPoker, AvPanelIntersection,
 	AvLine,	AvStandardHook, AvGrabButton, AvPanel, AvPanelAnchor, AvGadgetSeed, AvStandardBoxHook } 
 	from '@aardvarkxr/aardvark-react';
-import { Av, EndpointAddr, EHand, GrabberHighlight } from '@aardvarkxr/aardvark-shared'
+import { Av, EndpointAddr, EHand, GrabberHighlight, AvVector } from '@aardvarkxr/aardvark-shared'
 
 interface DefaultHandProps
 {
@@ -157,8 +157,10 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 				seeds.push( 
 					<div className="GadgetSeed">
 						<AvPanelAnchor>
-							<AvGadgetSeed key="gadget" uri={ gadget } 
-								radius={ 0.1 }/>
+							<AvModel uri="https://aardvark.install/models/sphere/sphere_backfaced.glb" scaleToFit={{x: 0.125, y: 0.125, z: 0.125}}>
+								<AvGadgetSeed key="gadget" uri={ gadget } 
+									radius={ 0.08 }/>
+							</AvModel>
 						</AvPanelAnchor>
 					</div> );
 			}

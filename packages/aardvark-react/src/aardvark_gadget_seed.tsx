@@ -119,7 +119,7 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 				break;
 
 			default:
-				scale = 1.25;
+				scale = 1.15;
 				break;
 		}
 		return (
