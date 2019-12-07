@@ -162,7 +162,7 @@ void CAardvarkCefHandler::OnAfterCreated(CefRefPtr<CefBrowser> browser)
 	msg->GetArgumentList()->SetString( 1, m_initialHook );
 	msg->GetArgumentList()->SetString( 2, m_gadgetManifestString );
 
-	m_browser->SendProcessMessage( PID_RENDERER, msg );
+	m_browser->GetFocusedFrame()->SendProcessMessage( PID_RENDERER, msg );
 }
 
 
@@ -206,7 +206,7 @@ void CAardvarkCefHandler::OnLoadError(CefRefPtr<CefBrowser> browser,
 		"<h2>Failed to load URL "
 		<< std::string(failedUrl) << " with error " << std::string(errorText)
 		<< " (" << errorCode << ").</h2></body></html>";
-	frame->LoadString(ss.str(), failedUrl);
+	//frame->LoadString(ss.str(), failedUrl);
 }
 
 
@@ -349,7 +349,7 @@ void CAardvarkCefHandler::updateSceneGraphTextures()
 	msg->GetArgumentList()->SetString( 0, std::to_string( (uint64_t)m_sharedTexture ) );
 	msg->GetArgumentList()->SetInt( 1, m_gadgetManifest.m_width );
 	msg->GetArgumentList()->SetInt( 2, m_gadgetManifest.m_height );
-	m_browser->SendProcessMessage( PID_RENDERER, msg );
+	m_browser->GetFocusedFrame()->SendProcessMessage( PID_RENDERER, msg );
 }
 
 

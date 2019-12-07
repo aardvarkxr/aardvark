@@ -291,12 +291,10 @@ void CAardvarkRenderProcessHandler::OnContextCreated(
 	info.frame = frame;
 	info.context = context;
 	
-	// Retrieve the context's window object.
-	CefRefPtr<CefV8Value> windowObj = context->GetGlobal();
-
-	// Create an object to store our functions in
-	info.aardvarkObject = CJavascriptObjectWithFunctions::create< CAardvarkObject>( this );
-	windowObj->SetValue( "aardvark", info.aardvarkObject.object, V8_PROPERTY_ATTRIBUTE_READONLY );
+	if ( m_gadgetManifest )
+	{
+		InitAardvarkForContext( info );
+	}
 
 	m_contexts.push_back( std::move( info ) );
 }
@@ -336,7 +334,12 @@ bool CAardvarkRenderProcessHandler::OnProcessMessageReceived( CefRefPtr<CefBrows
 		{
 			std::string manifestData = message->GetArgumentList()->GetString( 2 );
 			nlohmann::json j = nlohmann::json::parse( manifestData.begin(), manifestData.end() );
-			m_gadgetManifest = j.get<CAardvarkGadgetManifest>();
+			m_gadgetManifest = std::make_unique<CAardvarkGadgetManifest>( j.get<CAardvarkGadgetManifest>() );
+			
+			for ( auto & contextInfo : m_contexts )
+			{
+				InitAardvarkForContext( contextInfo );
+			}
 		}
 		catch ( nlohmann::json::exception & )
 		{
@@ -356,18 +359,46 @@ bool CAardvarkRenderProcessHandler::OnProcessMessageReceived( CefRefPtr<CefBrows
 }
 
 
+void CAardvarkRenderProcessHandler::InitAardvarkForContext( PerContextInfo_t &contextInfo )
+{
+	contextInfo.context->Enter();
+	CefRefPtr<CefV8Value> windowObj = contextInfo.context->GetGlobal();
+
+	// Create an object to store our functions in
+	contextInfo.aardvarkObject = CJavascriptObjectWithFunctions::create< CAardvarkObject>( this );
+	windowObj->SetValue( "aardvark", contextInfo.aardvarkObject.object, V8_PROPERTY_ATTRIBUTE_READONLY );
+
+
+	CefRefPtr<CefV8Value> retVal;
+	CefRefPtr<CefV8Exception> exception;
+	contextInfo.context->Eval( "if( aardvarkReady ) { aardvarkReady(); }", "", 1, retVal, exception );
+
+	contextInfo.context->Exit();
+}
+
+
 bool CAardvarkRenderProcessHandler::hasPermission( const std::string & permission )
 {
-	return m_gadgetManifest.m_permissions.find( permission ) != m_gadgetManifest.m_permissions.end();
+	if ( m_gadgetManifest )
+	{
+		return m_gadgetManifest->m_permissions.find( permission ) != m_gadgetManifest->m_permissions.end();
+	}
+	else
+	{
+		return false;
+	}
 }
 
 void CAardvarkRenderProcessHandler::runFrame()
 {
 	for ( auto & info : m_contexts )
 	{
-		info.context->Enter();
-		info.aardvarkObject->runFrame();
-		info.context->Exit();
+		if ( info.aardvarkObject )
+		{
+			info.context->Enter();
+			info.aardvarkObject->runFrame();
+			info.context->Exit();
+		}
 	}
 
 	m_uriRequestHandler.doCefRequestWork();
@@ -386,7 +417,7 @@ void CAardvarkRenderProcessHandler::runFrame()
 
 void CAardvarkRenderProcessHandler::sendBrowserMessage( CefRefPtr< CefProcessMessage > msg )
 {
-	CefV8Context::GetCurrentContext()->GetBrowser()->SendProcessMessage( PID_BROWSER, msg );
+	CefV8Context::GetCurrentContext()->GetBrowser()->GetFocusedFrame()->SendProcessMessage( PID_BROWSER, msg );
 }
 
 

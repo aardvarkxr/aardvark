@@ -31,6 +31,7 @@ public:
 		CefRefPtr<CefFrame> frame,
 		CefProcessId source_process,
 		CefRefPtr<CefProcessMessage> message ) override;
+
 	virtual void OnBrowserDestroyed( CefRefPtr<CefBrowser> browser ) override;
 
 
@@ -54,10 +55,11 @@ private:
 		JsObjectPtr< CAardvarkObject > aardvarkObject;
 	};
 	std::vector< PerContextInfo_t > m_contexts;
+	void InitAardvarkForContext( PerContextInfo_t &contextInfo );
 
 	std::string m_gadgetUri;
 	std::string m_initialHook;
-	CAardvarkGadgetManifest m_gadgetManifest;
+	std::unique_ptr<CAardvarkGadgetManifest> m_gadgetManifest;
 	CUriRequestHandler m_uriRequestHandler;
 	bool m_needRunFrame = true;
 
