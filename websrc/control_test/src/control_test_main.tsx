@@ -3,7 +3,7 @@ import  * as ReactDOM from 'react-dom';
 
 import bind from 'bind-decorator';
 import { AvTransform, AvSlider, AvGrabbable, AvSphereHandle, AvModel, AvPanel, AvPanelAnchor, AvTransformControl, QuaternionToEulerAngles, RadiansToDegrees } from '@aardvarkxr/aardvark-react';
-import { AvNodeTransform } from '@aardvarkxr/aardvark-shared';
+import { AvNodeTransform, g_builtinModelSphere, g_builtinModelGear } from '@aardvarkxr/aardvark-shared';
 
 
 interface ControlTestState
@@ -65,7 +65,7 @@ class ControlTest extends React.Component< {}, ControlTestState >
 			<div className="FullPage" >
 				<AvGrabbable preserveDropTransform={true}>
 					<AvTransform uniformScale={0.1}>
-						<AvModel uri="https://aardvark.install/models/sphere/sphere.glb"/>
+						<AvModel uri={ g_builtinModelSphere }/>
 					</AvTransform>
 					<AvSphereHandle radius={0.1} />
 
@@ -76,7 +76,7 @@ class ControlTest extends React.Component< {}, ControlTestState >
 								<div className="SliderControl">
 									<AvPanelAnchor>
 										<AvSlider rangeX={ 0.7 } onSetValue={ this.onSetSlider }
-											modelUri="https://aardvark.install/models/gear.glb"/>
+											modelUri={ g_builtinModelGear }/>
 									</AvPanelAnchor>
 								</div>
 							</div>

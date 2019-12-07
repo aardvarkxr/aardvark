@@ -4,7 +4,7 @@ import bind from 'bind-decorator';
 import { AvGadget,AvOrigin, AvTransform, AvGrabber, AvModel, AvPoker, AvPanelIntersection,
 	AvLine,	AvStandardHook, AvGrabButton, AvPanel, AvPanelAnchor, AvGadgetSeed, AvStandardBoxHook } 
 	from '@aardvarkxr/aardvark-react';
-import { Av, EndpointAddr, EHand, GrabberHighlight } from '@aardvarkxr/aardvark-shared'
+import { Av, EndpointAddr, EHand, GrabberHighlight, g_builtinModelSphere, g_builtinModelGear } from '@aardvarkxr/aardvark-shared'
 
 interface DefaultHandProps
 {
@@ -54,7 +54,6 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 	{
 		let modelColor = "#222288FF";
 		let highlightColor = "#FF0000FF";
-		let modelUri = "https://aardvark.install/models/sphere/sphere.glb";
 		switch( this.state.grabberHighlight )
 		{
 			case GrabberHighlight.NearHook:
@@ -88,7 +87,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 		return (
 			<AvOrigin path={ originPath }>
 				<AvTransform uniformScale= { 0.01 } >
-					<AvModel uri={ modelUri } color={ modelColor }/>
+					<AvModel uri={ g_builtinModelSphere } color={ modelColor }/>
 				</AvTransform>
 
 				<AvPoker updateHighlight = { this.updatePokerHighlight } >
@@ -190,7 +189,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		return (
 			<AvTransform>
 				<AvTransform translateZ={-0.1} rotateX={ 45 }>
-					<AvGrabButton modelUri="https://aardvark.install/models/gear.glb" 
+					<AvGrabButton modelUri={ g_builtinModelGear } 
 						onTrigger={ this.onActivateControlPanel } />
 				</AvTransform>;
 				{ this.renderPanel() }
@@ -221,5 +220,5 @@ class MasterControls extends React.Component< {}, {} >
 ReactDOM.render( <MasterControls/>, document.getElementById( "root" ) );
 
 // always start the renderer
-Av().startGadget( "http://aardvark.install/gadgets/aardvark_renderer", "", "", null );
+Av().startGadget( "http://localhost:23842/gadgets/aardvark_renderer", "", "", null );
 

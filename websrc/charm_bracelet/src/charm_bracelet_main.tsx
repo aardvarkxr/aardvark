@@ -3,7 +3,7 @@ import  * as ReactDOM from 'react-dom';
 
 import bind from 'bind-decorator';
 import { AvGadget, AvTransform, AvGrabbable, HighlightType, AvStandardHook, AvSphereHandle, AvModel, AvGrabButton, AvTransformControl } from '@aardvarkxr/aardvark-react';
-import { AvNodeTransform, AvVector, AvQuaternion } from '@aardvarkxr/aardvark-shared';
+import { AvNodeTransform, AvVector, AvQuaternion, g_builtinModelPlus, g_builtinModelMinus, g_builtinModelBracelet } from '@aardvarkxr/aardvark-shared';
 
 
 interface CharmProps
@@ -204,11 +204,11 @@ class CharmBracelet extends React.Component< {}, CharmBraceletState >
 
 		return <div>
 			<AvTransform translateZ={0.2} translateY={0.1} translateX={ 0.05 }>
-				<AvGrabButton modelUri="https://aardvark.install/models/plus.glb" 
+				<AvGrabButton modelUri={ g_builtinModelPlus }
 					onTrigger={ this.onPlus } />
 			</AvTransform>
 			<AvTransform translateZ={0.2} translateY={0.1} translateX={ -0.05 }>
-				<AvGrabButton modelUri="https://aardvark.install/models/minus.glb" 
+				<AvGrabButton modelUri={ g_builtinModelMinus }
 					onTrigger={ this.onMinus } />
 			</AvTransform>
 		</div>
@@ -243,7 +243,7 @@ class CharmBracelet extends React.Component< {}, CharmBraceletState >
 						dropOnHooks={ true }>
 						<AvSphereHandle radius={0.1} />
 						{ charms }
-						{ grabbedMode && <AvModel uri="http://aardvark.install/models/bracelet.glb" /> }
+						{ grabbedMode && <AvModel uri={ g_builtinModelBracelet } /> }
 						{ this.renderControls() }
 					</AvGrabbable>
 				</div>

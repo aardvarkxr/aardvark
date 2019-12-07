@@ -6,7 +6,7 @@ import { endpointAddrToString, endpointAddrIsEmpty, MessageType, MsgNodeHaptic,
 	MsgAttachGadgetToHook, MsgDetachGadgetFromHook, AvGrabEventType, AvNode, 
 	ENodeFlags, AvNodeTransform, AvConstraint, AvNodeType, EHand, EVolumeType, 
 	AvGrabEvent, MsgUpdateSceneGraph, EndpointType, MsgGrabEvent, endpointAddrsMatch, 
-	MsgSetEditMode, EndpointAddr, Av, AvModelInstance, MsgDestroyGadget } from '@aardvarkxr/aardvark-shared';
+	MsgSetEditMode, EndpointAddr, Av, AvModelInstance, MsgDestroyGadget, g_builtinModelPanel, g_builtinModelPanelInverted, g_builtinModelCylinder } from '@aardvarkxr/aardvark-shared';
 import { computeUniverseFromLine, nodeTransformToMat4, translateMat, nodeTransformFromMat4, vec3MultiplyAndAdd, scaleAxisToFit, scaleMat, minIgnoringNulls } from './traverser_utils';
 
 interface NodeData
@@ -678,10 +678,10 @@ export class AvDefaultTraverser
 
 		if ( !nodeData.modelInstance )
 		{
-			let sPanelModelUri = "https://aardvark.install/models/panel/panel.glb";
+			let sPanelModelUri = g_builtinModelPanel;
 			if( textureInfo.invertY )
 			{
-				sPanelModelUri = "https://aardvark.install/models/panel/panel_inverted.glb";
+				sPanelModelUri = g_builtinModelPanelInverted;
 			}
 
 			nodeData.modelInstance = Av().renderer.createModelInstance( sPanelModelUri );
@@ -1015,11 +1015,10 @@ export class AvDefaultTraverser
 
 				if ( !nodeData.modelInstance )
 				{
-					const cylinderUrl = "http://aardvark.install/models/cylinder.glb";
-					nodeData.modelInstance = Av().renderer.createModelInstance( cylinderUrl );
+					nodeData.modelInstance = Av().renderer.createModelInstance( g_builtinModelCylinder );
 					if ( nodeData.modelInstance )
 					{
-						nodeData.lastModelUri = cylinderUrl;
+						nodeData.lastModelUri = g_builtinModelCylinder;
 					}
 				}
 		
@@ -1263,7 +1262,7 @@ export class AvDefaultTraverser
 		{
 			return false;
 		}
-		
+
 		for( let hookId of this.m_hooksInUse )
 		{
 			if( endpointAddrsMatch( nodeId, hookId ) )

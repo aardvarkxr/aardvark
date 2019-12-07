@@ -79,13 +79,6 @@ public:
 		const RectList& dirtyRects,
 		void* shared_handle ) override;
 
-	// CefRequestHandler methods:
-	virtual ReturnValue OnBeforeResourceLoad(
-		CefRefPtr<CefBrowser> browser,
-		CefRefPtr<CefFrame> frame,
-		CefRefPtr<CefRequest> request,
-		CefRefPtr<CefRequestCallback> callback ) override;
-
 	bool IsClosing() const { return m_isClosing; }
 
 	void triggerClose( bool forceClose );

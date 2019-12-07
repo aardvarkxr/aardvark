@@ -1152,6 +1152,7 @@ class CServer
 		} );
 
 		this.m_app.use( "/gadgets", express.static( path.resolve( g_localInstallPath, "gadgets" ) ) );
+		this.m_app.use( "/models", express.static( path.resolve( g_localInstallPath, "models" ) ) );
 	}
 
 	@bind onConnection( ws: WebSocket )

@@ -30,7 +30,7 @@ CAardvarkCefHandler::CAardvarkCefHandler( IApplication *application, const std::
 
 	m_application = application;
 
-	m_gadgetUri = tools::filterUriForInstall( gadgetUri );
+	m_gadgetUri = gadgetUri;
 	m_initialHook = initialHook;
 	m_persistenceUuid = persistenceUuid;
 }
@@ -376,14 +376,4 @@ void CAardvarkCefHandler::triggerClose( bool forceClose )
 	m_browser->GetHost()->CloseBrowser( forceClose );
 }
 
-CAardvarkCefHandler::ReturnValue CAardvarkCefHandler::OnBeforeResourceLoad(
-	CefRefPtr<CefBrowser> browser,
-	CefRefPtr<CefFrame> frame,
-	CefRefPtr<CefRequest> request,
-	CefRefPtr<CefRequestCallback> callback )
-{
-	std::string filteredUri = tools::filterUriForInstall( request->GetURL() );
-	request->SetURL( filteredUri );
-	return RV_CONTINUE;
-}
 

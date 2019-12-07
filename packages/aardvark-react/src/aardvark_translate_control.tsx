@@ -4,7 +4,7 @@ import bind from 'bind-decorator';
 import { AvModel } from './aardvark_model';
 import { HighlightType, AvGrabbable, GrabResponse } from './aardvark_grabbable';
 import { AvSphereHandle, AvModelBoxHandle } from './aardvark_handles';
-import { AvGrabEvent, AvConstraint, AvNodeTransform, AvColor, EndpointAddr, endpointAddrsMatch } from '@aardvarkxr/aardvark-shared';
+import { AvGrabEvent, AvConstraint, AvNodeTransform, AvColor, EndpointAddr, endpointAddrsMatch, g_builtinModelArrow, g_builtinModelSphere } from '@aardvarkxr/aardvark-shared';
 
 
 interface TranslateArrowProps
@@ -61,10 +61,10 @@ class AvTranslateArrow extends React.Component< TranslateArrowProps, TranslateAr
 						rotateX={ this.props.rotateX } rotateY={ this.props.rotateY } rotateZ={ this.props.rotateZ }
 						uniformScale={ this.props.minimized ? 0.3 : 1.0 }>
 						<AvTransform translateY={ this.props.centerGap }>
-							<AvModelBoxHandle uri="http://aardvark.install/models/arrow.glb" 
+							<AvModelBoxHandle uri={ g_builtinModelArrow }
 								updateHighlight={ this.updateHighlight }
 								constraint={ this.props.constraint }/>
-							<AvModel uri={ "http://aardvark.install/models/arrow.glb" }
+							<AvModel uri={ g_builtinModelArrow }
 								color={ color }/> }
 							{ this.props.children }
 						</AvTransform>
@@ -124,7 +124,7 @@ class AvBallHandle extends React.Component< BallHandleProps, BallHandleState >
 
 		return <div>
 					<AvTransform uniformScale={ scale }>
-							<AvModel uri={ "http://aardvark.install/models/sphere/sphere.glb" }
+							<AvModel uri={ g_builtinModelSphere }
 								color={ color }/> }
 							{ this.props.children }
 					</AvTransform>
