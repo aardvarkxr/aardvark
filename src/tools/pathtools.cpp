@@ -87,30 +87,4 @@ namespace tools
 		return myPath;
 	}
 
-	std::string filterUriForInstall( const std::string & originalUri )
-	{
-		std::string lowerUrl = stringToLower( originalUri );
-
-		std::string httpPrefix = "http://aardvark.install/";
-		std::string httpsPrefix = "https://aardvark.install/";
-
-		if ( stringIsPrefixCaseSensitive( httpPrefix, lowerUrl ) )
-		{
-			auto updatedPath = tools::GetDataPath()
-				/ std::string( originalUri.begin() + httpPrefix.size(), originalUri.end() );
-			return tools::PathToFileUri( updatedPath );
-		}
-		else
-		{
-			if ( stringIsPrefixCaseSensitive( httpsPrefix, lowerUrl ) )
-			{
-				auto updatedPath = tools::GetDataPath()
-					/ std::string( originalUri.begin() + httpsPrefix.size(), originalUri.end() );
-				return tools::PathToFileUri( updatedPath );
-			}
-		}
-
-		return originalUri;
-	}
-
 }

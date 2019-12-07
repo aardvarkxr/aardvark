@@ -92,7 +92,7 @@ void CAardvarkCefApp::OnContextInitialized()
 	const bool use_views = false;
 #endif
 
-	startGadget( "http://aardvark.install/gadgets/aardvark_master", "", "master", aardvark::EndpointAddr_t() );
+	startGadget( "http://localhost:23842/gadgets/aardvark_master", "", "master", aardvark::EndpointAddr_t() );
 }
 
 

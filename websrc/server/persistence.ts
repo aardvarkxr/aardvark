@@ -3,7 +3,7 @@ import { v4 as uuid } from 'uuid';
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
-import { fixupUriForLocalInstall, HookPathParts, buildPersistentHookPath, getJSONFromUri } from './serverutils';
+import { buildPersistentHookPath, getJSONFromUri } from './serverutils';
 import bind from 'bind-decorator';
 
 
@@ -80,8 +80,8 @@ class CPersistenceManager
 	{
 		if( this.m_state.activeGadgets[ uuid ] )
 		{
-			let stateUri = fixupUriForLocalInstall( this.m_state.activeGadgets[uuid].uri );
-			let fixedGadgetUri = fixupUriForLocalInstall( gadgetUri );
+			let stateUri = new URL( this.m_state.activeGadgets[uuid].uri );
+			let fixedGadgetUri = new URL( gadgetUri );
 			//if( stateUri.toString() == fixedGadgetUri.toString() )
 			{
 				delete this.m_state.activeGadgets[uuid];

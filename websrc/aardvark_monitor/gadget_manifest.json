@@ -3,5 +3,5 @@
 	"permissions" : [ "scenegraph" ],
 	"width": 1024,
 	"height": 1024,
-	"model" : "http://aardvark.install/models/Panel/panel.glb"
+	"model" : "http://localhost:23842/models/panel/panel.glb"
 }

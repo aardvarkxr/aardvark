@@ -13,7 +13,7 @@ export interface StoredGadget
 	uuid: string;
 }
 
-const AardvarkStateFormat = 1;
+const AardvarkStateFormat = 2;
 
 export interface AardvarkState
 {
@@ -36,6 +36,23 @@ export function getStandardPersistencePath(): string
 	return path.join( getStandardAardvarkPath(), "state.json" );
 }
 
+export function v1ToV2( from: AardvarkState ): AardvarkState
+{
+	let to: AardvarkState = 
+	{ 
+		format: 2,
+		activeGadgets: from.activeGadgets,
+		installedGadgets: [] 
+	};
+
+	for( let installed of from.installedGadgets )
+	{
+		to.installedGadgets.push( installed.replace( "aardvark.install", "localhost:23842" ) );
+	}
+
+	return to;
+}
+
 export function readPersistentState( path: string ): AardvarkState
 {
 	try
@@ -44,6 +61,11 @@ export function readPersistentState( path: string ): AardvarkState
 
 		let previousState = fs.readFileSync( path, 'utf8' );
 		let state:AardvarkState = JSON.parse( previousState );
+
+		if( state.format == 1 )
+		{
+			state = v1ToV2( state );
+		}
 
 		if( state.format != AardvarkStateFormat )
 		{
@@ -56,20 +78,20 @@ export function readPersistentState( path: string ): AardvarkState
 	}
 	catch( e )
 	{
-		console.log( "Failed to read state file. Using default start" );
+		console.log( "Failed to read state file. Using default start", e );
 
 		let state =
 		{
 			format: AardvarkStateFormat,
 			activeGadgets: 
 			{
-				"master" : { uri: "https://aardvark.install/gadgets/aardvark_master" },
+				"master" : { uri: "http://localhost:23842/gadgets/aardvark_master" },
 			},
 			installedGadgets: 
 			[
-				"https://aardvark.install/gadgets/test_panel",
-				"https://aardvark.install/gadgets/charm_bracelet",
-				"https://aardvark.install/gadgets/control_test",
+				"http://localhost:23842/gadgets/test_panel",
+				"http://localhost:23842/gadgets/charm_bracelet",
+				"http://localhost:23842/gadgets/control_test",
 			],
 		}
 		return state;

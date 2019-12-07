@@ -5,29 +5,8 @@ import * as fileUrl from 'file-url';
 import axios, { AxiosResponse } from 'axios';import { AvNodeTransform } from '@aardvarkxr/aardvark-shared';
 1
 
-export let g_localInstallPathUri = fileUrl( path.resolve( path.dirname( __filename ), ".." ));
-
-export function fixupUriForLocalInstall( originalUri: string ):URL
-{
-	let lowerUri = originalUri.toLowerCase();
-
-	let httpPrefix = "http://aardvark.install";
-	let httpsPrefix = "https://aardvark.install";
-
-	if ( lowerUri.indexOf( httpPrefix ) == 0 )
-	{
-		return new URL( g_localInstallPathUri + originalUri.slice( httpPrefix.length ) );
-	}
-	else
-	{
-		if ( lowerUri.indexOf( httpsPrefix ) == 0 )
-		{
-			return new URL( g_localInstallPathUri + originalUri.slice( httpsPrefix.length ) );
-		}
-	}
-
-	return new URL( originalUri );
-}
+export let g_localInstallPath = path.resolve( path.dirname( __filename ), ".." );
+export let g_localInstallPathUri = fileUrl( g_localInstallPath );
 
 export function getJSONFromUri( uri: string ): Promise< any >
 {
@@ -35,7 +14,7 @@ export function getJSONFromUri( uri: string ): Promise< any >
 	{
 		try
 		{
-			let url = fixupUriForLocalInstall( uri );
+			let url = new URL( uri );
 			if( url.protocol == "file:" )
 			{
 				fs.readFile( url, "utf8", (err: NodeJS.ErrnoException, data: string ) =>

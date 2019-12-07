@@ -151,7 +151,7 @@ CUriRequest::CUriRequest( CUriRequestHandler *handler, const std::string & uri,
 	std::function<void( CUriRequestHandler::Result_t & result )> fn )
 	: m_handler( handler ), m_callback( fn )
 {
-	m_uri = tools::filterUriForInstall( uri );
+	m_uri = uri;
 }
 
 CUriRequest::~CUriRequest()
@@ -201,7 +201,7 @@ void CUriRequest::start()
 		m_cefRequestClient = new CCefUriRequest( this );
 
 		CefRefPtr<CefRequest> request = CefRequest::Create();
-		request->SetURL( tools::filterUriForInstall( m_uri ) );
+		request->SetURL( m_uri );
 		request->SetMethod( "GET" );
 
 		m_cefRequest = CefURLRequest::Create( request, m_cefRequestClient, nullptr );
