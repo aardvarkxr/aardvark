@@ -119,6 +119,7 @@ private:
 	aardvark::EndpointAddr_t m_epToNotify;
 	bool m_wantsToQuit = false;
 	bool m_wantsTexture = false;
+	bool m_firstPaint = true;
 
 	CUriRequestHandler m_uriRequestHandler;
 

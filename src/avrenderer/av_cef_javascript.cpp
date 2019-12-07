@@ -248,13 +248,13 @@ void CAardvarkObject::msgUpdateTextureInfo( CefRefPtr< CefProcessMessage > msg )
 		V8_PROPERTY_ATTRIBUTE_NONE );
 	textureInfo->SetValue( "format", CefV8Value::CreateInt( (int)ETextureFormat::B8G8R8A8 ),
 		V8_PROPERTY_ATTRIBUTE_NONE );
-	textureInfo->SetValue( "invertY", CefV8Value::CreateBool( true ),
-		V8_PROPERTY_ATTRIBUTE_NONE );
 	textureInfo->SetValue( "dxgiHandle", CefV8Value::CreateString( msg->GetArgumentList()->GetString( 0 ) ),
 		V8_PROPERTY_ATTRIBUTE_NONE );
 	textureInfo->SetValue( "width", CefV8Value::CreateInt( msg->GetArgumentList()->GetInt( 1 ) ),
 		V8_PROPERTY_ATTRIBUTE_NONE );
 	textureInfo->SetValue( "height", CefV8Value::CreateInt( msg->GetArgumentList()->GetInt( 2 ) ),
+		V8_PROPERTY_ATTRIBUTE_NONE );
+	textureInfo->SetValue( "invertY", CefV8Value::CreateBool( msg->GetArgumentList()->GetBool( 3 ) ),
 		V8_PROPERTY_ATTRIBUTE_NONE );
 
 	m_textureInfoCallback->ExecuteFunction( nullptr, { textureInfo } );

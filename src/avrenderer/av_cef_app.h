@@ -9,7 +9,7 @@
 #include "iapplication.h"
 
 #include <thread>
-
+#include <d3d11.h>
 
 // Implement application-level callbacks for the browser process.
 class CAardvarkCefApp : public CefApp, public CefBrowserProcessHandler , IApplication
@@ -39,6 +39,9 @@ public:
 
 	virtual void quitRequested() override;
 	virtual void browserClosed( CAardvarkCefHandler *handler ) override;
+	virtual bool createTextureForBrowser( void **sharedHandle,
+		int width, int height ) override;
+	virtual void updateTexture( void *sharedHandle, const void *buffer, int width, int height ) override;
 
 	bool wantsToQuit();
 	void runFrame();
@@ -49,6 +52,10 @@ private:
 	bool m_quitHandled = false;
 
 	std::vector< CefRefPtr<CAardvarkCefHandler> > m_browsers;
+	ID3D11Device *m_pD3D11Device = nullptr;
+	ID3D11DeviceContext *m_pD3D11ImmediateContext = nullptr;
+
+	std::map<void *, ID3D11Texture2D *> m_browserTextures;
 
 	// Include the default reference counting implementation.
 	IMPLEMENT_REFCOUNTING(CAardvarkCefApp);

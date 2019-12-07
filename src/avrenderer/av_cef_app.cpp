@@ -92,6 +92,14 @@ void CAardvarkCefApp::OnContextInitialized()
 	const bool use_views = false;
 #endif
 
+	D3D_FEATURE_LEVEL featureLevel[] = { D3D_FEATURE_LEVEL_11_1 };
+	D3D_FEATURE_LEVEL createdFeatureLevel;
+
+	D3D11CreateDevice( nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, 
+		D3D11_CREATE_DEVICE_DEBUG | D3D11_CREATE_DEVICE_BGRA_SUPPORT, 
+		featureLevel, 1, D3D11_SDK_VERSION,
+		&m_pD3D11Device, &createdFeatureLevel, &m_pD3D11ImmediateContext );
+
 	startGadget( "http://localhost:23842/gadgets/aardvark_master", "", "master", aardvark::EndpointAddr_t() );
 }
 
@@ -141,6 +149,8 @@ CAardvarkCefApp* CAardvarkCefApp::instance()
 
 void CAardvarkCefApp::runFrame()
 {
+	m_pD3D11ImmediateContext->Flush();
+
 	if ( m_quitRequested && !m_quitHandled )
 	{
 		m_quitHandled = true;
@@ -168,4 +178,64 @@ void CAardvarkCefApp::browserClosed( CAardvarkCefHandler *handler )
 	}
 }
 
+
+
+bool CAardvarkCefApp::createTextureForBrowser( void **sharedHandle, 
+	int width, int height )
+{
+	if ( !m_pD3D11Device )
+	{
+		return false;
+	}
+
+	D3D11_TEXTURE2D_DESC sharedDesc;
+	sharedDesc.Width = width;
+	sharedDesc.Height = height;
+	sharedDesc.MipLevels = sharedDesc.ArraySize = 1;
+	sharedDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	sharedDesc.SampleDesc.Count = 1;
+	sharedDesc.SampleDesc.Quality = 0;
+	sharedDesc.Usage = D3D11_USAGE_DEFAULT;
+	sharedDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	sharedDesc.CPUAccessFlags = 0;
+	sharedDesc.MiscFlags = D3D11_RESOURCE_MISC_SHARED;
+
+	ID3D11Texture2D *texture = nullptr;
+	HRESULT result = m_pD3D11Device->CreateTexture2D( &sharedDesc, nullptr, &texture );
+	if ( result != S_OK )
+		return false;
+
+	IDXGIResource *dxgiResource = nullptr;
+	texture->QueryInterface( __uuidof( IDXGIResource ), (LPVOID*)& dxgiResource );
+
+	void *handle = nullptr;
+	dxgiResource->GetSharedHandle( &handle );
+	dxgiResource->Release();
+
+	if ( !handle )
+	{
+		return false;
+	}
+
+	m_browserTextures.insert( std::make_pair( handle, texture ) );
+
+	*sharedHandle = handle;
+	return true;
+}
+
+void CAardvarkCefApp::updateTexture( void *sharedHandle, const void *buffer, int width, int height )
+{
+	auto i = m_browserTextures.find( sharedHandle );
+	if ( i == m_browserTextures.end() )
+		return;
+
+	D3D11_BOX box;
+	box.left = 0;
+	box.right = width;
+	box.top = 0;
+	box.bottom = height;
+	box.front = 0;
+	box.back = 1;
+	m_pD3D11ImmediateContext->UpdateSubresource( i->second, 0, &box, buffer, width * 4, width * height * 4 );
+}
 
