@@ -23,6 +23,10 @@
       {
          "binding_url" : "aardvark_binding_knuckles.json",
          "controller_type" : "knuckles"
+      },
+      {
+         "binding_url" : "aardvark_binding_oculus_touch.json",
+         "controller_type" : "oculus_touch"
       }
    ],
    "localization" : [
