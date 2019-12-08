@@ -46,7 +46,7 @@ std::vector<PokerState_t> CIntersectionTester::updatePokerProximity()
 			float v = positionOnPanel.z + 0.5f;
 			float dist = positionOnPanel.y * panel.zScale;
 
-			if ( u < 0.1f || u > 1.1f || v < 0.1f || v > 1.1f
+			if ( u < 0.0f || u > 1.0f || v < 0.0f || v > 1.0f
 				|| dist < -0.1f || dist > 0.2f )
 				continue;
 
