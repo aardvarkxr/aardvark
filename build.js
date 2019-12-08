@@ -167,6 +167,7 @@ async function runBuild()
 
 	runCommand( "npm", ["install"], webDir, 60, "npm install" );
 	runCommand( "npm", ["run", "build"], webDir, 30, "web build" );
+	runCommand( "npm", ["run", "updatelicense"], webDir, 10, "generate web license file" );
 	await unzipCef();
 	await cppBuild();
 	await copyRelease();
