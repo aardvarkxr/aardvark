@@ -78,7 +78,7 @@ async function unzipCef()
 	console.log( '++ starting CEF unzip' );
 	let startTime = Date.now();
 
-	let cefDir = path.resolve( srcDir, 'thirdparty/cefbinary_72' );
+	let cefDir = path.resolve( srcDir, 'thirdparty/cef_binary_78' );
 	await unzip( path.resolve( cefDir, 'Debug/libcef.dll.gz' ),
 		path.resolve( cefDir, 'Debug/libcef.dll' ) );
 	await unzip( path.resolve( cefDir, 'Debug/cef_sandbox.lib.gz' ),
