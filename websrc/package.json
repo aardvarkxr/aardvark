@@ -9,7 +9,7 @@
     "start": "webpack --env=dev --watch --progress"
   },
   "keywords": [],
-  "author": "Joe Ludwig",
+  "author": "Aardvark Team",
   "license": "BSD-3-Clause",
   "repository": "https://github.com/JoeLudwig/aardvark",
   "devDependencies": {
