@@ -18,7 +18,6 @@ If you need to do any development work from the source, you may want to run a lo
 
 All of this has been tested on Windows 10 with VS2017.
 Other platforms (including other versions of Windows) and other compilers are left as an exercise to the reader.)
-This has also only been tested in debug.
 
 Follow these steps:
 
@@ -28,9 +27,9 @@ Follow these steps:
    2. npm install
    3. npm run build
 3. Unzip CEF libs (These are over the 100MB Github file size limit when unzipped)
-   1. unzip d:\aardvark\src\thirdparty\cefbinary_72\Debug\libcef.zip
-   2. unzip d:\aardvark\src\thirdparty\cefbinary_72\Debug\cef_sandbox.zip
-   3. unzip d:\aardvark\src\thirdparty\cefbinary_72\Release\libcef.zip
+   1. unzip d:\aardvark\src\thirdparty\cef_binary_78\Debug\libcef.gz
+   2. unzip d:\aardvark\src\thirdparty\cef_binary_78\Debug\cef_sandbox.gz
+   3. unzip d:\aardvark\src\thirdparty\cef_binary_78\Release\libcef.gz
 4. Build aardvark C++ code
    1. cd d:\aardvark\src
    2. mkdir build
