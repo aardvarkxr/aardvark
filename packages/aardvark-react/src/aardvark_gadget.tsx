@@ -88,7 +88,7 @@ export class AvGadget
 			this.m_actualGadgetUri = 
 				window.location.origin
 				+ window.location.pathname.slice( 0, window.location.pathname.lastIndexOf( "/" ) );
-			console.log( "Stripping gadget URI down to", this.m_actualGadgetUri );
+			//console.log( "Stripping gadget URI down to", this.m_actualGadgetUri );
 		}
 		else
 		{
