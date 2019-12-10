@@ -1,7 +1,7 @@
 # What is Aardvark?
 
 Aardvark is a framework for building augmented reality "gadgets" that run on top of virtual reality experiences. 
-Gadgets are constructed using a bunch of custom React components (from the @aardvarkxr/aardvark-react package) and run in the Aardvark application.
+Gadgets are constructed using a bunch of custom React components (from the [@aardvarkxr/aardvark-react](https://www.npmjs.com/package/@aardvarkxr/aardvark-react) package) and run in the Aardvark application.
 Gadgets use these components to show interactive models, 2D UI, or other stuff that will draw on top of any VR applications you run.
 You can attach these gadgets to your hands and bring them with you in your favorite VR apps.
 
