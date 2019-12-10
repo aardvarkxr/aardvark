@@ -461,7 +461,7 @@ export class AvGadget
 
 		if( this.m_firstSceneGraph )
 		{
-			console.log( `sending GadgetStarted for ${ this.m_endpoint.getEndpointId() }`)
+			//console.log( `sending GadgetStarted for ${ this.m_endpoint.getEndpointId() }`)
 			this.m_firstSceneGraph = false;
 			if( this.m_epToNotify )
 			{

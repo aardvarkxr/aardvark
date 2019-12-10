@@ -368,11 +368,6 @@ void CAardvarkRenderProcessHandler::InitAardvarkForContext( PerContextInfo_t &co
 	contextInfo.aardvarkObject = CJavascriptObjectWithFunctions::create< CAardvarkObject>( this );
 	windowObj->SetValue( "aardvark", contextInfo.aardvarkObject.object, V8_PROPERTY_ATTRIBUTE_READONLY );
 
-
-	CefRefPtr<CefV8Value> retVal;
-	CefRefPtr<CefV8Exception> exception;
-	contextInfo.context->Eval( "if( aardvarkReady ) { aardvarkReady(); }", "", 1, retVal, exception );
-
 	contextInfo.context->Exit();
 }
 
