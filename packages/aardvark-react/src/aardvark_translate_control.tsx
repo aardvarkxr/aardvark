@@ -236,6 +236,7 @@ export class AvTransformControl extends React.Component< TransformControlProps, 
 		return (
 		[
 			<AvTranslateArrow 
+				key="y"
 				color={ { r: 0.8, g: 0, b: 0 } }
 				highlightColor={ { r: 1, g: 0, b: 0 } }
 				centerGap={ centerGap }
@@ -247,6 +248,7 @@ export class AvTransformControl extends React.Component< TransformControlProps, 
 					minZ: 0, maxZ: 0,
 				} } />,
 			<AvTranslateArrow 
+				key="z"
 				rotateX={ -90 }
 				color={ { r: 0, g: 0.8, b: 0 } }
 				highlightColor={ { r: 0, g: 1, b: 0 } }
@@ -259,6 +261,7 @@ export class AvTransformControl extends React.Component< TransformControlProps, 
 					minZ: -100, maxZ: 100,
 				} } />,
 			<AvTranslateArrow 
+				key="x"
 				rotateZ={ -90 }
 				color={ { r: 0, g: 0, b: 0.8 } }
 				highlightColor={ { r: 0, g: 0, b: 1 } }
