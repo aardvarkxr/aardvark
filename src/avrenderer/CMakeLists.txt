@@ -47,7 +47,6 @@ target_compile_definitions(avrenderer PRIVATE
 	_USE_MATH_DEFINES
 	_SILENCE_CXX17_OLD_ALLOCATOR_MEMBERS_DEPRECATION_WARNING
 	NOMINMAX
-	VK_EXAMPLE_DATA_DIR="${AV_DATA}"
 	)
 
 target_link_directories( avrenderer PRIVATE ${CEF_BINARY_DIR} )

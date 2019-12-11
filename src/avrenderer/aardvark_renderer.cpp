@@ -386,7 +386,7 @@ void VulkanExample::loadAssets()
 	tinygltf::asset_manager = androidApp->activity->assetManager;
 	readDirectory( assetpath + "models", "*.gltf", scenes, true );
 #else
-	const std::string assetpath = std::string( VK_EXAMPLE_DATA_DIR ) + "/";
+	const std::string assetpath = tools::GetDataPath().generic_string() + "/";
 	struct stat info;
 	if ( stat( assetpath.c_str(), &info ) != 0 ) {
 		std::string msg = "Could not locate asset path in \"" + assetpath + "\".\nMake sure binary is run from correct relative directory!";

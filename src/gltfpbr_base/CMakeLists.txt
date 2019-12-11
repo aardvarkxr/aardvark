@@ -33,9 +33,9 @@ target_include_directories( gltfpbr_base PUBLIC ${AV_SRC_THIRDPARTY}/tinygltf )
 target_include_directories( gltfpbr_base PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_definitions( gltfpbr_base PUBLIC 
 	VK_USE_PLATFORM_WIN32_KHR
-	VK_EXAMPLE_DATA_DIR="${AV_DATA}"
 	)
 target_link_libraries( gltfpbr_base ${OpenVR_LIB_DIR}/openvr_api.lib )
+target_link_libraries( gltfpbr_base tools )
 target_include_directories( gltfpbr_base PRIVATE ${OpenVR_INCLUDE_DIR} )
 
 if(WIN32)
