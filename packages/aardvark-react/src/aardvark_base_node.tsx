@@ -69,6 +69,13 @@ export abstract class AvBaseNode<TProps, TState> extends React.Component<TProps,
 	constructor( props: any )
 	{
 		super( props );
+
+		AvGadget.instance().register( this );
+
+		if( this.baseProps.onIdAssigned )
+		{
+			this.baseProps.onIdAssigned( this.endpointAddr() );
+		}
 	}
 
 	public abstract buildNode( ): AvNode;
@@ -92,16 +99,6 @@ export abstract class AvBaseNode<TProps, TState> extends React.Component<TProps,
 		}
 
 		return this.buildNode();
-	}
-
-	public componentWillMount()
-	{
-		AvGadget.instance().register( this );
-
-		if( this.baseProps.onIdAssigned )
-		{
-			this.baseProps.onIdAssigned( this.endpointAddr() );
-		}
 	}
 
 	public componentWillUnmount()

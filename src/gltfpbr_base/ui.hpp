@@ -68,7 +68,7 @@ public:
 		io.Fonts->AddFontFromMemoryTTF(fontAsset, size, 14.0f * scale);
 		delete[] fontAsset;
 #else
-		io.Fonts->AddFontFromFileTTF( ( std::string( VK_EXAMPLE_DATA_DIR ) + "/Roboto-Medium.ttf").c_str(), 16.0f  );
+		io.Fonts->AddFontFromFileTTF( ( tools::GetDataPath().generic_string() + "/Roboto-Medium.ttf").c_str(), 16.0f  );
 #endif
 		io.Fonts->GetTexDataAsRGBA32(&fontData, &texWidth, &texHeight);
 		fontTexture.loadFromBuffer(fontData, texWidth * texHeight * 4 * sizeof(char), VK_FORMAT_R8G8B8A8_UNORM, texWidth, texHeight, vulkanDevice, queue);

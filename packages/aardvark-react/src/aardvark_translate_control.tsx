@@ -4,7 +4,7 @@ import bind from 'bind-decorator';
 import { AvModel } from './aardvark_model';
 import { HighlightType, AvGrabbable, GrabResponse } from './aardvark_grabbable';
 import { AvSphereHandle, AvModelBoxHandle } from './aardvark_handles';
-import { AvGrabEvent, AvConstraint, AvNodeTransform, AvColor, EndpointAddr, endpointAddrsMatch } from '@aardvarkxr/aardvark-shared';
+import { AvGrabEvent, AvConstraint, AvNodeTransform, AvColor, EndpointAddr, endpointAddrsMatch, g_builtinModelArrow, g_builtinModelSphere } from '@aardvarkxr/aardvark-shared';
 
 
 interface TranslateArrowProps
@@ -61,10 +61,10 @@ class AvTranslateArrow extends React.Component< TranslateArrowProps, TranslateAr
 						rotateX={ this.props.rotateX } rotateY={ this.props.rotateY } rotateZ={ this.props.rotateZ }
 						uniformScale={ this.props.minimized ? 0.3 : 1.0 }>
 						<AvTransform translateY={ this.props.centerGap }>
-							<AvModelBoxHandle uri="http://aardvark.install/models/arrow.glb" 
+							<AvModelBoxHandle uri={ g_builtinModelArrow }
 								updateHighlight={ this.updateHighlight }
 								constraint={ this.props.constraint }/>
-							<AvModel uri={ "http://aardvark.install/models/arrow.glb" }
+							<AvModel uri={ g_builtinModelArrow }
 								color={ color }/> }
 							{ this.props.children }
 						</AvTransform>
@@ -124,7 +124,7 @@ class AvBallHandle extends React.Component< BallHandleProps, BallHandleState >
 
 		return <div>
 					<AvTransform uniformScale={ scale }>
-							<AvModel uri={ "http://aardvark.install/models/sphere/sphere.glb" }
+							<AvModel uri={ g_builtinModelSphere }
 								color={ color }/> }
 							{ this.props.children }
 					</AvTransform>
@@ -236,6 +236,7 @@ export class AvTransformControl extends React.Component< TransformControlProps, 
 		return (
 		[
 			<AvTranslateArrow 
+				key="y"
 				color={ { r: 0.8, g: 0, b: 0 } }
 				highlightColor={ { r: 1, g: 0, b: 0 } }
 				centerGap={ centerGap }
@@ -247,6 +248,7 @@ export class AvTransformControl extends React.Component< TransformControlProps, 
 					minZ: 0, maxZ: 0,
 				} } />,
 			<AvTranslateArrow 
+				key="z"
 				rotateX={ -90 }
 				color={ { r: 0, g: 0.8, b: 0 } }
 				highlightColor={ { r: 0, g: 1, b: 0 } }
@@ -259,6 +261,7 @@ export class AvTransformControl extends React.Component< TransformControlProps, 
 					minZ: -100, maxZ: 100,
 				} } />,
 			<AvTranslateArrow 
+				key="x"
 				rotateZ={ -90 }
 				color={ { r: 0, g: 0, b: 0.8 } }
 				highlightColor={ { r: 0, g: 0, b: 1 } }

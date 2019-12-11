@@ -21,7 +21,7 @@ set( TinyProcessLibrary_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/thirdparty/tiny-process-
 set( TinyProcessLibrary_LIB_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/thirdparty/tiny-process-library/$<CONFIG> )
 
 message ( "tpl" $TinyProcessLibrary_LIB_DIR )
-set( CEF_ROOT ${CMAKE_SOURCE_DIR}/thirdparty/cefbinary_72 )
+set( CEF_ROOT ${CMAKE_SOURCE_DIR}/thirdparty/cef_binary_78 )
 find_package( CEF )
 
 #add_compile_definitions(_ITERATOR_DEBUG_LEVEL=0)
@@ -40,7 +40,7 @@ add_subdirectory(tools)
 add_subdirectory(tests)
 add_subdirectory(gltfpbr_base)
 add_subdirectory(avrenderer)
-add_subdirectory(thirdparty/cefbinary_72/libcef_dll )
+add_subdirectory(thirdparty/cef_binary_78/libcef_dll )
 add_subdirectory(thirdparty/tiny-process-library )
 
 

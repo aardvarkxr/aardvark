@@ -213,12 +213,6 @@ protected:
 		glm::vec3 rotation = glm::vec3( 75.0f, 40.0f, 0.0f );
 	} lightSource;
 
-#if defined(VK_USE_PLATFORM_ANDROID_KHR)
-	const std::string assetpath = "";
-#else
-	const std::string assetpath = std::string( VK_EXAMPLE_DATA_DIR ) + "/";
-#endif
-
 	bool rotateModel = false;
 	glm::vec3 modelrot = glm::vec3( 0.0f );
 	glm::vec3 modelPos = glm::vec3( 0.0f );

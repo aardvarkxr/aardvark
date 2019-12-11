@@ -248,13 +248,13 @@ void CAardvarkObject::msgUpdateTextureInfo( CefRefPtr< CefProcessMessage > msg )
 		V8_PROPERTY_ATTRIBUTE_NONE );
 	textureInfo->SetValue( "format", CefV8Value::CreateInt( (int)ETextureFormat::B8G8R8A8 ),
 		V8_PROPERTY_ATTRIBUTE_NONE );
-	textureInfo->SetValue( "invertY", CefV8Value::CreateBool( true ),
-		V8_PROPERTY_ATTRIBUTE_NONE );
 	textureInfo->SetValue( "dxgiHandle", CefV8Value::CreateString( msg->GetArgumentList()->GetString( 0 ) ),
 		V8_PROPERTY_ATTRIBUTE_NONE );
 	textureInfo->SetValue( "width", CefV8Value::CreateInt( msg->GetArgumentList()->GetInt( 1 ) ),
 		V8_PROPERTY_ATTRIBUTE_NONE );
 	textureInfo->SetValue( "height", CefV8Value::CreateInt( msg->GetArgumentList()->GetInt( 2 ) ),
+		V8_PROPERTY_ATTRIBUTE_NONE );
+	textureInfo->SetValue( "invertY", CefV8Value::CreateBool( msg->GetArgumentList()->GetBool( 3 ) ),
 		V8_PROPERTY_ATTRIBUTE_NONE );
 
 	m_textureInfoCallback->ExecuteFunction( nullptr, { textureInfo } );
@@ -291,12 +291,10 @@ void CAardvarkRenderProcessHandler::OnContextCreated(
 	info.frame = frame;
 	info.context = context;
 	
-	// Retrieve the context's window object.
-	CefRefPtr<CefV8Value> windowObj = context->GetGlobal();
-
-	// Create an object to store our functions in
-	info.aardvarkObject = CJavascriptObjectWithFunctions::create< CAardvarkObject>( this );
-	windowObj->SetValue( "aardvark", info.aardvarkObject.object, V8_PROPERTY_ATTRIBUTE_READONLY );
+	if ( m_gadgetManifest )
+	{
+		InitAardvarkForContext( info );
+	}
 
 	m_contexts.push_back( std::move( info ) );
 }
@@ -321,6 +319,7 @@ void CAardvarkRenderProcessHandler::OnBrowserDestroyed( CefRefPtr<CefBrowser> br
 
 
 bool CAardvarkRenderProcessHandler::OnProcessMessageReceived( CefRefPtr<CefBrowser> browser,
+	CefRefPtr<CefFrame> frame,
 	CefProcessId source_process,
 	CefRefPtr<CefProcessMessage> message )
 {
@@ -335,7 +334,12 @@ bool CAardvarkRenderProcessHandler::OnProcessMessageReceived( CefRefPtr<CefBrows
 		{
 			std::string manifestData = message->GetArgumentList()->GetString( 2 );
 			nlohmann::json j = nlohmann::json::parse( manifestData.begin(), manifestData.end() );
-			m_gadgetManifest = j.get<CAardvarkGadgetManifest>();
+			m_gadgetManifest = std::make_unique<CAardvarkGadgetManifest>( j.get<CAardvarkGadgetManifest>() );
+			
+			for ( auto & contextInfo : m_contexts )
+			{
+				InitAardvarkForContext( contextInfo );
+			}
 		}
 		catch ( nlohmann::json::exception & )
 		{
@@ -355,18 +359,41 @@ bool CAardvarkRenderProcessHandler::OnProcessMessageReceived( CefRefPtr<CefBrows
 }
 
 
+void CAardvarkRenderProcessHandler::InitAardvarkForContext( PerContextInfo_t &contextInfo )
+{
+	contextInfo.context->Enter();
+	CefRefPtr<CefV8Value> windowObj = contextInfo.context->GetGlobal();
+
+	// Create an object to store our functions in
+	contextInfo.aardvarkObject = CJavascriptObjectWithFunctions::create< CAardvarkObject>( this );
+	windowObj->SetValue( "aardvark", contextInfo.aardvarkObject.object, V8_PROPERTY_ATTRIBUTE_READONLY );
+
+	contextInfo.context->Exit();
+}
+
+
 bool CAardvarkRenderProcessHandler::hasPermission( const std::string & permission )
 {
-	return m_gadgetManifest.m_permissions.find( permission ) != m_gadgetManifest.m_permissions.end();
+	if ( m_gadgetManifest )
+	{
+		return m_gadgetManifest->m_permissions.find( permission ) != m_gadgetManifest->m_permissions.end();
+	}
+	else
+	{
+		return false;
+	}
 }
 
 void CAardvarkRenderProcessHandler::runFrame()
 {
 	for ( auto & info : m_contexts )
 	{
-		info.context->Enter();
-		info.aardvarkObject->runFrame();
-		info.context->Exit();
+		if ( info.aardvarkObject )
+		{
+			info.context->Enter();
+			info.aardvarkObject->runFrame();
+			info.context->Exit();
+		}
 	}
 
 	m_uriRequestHandler.doCefRequestWork();
@@ -385,7 +412,7 @@ void CAardvarkRenderProcessHandler::runFrame()
 
 void CAardvarkRenderProcessHandler::sendBrowserMessage( CefRefPtr< CefProcessMessage > msg )
 {
-	CefV8Context::GetCurrentContext()->GetBrowser()->SendProcessMessage( PID_BROWSER, msg );
+	CefV8Context::GetCurrentContext()->GetBrowser()->GetFocusedFrame()->SendProcessMessage( PID_BROWSER, msg );
 }
 
 

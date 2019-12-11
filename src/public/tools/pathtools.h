@@ -16,7 +16,5 @@ namespace tools
 	/** returns the data path */
 	std::filesystem::path GetDataPath();
 
-	std::string filterUriForInstall( const std::string & originalUri );
-
 };
 

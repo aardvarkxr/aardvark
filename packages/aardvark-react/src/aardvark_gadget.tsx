@@ -88,7 +88,7 @@ export class AvGadget
 			this.m_actualGadgetUri = 
 				window.location.origin
 				+ window.location.pathname.slice( 0, window.location.pathname.lastIndexOf( "/" ) );
-			console.log( "Stripping gadget URI down to", this.m_actualGadgetUri );
+			//console.log( "Stripping gadget URI down to", this.m_actualGadgetUri );
 		}
 		else
 		{
@@ -461,7 +461,7 @@ export class AvGadget
 
 		if( this.m_firstSceneGraph )
 		{
-			console.log( `sending GadgetStarted for ${ this.m_endpoint.getEndpointId() }`)
+			//console.log( `sending GadgetStarted for ${ this.m_endpoint.getEndpointId() }`)
 			this.m_firstSceneGraph = false;
 			if( this.m_epToNotify )
 			{

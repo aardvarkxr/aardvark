@@ -1,8 +1,46 @@
-# Aardvark is not ready
+# What is Aardvark?
+
+Aardvark is a framework for building augmented reality "gadgets" that run on top of virtual reality experiences. 
+Gadgets are constructed using a bunch of custom React components (from the [@aardvarkxr/aardvark-react](https://www.npmjs.com/package/@aardvarkxr/aardvark-react) package) and run in the Aardvark application.
+Gadgets use these components to show interactive models, 2D UI, or other stuff that will draw on top of any VR applications you run.
+You can attach these gadgets to your hands and bring them with you in your favorite VR apps.
+
+# Project Status and Road Map
+
+## Current Status
+
+Aardvark is more or less a prototype at the moment.
+The interfaces are still in flux, many necessary features are missing, and the user interface still needs a lot of work.
+We're putting this out there now to gather as much feedback from people as possible and let users and developers shape the future direction of the project. 
+[Join the slack](https://join.slack.com/t/aardvarkxr/shared_invite/enQtODU1MTM3NjI5OTg3LTM0MGI4NzRjZDBjYTJjN2E1ZWIxNjU5MzdmNWZjMWVmM2UzMWE4MWZhOWY1YzI2MDMzZDNmZjhhNzViY2YxYWU) and tell us what you think.
+Or file an issue or pull request if you find something that could be better. 
+We want to hear from you.
 
 Aardvark is not far enough along for you to use it in any kind of production project.
-This release is intended to gather feedback and foster further development, but there is still a ways to go before the API is stable.
 Expect future releases to break compatibility with existing gadgets.
+
+## Upcoming Features
+
+Here's a short list of things that we'd like to add or work on in no particular order:
+
+* Multiple panels in each gadget, probably through popups
+* Panels for desktop applications #38
+* Animation to smooth  out transitions and just generally make things nicer
+* Switch to using a more capable rendering engine #11
+* Figure out better ways of not conflicting with the input of the host games
+* Provide better ways to let users find and use gadgets
+* Networked gadget scene graphs, including panels
+* Knowledge of where the user is in the VR experiences themselves so gadgets can be responsive to that
+
+If you want to help out with any of these, please reach out.
+
+# Who is building this thing?
+
+There are a few of us working on it.
+Look at the commits to see a list of active participants.
+
+Most of us work at companies that are involved in the VR space.
+Aardvark is not associated with any of those companies.
 
 # Getting Started
 
@@ -18,7 +56,6 @@ If you need to do any development work from the source, you may want to run a lo
 
 All of this has been tested on Windows 10 with VS2017.
 Other platforms (including other versions of Windows) and other compilers are left as an exercise to the reader.)
-This has also only been tested in debug.
 
 Follow these steps:
 
@@ -28,9 +65,9 @@ Follow these steps:
    2. npm install
    3. npm run build
 3. Unzip CEF libs (These are over the 100MB Github file size limit when unzipped)
-   1. unzip d:\aardvark\src\thirdparty\cefbinary_72\Debug\libcef.zip
-   2. unzip d:\aardvark\src\thirdparty\cefbinary_72\Debug\cef_sandbox.zip
-   3. unzip d:\aardvark\src\thirdparty\cefbinary_72\Release\libcef.zip
+   1. unzip d:\aardvark\src\thirdparty\cef_binary_78\Debug\libcef.gz
+   2. unzip d:\aardvark\src\thirdparty\cef_binary_78\Debug\cef_sandbox.gz
+   3. unzip d:\aardvark\src\thirdparty\cef_binary_78\Release\libcef.gz
 4. Build aardvark C++ code
    1. cd d:\aardvark\src
    2. mkdir build
@@ -87,6 +124,7 @@ This will install the @aardvarkxr/create script and then run it.
 Answer the prompts to set up your gadget.
 
 Then run:
+
 	npm install
 	npm run build
 

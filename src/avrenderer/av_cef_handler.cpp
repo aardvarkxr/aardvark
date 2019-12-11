@@ -30,7 +30,7 @@ CAardvarkCefHandler::CAardvarkCefHandler( IApplication *application, const std::
 
 	m_application = application;
 
-	m_gadgetUri = tools::filterUriForInstall( gadgetUri );
+	m_gadgetUri = gadgetUri;
 	m_initialHook = initialHook;
 	m_persistenceUuid = persistenceUuid;
 }
@@ -86,7 +86,7 @@ void CAardvarkCefHandler::onGadgetManifestReceived( bool success, const std::vec
 	window_info.SetAsPopup( NULL, m_gadgetManifest.m_name );
 
 	window_info.windowless_rendering_enabled = true;
-	window_info.shared_texture_enabled = true;
+	//window_info.shared_texture_enabled = true;
 
 	window_info.width = m_gadgetManifest.m_width;
 	window_info.height = m_gadgetManifest.m_height;
@@ -120,8 +120,12 @@ void CAardvarkCefHandler::onGadgetManifestReceived( bool success, const std::vec
 	}
 	fullUri += sArgs;
 
+	// create the texture to copy the rendered image into
+	m_application->createTextureForBrowser( &m_sharedTexture,
+		window_info.width, window_info.height );
+
 	// Create the first browser window.
-	CefBrowserHost::CreateBrowser( window_info, this, fullUri, browser_settings,
+	CefBrowserHost::CreateBrowser( window_info, this, fullUri, browser_settings, nullptr,
 		NULL );
 }
 
@@ -162,7 +166,9 @@ void CAardvarkCefHandler::OnAfterCreated(CefRefPtr<CefBrowser> browser)
 	msg->GetArgumentList()->SetString( 1, m_initialHook );
 	msg->GetArgumentList()->SetString( 2, m_gadgetManifestString );
 
-	m_browser->SendProcessMessage( PID_RENDERER, msg );
+	m_browser->GetFocusedFrame()->SendProcessMessage( PID_RENDERER, msg );
+	
+	updateSceneGraphTextures();
 }
 
 
@@ -204,7 +210,7 @@ void CAardvarkCefHandler::OnLoadError(CefRefPtr<CefBrowser> browser,
 		"<h2>Failed to load URL "
 		<< std::string(failedUrl) << " with error " << std::string(errorText)
 		<< " (" << errorCode << ").</h2></body></html>";
-	frame->LoadString(ss.str(), failedUrl);
+	//frame->LoadString(ss.str(), failedUrl);
 }
 
 
@@ -226,6 +232,14 @@ void CAardvarkCefHandler::OnPaint( CefRefPtr<CefBrowser> browser,
 	// we don't care about the slow paint, just the GPU paint in OnAcceleratedPaint
 	assert( m_gadgetManifest.m_width == width );
 	assert( m_gadgetManifest.m_height == height );
+
+	m_application->updateTexture( m_sharedTexture, buffer, width, height );
+
+	if ( m_firstPaint )
+	{
+		updateSceneGraphTextures();
+		m_firstPaint = false;
+	}
 }
 
 
@@ -234,18 +248,19 @@ void CAardvarkCefHandler::OnAcceleratedPaint( CefRefPtr<CefBrowser> browser,
 	const RectList& dirtyRects,
 	void* shared_handle )
 {
-	if ( m_sharedTexture != shared_handle )
-	{
-		m_sharedTexture = shared_handle;
-		if ( m_wantsTexture )
-		{
-			updateSceneGraphTextures();
-		}
-	}
+	//if ( m_sharedTexture != shared_handle )
+	//{
+	//	m_sharedTexture = shared_handle;
+	//	if ( m_wantsTexture )
+	//	{
+	//		updateSceneGraphTextures();
+	//	}
+	//}
 }
 
 
 bool CAardvarkCefHandler::OnProcessMessageReceived( CefRefPtr<CefBrowser> browser,
+	CefRefPtr<CefFrame> frame,
 	CefProcessId source_process,
 	CefRefPtr<CefProcessMessage> message )
 {
@@ -279,10 +294,7 @@ bool CAardvarkCefHandler::OnProcessMessageReceived( CefRefPtr<CefBrowser> browse
 	else if ( message->GetName() == "request_texture_info" )
 	{
 		m_wantsTexture = true;
-		if ( m_sharedTexture )
-		{
-			updateSceneGraphTextures();
-		}
+		updateSceneGraphTextures();
 	}
 	else if ( message->GetName() == "request_close" )
 	{
@@ -336,7 +348,7 @@ bool CAardvarkCefHandler::OnProcessMessageReceived( CefRefPtr<CefBrowser> browse
 
 void CAardvarkCefHandler::updateSceneGraphTextures()
 {
-	if ( !m_sharedTexture )
+	if ( !m_sharedTexture || !m_wantsTexture )
 	{
 		// if we don't have a shared texture or gadget yet, there's nothing to update
 		return;
@@ -346,7 +358,8 @@ void CAardvarkCefHandler::updateSceneGraphTextures()
 	msg->GetArgumentList()->SetString( 0, std::to_string( (uint64_t)m_sharedTexture ) );
 	msg->GetArgumentList()->SetInt( 1, m_gadgetManifest.m_width );
 	msg->GetArgumentList()->SetInt( 2, m_gadgetManifest.m_height );
-	m_browser->SendProcessMessage( PID_RENDERER, msg );
+	msg->GetArgumentList()->SetBool( 3, false );
+	m_browser->GetFocusedFrame()->SendProcessMessage( PID_RENDERER, msg );
 }
 
 
@@ -376,14 +389,4 @@ void CAardvarkCefHandler::triggerClose( bool forceClose )
 	m_browser->GetHost()->CloseBrowser( forceClose );
 }
 
-CAardvarkCefHandler::ReturnValue CAardvarkCefHandler::OnBeforeResourceLoad(
-	CefRefPtr<CefBrowser> browser,
-	CefRefPtr<CefFrame> frame,
-	CefRefPtr<CefRequest> request,
-	CefRefPtr<CefRequestCallback> callback )
-{
-	std::string filteredUri = tools::filterUriForInstall( request->GetURL() );
-	request->SetURL( filteredUri );
-	return RV_CONTINUE;
-}
 

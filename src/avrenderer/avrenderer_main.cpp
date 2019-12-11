@@ -56,7 +56,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 	settings.no_sandbox = true;
 #endif
 
-	settings.multi_threaded_message_loop = true;
+	//settings.multi_threaded_message_loop = true;
 	settings.windowless_rendering_enabled = true;
 
 	// Initialize CEF.
@@ -64,6 +64,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 
 	while ( !app->wantsToQuit() )
 	{
+		CefDoMessageLoopWork();
+		app->runFrame();
 		std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
 	}
 

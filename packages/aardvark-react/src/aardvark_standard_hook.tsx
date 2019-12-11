@@ -4,7 +4,7 @@ import bind from 'bind-decorator';
 import { AvModel } from './aardvark_model';
 import { HookHighlight, AvHook } from './aardvark_hook';
 import { AvGadget } from './aardvark_gadget';
-import { EHand, EndpointAddr } from '@aardvarkxr/aardvark-shared';
+import { EHand, EndpointAddr, g_builtinModelHook, g_builtinModelBoundingBox } from '@aardvarkxr/aardvark-shared';
 import { AvLine } from './aardvark_line';
 
 
@@ -84,7 +84,7 @@ export class AvStandardHook extends React.Component< StandardHookProps, Standard
 		if( showHook || AvGadget.instance().getEditModeForHand( this.props.hand ) )
 		{
 			return <AvTransform uniformScale={ hookScale }>
-					<AvModel uri="https://aardvark.install/models/hook.glb" />
+					<AvModel uri={ g_builtinModelHook } />
 				</AvTransform>;
 		}
 	}
@@ -188,7 +188,7 @@ export class AvStandardBoxHook extends React.Component< StandardBoxHookProps, St
 					scaleX={ ( this.props.xMax - this.props.xMin ) / 2 }
 					scaleY={ ( this.props.yMax - this.props.yMin ) / 2 }
 					scaleZ={ ( this.props.zMax - this.props.zMin ) / 2 } >
-						<AvModel uri="https://aardvark.install/models/bounding_box.glb" 
+						<AvModel uri={ g_builtinModelBoundingBox }
 							color={ color }/>
 				</AvTransform>;
 		}

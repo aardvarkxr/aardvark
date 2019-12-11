@@ -1,6 +1,7 @@
 #pragma once
 
 #include "VulkanUtils.hpp"
+#include <tools/pathtools.h>
 
 VkPipelineShaderStageCreateInfo loadShader( VkDevice device, std::string filename, VkShaderStageFlagBits stage )
 {
@@ -27,7 +28,7 @@ VkPipelineShaderStageCreateInfo loadShader( VkDevice device, std::string filenam
 	VK_CHECK_RESULT( vkCreateShaderModule( device, &moduleCreateInfo, NULL, &shaderStage.module ) );
 	delete[] shaderCode;
 #else
-	std::ifstream is( std::string( VK_EXAMPLE_DATA_DIR ) + "/shaders/" + filename, std::ios::binary | std::ios::in | std::ios::ate );
+	std::ifstream is( tools::GetDataPath().generic_string() + "/shaders/" + filename, std::ios::binary | std::ios::in | std::ios::ate );
 
 	if ( is.is_open() ) {
 		size_t size = is.tellg();

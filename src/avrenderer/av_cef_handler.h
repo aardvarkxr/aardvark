@@ -46,6 +46,7 @@ public:
 	virtual CefRefPtr<CefLoadHandler> GetLoadHandler() override { return this; }
 	virtual CefRefPtr<CefRenderHandler> GetRenderHandler() override { return this; }
 	virtual bool OnProcessMessageReceived( CefRefPtr<CefBrowser> browser,
+		CefRefPtr<CefFrame> frame,
 		CefProcessId source_process,
 		CefRefPtr<CefProcessMessage> message ) override;
 	virtual CefRefPtr<CefRequestHandler> GetRequestHandler() override { return this; }
@@ -78,13 +79,6 @@ public:
 		PaintElementType type,
 		const RectList& dirtyRects,
 		void* shared_handle ) override;
-
-	// CefRequestHandler methods:
-	virtual ReturnValue OnBeforeResourceLoad(
-		CefRefPtr<CefBrowser> browser,
-		CefRefPtr<CefFrame> frame,
-		CefRefPtr<CefRequest> request,
-		CefRefPtr<CefRequestCallback> callback ) override;
 
 	bool IsClosing() const { return m_isClosing; }
 
@@ -125,6 +119,7 @@ private:
 	aardvark::EndpointAddr_t m_epToNotify;
 	bool m_wantsToQuit = false;
 	bool m_wantsTexture = false;
+	bool m_firstPaint = true;
 
 	CUriRequestHandler m_uriRequestHandler;
 
