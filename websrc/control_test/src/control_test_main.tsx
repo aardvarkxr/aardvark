@@ -3,7 +3,7 @@ import  * as ReactDOM from 'react-dom';
 
 import bind from 'bind-decorator';
 import { AvTransform, AvSlider, AvGrabbable, AvSphereHandle, AvModel, AvPanel, AvPanelAnchor, AvTransformControl, QuaternionToEulerAngles, RadiansToDegrees } from '@aardvarkxr/aardvark-react';
-import { AvNodeTransform, g_builtinModelSphere, g_builtinModelGear } from '@aardvarkxr/aardvark-shared';
+import { AvNodeTransform, g_builtinModelSphere, g_builtinModelAardvark,  } from '@aardvarkxr/aardvark-shared';
 
 
 interface ControlTestState
@@ -76,7 +76,7 @@ class ControlTest extends React.Component< {}, ControlTestState >
 								<div className="SliderControl">
 									<AvPanelAnchor>
 										<AvSlider rangeX={ 0.7 } onSetValue={ this.onSetSlider }
-											modelUri={ g_builtinModelGear }/>
+											modelUri={ g_builtinModelAardvark }/>
 									</AvPanelAnchor>
 								</div>
 							</div>
