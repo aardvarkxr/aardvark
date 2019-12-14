@@ -5,8 +5,11 @@ add_library(tools STATIC
 	${AV_SRC_PUBLIC}/tools/filetools.h
 	pathtools.cpp
 	${AV_SRC_PUBLIC}/tools/pathtools.h
+	logging.cpp
+	${AV_SRC_PUBLIC}/tools/logging.h
 	stringtools.cpp
 	${AV_SRC_PUBLIC}/tools/stringtools.h
+	${AV_SRC_THIRDPARTY}/easyloggingpp-9.96.7/src/easylogging++.cc
 )
 
 target_include_directories( tools PUBLIC ${AV_SRC_PUBLIC} )

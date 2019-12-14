@@ -16,5 +16,7 @@ namespace tools
 	/** returns the data path */
 	std::filesystem::path GetDataPath();
 
+	/** Returns the user's document path */
+	std::filesystem::path GetUserDocumentsPath();
 };
 

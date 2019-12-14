@@ -4,6 +4,8 @@
 #define STBI_MSC_SECURE_CRT
 #include "tiny_gltf.h"
 
+#include <tools/logging.h>
+
 #include "av_cef_app.h"
 #include "avserver.h"
 
@@ -13,6 +15,8 @@
 // OS specific macros for the example main entry points
 int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 {
+	tools::initLogs();
+
 	// give the CEF subprocess the first crack
 	  // Enable High-DPI support on Windows 7 or newer.
 	CefEnableHighDPISupport();
@@ -42,6 +46,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 		// The sub-process has completed so return here.
 		return exit_code;
 	}
+
+	tools::LogDefault()->info( "Starting browser process" );
 
 	if ( !StartServer( hInstance ) )
 	{

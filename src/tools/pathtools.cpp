@@ -9,6 +9,10 @@
 #include <algorithm>
 #include <cctype>
 
+#include <windows.h>
+#include <KnownFolders.h>
+#include <ShlObj.h>
+
 namespace tools
 {
 	bool IsFileUri( const std::string & sUri )
@@ -85,6 +89,20 @@ namespace tools
 		std::filesystem::path myPath = std::filesystem::current_path();
 		myPath /= "data";
 		return myPath;
+	}
+
+	/** Returns the user's document path */
+	std::filesystem::path GetUserDocumentsPath()
+	{
+		PWSTR documentsPath;
+		if ( SUCCEEDED( SHGetKnownFolderPath( FOLDERID_Documents, 0, NULL, &documentsPath ) ) )
+		{
+			return documentsPath;
+		}
+		else
+		{
+			return "";
+		}
 	}
 
 }
