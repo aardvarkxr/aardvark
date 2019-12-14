@@ -4,6 +4,7 @@
 
 #include <windows.h>
 #include <shellapi.h>
+#include <tools/logging.h>
 
 static TinyProcessLib::Process *g_pServerProcess = nullptr;
 
@@ -46,20 +47,28 @@ bool StartServer( HINSTANCE hInstance )
 	std::function< void( const char *, size_t )> fnToUse;
 	if ( !bShowConsole )
 	{
-		fnToUse = []( const char *bytes, size_t n ) {};
+		fnToUse = []( const char *bytes, size_t n ) 
+		{
+			if ( n == 0 )
+				return;
+
+			LOG( INFO ) << "Server: " << std::string( bytes, n - 1 );
+		};
 	}
 
 	g_pServerProcess = new TinyProcessLib::Process( vecServerArgs, "", fnToUse, fnToUse );
 
 	int exitCode = 0;
-	if ( g_pServerProcess->try_get_exit_status( exitCode ) )
+	if ( g_pServerProcess->try_get_exit_status( exitCode ) || !g_pServerProcess->get_id() )
 	{
+		LOG( FATAL) << "Server failed to start with exit code " << exitCode;
 		// the process exited, which means we failed to start it
 		delete g_pServerProcess;
 		return false;
 	}
 	else
 	{
+		LOG( INFO ) << "Server started with PID " << g_pServerProcess->get_id();
 		return true;
 	}
 }
