@@ -105,4 +105,15 @@ namespace tools
 		}
 	}
 
+	std::filesystem::path GetExecutablePath()
+	{
+		wchar_t buf[MAX_PATH];
+		if ( !GetModuleFileNameW( NULL, buf, MAX_PATH ) )
+		{
+			return "";
+		}
+
+		return buf;
+	}
+
 }

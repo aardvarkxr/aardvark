@@ -9,6 +9,8 @@ add_library(tools STATIC
 	${AV_SRC_PUBLIC}/tools/logging.h
 	stringtools.cpp
 	${AV_SRC_PUBLIC}/tools/stringtools.h
+	systools.cpp
+	${AV_SRC_PUBLIC}/tools/systools.h
 	${AV_SRC_THIRDPARTY}/easyloggingpp-9.96.7/src/easylogging++.cc
 )
 
