@@ -17,6 +17,7 @@
 #include "include/wrapper/cef_closure_task.h"
 #include "include/wrapper/cef_helpers.h"
 #include <tools/pathtools.h>
+#include <tools/logging.h>
 
 #include <json/json.hpp>
 
@@ -58,7 +59,7 @@ void CAardvarkCefHandler::onGadgetManifestReceived( bool success, const std::vec
 {
 	if ( !success )
 	{
-		assert( false );
+		LOG( ERROR ) << "Failed to load manifest for " << this->m_gadgetUri << ".";
 		return;
 	}
 
@@ -70,7 +71,7 @@ void CAardvarkCefHandler::onGadgetManifestReceived( bool success, const std::vec
 	catch ( nlohmann::json::exception &  )
 	{
 		// manifest parse failed
-		assert( false );
+		LOG( ERROR ) << "Failed to parse manifest for " << this->m_gadgetUri << ".";
 		return;
 	}
 

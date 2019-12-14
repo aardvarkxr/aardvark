@@ -51,7 +51,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 
 	if ( !StartServer( hInstance ) )
 	{
-		fprintf( stderr, "Failed to start the server\n" );
+		LOG( FATAL ) << "Failed to start the server";
 		return -57;
 	}
 

@@ -390,7 +390,7 @@ void VulkanExample::loadAssets()
 	struct stat info;
 	if ( stat( assetpath.c_str(), &info ) != 0 ) {
 		std::string msg = "Could not locate asset path in \"" + assetpath + "\".\nMake sure binary is run from correct relative directory!";
-		std::cerr << msg << std::endl;
+		LOG( FATAL ) << msg << std::endl;
 		exit( -1 );
 	}
 #endif
@@ -424,7 +424,11 @@ void VulkanExample::loadAssets()
 	//loadScene(sceneFile.c_str());
 	//models.skybox.loadFromFile(assetpath + "models/Box/glTF-Embedded/Box.gltf", vulkanDevice, queue);
 
-	m_skybox.loadFromFile( assetpath + "models/Box/glTF-Embedded/Box.gltf", vulkanDevice, m_descriptorManager, queue );
+	if ( !m_skybox.loadFromFile( assetpath + "models/Box/glTF-Embedded/Box.gltf", vulkanDevice, m_descriptorManager, queue ) )
+	{
+		LOG( FATAL ) << "Couldn't load skybox. Bailing.";
+	}
+
 	loadEnvironment( envMapFile.c_str() );
 
 }

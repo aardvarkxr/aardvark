@@ -28,7 +28,8 @@ VkPipelineShaderStageCreateInfo loadShader( VkDevice device, std::string filenam
 	VK_CHECK_RESULT( vkCreateShaderModule( device, &moduleCreateInfo, NULL, &shaderStage.module ) );
 	delete[] shaderCode;
 #else
-	std::ifstream is( tools::GetDataPath().generic_string() + "/shaders/" + filename, std::ios::binary | std::ios::in | std::ios::ate );
+	std::filesystem::path shaderFileName = tools::GetDataPath() / "shaders" / filename;
+	std::ifstream is( shaderFileName.generic_string(), std::ios::binary | std::ios::in | std::ios::ate );
 
 	if ( is.is_open() ) {
 		size_t size = is.tellg();
@@ -45,7 +46,7 @@ VkPipelineShaderStageCreateInfo loadShader( VkDevice device, std::string filenam
 		delete[] shaderCode;
 	}
 	else {
-		std::cerr << "Error: Could not open shader file \"" << filename << "\"" << std::endl;
+		LOG(ERROR) << "Error: Could not open shader file \"" << shaderFileName << "\"" << std::endl;
 		shaderStage.module = VK_NULL_HANDLE;
 	}
 

@@ -696,7 +696,7 @@ namespace vkglTF
 							break;
 						}
 						default:
-							std::cerr << "Index component type " << accessor.componentType << " not supported!" << std::endl;
+							LOG(ERROR) << "Index component type " << accessor.componentType << " not supported!" << std::endl;
 							return;
 						}
 					}					
@@ -1067,7 +1067,7 @@ namespace vkglTF
 			}
 		}
 
-		void loadFromFile(std::string filename, vks::VulkanDevice *device, vks::CDescriptorManager *descriptorManager, VkQueue transferQueue, float scale = 1.0f)
+		bool loadFromFile(std::string filename, vks::VulkanDevice *device, vks::CDescriptorManager *descriptorManager, VkQueue transferQueue, float scale = 1.0f)
 		{
 			tinygltf::Model gltfModel;
 			tinygltf::TinyGLTF gltfContext;
@@ -1085,11 +1085,12 @@ namespace vkglTF
 			if( !fileLoaded )
 			{
 				// TODO: throw
-				std::cerr << "Could not load gltf file: " << error << std::endl;
-				return;
+				LOG( ERROR ) << "Could not load gltf file: " << error << std::endl;
+				return false;
 			}
 
 			loadFromGltfModel( device, descriptorManager, gltfModel, transferQueue, scale );
+			return true;
 		}
 
 		bool loadFromMemory( const void *pvData, size_t unSize, vks::VulkanDevice *device, vks::CDescriptorManager *descriptorManager, VkQueue transferQueue, float scale = 1.0f )
@@ -1117,7 +1118,7 @@ namespace vkglTF
 			if ( !bLoaded )
 			{
 				// TODO: throw
-				std::cerr << "Could not load gltf model from memory: " << error << std::endl;
+				LOG( ERROR ) << "Could not load gltf model from memory: " << error << std::endl;
 				return false;
 			}
 

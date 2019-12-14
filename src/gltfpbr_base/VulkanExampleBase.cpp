@@ -629,7 +629,7 @@ void VulkanExampleBase::initVulkan()
 	*/
 	err = createInstance(settings.validation);
 	if (err) {
-		std::cerr << "Could not create Vulkan instance!" << std::endl;
+		LOG( FATAL ) << "Could not create Vulkan instance!" << std::endl;
 		exit(err);
 	}
 
@@ -659,7 +659,7 @@ void VulkanExampleBase::initVulkan()
 	std::vector<VkPhysicalDevice> physicalDevices(gpuCount);
 	err = vkEnumeratePhysicalDevices(instance, &gpuCount, physicalDevices.data());
 	if (err) {
-		std::cerr << "Could not enumerate physical devices!" << std::endl;
+		LOG( FATAL ) << "Could not enumerate physical devices!" << std::endl;
 		exit(err);
 	}
 	uint32_t selectedDevice = 0;
@@ -670,9 +670,9 @@ void VulkanExampleBase::initVulkan()
 			uint32_t index = strtol(args[i + 1], &endptr, 10);
 			if (endptr != args[i + 1])  { 
 				if (index > gpuCount - 1) {
-					std::cerr << "Selected device index " << index << " is out of range, reverting to device 0 (use -listgpus to show available Vulkan devices)" << std::endl;
+					LOG( ERROR ) << "Selected device index " << index << " is out of range, reverting to device 0 (use -listgpus to show available Vulkan devices)" << std::endl;
 				} else {
-					std::cout << "Selected Vulkan device " << index << std::endl;
+					LOG( INFO ) << "Selected Vulkan device " << index << std::endl;
 					selectedDevice = index;
 				}
 			};
@@ -698,7 +698,7 @@ void VulkanExampleBase::initVulkan()
 	std::vector<const char*> enabledExtensions{};
 	VkResult res = vulkanDevice->createLogicalDevice(enabledFeatures, enabledExtensions);
 	if (res != VK_SUCCESS) {
-		std::cerr << "Could not create Vulkan device!" << std::endl;
+		LOG( FATAL ) << "Could not create Vulkan device!" << std::endl;
 		exit(res);
 	}
 	device = vulkanDevice->logicalDevice;
@@ -777,8 +777,7 @@ HWND VulkanExampleBase::setupWindow( HINSTANCE hinstance )
 	wndClass.hIconSm = LoadIcon(NULL, IDI_WINLOGO);
 
 	if (!RegisterClassEx(&wndClass)) {
-		std::cout << "Could not register window class!\n";
-		fflush(stdout);
+		LOG( FATAL ) << "Could not register window class!\n";
 		exit(1);
 	}
 
@@ -843,9 +842,7 @@ HWND VulkanExampleBase::setupWindow( HINSTANCE hinstance )
 	}
 
 	if (!window) {
-		printf("Could not create window!\n");
-		fflush(stdout);
-		return nullptr;
+		LOG( FATAL ) << "Could not create window!";
 		exit(1);
 	}
 
