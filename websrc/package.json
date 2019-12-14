@@ -27,6 +27,7 @@
     "mini-css-extract-plugin": "^0.7.0",
     "nodemon": "^1.19.1",
     "npm": "^6.13.4",
+    "shebang-loader": "0.0.1",
     "ts-loader": "^6.0.4",
     "tslib": "^1.10.0",
     "typescript": "^3.5.2",

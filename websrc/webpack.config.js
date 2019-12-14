@@ -163,5 +163,53 @@ module.exports =
 				"@aardvarkxr/aardvark-react" : path.resolve( __dirname, "../packages/aardvark-react/src/index.ts" )
 			}
 		},	
+	},
+	{
+		target: "node",
+		entry: 
+		{
+			app: ["./avcmd/avcmd.ts" ]
+		},
+		output:
+		{
+			path: path.resolve( __dirname, '../data/avcmd' ),
+			filename: "avcmd.js"
+		},
+		resolve:
+		{
+			extensions: ['.ts', '.js' ]
+		},
+		module: 
+		{
+			rules:
+			[
+				{ 
+					test: /\.tsx?$/,
+					use: [ 'ts-loader', 'shebang-loader' ],
+					exclude: /node_modules/
+				},
+			]
+		},
+		node:
+		{
+			__dirname: false,
+			__filename: false,
+		},
+
+		mode: "development",
+		devtool: "inline-source-map",
+
+		resolve:
+		{
+			modules:[ path.resolve( __dirname, 'node_modules' ) ],
+			extensions: [ '.ts', '.tsx', '.js' ],
+			alias: 
+			{
+				"common" : path.resolve( __dirname, "./common" ),
+				"@aardvarkxr/aardvark-cli" : path.resolve( __dirname, "../packages/aardvark-cli/src/avcmd.ts" ),
+				"@aardvarkxr/aardvark-shared" : path.resolve( __dirname, "../packages/aardvark-shared/src/index.ts" ),
+				"@aardvarkxr/aardvark-react" : path.resolve( __dirname, "../packages/aardvark-react/src/index.ts" )
+			}
+		},	
 	}
 ];

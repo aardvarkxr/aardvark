@@ -13,6 +13,7 @@ Release
 ~*
 data/gadgets
 data/server
+data/avcmd
 packages/aardvark-cli/lib
 packages/aardvark-react/lib
 packages/aardvark-shared/lib

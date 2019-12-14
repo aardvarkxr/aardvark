@@ -17,6 +17,7 @@
 			"common/*" : [ "common/*" ],
 			"@aardvarkxr/aardvark-shared" : [ "../packages/aardvark-shared/src/index.ts" ],
 			"@aardvarkxr/aardvark-react" : [ "../packages/aardvark-react/src/index.ts" ],
+			"@aardvarkxr/aardvark-cli" : [ "../packages/aardvark-cli/src/avcmd.ts" ],
 			"*" : [ "node_modules/@types/*", "node_modules/*", "*" ]
 		},
 		"moduleResolution" : "node"
