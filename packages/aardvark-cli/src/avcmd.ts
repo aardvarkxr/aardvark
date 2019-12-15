@@ -6,6 +6,9 @@ import { getStandardAardvarkPath, getStandardPersistencePath, readPersistentStat
 import * as fs from 'fs';
 import fileUrl from 'file-url';
 import isUrl from 'is-url';
+import * as winston from 'winston';
+import * as os from 'os';
+import * as path from 'path';
 
 let program = require( 'commander' );
 
@@ -13,6 +16,32 @@ let program = require( 'commander' );
 let showHelp = true;
 
 let asyncCommand: null | { (): void} = null;
+
+let logDir = path.resolve( os.homedir(), "Documents/aardvark/logs" );
+let logFile = path.resolve( logDir, "avcmd.txt" );
+
+const logger = winston.createLogger(
+	{
+		format: winston.format.combine(
+			winston.format.splat(),
+			winston.format.simple()
+		  ),
+		transports: 
+		[
+			new winston.transports.Console(),
+			new winston.transports.File( 
+				{ 
+					filename: logFile,
+					format: 
+						winston.format.printf( 
+							( info: any ) => `${new Date().toISOString() }: ${ info.message }` ),
+					maxsize: 1000000,
+					maxFiles: 3,
+					tailable: true,
+				} ),
+		]
+	}
+)
 
 program
 	.version( '0.1.0' )
@@ -25,49 +54,7 @@ program
 	{
 		asyncCommand = async () =>
 		{
-			let aardvarkPath = getStandardAardvarkPath();
-			let persistencePath = getStandardPersistencePath();
-	
-			let state = readPersistentState( persistencePath );
-	
-			let dirty = false;
-			for( let gadgetUrl of urls )
-			{
-				if( !isUrl( gadgetUrl ) )
-				{
-					// turn paths into URLs
-					gadgetUrl = fileUrl( gadgetUrl );
-				}
-	
-				try
-				{
-					let gadgetManifest: AvGadgetManifest = await getJSONFromUri( gadgetUrl + "/gadget_manifest.json" ) as AvGadgetManifest
-					if( !gadgetManifest || !gadgetManifest.name )
-					{
-						throw "Invalid manifest";
-					}
-					if( state.installedGadgets.includes( gadgetUrl ) )
-					{
-						console.log( `${ gadgetManifest.name } is already installed: ${ gadgetUrl }` );
-					}
-					else
-					{
-						console.log( `Installing ${ gadgetManifest.name }: ${ gadgetUrl }` );
-						state.installedGadgets.push( gadgetUrl );
-						dirty = true;
-					}
-				}
-				catch( e )
-				{
-					console.log( `Invalid gadget url ${ gadgetUrl }` );
-				}
-			}
-	
-			if( dirty )
-			{
-				console.log( `writing state to ${ persistencePath }` );
-				writePersistentState( state, persistencePath );
-			}
+			installGadgets( urls );
 		}
 
 		showHelp = false;
@@ -77,42 +64,7 @@ program
 	.command( "uninstall [url...]" )
 	.action( ( urls: string[] ) =>
 	{
-		let aardvarkPath = getStandardAardvarkPath();
-		let persistencePath = getStandardPersistencePath();
-
-		let state = readPersistentState( persistencePath );
-
-		let dirty = false;
-		for( let gadgetUrl of urls )
-		{
-			if( !isUrl( gadgetUrl ) )
-			{
-				// turn paths into URLs
-				gadgetUrl = fileUrl( gadgetUrl );
-			}
-
-			if( !state.installedGadgets.includes( gadgetUrl ) )
-			{
-				console.log( `Gadget is not installed: ${ gadgetUrl }` );
-			}
-			else
-			{
-				console.log( `Uninstalling gadget: ${ gadgetUrl }` );
-				state.installedGadgets = 
-					state.installedGadgets.filter( ( value: string ) =>
-					{
-						return value != gadgetUrl;
-					});
-				dirty = true;
-			}
-		}
-
-		if( dirty )
-		{
-			console.log( `writing state to ${ persistencePath }` );
-			writePersistentState( state, persistencePath );
-		}
-
+		uninstallGadgets(urls);
 		showHelp = false;
 	})
 	
@@ -126,33 +78,33 @@ program
 
 		if( !state.installedGadgets )
 		{
-			console.log( "No installed gadgets" );
+			logger.info( "No installed gadgets" );
 		}
 		else
 		{
 			for( let gadgetUrl of state.installedGadgets )
 			{
-				console.log( gadgetUrl );
+				logger.info( gadgetUrl );
 			}
 		}
 
 		if( !state.activeGadgets )
 		{
-			console.log( "No active gadgets" );
+			logger.info( "No active gadgets" );
 		}
 		else
 		{
 			for( let uuid in state.activeGadgets )
 			{
 				let gadgetState = state.activeGadgets[ uuid ];
-				console.log( `\t${ uuid }: ${gadgetState.uri}` );
+				logger.info( `\t${ uuid }: ${gadgetState.uri}` );
 				if( gadgetState.hookPath )
 				{
-					console.log( `\t\t${ gadgetState.hookPath }: ${gadgetState.uri}` );
+					logger.info( `\t\t${ gadgetState.hookPath }: ${gadgetState.uri}` );
 				}
 				if( gadgetState.settings )
 				{
-					console.log( `\t\t${ JSON.stringify( gadgetState.settings, undefined, "\t" ) }` );
+					logger.info( `\t\t${ JSON.stringify( gadgetState.settings, undefined, "\t" ) }` );
 				}
 			}
 		}
@@ -167,15 +119,50 @@ program
 		if( fs.existsSync( persistencePath ) )
 		{
 			fs.unlinkSync( persistencePath );
-			console.log( `Deleting persistent state for Aardvark: ${ persistencePath }` );	
+			logger.info( `Deleting persistent state for Aardvark: ${ persistencePath }` );	
 		}
 		else
 		{
-			console.log( "No persistent Aardvark data to clear" );
+			logger.info( "No persistent Aardvark data to clear" );
 		}
 
 		showHelp = false;
-	})
+	});
+	
+program
+	.command( "handleurl [url]", undefined, { noHelp: true } )
+	.action( ( url: string ) =>
+	{
+		logger.info( "handleurl "+ url );
+		let re = /^aardvark:\/\/([a-zA-Z]+)(\/(.*)$)/;
+		let match = re.exec( url );
+		if( !match )
+		{
+			logger.info( `Failed to parse URL ${ url }` );
+		}
+		else
+		{
+			let command = match[1];
+			let arg = decodeURIComponent( match[3] );
+			logger.info( `handling url ${ command } "${ arg }"`)
+
+			switch( command )
+			{
+				case "install":
+					asyncCommand = async () =>
+					{
+						installGadgets( [ arg ] );
+					}
+					break;
+				
+				case "uninstall":
+					uninstallGadgets( [ arg ] );
+					break;
+			}
+		}
+
+		showHelp = false;
+	} );
 	
 program.parse( process.argv );
 
@@ -228,3 +215,84 @@ export function getJSONFromUri( uri: string ): Promise< any >
 		}
 	} );
 }
+
+async function installGadgets( urls: string[] )
+{
+	let aardvarkPath = getStandardAardvarkPath();
+	let persistencePath = getStandardPersistencePath();
+
+	let state = readPersistentState( persistencePath );
+
+	let dirty = false;
+	for( let gadgetUrl of urls )
+	{
+		if (!isUrl(gadgetUrl) 
+			&& !gadgetUrl.startsWith( "file:" ) && !gadgetUrl.startsWith( "FILE:" ) )
+		{
+			// turn paths into URLs
+			gadgetUrl = fileUrl( gadgetUrl );
+		}
+
+		try
+		{
+			let gadgetManifest: AvGadgetManifest = await getJSONFromUri( gadgetUrl + "/gadget_manifest.json" ) as AvGadgetManifest
+			if( !gadgetManifest || !gadgetManifest.name )
+			{
+				throw "Invalid manifest";
+			}
+			if( state.installedGadgets.includes( gadgetUrl ) )
+			{
+				logger.info( `${ gadgetManifest.name } is already installed: ${ gadgetUrl }` );
+			}
+			else
+			{
+				logger.info( `Installing ${ gadgetManifest.name }: ${ gadgetUrl }` );
+				state.installedGadgets.push( gadgetUrl );
+				dirty = true;
+			}
+		}
+		catch( e )
+		{
+			logger.info( `Invalid gadget url ${ gadgetUrl }: ${ e }` );
+		}
+	}
+
+	if( dirty )
+	{
+		logger.info( `writing state to ${ persistencePath }` );
+		writePersistentState( state, persistencePath );
+	}
+}
+
+function uninstallGadgets( urls: string[] ) 
+{
+	let aardvarkPath = getStandardAardvarkPath();
+	let persistencePath = getStandardPersistencePath();
+	let state = readPersistentState(persistencePath);
+	let dirty = false;
+	for (let gadgetUrl of urls) {
+		if (!isUrl(gadgetUrl) 
+			&& !gadgetUrl.startsWith( "file:" ) && !gadgetUrl.startsWith( "FILE:" ) ) 
+		{
+			// turn paths into URLs
+			gadgetUrl = fileUrl(gadgetUrl);
+		}
+		if (!state.installedGadgets.includes(gadgetUrl)) {
+			logger.info(`Gadget is not installed: ${gadgetUrl}`);
+		}
+		else {
+			logger.info(`Uninstalling gadget: ${gadgetUrl}`);
+			state.installedGadgets =
+				state.installedGadgets.filter((value: string) => {
+					return value != gadgetUrl;
+				});
+			dirty = true;
+		}
+	}
+
+	if (dirty) {
+		logger.info(`writing state to ${persistencePath}`);
+		writePersistentState(state, persistencePath);
+	}
+}
+

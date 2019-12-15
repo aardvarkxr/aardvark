@@ -15,7 +15,7 @@ namespace tools
 		return result;
 	}
 
-	bool registerURLSchemeHandler( const std::string & urlScheme, const std::filesystem::path & executableToRun )
+	bool registerURLSchemeHandler( const std::string & urlScheme, const std::string & commandToRun)
 	{
 		std::string classPath = "Software\\Classes\\" + urlScheme;
 		HKEY hSchemeKey;
@@ -46,9 +46,7 @@ namespace tools
 			return false;
 		}
 
-		std::string exePath = WStringToUtf8( executableToRun.native() );
-		std::string command = std::string( "\"" ) + exePath + "\" \"%1\"";
-		if ( ERROR_SUCCESS != RegSetKeyValueA( hCommandKey, nullptr, nullptr, REG_SZ, command.c_str(), (DWORD)( command.size() + 1 ) ) )
+		if ( ERROR_SUCCESS != RegSetKeyValueA( hCommandKey, nullptr, nullptr, REG_SZ, commandToRun.c_str(), (DWORD)( commandToRun.size() + 1 ) ) )
 		{
 			LOG( ERROR ) << "Failed to set command value for URI scheme " << urlScheme;
 			return false;

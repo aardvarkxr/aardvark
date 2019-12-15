@@ -17,7 +17,8 @@
     "is-url": "^1.2.4",
     "npm": "^6.13.4",
     "path": "^0.12.7",
-    "tslib": "^1.10.0"
+    "tslib": "^1.10.0",
+    "winston": "^3.2.1"
   },
   "devDependencies": {
     "@types/is-url": "^1.2.28",
