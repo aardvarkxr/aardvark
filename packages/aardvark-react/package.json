@@ -23,7 +23,7 @@
     "@types/react-dom": "^16.8.4",
     "jss": "^9.7.0",
     "react-docgen-typescript": "^1.15.1",
-    "react-styleguidist": "^10.1.0",
+    "react-styleguidist": "^10.3.2",
     "source-map-loader": "^0.2.4",
     "ts-loader": "^6.2.0",
     "tslib": "^1.10.0",
