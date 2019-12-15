@@ -3,6 +3,19 @@
 
 INITIALIZE_EASYLOGGINGPP
 
+class CDebugConsoleLogger : public el::LogDispatchCallback
+{
+public:
+	virtual void handle( const el::LogDispatchData* data )
+	{
+		el::base::type::string_t msg = data->logMessage()->logger()->logBuilder()->build( data->logMessage(), true );
+		OutputDebugStringA( msg.c_str() );
+	}
+
+};
+
+//CDebugConsoleLogger g_debugConsoleLogger;
+
 namespace tools
 {
 	void initLogs()
@@ -22,6 +35,8 @@ namespace tools
 		defaultConf.set( el::Level::Global,
 			el::ConfigurationType::Filename, logFile.generic_string() );
 		el::Loggers::reconfigureLogger( "default", defaultConf );
+
+		el::Helpers::installLogDispatchCallback< CDebugConsoleLogger>( "debugConsole" );
 	}
 
 }

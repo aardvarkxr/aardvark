@@ -11,6 +11,9 @@
 
 #include <chrono>
 #include <thread>
+#include <tools/systools.h>
+#include <tools/pathtools.h>
+#include <tools/stringtools.h>
 
 // OS specific macros for the example main entry points
 int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
@@ -47,7 +50,15 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 		return exit_code;
 	}
 
+	// ---------------------------------------------------------
+	// Everything below here only happens in the browser process
+	// ---------------------------------------------------------
+
 	tools::LogDefault()->info( "Starting browser process" );
+
+	std::string urlHandlerCommand = "\"" + tools::WStringToUtf8( getNodeExePath() ) + "\" \"" 
+		+ tools::WStringToUtf8( getAvCmdJsPath() ) + "\" handleurl \"%1\"";
+	tools::registerURLSchemeHandler( "aardvark", urlHandlerCommand );
 
 	if ( !StartServer( hInstance ) )
 	{

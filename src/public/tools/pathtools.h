@@ -18,5 +18,8 @@ namespace tools
 
 	/** Returns the user's document path */
 	std::filesystem::path GetUserDocumentsPath();
+
+	/** Returns the current executable's path */
+	std::filesystem::path GetExecutablePath();
 };
 

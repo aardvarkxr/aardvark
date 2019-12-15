@@ -8,6 +8,21 @@
 
 static TinyProcessLib::Process *g_pServerProcess = nullptr;
 
+std::filesystem::path getNodeExePath()
+{
+	return tools::GetDataPath() / "server" / "bin" / "Node.exe";
+}
+
+std::filesystem::path getServerJsPath()
+{
+	return tools::GetDataPath() / "server" / "server_bundle.js";
+}
+
+std::filesystem::path getAvCmdJsPath()
+{
+	return tools::GetDataPath() / "avcmd" / "avcmd.js";
+}
+
 bool StartServer( HINSTANCE hInstance )
 {
 	// TODO( Joe ): Move getting command line args into a library
@@ -39,10 +54,7 @@ bool StartServer( HINSTANCE hInstance )
 		return true; // not an error to obey the command line
 
 	// start the server
-	std::filesystem::path serverPath = tools::GetDataPath() / "server";
-	auto exePath = serverPath / "bin/node.exe";
-	auto scriptPath = serverPath / "server_bundle.js";
-	std::vector<std::string> vecServerArgs = { exePath.u8string(), scriptPath.u8string() };
+	std::vector<std::string> vecServerArgs = { getNodeExePath().u8string(), getServerJsPath().u8string() };
 
 	std::function< void( const char *, size_t )> fnToUse;
 	if ( !bShowConsole )
