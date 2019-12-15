@@ -11,7 +11,7 @@ Then run:
   npm install
   npm run build
 
-After that you probably want to install your gadget with: 
+After that you probably want to install your gadget with: (You probably want "npm install -g avcmd" first.)
 
   avcmd install dist
 
