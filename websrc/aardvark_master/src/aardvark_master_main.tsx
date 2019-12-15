@@ -5,7 +5,7 @@ import { AvGadget, AvOrigin, AvTransform, AvGrabber, AvModel, AvPoker, AvPanelIn
 	AvLine, AvGrabButton, AvPanel, AvPanelAnchor, AvGadgetSeed, AvStandardBoxHook } 
 	from '@aardvarkxr/aardvark-react';
 
-import { Av, EndpointAddr, EHand, GrabberHighlight, g_builtinModelSphere, g_builtinModelGear } from '@aardvarkxr/aardvark-shared'
+import { Av, EndpointAddr, EHand, GrabberHighlight, g_builtinModelSphere, g_builtinModelGear, g_builtinModelBackfacedSphere } from '@aardvarkxr/aardvark-shared'
 
 interface DefaultHandProps
 {
@@ -157,9 +157,9 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 				seeds.push( 
 					<div className="GadgetSeed">
 						<AvPanelAnchor>
-							<AvModel uri="https://aardvark.install/models/sphere/sphere_backfaced.glb" scaleToFit={{x: 0.125, y: 0.125, z: 0.125}}>
+							<AvModel uri={ g_builtinModelBackfacedSphere } scaleToFit={{x: 0.125, y: 0.125, z: 0.125}}>
 								<AvGadgetSeed key="gadget" uri={ gadget } 
-									radius={ 0.08 }/>
+									radius={ 0.07 }/>
 							</AvModel>
 						</AvPanelAnchor>
 					</div> );
@@ -174,11 +174,10 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 			return null;
 
 		return <AvTransform rotateX={ 45 } translateZ={ -0.1 }>
-				<AvTransform uniformScale={0.25}>
+				<AvTransform uniformScale={ 0.25 }>
 					<AvTransform translateZ={ -0.55 }>
 						<AvPanel interactive={false}>
 							<div className="FullPage" >
-								<h1>This is the control panel</h1>
 								{ this.renderGadgetSeedList() }
 							</div>;
 						</AvPanel>
@@ -196,7 +195,6 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 						onTrigger={ this.onActivateControlPanel } />
 				</AvTransform>;
 				{ this.renderPanel() }
-
 			</AvTransform>	);
 	}
 }
