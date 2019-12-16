@@ -5,7 +5,7 @@ import { AvGadget, AvOrigin, AvTransform, AvGrabber, AvModel, AvPoker, AvPanelIn
 	AvLine, AvGrabButton, AvPanel, AvPanelAnchor, AvGadgetSeed, AvStandardBoxHook } 
 	from '@aardvarkxr/aardvark-react';
 
-import { Av, EndpointAddr, EHand, GrabberHighlight, g_builtinModelSphere, g_builtinModelGear, g_builtinModelBackfacedSphere } from '@aardvarkxr/aardvark-shared'
+import { Av, EndpointAddr, EHand, GrabberHighlight, g_builtinModelSphere, g_builtinModelBackfacedSphere, g_builtinModelToolbox } from '@aardvarkxr/aardvark-shared'
 
 interface DefaultHandProps
 {
@@ -190,8 +190,8 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 	{
 		return (
 			<AvTransform>
-				<AvTransform translateZ={-0.1} rotateX={ 45 }>
-					<AvGrabButton modelUri={ g_builtinModelGear } 
+				<AvTransform translateZ={0} rotateX={ 0 }>
+					<AvGrabButton modelUri={ g_builtinModelToolbox } 
 						onTrigger={ this.onActivateControlPanel } />
 				</AvTransform>;
 				{ this.renderPanel() }
