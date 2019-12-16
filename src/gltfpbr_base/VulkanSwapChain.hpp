@@ -17,6 +17,7 @@
 #include <vector>
 
 #include <vulkan/vulkan.h>
+#include <tools/logging.h>
 #include "macros.h"
 
 #ifdef __ANDROID__
@@ -115,7 +116,7 @@ public:
 #endif
 
 		if (err != VK_SUCCESS) {
-			std::cerr << "Could not create surface!" << std::endl;
+			LOG(FATAL) << "Could not create surface!" << std::endl;
 			exit(err);
 		}
 
@@ -173,13 +174,13 @@ public:
 
 		// Exit if either a graphics or a presenting queue hasn't been found
 		if (graphicsQueueNodeIndex == UINT32_MAX || presentQueueNodeIndex == UINT32_MAX) {
-			std::cerr << "Could not find a graphics and/or presenting queue!" << std::endl;
+			LOG(FATAL) << "Could not find a graphics and/or presenting queue!" << std::endl;
 			exit(-1);
 		}
 
 		// todo : Add support for separate graphics and presenting queue
 		if (graphicsQueueNodeIndex != presentQueueNodeIndex) {
-			std::cerr << "Separate graphics and presenting queues are not supported yet!" << std::endl;
+			LOG( FATAL ) << "Separate graphics and presenting queues are not supported yet!" << std::endl;
 			exit(-1);
 		}
 

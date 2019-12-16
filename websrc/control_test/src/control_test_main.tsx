@@ -3,7 +3,7 @@ import  * as ReactDOM from 'react-dom';
 
 import bind from 'bind-decorator';
 import { AvTransform, AvSlider, AvGrabbable, AvSphereHandle, AvModel, AvPanel, AvPanelAnchor, AvTransformControl, QuaternionToEulerAngles, RadiansToDegrees } from '@aardvarkxr/aardvark-react';
-import { AvNodeTransform, g_builtinModelSphere, g_builtinModelGear } from '@aardvarkxr/aardvark-shared';
+import { AvNodeTransform, g_builtinModelAardvark, g_builtinModelGear  } from '@aardvarkxr/aardvark-shared';
 
 
 interface ControlTestState
@@ -64,10 +64,10 @@ class ControlTest extends React.Component< {}, ControlTestState >
 		return (
 			<div className="FullPage" >
 				<AvGrabbable preserveDropTransform={true}>
-					<AvTransform uniformScale={0.1}>
-						<AvModel uri={ g_builtinModelSphere }/>
+					<AvTransform uniformScale={2}>
+						<AvModel uri={ g_builtinModelAardvark }/>
 					</AvTransform>
-					<AvSphereHandle radius={0.1} />
+					<AvSphereHandle radius={0.2} />
 
 					<AvPanel interactive={ false } >
 						<div className="ControlList">

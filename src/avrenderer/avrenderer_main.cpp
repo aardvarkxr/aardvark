@@ -4,15 +4,22 @@
 #define STBI_MSC_SECURE_CRT
 #include "tiny_gltf.h"
 
+#include <tools/logging.h>
+
 #include "av_cef_app.h"
 #include "avserver.h"
 
 #include <chrono>
 #include <thread>
+#include <tools/systools.h>
+#include <tools/pathtools.h>
+#include <tools/stringtools.h>
 
 // OS specific macros for the example main entry points
 int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 {
+	tools::initLogs();
+
 	// give the CEF subprocess the first crack
 	  // Enable High-DPI support on Windows 7 or newer.
 	CefEnableHighDPISupport();
@@ -43,9 +50,19 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 		return exit_code;
 	}
 
+	// ---------------------------------------------------------
+	// Everything below here only happens in the browser process
+	// ---------------------------------------------------------
+
+	tools::LogDefault()->info( "Starting browser process" );
+
+	std::string urlHandlerCommand = "\"" + tools::WStringToUtf8( getNodeExePath() ) + "\" \"" 
+		+ tools::WStringToUtf8( getAvCmdJsPath() ) + "\" handleurl \"%1\"";
+	tools::registerURLSchemeHandler( "aardvark", urlHandlerCommand );
+
 	if ( !StartServer( hInstance ) )
 	{
-		fprintf( stderr, "Failed to start the server\n" );
+		LOG( FATAL ) << "Failed to start the server";
 		return -57;
 	}
 

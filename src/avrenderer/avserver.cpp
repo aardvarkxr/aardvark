@@ -4,8 +4,24 @@
 
 #include <windows.h>
 #include <shellapi.h>
+#include <tools/logging.h>
 
 static TinyProcessLib::Process *g_pServerProcess = nullptr;
+
+std::filesystem::path getNodeExePath()
+{
+	return tools::GetDataPath() / "server" / "bin" / "Node.exe";
+}
+
+std::filesystem::path getServerJsPath()
+{
+	return tools::GetDataPath() / "server" / "server_bundle.js";
+}
+
+std::filesystem::path getAvCmdJsPath()
+{
+	return tools::GetDataPath() / "avcmd" / "avcmd.js";
+}
 
 bool StartServer( HINSTANCE hInstance )
 {
@@ -38,28 +54,33 @@ bool StartServer( HINSTANCE hInstance )
 		return true; // not an error to obey the command line
 
 	// start the server
-	std::filesystem::path serverPath = tools::GetDataPath() / "server";
-	auto exePath = serverPath / "bin/node.exe";
-	auto scriptPath = serverPath / "server_bundle.js";
-	std::vector<std::string> vecServerArgs = { exePath.u8string(), scriptPath.u8string() };
+	std::vector<std::string> vecServerArgs = { getNodeExePath().u8string(), getServerJsPath().u8string() };
 
 	std::function< void( const char *, size_t )> fnToUse;
 	if ( !bShowConsole )
 	{
-		fnToUse = []( const char *bytes, size_t n ) {};
+		fnToUse = []( const char *bytes, size_t n ) 
+		{
+			if ( n == 0 )
+				return;
+
+			LOG( INFO ) << "Server: " << std::string( bytes, n - 1 );
+		};
 	}
 
 	g_pServerProcess = new TinyProcessLib::Process( vecServerArgs, "", fnToUse, fnToUse );
 
 	int exitCode = 0;
-	if ( g_pServerProcess->try_get_exit_status( exitCode ) )
+	if ( g_pServerProcess->try_get_exit_status( exitCode ) || !g_pServerProcess->get_id() )
 	{
+		LOG( FATAL) << "Server failed to start with exit code " << exitCode;
 		// the process exited, which means we failed to start it
 		delete g_pServerProcess;
 		return false;
 	}
 	else
 	{
+		LOG( INFO ) << "Server started with PID " << g_pServerProcess->get_id();
 		return true;
 	}
 }

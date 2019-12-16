@@ -9,6 +9,7 @@
 #pragma once
 
 #include "vulkan/vulkan.h"
+#include <tools/logging.h>
 
 #if defined(__ANDROID__)
 #define VK_CHECK_RESULT(f)																				\
@@ -26,7 +27,7 @@
 	VkResult res = (f);																					\
 	if (res != VK_SUCCESS)																				\
 	{																									\
-		std::cout << "Fatal : VkResult is \"" << res << "\" in " << __FILE__ << " at line " << __LINE__ << std::endl; \
+		LOG( FATAL ) << "Fatal : VkResult is \"" << res << "\" in " << __FILE__ << " at line " << __LINE__ << std::endl; \
 		assert(res == VK_SUCCESS);																		\
 	}																									\
 }
@@ -37,6 +38,7 @@
 	fp##entrypoint = reinterpret_cast<PFN_vk##entrypoint>(vkGetInstanceProcAddr(inst, "vk"#entrypoint)); \
 	if (fp##entrypoint == NULL)                                         \
 	{																    \
+		LOG(FATAL) << "Failed to get vulkan instance proc " << "vk"#entrypoint; \
 		exit(1);                                                        \
 	}                                                                   \
 }
@@ -46,6 +48,7 @@
 	fp##entrypoint = reinterpret_cast<PFN_vk##entrypoint>(vkGetDeviceProcAddr(dev, "vk"#entrypoint));   \
 	if (fp##entrypoint == NULL)                                         \
 	{																    \
+		LOG(FATAL) << "Failed to get vulkan device proc " << "vk"#entrypoint; \
 		exit(1);                                                        \
 	}                                                                   \
 }

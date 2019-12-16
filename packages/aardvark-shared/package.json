@@ -1,6 +1,6 @@
 {
   "name": "@aardvarkxr/aardvark-shared",
-  "version": "0.0.11",
+  "version": "0.0.14",
   "description": "Shared source code for Aardvark",
   "main": "lib/index",
   "types": "lib/index",
@@ -24,6 +24,6 @@
     "bind-decorator": "^1.0.11",
     "color": "^3.1.2",
     "node": "^12.12.0",
-    "npm": "^6.12.0"
+    "npm": "^6.13.4"
   }
 }
