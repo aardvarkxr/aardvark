@@ -5,7 +5,7 @@ import { AvGadget, AvOrigin, AvTransform, AvGrabber, AvModel, AvPoker, AvPanelIn
 	AvLine, AvGrabButton, AvPanel, AvPanelAnchor, AvGadgetSeed, AvStandardBoxHook } 
 	from '@aardvarkxr/aardvark-react';
 
-import { Av, EndpointAddr, EHand, GrabberHighlight, g_builtinModelSphere, g_builtinModelBackfacedSphere, g_builtinModelToolbox } from '@aardvarkxr/aardvark-shared'
+import { Av, EndpointAddr, AvColor, AvGadgetManifest, EHand, GrabberHighlight, g_builtinModelSphere, g_builtinModelBackfacedSphere, g_builtinModelToolbox } from '@aardvarkxr/aardvark-shared'
 
 interface DefaultHandProps
 {
@@ -121,6 +121,8 @@ interface ControlPanelState
 
 class ControlPanel extends React.Component< {}, ControlPanelState >
 {
+	installedGadgetManifests = new Map();
+
 	private m_panelId: EndpointAddr;
 
 	constructor( props: any )
@@ -134,6 +136,15 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		AvGadget.instance().getInstalledGadgets()
 		.then( ( installedGadgets: string[] ) =>
 		{
+			for( let gadget of this.state.installedGadgets )
+			{
+				if (!this.installedGadgetManifests.has(gadget)){
+					AvGadget.instance().loadManifest(gadget).then(  ( manifest: AvGadgetManifest ) =>{	
+						this.installedGadgetManifests.set(gadget, manifest);		  
+					});
+				}
+			}
+
 			this.setState( { installedGadgets } );
 		} );
 	}
@@ -142,6 +153,29 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 	{
 		this.setState( { active: !this.state.active } );
 	}
+
+	private arbitraryColorFromString(seedName: string){
+		if(seedName == null || seedName.length < 3){
+			let defaultColor : AvColor;
+				defaultColor.r = 1;
+				defaultColor.g = 1;
+				defaultColor.b = 1;
+				defaultColor.a = 1;
+					
+			return defaultColor
+		}
+
+		var seed1 = seedName.charCodeAt(0) ^ seedName.charCodeAt(1);
+		var seed2 = seedName.charCodeAt(1) ^ seedName.charCodeAt(2);
+		var seed3 = seedName.charCodeAt(0) ^ seedName.charCodeAt(2);
+
+		let avColor : AvColor;
+
+		avColor = {r: (seed1 * 100 % 256) / 256, g: (seed2 * 100 % 256) / 256, b: (seed3 * 100  % 256) / 256};
+  
+		return avColor
+	}
+
 
 	private renderGadgetSeedList()
 	{
@@ -157,7 +191,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 				seeds.push( 
 					<div className="GadgetSeed">
 						<AvPanelAnchor>
-							<AvModel uri={ g_builtinModelBackfacedSphere } scaleToFit={{x: 0.125, y: 0.125, z: 0.125}}>
+							<AvModel uri={ g_builtinModelBackfacedSphere } scaleToFit={{x: 0.125, y: 0.125, z: 0.125}} color={ this.arbitraryColorFromString(this.installedGadgetManifests.get(gadget).name)} >
 								<AvGadgetSeed key="gadget" uri={ gadget } 
 									radius={ 0.07 }/>
 							</AvModel>
@@ -190,7 +224,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 	{
 		return (
 			<AvTransform>
-				<AvTransform translateZ={0} rotateX={ 0 }>
+				<AvTransform translateZ={-.05} rotateX={ 0 }>
 					<AvGrabButton modelUri={ g_builtinModelToolbox } 
 						onTrigger={ this.onActivateControlPanel } />
 				</AvTransform>;
