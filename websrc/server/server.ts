@@ -552,6 +552,7 @@ class CGadgetData
 
 					this.m_dispatcher.forwardToEndpoint( this.m_hook.hookAddr, env );
 					this.m_dispatcher.forwardToEndpoint( this.m_mainGrabbable, env );
+					this.m_dispatcher.sendToAllEndpointsOfType( EndpointType.Monitor, env );
 				}
 			}
 
