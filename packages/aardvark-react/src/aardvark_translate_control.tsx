@@ -201,7 +201,7 @@ export class AvTransformControl extends React.Component< TransformControlProps, 
 		};
 	}
 
-	@bind onUpdateHighlight( newHighlight: HighlightType, handleAddr: EndpointAddr )
+	@bind onUpdateHighlight( newHighlight: HighlightType, handleAddr: EndpointAddr, tethered: boolean )
 	{
 		this.setState( { grabberInRange: newHighlight != HighlightType.None } );
 	}

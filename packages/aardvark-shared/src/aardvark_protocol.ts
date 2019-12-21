@@ -384,6 +384,7 @@ export enum AvGrabEventType
 	GrabStarted = 10,
 	UpdateGrabberHighlight = 11,
 	TransformUpdated = 12,
+	Untether = 13,
 };
 
 export enum GrabberHighlight
@@ -486,6 +487,7 @@ export enum ENodeFlags
 	NotifyProximityWithoutGrab 	= 1 << 3,
 	AllowDropOnHooks  			= 1 << 4,
 	AllowMultipleDrops			= 1 << 5,
+	Tethered					= 1 << 6,
 }
 
 export interface AvConstraint

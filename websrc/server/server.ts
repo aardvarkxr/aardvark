@@ -536,6 +536,7 @@ class CGadgetData
 						hookId: this.m_hook.hookAddr,
 						grabbableId: this.m_mainGrabbable,
 						handleId: this.m_mainHandle,
+						hookFromGrabbable: this.m_hook.hookFromGadget,
 					};
 
 					let msg: MsgGrabEvent =

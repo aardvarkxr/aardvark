@@ -22,12 +22,13 @@ export enum HighlightType
 	/** There is a grabber within grabbing range of the grabbable. */
 	InRange = 1,
 
-	/** There is a grabber actively grabbing the grabbable. */
+	/** There is a grabber actively grabbing the grabbable, and it isn't attached to anything. */
 	Grabbed = 2,
 
 	/** The grabbed grabbable is within drop range of a hook. */
 	InHookRange = 3,
 }
+
 
 interface AvGrabbableProps extends AvBaseNodeProps
 {
@@ -38,7 +39,7 @@ interface AvGrabbableProps extends AvBaseNodeProps
 	 * 
 	 * @default no highlight
 	 */
-	updateHighlight?: ( highlightType: HighlightType, handleAddr: EndpointAddr ) => void;
+	updateHighlight?: ( highlightType: HighlightType, handleAddr: EndpointAddr, tethered: boolean ) => void;
 
 	/** This callback allows the grabbable's owner to override the default behavior
 	 * when the grabbable is grabbed. If this is not specified, the grabbable's transform
@@ -87,14 +88,46 @@ interface AvGrabbableProps extends AvBaseNodeProps
 	dropOnHooks?: boolean;
 }
 
+interface AvGrabbableState
+{
+	/** If this grabbable is tethered to a hook, this will be the EPA of the hook. */
+	hook?: EndpointAddr;
+
+	/** If this grabbable is tethered to a hook, this will be the transform from
+	 * the grabbable to the hook.
+	 */
+	hookFromGrabbable?: AvNodeTransform;
+
+	/** The last highlight that we told anyone. */
+	lastHighlight: HighlightType;
+
+	/** The last handle that we told anyone */
+	lastHandle: EndpointAddr;
+
+}
+
+
 /** This is a node that can be grabbed. Depending on how it is configured, the node
  * may be reparented to the grabber, or it may just call back the owner with its 
  * updated grab state.
  */
-export class AvGrabbable extends AvBaseNode< AvGrabbableProps, {} >
+export class AvGrabbable extends AvBaseNode< AvGrabbableProps, AvGrabbableState >
 {
-	private m_lastHighlight = HighlightType.None;
-	private m_lastHandle: EndpointAddr = null;
+	/** The last highlight that we told anyone. */
+	private m_lastNotifiedHighlight: HighlightType = HighlightType.None;
+	private m_lastNotifiedHandle: EndpointAddr = null;
+	private m_lastNotifiedTethered: boolean = false;
+
+	constructor( props: any )
+	{
+		super( props );
+
+		this.state = 
+		{ 
+			lastHighlight: HighlightType.None,
+			lastHandle: null,
+		};
+	}
 
 	public buildNode()
 	{
@@ -116,62 +149,71 @@ export class AvGrabbable extends AvBaseNode< AvGrabbableProps, {} >
 		{
 			node.flags |= ENodeFlags.PreserveGrabTransform;
 		}
-		if( this.props.dropOnHooks )
+		if( this.props.dropOnHooks && !this.state.hook )
 		{
 			node.flags |= ENodeFlags.AllowDropOnHooks;
 		}
-		
+		if( this.state.hook )
+		{
+			node.flags |= ENodeFlags.Tethered;
+		}
+
 		return node;
 	}
 
 	public grabInProgress( grabber: EndpointAddr ):void
 	{
 		//console.log( `Starting out grabbed by ${ endpointAddrToString( grabber) }` );
-		this.m_lastHighlight = HighlightType.Grabbed;
+		this.setState( { lastHighlight: HighlightType.Grabbed } );
+	}
+
+	public componentDidUpdate()
+	{
 		if( this.props.updateHighlight )
 		{
-			this.props.updateHighlight( this.m_lastHighlight, this.m_lastHandle );
+			if( this.state.lastHighlight != this.m_lastNotifiedHighlight
+				|| this.state.lastHandle != this.m_lastNotifiedHandle 
+				|| !!this.state.hook != this.m_lastNotifiedTethered )
+			{
+				this.m_lastNotifiedHighlight = this.state.lastHighlight;
+				this.m_lastNotifiedHandle = this.state.lastHandle;
+				this.m_lastNotifiedTethered = !!this.state.hook;
+				this.props.updateHighlight( this.state.lastHighlight, this.state.lastHandle, !!this.state.hook );
+			}
 		}
 	}
 
 	@bind private onGrabEvent( evt: AvGrabEvent )
 	{
 //		console.log( `Grab event ${ AvGrabEventType[ evt.type ] }` );
-
-		// by default, don't change the highlight
-		let newHighlight = this.m_lastHighlight;
-		let newHandle = this.m_lastHandle;
-
 		switch( evt.type )
 		{
 			case AvGrabEventType.EnterRange:
-				newHighlight = HighlightType.InRange;
-				newHandle = evt.handleId;
+				this.setState( { lastHighlight: HighlightType.InRange, lastHandle: evt.handleId } );
 				break;
 
 			case AvGrabEventType.LeaveRange:
-				newHighlight = HighlightType.None;
-				newHandle = null;
+				this.setState( { lastHighlight: HighlightType.None, lastHandle: null } );
 				break;
 
 			case AvGrabEventType.StartGrab:
-				newHighlight = HighlightType.Grabbed;
-				newHandle = evt.handleId;
+				this.setState( { lastHighlight: HighlightType.Grabbed, lastHandle: null } );
 				break;
 
 			case AvGrabEventType.EndGrab:
-				newHighlight = HighlightType.InRange;
-				newHandle = evt.handleId;
+				this.setState( { lastHighlight: HighlightType.InRange, lastHandle: evt.handleId } );
+				break;
+
+			case AvGrabEventType.Untether:
+				this.setState( { lastHighlight: HighlightType.Grabbed, lastHandle: evt.handleId } );
 				break;
 
 			case AvGrabEventType.EnterHookRange:
-				newHighlight = HighlightType.InHookRange;
-				newHandle = evt.handleId;
+				this.setState( { lastHighlight: HighlightType.InHookRange, lastHandle: evt.handleId } );
 				break;
 
 			case AvGrabEventType.LeaveHookRange:
-				newHighlight = HighlightType.Grabbed;
-				newHandle = evt.handleId;
+				this.setState( { lastHighlight: HighlightType.Grabbed, lastHandle: evt.handleId } );
 				break;
 
 			case AvGrabEventType.RequestGrab:
@@ -242,16 +284,5 @@ export class AvGrabbable extends AvBaseNode< AvGrabbableProps, {} >
 					this.props.onTransformUpdated( evt.parentFromNode, evt.universeFromNode );
 				}
 		}
-
-		if( newHighlight != this.m_lastHighlight )
-		{
-			this.m_lastHighlight = newHighlight;
-			this.m_lastHandle = newHandle;
-			if( this.props.updateHighlight )
-			{
-				this.props.updateHighlight( this.m_lastHighlight, newHandle );
-			}
-		}
 	}
-
 }
