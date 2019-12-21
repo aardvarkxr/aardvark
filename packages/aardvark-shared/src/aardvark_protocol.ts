@@ -87,9 +87,16 @@ function endpointCharacterFromType( ept: EndpointType ): string
 
 export function endpointAddrToString( epa: EndpointAddr ) : string
 {
-	return endpointCharacterFromType( epa.type )
+	if( !epa )
+	{
+		return null;
+	}
+	else
+	{
+		return endpointCharacterFromType( epa.type )
 		+ ":" + ( epa.endpointId ? epa.endpointId : 0 )
 		+ ":" + ( epa.nodeId ? epa.nodeId : 0 );
+	}
 }
 
 
