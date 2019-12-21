@@ -135,6 +135,7 @@ interface NodeToNodeAnchor_t
 	handleGlobalId?: EndpointAddr;
 	grabberFromGrabbable: mat4;
 	grabbableParentFromGrabbableOrigin?: mat4;
+	anchorToRestore?: NodeToNodeAnchor_t;
 }
 
 interface AvNodeRoot
@@ -354,6 +355,20 @@ export class AvDefaultTraverser
 
 	private sendGrabEvent( event: AvGrabEvent )
 	{
+		if( event.type == AvGrabEventType.EndGrab )
+		{
+			// if we're ending a grab with no hook for a tethered thing, put us back to the old hook
+			// and transform
+			let grabbableIdStr = endpointAddrToString( event.grabbableId );
+			let oldAnchor = this.m_nodeToNodeAnchors[ grabbableIdStr ];
+			if( oldAnchor && oldAnchor.anchorToRestore && !event.hookId )
+			{
+				event.hookId = oldAnchor.anchorToRestore.parentGlobalId;
+				event.hookFromGrabbable = 
+					nodeTransformFromMat4( oldAnchor.anchorToRestore.grabberFromGrabbable );
+			}
+		}
+
 		this.m_grabEventsToProcess.push( event );
 		if( this.m_grabEventTimer == -1 )
 		{
@@ -1089,13 +1104,13 @@ export class AvDefaultTraverser
 	{
 		let grabbableData = this.getNodeDataByEpa( grabEvent.grabbableId );
 		let grabbableFlags = grabbableData ? grabbableData.lastFlags : 0;
+		let grabberIdStr = endpointAddrToString( grabEvent.grabberId );
+		let grabbableIdStr = endpointAddrToString( grabEvent.grabbableId );
 		switch( grabEvent.type )
 		{
 			case AvGrabEventType.StartGrab:
 				console.log( "Traverser starting grab of " + grabEvent.grabbableId + " by " + grabEvent.grabberId );
 
-				let grabberIdStr = endpointAddrToString( grabEvent.grabberId );
-				let grabbableIdStr = endpointAddrToString( grabEvent.grabbableId );
 				if( !this.m_lastFrameUniverseFromNodeTransforms.hasOwnProperty( grabberIdStr ) )
 				{
 					throw "grabber wasn't rendered last frame";
@@ -1116,16 +1131,24 @@ export class AvDefaultTraverser
 					grabberFromGrabbable = grabberFromUniverse.multiply( universeFromGrabbable );
 				}
 
-				let oldAnchor = this.m_nodeToNodeAnchors[ grabbableIdStr ];
-				if( oldAnchor && oldAnchor.parentGlobalId.type == EndpointType.Node )
+				let anchorToRestore: NodeToNodeAnchor_t;
+				if( 0 == ( grabbableFlags & ENodeFlags.Tethered ) )
 				{
-					let msg: MsgDetachGadgetFromHook =
+					let oldAnchor = this.m_nodeToNodeAnchors[ grabbableIdStr ];
+					if( oldAnchor && oldAnchor.parentGlobalId.type == EndpointType.Node )
 					{
-						grabbableNodeId: grabEvent.grabbableId,
-						hookNodeId: oldAnchor.parentGlobalId,
-					}
-	
-					this.m_endpoint.sendMessage( MessageType.DetachGadgetFromHook, msg );
+						let msg: MsgDetachGadgetFromHook =
+						{
+							grabbableNodeId: grabEvent.grabbableId,
+							hookNodeId: oldAnchor.parentGlobalId,
+						}
+		
+						this.m_endpoint.sendMessage( MessageType.DetachGadgetFromHook, msg );
+					}	
+				}
+				else
+				{
+					anchorToRestore = this.m_nodeToNodeAnchors[ grabbableIdStr ];
 				}
 
 				let grabbableParentFromGrabbableOrigin: mat4;
@@ -1140,6 +1163,7 @@ export class AvDefaultTraverser
 					handleGlobalId: grabEvent.handleId,
 					grabberFromGrabbable,
 					grabbableParentFromGrabbableOrigin, 
+					anchorToRestore,
 				};
 				Av().renderer.startGrab( grabEvent.grabberId, grabEvent.grabbableId );
 				console.log( `telling collider about ${ endpointAddrToString( grabEvent.grabberId ) } `
@@ -1157,6 +1181,7 @@ export class AvDefaultTraverser
 			case AvGrabEventType.EndGrab:
 				console.log( "Traverser ending grab of " + grabEvent.grabbableId + " by " + grabEvent.grabberId );
 				Av().renderer.endGrab( grabEvent.grabberId, grabEvent.grabbableId );
+				let oldAnchor = this.m_nodeToNodeAnchors[ grabbableIdStr ];
 				if( !endpointAddrIsEmpty( grabEvent.hookId ) )
 				{
 					let anchor: NodeToNodeAnchor_t =
@@ -1180,7 +1205,7 @@ export class AvDefaultTraverser
 						msg.hookFromGrabbable = grabEvent.hookFromGrabbable;
 					}
 
-					this.m_nodeToNodeAnchors[ endpointAddrToString( grabEvent.grabbableId ) ] = anchor;
+					this.m_nodeToNodeAnchors[ grabbableIdStr ] = anchor;
 
 					this.m_endpoint.sendMessage( MessageType.AttachGadgetToHook, msg );
 				}
@@ -1195,7 +1220,6 @@ export class AvDefaultTraverser
 				}
 				else
 				{
-
 					// we're dropping into open space
 					delete this.m_nodeToNodeAnchors[ endpointAddrToString( grabEvent.grabbableId ) ];
 				}

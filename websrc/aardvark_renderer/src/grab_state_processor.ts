@@ -277,23 +277,26 @@ export class CGrabStateProcessor
 				}
 
 				let lastGrabbableCollision = state.grabbables[ lastGrabbableIndex ];
-				if( state.hooks && state.hooks.length > 0 
-					&& 0 != ( lastGrabbableCollision.grabbableFlags & ENodeFlags.AllowDropOnHooks ) )
+				if( 0 == ( lastGrabbableCollision.grabbableFlags & ENodeFlags.Tethered ) )
 				{
-					// we handle hooks before dropping in case we got the
-					// unpress and the hook in the same update
-					this.m_lastHook = state.hooks[0];
-					this.m_context.sendGrabEvent( 
-						{
-							type: AvGrabEventType.EnterHookRange,
-							senderId: this.m_context.grabberEpa.nodeId,
-							grabberId: this.m_context.grabberEpa,
-							grabbableId: this.m_lastGrabbable,
-							handleId: this.m_lastHandle,
-							hookId: this.m_lastHook,
-						});
-					this.m_lastHighlight = GrabberHighlight.NearHook;
-					break;
+					if( state.hooks && state.hooks.length > 0 
+						&& 0 != ( lastGrabbableCollision.grabbableFlags & ENodeFlags.AllowDropOnHooks ) )
+					{
+						// we handle hooks before dropping in case we got the
+						// unpress and the hook in the same update
+						this.m_lastHook = state.hooks[0];
+						this.m_context.sendGrabEvent( 
+							{
+								type: AvGrabEventType.EnterHookRange,
+								senderId: this.m_context.grabberEpa.nodeId,
+								grabberId: this.m_context.grabberEpa,
+								grabbableId: this.m_lastGrabbable,
+								handleId: this.m_lastHandle,
+								hookId: this.m_lastHook,
+							});
+						this.m_lastHighlight = GrabberHighlight.NearHook;
+						break;
+					}
 				}
 
 				if( !state.isPressed )

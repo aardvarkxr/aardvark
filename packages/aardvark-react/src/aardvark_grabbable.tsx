@@ -201,7 +201,13 @@ export class AvGrabbable extends AvBaseNode< AvGrabbableProps, AvGrabbableState 
 				break;
 
 			case AvGrabEventType.EndGrab:
-				this.setState( { lastHighlight: HighlightType.InRange, lastHandle: evt.handleId } );
+				this.setState( 
+					{ 
+						lastHighlight: HighlightType.InRange, 
+						lastHandle: evt.handleId,
+						hook: evt.hookId,
+						hookFromGrabbable: evt.hookFromGrabbable,
+					} );
 				break;
 
 			case AvGrabEventType.Untether:
