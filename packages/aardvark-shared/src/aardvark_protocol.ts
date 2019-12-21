@@ -127,7 +127,7 @@ export function endpointAddrsMatch( epa1: EndpointAddr, epa2: EndpointAddr ): bo
 	if( endpointAddrIsEmpty( epa1 ) )
 		return endpointAddrIsEmpty( epa2 );
 	else if( endpointAddrIsEmpty( epa2 ) )
-		return true;
+		return false;
 
 	return epa1.type == epa2.type && epa1.nodeId == epa2.nodeId && epa1.endpointId == epa2.endpointId;
 }
