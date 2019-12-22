@@ -4,7 +4,7 @@ import bind from 'bind-decorator';
 import { AvGadget,AvOrigin, AvTransform, AvGrabber, AvModel, AvPoker, AvPanelIntersection,
 	AvLine,	AvStandardHook, AvGrabButton, AvPanel, AvPanelAnchor, AvGadgetSeed, AvStandardBoxHook } 
 	from '@aardvarkxr/aardvark-react';
-import { Av, EndpointAddr, EHand, GrabberHighlight, g_builtinModelSphere, g_builtinModelGear } from '@aardvarkxr/aardvark-shared'
+import { Av, EndpointAddr, EHand, GrabberHighlight, g_builtinModelSphere, g_builtinModelGear, EAction } from '@aardvarkxr/aardvark-shared'
 
 interface DefaultHandProps
 {
@@ -20,7 +20,7 @@ interface DefaultHandState
 
 class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 {
-	private m_editModeHandle = 0;
+	private m_actionListenerHandle = 0;
 
 	constructor( props: any )
 	{
@@ -33,7 +33,8 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 			currentPanel: null,
 		};
 
-		this.m_editModeHandle = AvGadget.instance().listenForEditModeWithComponent( this )
+		this.m_actionListenerHandle = AvGadget.instance().listenForActionStateWithComponent( this.props.hand, 
+			EAction.B, this );
 	}
 
 	@bind updateGrabberHighlight( newHighlight: GrabberHighlight )
@@ -48,7 +49,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 
 	componentWillUnmount()
 	{
-		AvGadget.instance().unlistenForEditMode( this.m_editModeHandle );
+		AvGadget.instance().unlistenForActionState( this.m_actionListenerHandle );
 	}
 	public render()
 	{
@@ -106,7 +107,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 					yMin={-0.3} yMax={0.5}
 					zMin={-0.3} zMax={0.3}
 					/>}
-				{ AvGadget.instance().getEditModeForHand( this.props.hand ) && <ControlPanel />}
+				{ AvGadget.instance().getActionStateForHand( this.props.hand, EAction.B ) && <ControlPanel />}
 			</AvOrigin>
 		);
 	}

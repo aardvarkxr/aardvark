@@ -1,5 +1,5 @@
 import { EndpointAddr, indexOfEndpointAddrs, endpointAddrsMatch, MsgGrabberState,
-	AvGrabEvent, AvGrabEventType, GrabberHighlight, AvGrabbableCollision, ENodeFlags } 
+	AvGrabEvent, AvGrabEventType, GrabberHighlight, AvGrabbableCollision, ENodeFlags, EAction, EHand } 
 	from '@aardvarkxr/aardvark-shared';
 import { assert } from '@aardvarkxr/aardvark-react';
 import { mat4 } from '@tlaukkan/tsm';
@@ -10,6 +10,7 @@ interface GrabContext
 {
 	sendGrabEvent( event: AvGrabEvent ): void;
 	getUniverseFromNode( nodeAddr: EndpointAddr ): mat4;
+	getActionState( hand: EHand, action: EAction ): boolean;
 	grabberEpa: EndpointAddr;
 }
 
@@ -158,7 +159,7 @@ export class CGrabStateProcessor
 		let bestGrabbable = this.findBestGrabbable( state );
 		if( this.m_lastGrabbable && this.m_lastHighlight == GrabberHighlight.Grabbed
 			&& ( !bestGrabbable || !endpointAddrsMatch( this.m_lastGrabbable, bestGrabbable.grabbableId ) )
-			&& state.isPressed )
+			&& this.m_context.getActionState( state.hand, EAction.Grab ) )
 		{
 			// The thing we think we're grabbing isn't in the grabbable list.
 			// This can happen if grabber intersections are in flight when the grab starts,
@@ -217,7 +218,8 @@ export class CGrabStateProcessor
 					break;
 				}
 
-				if( !state.isPressed || isProximityOnly( bestGrabbable ) )
+				if( !this.m_context.getActionState( state.hand, EAction.Grab ) 
+				|| isProximityOnly( bestGrabbable ) )
 				{
 					// if the user didn't press grab we have nothing else to do.
 					// proximityOnly handles can't get grabbed, so wait until we
@@ -251,7 +253,7 @@ export class CGrabStateProcessor
 
 			case GrabberHighlight.WaitingForReleaseAfterRejection:
 				// when the button gets released, go back to in range
-				if( !state.isPressed )
+				if( !this.m_context.getActionState( state.hand, EAction.Grab ) )
 				{
 					this.m_lastHighlight = GrabberHighlight.InRange;
 				}
@@ -299,7 +301,7 @@ export class CGrabStateProcessor
 					}
 				}
 
-				if( !state.isPressed )
+				if( !this.m_context.getActionState( state.hand, EAction.Grab ) )
 				{
 					// drop not on a hook
 					this.m_context.sendGrabEvent( 
@@ -335,7 +337,7 @@ export class CGrabStateProcessor
 					break;
 				}
 
-				if( !state.isPressed )
+				if( !this.m_context.getActionState( state.hand, EAction.Grab ) )
 				{
 					// a drop on a hook
 					this.m_context.sendGrabEvent( 

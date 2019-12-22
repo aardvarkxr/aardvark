@@ -20,6 +20,16 @@ export interface AvModelInstance
 }
 
 
+export interface AvActionState
+{
+	a: boolean;
+	b: boolean;
+	grab: boolean;
+	squeeze: boolean;
+	detach: boolean;
+}
+
+
 interface AvRenderer
 {
 	registerTraverser( traverser: AvTraversalRenderer ): void;
@@ -49,7 +59,7 @@ interface AvRenderer
 	startGrab( grabberGlobalId: EndpointAddr, grabbableGlobalId: EndpointAddr  ): void;
 	endGrab( grabberGlobalId: EndpointAddr, grabbableGlobalId: EndpointAddr  ): void;
 
-	isEditPressed( hand: EHand ): boolean;
+	getActionState( hand: EHand ): AvActionState;
 }
 
 export interface AvStartGadgetCallback

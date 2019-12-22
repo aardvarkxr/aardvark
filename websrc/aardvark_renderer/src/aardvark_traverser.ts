@@ -6,8 +6,9 @@ import { endpointAddrToString, endpointAddrIsEmpty, MessageType, MsgNodeHaptic,
 	MsgAttachGadgetToHook, MsgDetachGadgetFromHook, AvGrabEventType, AvNode, 
 	ENodeFlags, AvNodeTransform, AvConstraint, AvNodeType, EHand, EVolumeType, 
 	AvGrabEvent, MsgUpdateSceneGraph, EndpointType, MsgGrabEvent, endpointAddrsMatch, 
-	MsgSetEditMode, EndpointAddr, Av, AvModelInstance, MsgDestroyGadget, g_builtinModelPanel, g_builtinModelPanelInverted, g_builtinModelCylinder } from '@aardvarkxr/aardvark-shared';
+	MsgUpdateActionState, EndpointAddr, Av, AvModelInstance, MsgDestroyGadget, g_builtinModelPanel, g_builtinModelPanelInverted, g_builtinModelCylinder, AvActionState, EAction, getActionFromState } from '@aardvarkxr/aardvark-shared';
 import { computeUniverseFromLine, nodeTransformToMat4, translateMat, nodeTransformFromMat4, vec3MultiplyAndAdd, scaleAxisToFit, scaleMat, minIgnoringNulls } from './traverser_utils';
+const equal = require( 'fast-deep-equal' );
 
 interface NodeData
 {
@@ -161,11 +162,11 @@ export class AvDefaultTraverser
 	private m_nodeToNodeAnchors: { [ nodeGlobalId: string ]: NodeToNodeAnchor_t } = {};
 	private m_hooksInUse: EndpointAddr[] = [];
 	private m_endpoint: CRendererEndpoint = null;
-	private m_editMode: { [hand: number]: boolean } = { };
-	private m_editableNodesForHand: { [ hand: number ]: AvNode[] } = {}
+	private m_actionStateNodesForHand: { [ hand: number ]: AvNode[] } = {}
 	private m_grabEventsToProcess: AvGrabEvent[] = [];
 	private m_grabEventTimer: number = -1;
 	private m_frameNumber: number = 1;
+	private m_actionState: { [ hand: number ] : AvActionState } = {};
 
 	constructor()
 	{
@@ -177,9 +178,6 @@ export class AvDefaultTraverser
 				this.grabEvent( m.event );
 			} );
 		this.m_endpoint.registerHandler( MessageType.NodeHaptic, this.onNodeHaptic );
-
-		this.m_editMode[ EHand.Left ] = false;
-		this.m_editMode[ EHand.Right ] = false;
 	}
 
 	@bind onEndpointOpen()
@@ -240,9 +238,9 @@ export class AvDefaultTraverser
 		this.m_currentGrabbableGlobalId = null;
 		this.m_universeFromNodeTransforms = {};
 		this.m_renderList = [];
-		this.m_editableNodesForHand[ EHand.Invalid ] = [];
-		this.m_editableNodesForHand[ EHand.Left ] = [];
-		this.m_editableNodesForHand[ EHand.Right ] = [];
+		this.m_actionStateNodesForHand[ EHand.Invalid ] = [];
+		this.m_actionStateNodesForHand[ EHand.Left ] = [];
+		this.m_actionStateNodesForHand[ EHand.Right ] = [];
 		this.clearHooksInUse();
 		this.m_frameNumber++;
 
@@ -263,32 +261,37 @@ export class AvDefaultTraverser
 	
 		Av().renderer.renderList( this.m_renderList );
 
-		this.updateEditMode( EHand.Left );
-		this.updateEditMode( EHand.Right );
+		this.updateInput();
 		this.updateGrabberIntersections();
 		this.updatePokerProximity();
 
 		this.cleanupOldNodeData();
 	}
 
-	private updateEditMode( hand: EHand )
+	private updateInput()
 	{
-		let editMode = Av().renderer.isEditPressed( hand );
-		if( editMode != this.m_editMode[ hand ] )
+		this.updateActionState( EHand.Left );
+		this.updateActionState( EHand.Right );
+	}
+
+	private updateActionState( hand: EHand )
+	{
+		let newActionState = Av().renderer.getActionState( hand );
+		let oldActionState = this.m_actionState[ hand ]
+		if( !equal( newActionState, oldActionState ) )
 		{
-			for( let node of this.m_editableNodesForHand[ hand ] )
+			for( let node of this.m_actionStateNodesForHand[ hand ] )
 			{
-				let m: MsgSetEditMode =
+				let m: MsgUpdateActionState =
 				{
 					nodeId: node.globalId,
 					hand,
-					editMode,
+					actionState: newActionState,
 				}
 
-				this.m_endpoint.sendMessage( MessageType.SetEditMode, m );
+				this.m_endpoint.sendMessage( MessageType.UpdateActionState, m );
 			}
-
-			this.m_editMode[ hand ] = editMode;
+			this.m_actionState[ hand ] = newActionState;
 		}
 	}
 
@@ -306,6 +309,10 @@ export class AvDefaultTraverser
 						sendGrabEvent: ( event: AvGrabEvent ) => 
 						{ 
 							this.sendGrabEvent( event );
+						},
+						getActionState: ( hand: EHand, action: EAction ) =>
+						{
+							return getActionFromState( action, this.m_actionState[ hand ] );
 						},
 						getUniverseFromNode: this.getLastUniverseFromNode,
 						grabberEpa: state.grabberId
@@ -349,6 +356,7 @@ export class AvDefaultTraverser
 		let proximities = Av().renderer.updatePokerProximity();
 		for( let proximity of proximities )
 		{
+			proximity.actionState = this.m_actionState[ proximity.hand ];
 			this.m_endpoint.sendMessage( MessageType.PokerProximity, proximity );
 		}
 	}
@@ -590,7 +598,7 @@ export class AvDefaultTraverser
 					this.m_currentHand = EHand.Invalid;
 				}
 
-				this.m_editableNodesForHand[ this.m_currentHand ].push( node );
+				this.m_actionStateNodesForHand[ this.m_currentHand ].push( node );
 			}
 		}
 		else if( origin != null )
@@ -777,7 +785,7 @@ export class AvDefaultTraverser
 			if( hand != undefined )
 			{
 				this.m_currentHand = hand;
-				this.m_editableNodesForHand[ this.m_currentHand ].push( node );
+				this.m_actionStateNodesForHand[ this.m_currentHand ].push( node );
 			}
 
 			if( parentInfo.parentGlobalId.type == EndpointType.Node )

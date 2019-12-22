@@ -33,8 +33,6 @@ class Charm extends React.Component< CharmProps, CharmState >
 		this.state = 
 		{
 		};
-
-		AvGadget.instance().listenForEditMode( this.onEditModeUpdated );
 	}
 
 	@bind onEditModeUpdated()
@@ -67,21 +65,7 @@ class Charm extends React.Component< CharmProps, CharmState >
 
 	render()
 	{
-		let editMode = AvGadget.instance().editMode;
-		let transform: AvNodeTransform = 
-		{
-			position: this.settings.translate,
-			rotation: this.settings.rotation,
-		};
-
-		return 	(
-			<AvTransformControl initialTransform={ transform }
-				onSetValue= { this.onTransform } 
-				translate={ editMode } rotate={ editMode } general={ editMode }
-				key={ this.props.id }
-				minimizeUntilNearby={ true }>
-				<AvStandardHook persistentName={ "hook" + this.props.id } />
-			</AvTransformControl> );
+		return <></>;
 	}
 }
 
@@ -138,7 +122,6 @@ class CharmBracelet extends React.Component< {}, CharmBraceletState >
 		};
 
 		AvGadget.instance().registerForSettings( this.onSettingsReceived );
-		AvGadget.instance().listenForEditMode( this.onEditModeUpdated );
 	}
 
 	@bind onGrabbableHighlight( newHighlight: HighlightType )
@@ -175,43 +158,10 @@ class CharmBracelet extends React.Component< {}, CharmBraceletState >
 		}
 	}
 
-	@bind onEditModeUpdated()
-	{
-		if( !AvGadget.instance().editMode && this.m_dirty )
-		{
-			this.m_dirty = false;
-
-			let settings: CharmBraceletSettings =
-			{
-				charmCount: this.state.charmCount,
-				charms: this.m_charmSettings,
-			};
-			AvGadget.instance().saveSettings( settings );
-		}
-		this.forceUpdate();
-	}
-
 	@bind setCharmSetting( id: number, settings: CharmSettings )
 	{
 		this.m_charmSettings[ id ] = settings;
 		this.m_dirty = true;
-	}
-
-	private renderControls()
-	{
-		if( !AvGadget.instance().editMode )
-			return null;
-
-		return <div>
-			<AvTransform translateZ={0.2} translateY={0.1} translateX={ 0.05 }>
-				<AvGrabButton modelUri={ g_builtinModelPlus }
-					onTrigger={ this.onPlus } />
-			</AvTransform>
-			<AvTransform translateZ={0.2} translateY={0.1} translateX={ -0.05 }>
-				<AvGrabButton modelUri={ g_builtinModelMinus }
-					onTrigger={ this.onMinus } />
-			</AvTransform>
-		</div>
 	}
 
 	public render()
@@ -244,7 +194,6 @@ class CharmBracelet extends React.Component< {}, CharmBraceletState >
 						<AvSphereHandle radius={0.1} />
 						{ charms }
 						{ grabbedMode && <AvModel uri={ g_builtinModelBracelet } /> }
-						{ this.renderControls() }
 					</AvGrabbable>
 				</div>
 			</div>

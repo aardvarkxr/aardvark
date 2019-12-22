@@ -5,7 +5,7 @@ import { StoredGadget, AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, Av
 	MsgOverrideTransform, MsgGetGadgetManifest, MsgGetGadgetManifestResponse, 
 	MsgUpdateSceneGraph, EndpointAddr, endpointAddrToString, MsgGrabEvent, 
 	endpointAddrsMatch, MsgGrabberState, MsgGadgetStarted, MsgSetEndpointTypeResponse, 
-	MsgPokerProximity, MsgMouseEvent, MsgNodeHaptic, MsgSetEditMode, 
+	MsgPokerProximity, MsgMouseEvent, MsgNodeHaptic, MsgUpdateActionState, 
 	MsgDetachGadgetFromHook, MessageType, EndpointType, MsgSetEndpointType, Envelope, 
 	MsgNewEndpoint, MsgLostEndpoint, parseEnvelope, MsgError, AardvarkPort,
 	MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgDestroyGadget, WebSocketCloseCodes } from '@aardvarkxr/aardvark-shared';
@@ -740,7 +740,7 @@ class CEndpoint
 		this.registerEnvelopeHandler( MessageType.AttachGadgetToHook, this.onAttachGadgetToHook );
 		this.registerEnvelopeHandler( MessageType.DetachGadgetFromHook, this.onDetachGadgetFromHook );
 		this.registerEnvelopeHandler( MessageType.SaveSettings, this.onSaveSettings );
-		this.registerForwardHandler( MessageType.SetEditMode, (m:MsgSetEditMode) =>
+		this.registerForwardHandler( MessageType.UpdateActionState, (m:MsgUpdateActionState) =>
 		{
 			return [ m.nodeId ];
 		});

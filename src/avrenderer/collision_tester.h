@@ -22,7 +22,7 @@ struct GrabbableCollision_t
 struct GrabberCollisionState_t
 {
 	aardvark::EndpointAddr_t grabberGlobalId;
-	bool isPressed;
+	EHand hand;
 	std::vector<GrabbableCollision_t> grabbables;
 	std::vector<aardvark::EndpointAddr_t> hooks;
 };
@@ -48,7 +48,7 @@ public:
 	};
 
 	void addGrabber_Sphere( const aardvark::EndpointAddr_t & globalGrabberId, const glm::mat4 & universeFromGrabber,
-		float radius, EHand hand, bool isPressed );
+		float radius, EHand hand );
 	void addGrabbableHandle_Sphere( const aardvark::EndpointAddr_t & globalGrabbableId, 
 		const aardvark::EndpointAddr_t & globalHandleId, 
 		const glm::mat4 & universeFromHandle,
@@ -80,7 +80,6 @@ private:
 	{
 		aardvark::EndpointAddr_t globalGrabberId;
 		EHand hand;
-		bool isPressed;
 		Volume_t volume;
 	};
 	std::vector<ActiveGrabber_t> m_activeGrabbers;

@@ -1,3 +1,5 @@
+import { AvActionState } from './aardvark';
+
 export const AardvarkPort = 23842;
 
 export enum MessageType
@@ -28,7 +30,7 @@ export enum MessageType
 	DetachGadgetFromHook = 308,
 	MasterStartGadget = 309, // tells master to start a gadget
 	SaveSettings = 310,
-	SetEditMode = 311,
+	UpdateActionState = 311,
 	DestroyGadget = 312,
 
 	// System messages
@@ -214,7 +216,7 @@ export interface MsgUpdateSceneGraph
 export interface MsgGrabberState
 {
 	grabberId: EndpointAddr;
-	isPressed: boolean;
+	hand: EHand;
 	grabbables?: AvGrabbableCollision[];
 	hooks?: EndpointAddr[];
 }
@@ -255,7 +257,8 @@ export interface MsgGadgetStarted
 export interface MsgPokerProximity
 {
 	pokerId: EndpointAddr;
-	isPressed: boolean;
+	hand: EHand;
+	actionState: AvActionState;
 	panels: PokerProximity[];
 }
 
@@ -297,11 +300,11 @@ export interface MsgSaveSettings
 	settings: any;
 }
 
-export interface MsgSetEditMode
+export interface MsgUpdateActionState
 {
 	nodeId: EndpointAddr;
 	hand: EHand;
-	editMode: boolean;
+	actionState: AvActionState;
 }
 
 export interface MsgOverrideTransform
@@ -542,9 +545,9 @@ export interface AvNode
 
 export enum EHand
 {
-	Invalid = 0,
-	Left = 1,
-	Right = 2,
+	Invalid = -1,
+	Left = 0,
+	Right = 1,
 };
 
 enum ETextureType
@@ -578,4 +581,32 @@ export interface AvGadgetManifest
 	model: string;
 	startAutomatically: boolean;
 }
+
+
+export enum EAction
+{
+	A = 0,
+	B = 1,
+	Squeeze = 2,
+	Grab = 3,
+	Detach = 4,
+	Max
+}
+
+export function getActionFromState( action: EAction, state: AvActionState): boolean
+{
+	if( !state )
+		return false;
+
+	switch( action )
+	{
+		case EAction.A: return state.a;
+		case EAction.B: return state.b;
+		case EAction.Grab: return state.grab;
+		case EAction.Squeeze: return state.squeeze;
+		case EAction.Detach: return state.detach;
+		default: return false;
+	}
+}
+
 

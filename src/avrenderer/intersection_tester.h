@@ -13,7 +13,7 @@
 struct PokerState_t
 {
 	aardvark::EndpointAddr_t pokerId;
-	bool isPressed = false;
+	EHand hand;
 	std::vector<aardvark::PokerProximity_t> panels;
 };
 
@@ -25,7 +25,7 @@ public:
 	void addActivePanel( const aardvark::EndpointAddr_t & globalPanelId, 
 		const glm::mat4 & matPanelFromUniverse, float zScale, EHand hand );
 	void addActivePoker( const aardvark::EndpointAddr_t & globalPokerId, 
-		const glm::vec3 & posPokerInUniverse, EHand hand, bool isPressed );
+		const glm::vec3 & posPokerInUniverse, EHand hand );
 
 	void reset();
 	std::vector<PokerState_t> updatePokerProximity();
@@ -44,7 +44,6 @@ private:
 	{
 		aardvark::EndpointAddr_t globalPokerId;
 		EHand hand;
-		bool isPressed;
 		glm::vec3 pokerPosInUniverse;
 	};
 	std::vector<ActivePoker_t> m_activePokers;
