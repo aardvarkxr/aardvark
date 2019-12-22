@@ -618,3 +618,13 @@ export function emptyActionState(): AvActionState
 		} );
 }
 
+
+export function filterActionsForGadget( actionState: AvActionState ): AvActionState
+{
+	return {
+		a: actionState.a,
+		b: actionState.b,
+		squeeze: actionState.squeeze,
+	};
+}
+

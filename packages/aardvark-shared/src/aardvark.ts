@@ -22,11 +22,14 @@ export interface AvModelInstance
 
 export interface AvActionState
 {
+	// these actions are available to held gadgets
 	a: boolean;
 	b: boolean;
-	grab: boolean;
 	squeeze: boolean;
-	detach: boolean;
+
+	// these actions are not available to gadgets
+	grab?: boolean;
+	detach?: boolean;
 }
 
 

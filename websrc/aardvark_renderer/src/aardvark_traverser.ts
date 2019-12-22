@@ -6,7 +6,10 @@ import { endpointAddrToString, endpointAddrIsEmpty, MessageType, MsgNodeHaptic,
 	MsgAttachGadgetToHook, MsgDetachGadgetFromHook, AvGrabEventType, AvNode, 
 	ENodeFlags, AvNodeTransform, AvConstraint, AvNodeType, EHand, EVolumeType, 
 	AvGrabEvent, MsgUpdateSceneGraph, EndpointType, MsgGrabEvent, endpointAddrsMatch, 
-	MsgUpdateActionState, EndpointAddr, Av, AvModelInstance, MsgDestroyGadget, g_builtinModelPanel, g_builtinModelPanelInverted, g_builtinModelCylinder, AvActionState, EAction, getActionFromState, emptyActionState } from '@aardvarkxr/aardvark-shared';
+	MsgUpdateActionState, EndpointAddr, Av, AvModelInstance, MsgDestroyGadget, 
+	g_builtinModelPanel, g_builtinModelPanelInverted, g_builtinModelCylinder, 
+	AvActionState, EAction, getActionFromState, emptyActionState, filterActionsForGadget
+} from '@aardvarkxr/aardvark-shared';
 import { computeUniverseFromLine, nodeTransformToMat4, translateMat, nodeTransformFromMat4, vec3MultiplyAndAdd, scaleAxisToFit, scaleMat, minIgnoringNulls } from './traverser_utils';
 const equal = require( 'fast-deep-equal' );
 
@@ -19,6 +22,7 @@ interface NodeData
 	constraint?: AvConstraint;
 	lastFlags?: ENodeFlags;
 	lastFrameUsed: number;
+	nodeType: AvNodeType;
 }
 
 
@@ -146,6 +150,7 @@ interface AvNodeRoot
 	hook?: string | EndpointAddr;
 	hookFromGadget?: AvNodeTransform;
 	handIsRelevant: Set<EHand>;
+	wasGadgetDraggedLastFrame: boolean;
 }
 
 export class AvDefaultTraverser
@@ -168,6 +173,7 @@ export class AvDefaultTraverser
 	private m_grabEventTimer: number = -1;
 	private m_frameNumber: number = 1;
 	private m_actionState: { [ hand: number ] : AvActionState } = {};
+	private m_dirtyGadgetActions = new Set<number>();
 
 	constructor()
 	{
@@ -204,6 +210,7 @@ export class AvDefaultTraverser
 				{ 
 					gadgetId: sender.endpointId, 
 					handIsRelevant: new Set<EHand>(),
+					wasGadgetDraggedLastFrame: false,
 					root: null 
 				};
 			}
@@ -270,6 +277,12 @@ export class AvDefaultTraverser
 		this.updateGrabberIntersections();
 		this.updatePokerProximity();
 
+		for( let gadgetId of this.m_dirtyGadgetActions )
+		{
+			this.sendUpdateActionState( gadgetId, EHand.Left );
+			this.sendUpdateActionState( gadgetId, EHand.Right );
+		}
+
 		this.cleanupOldNodeData();
 	}
 
@@ -279,8 +292,29 @@ export class AvDefaultTraverser
 		this.updateActionState( EHand.Right );
 	}
 
-	private sendUpdateActionState( gadgetId: number, hand: EHand, actionState: AvActionState )
+	private sendUpdateActionState( gadgetId: number, hand: EHand )
 	{
+		if( this.m_inFrameTraversal )
+		{
+			throw new Error( "sendUpdateActionState not valid during traversal" );
+		}
+
+		let root = this.m_roots[ gadgetId ];
+		if( !root )
+		{
+			return;
+		}
+
+		let actionState: AvActionState;
+		if( root.wasGadgetDraggedLastFrame && root.handIsRelevant.has( hand ) )
+		{
+			actionState = filterActionsForGadget( this.m_actionState[ hand ] ); 
+		}
+		else
+		{
+			actionState = emptyActionState();
+		}
+
 		let m: MsgUpdateActionState =
 		{
 			gadgetId,
@@ -304,7 +338,7 @@ export class AvDefaultTraverser
 				if( !root.handIsRelevant.has( hand ) )
 					continue;
 
-				this.sendUpdateActionState( root.gadgetId, hand, newActionState );
+				this.m_dirtyGadgetActions.add( root.gadgetId );
 			}
 			this.m_actionState[ hand ] = newActionState;
 		}
@@ -413,20 +447,25 @@ export class AvDefaultTraverser
 
 	getNodeData( node: AvNode ): NodeData
 	{
-		return this.getNodeDataByEpa( node.globalId );
+		return this.getNodeDataByEpa( node.globalId, node.type );
 	}
 
-	getNodeDataByEpa( nodeGlobalId: EndpointAddr ): NodeData
+	getNodeDataByEpa( nodeGlobalId: EndpointAddr, typeHint?: AvNodeType ): NodeData
 	{
 		if( !nodeGlobalId )
 		{
 			return null;
 		}
 
+		if( typeHint === undefined )
+		{
+			typeHint = AvNodeType.Invalid;
+		}
+
 		let nodeIdStr = endpointAddrToString( nodeGlobalId );
 		if( !this.m_nodeData.hasOwnProperty( nodeIdStr ) )
 		{
-			let nodeData = { lastFrameUsed: this.m_frameNumber };
+			let nodeData = { lastFrameUsed: this.m_frameNumber, nodeType: typeHint };
 			this.m_nodeData[ nodeIdStr] = nodeData;
 			return nodeData;
 		}
@@ -460,6 +499,7 @@ export class AvDefaultTraverser
 			this.m_currentRoot = root;
 			let oldRelevantHands = this.m_currentRoot.handIsRelevant;
 			this.m_currentRoot.handIsRelevant = new Set<EHand>();
+			this.m_currentRoot.wasGadgetDraggedLastFrame = false;
 
 			// get the ID for node 0. We're going to use that as the parent of
 			// everything. 
@@ -501,7 +541,7 @@ export class AvDefaultTraverser
 
 				if( !this.m_currentRoot.handIsRelevant.has( hand ) )
 				{
-					this.sendUpdateActionState( root.gadgetId, hand, emptyActionState( ) );
+					this.m_dirtyGadgetActions.add( root.gadgetId );
 				}
 			}
 
@@ -513,7 +553,7 @@ export class AvDefaultTraverser
 
 				if( !oldRelevantHands.has( hand ) )
 				{
-					this.sendUpdateActionState( root.gadgetId, hand, this.m_actionState[ hand ] );
+					this.m_dirtyGadgetActions.add( root.gadgetId );
 				}
 			}
 			
@@ -826,6 +866,15 @@ export class AvDefaultTraverser
 		else
 		{
 			let parentInfo = this.m_nodeToNodeAnchors[ nodeIdStr ];
+
+			if( parentInfo.parentGlobalId )
+			{
+				let parentNodeData = this.getNodeDataByEpa( parentInfo.parentGlobalId );
+				if( parentNodeData.nodeType == AvNodeType.Grabber )
+				{
+					this.m_currentRoot.wasGadgetDraggedLastFrame = true;
+				}
+			}
 
 			let hand = this.m_handDeviceForNode[ endpointAddrToString( parentInfo.parentGlobalId ) ];
 			if( hand != undefined )
@@ -1384,6 +1433,7 @@ export class AvDefaultTraverser
 			return this.m_lastFrameUniverseFromNodeTransforms[ nodeGlobalId ];
 		}
 	}
+
 }
 
 
