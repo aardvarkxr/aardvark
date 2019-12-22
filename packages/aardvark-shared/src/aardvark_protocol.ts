@@ -394,7 +394,7 @@ export enum AvGrabEventType
 	GrabStarted = 10,
 	UpdateGrabberHighlight = 11,
 	TransformUpdated = 12,
-	Untether = 13,
+	Detach = 13,
 };
 
 export enum GrabberHighlight

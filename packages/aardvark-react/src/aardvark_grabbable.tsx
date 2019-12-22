@@ -210,8 +210,9 @@ export class AvGrabbable extends AvBaseNode< AvGrabbableProps, AvGrabbableState 
 					} );
 				break;
 
-			case AvGrabEventType.Untether:
-				this.setState( { lastHighlight: HighlightType.Grabbed, lastHandle: evt.handleId } );
+			case AvGrabEventType.Detach:
+				this.setState( { lastHighlight: HighlightType.Grabbed, lastHandle: evt.handleId, 
+					hook: null, hookFromGrabbable: null } );
 				break;
 
 			case AvGrabEventType.EnterHookRange:

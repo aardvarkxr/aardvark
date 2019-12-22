@@ -279,6 +279,22 @@ export class CGrabStateProcessor
 				}
 
 				let lastGrabbableCollision = state.grabbables[ lastGrabbableIndex ];
+				if( 0 != ( lastGrabbableCollision.grabbableFlags & ENodeFlags.Tethered ) )
+				{
+					// see if we want to untether
+					if( this.m_context.getActionState( state.hand, EAction.Detach ) )
+					{
+						this.m_context.sendGrabEvent( 
+							{
+								type: AvGrabEventType.Detach,
+								senderId: this.m_context.grabberEpa.nodeId,
+								grabberId: this.m_context.grabberEpa,
+								grabbableId: this.m_lastGrabbable,
+								handleId: this.m_lastHandle,
+							});
+					}
+				}
+
 				if( 0 == ( lastGrabbableCollision.grabbableFlags & ENodeFlags.Tethered ) )
 				{
 					if( state.hooks && state.hooks.length > 0 

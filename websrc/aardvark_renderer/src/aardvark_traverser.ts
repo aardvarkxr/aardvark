@@ -1232,6 +1232,7 @@ export class AvDefaultTraverser
 				break;
 
 			case AvGrabEventType.EndGrab:
+			{
 				console.log( "Traverser ending grab of " + grabEvent.grabbableId + " by " + grabEvent.grabberId );
 				Av().renderer.endGrab( grabEvent.grabberId, grabEvent.grabbableId );
 				let oldAnchor = this.m_nodeToNodeAnchors[ grabbableIdStr ];
@@ -1276,7 +1277,19 @@ export class AvDefaultTraverser
 					// we're dropping into open space
 					delete this.m_nodeToNodeAnchors[ endpointAddrToString( grabEvent.grabbableId ) ];
 				}
-				break;
+			}
+			break;
+
+			case AvGrabEventType.Detach:
+			{
+				let oldAnchor = this.m_nodeToNodeAnchors[ grabbableIdStr ];
+				if( oldAnchor )
+				{
+					// forget the point to restore
+					oldAnchor.anchorToRestore = null;
+				}
+			}
+			break;
 		}
 
 		if( grabEvent.grabberId )
