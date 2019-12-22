@@ -302,7 +302,7 @@ export interface MsgSaveSettings
 
 export interface MsgUpdateActionState
 {
-	nodeId: EndpointAddr;
+	gadgetId: number;
 	hand: EHand;
 	actionState: AvActionState;
 }
@@ -609,4 +609,12 @@ export function getActionFromState( action: EAction, state: AvActionState): bool
 	}
 }
 
+export function emptyActionState(): AvActionState
+{
+	return (
+		{
+			a: false, b:false, squeeze: false,
+			grab: false, detach: false
+		} );
+}
 

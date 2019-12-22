@@ -742,7 +742,7 @@ class CEndpoint
 		this.registerEnvelopeHandler( MessageType.SaveSettings, this.onSaveSettings );
 		this.registerForwardHandler( MessageType.UpdateActionState, (m:MsgUpdateActionState) =>
 		{
-			return [ m.nodeId ];
+			return [ { type: EndpointType.Gadget, endpointId: m.gadgetId } ];
 		});
 
 		this.registerEnvelopeHandler( MessageType.OverrideTransform, this.onOverrideTransform );
