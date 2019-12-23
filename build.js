@@ -11,11 +11,23 @@ let dataDir = path.resolve( __dirname, 'data' );
 let bldDir = path.resolve( srcDir, "build" );
 
 let verbose = false;
-for( let arg of process.argv )
+let buildVersion = null;
+
+for( let argIndex = 0; argIndex < process.argv.length;  )
 {
+	let arg = process.argv[ argIndex++ ];
 	if( arg == "--verbose" || arg == "-v" )
 	{
 		verbose = true;
+	}
+	else if( arg == "--buildversion" || arg == "-b" )
+	{
+		if( argIndex == process.argv.length )
+		{
+			console.log( "Usage: --buildversion|-b x.y.z" );
+			process.exit( 1 );
+		}
+		buildVersion = process.argv[ argIndex++ ];
 	}
 }
 
@@ -145,20 +157,72 @@ async function copyDir( from, to )
 	fromDir.closeSync();
 }
 
+let subDir = "release";
+if( buildVersion )
+{
+	subDir = "aardvark_" + buildVersion;
+}
+
 async function copyRelease()
 {
 	console.log( '++ starting release copy' );
 	let startTime = Date.now();
 
-	let outDir = path.resolve( __dirname, "release" );
+	let outDir = path.resolve( __dirname, subDir );
 
 	let inDir = path.resolve( bldDir, "avrenderer/Release" );
 	copyDir( inDir, outDir );
 	copyDir( dataDir, path.resolve( outDir, "data" ) );
 
-
 	let elapsedTime = ( Date.now() - startTime ) / 1000;
 	console.log(`-- finished release copy (Elapsed time ${elapsedTime} seconds)` );
+}
+
+
+async function buildArchive()
+{
+	if( !buildVersion )
+	{
+		console.log( '== Skipping archive' );
+		return;
+	}
+
+	console.log( '++ starting build archive (Estimated time 30 seconds)' );
+	let startTime = Date.now();
+
+	await new Promise( ( resolve, reject ) =>
+		{
+			const archiver = require( path.resolve( __dirname, 'websrc/node_modules/archiver' ) );
+
+			let output = fs.createWriteStream( 
+				path.resolve( __dirname, subDir + ".zip" ) );
+			let archive = archiver( 'zip', 
+				{
+					zlib: { level: 9 }
+				} );
+
+			output.on( 'close', () => { resolve(); } );
+
+			archive.on( 'warning', ( err ) => 
+				{ 
+					if( err == 'ENOENT' )
+					{
+					}
+					else
+					{
+						throw err;
+					} 
+				} );
+
+			archive.on( 'error', ( err ) => { throw err; } );
+			archive.pipe( output );
+
+			archive.directory( subDir, subDir );
+			archive.finalize();		
+		} );
+
+	let elapsedTime = ( Date.now() - startTime ) / 1000;
+	console.log(`-- finished build archive (Elapsed time ${elapsedTime} seconds)` );
 }
 
 
@@ -171,6 +235,8 @@ async function runBuild()
 	await unzipCef();
 	await cppBuild();
 	await copyRelease();
+	await buildArchive();
+
 
 	console.log( "build finished" );
 }
