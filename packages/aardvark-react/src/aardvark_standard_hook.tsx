@@ -44,13 +44,6 @@ export class AvStandardHook extends React.Component< StandardHookProps, Standard
 			highlight: HookHighlight.None,
 			grabbableAddr: null,
 		};
-
-		this.m_editModeHandle = AvGadget.instance().listenForEditModeWithComponent( this )
-	}
-
-	componentWillUnmount()
-	{
-		AvGadget.instance().unlistenForEditMode( this.m_editModeHandle );
 	}
 
 	@bind updateHookHighlight( newHighlight: HookHighlight, grabbableAddr: EndpointAddr )
@@ -81,7 +74,7 @@ export class AvStandardHook extends React.Component< StandardHookProps, Standard
 				showHook = true;
 		}
 
-		if( showHook || AvGadget.instance().getEditModeForHand( this.props.hand ) )
+		if( showHook )
 		{
 			return <AvTransform uniformScale={ hookScale }>
 					<AvModel uri={ g_builtinModelHook } />
@@ -139,13 +132,6 @@ export class AvStandardBoxHook extends React.Component< StandardBoxHookProps, St
 			highlight: HookHighlight.None,
 			grabbableAddr: null,
 		};
-
-		this.m_editModeHandle = AvGadget.instance().listenForEditModeWithComponent( this )
-	}
-
-	componentWillUnmount()
-	{
-		AvGadget.instance().unlistenForEditMode( this.m_editModeHandle );
 	}
 
 	@bind updateHookHighlight( newHighlight: HookHighlight, grabbableAddr: EndpointAddr )
@@ -179,7 +165,7 @@ export class AvStandardBoxHook extends React.Component< StandardBoxHookProps, St
 				showHook = true;
 		}
 
-		if( showHook || AvGadget.instance().getEditModeForHand( this.props.hand ) )
+		if( showHook )
 		{
 			return <AvTransform 
 					translateX = { ( this.props.xMin + this.props.xMax ) / 2 }

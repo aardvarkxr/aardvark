@@ -1,0 +1,21 @@
+{
+	"source": "aardvark",
+	"applications":
+	[
+		{
+			"app_key": "aardvarkxr.aardvark",
+			"launch_type": "binary",
+			"action_manifest_path": "input/aardvark_actions.json",
+			"is_dashboard_overlay": true,
+			"binary_path_windows": "../avrenderer.exe",
+			"arguments": "",
+			"strings": {
+				"en_us": {
+					"name": "Aardvark",
+					"description": "AR in VR"
+				}
+			}
+		}
+	]
+}
+

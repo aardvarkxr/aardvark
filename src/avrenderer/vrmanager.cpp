@@ -11,7 +11,10 @@ void CVRManager::init()
 	vr::VRInput()->GetActionSetHandle( "/actions/aardvark", &m_actionSet );
 	vr::VRInput()->GetActionHandle( "/actions/aardvark/out/haptic", &m_actionHaptic );
 	vr::VRInput()->GetActionHandle( "/actions/aardvark/in/grab", &m_actionGrab );
-	vr::VRInput()->GetActionHandle( "/actions/aardvark/in/edit", &m_actionEdit );
+	vr::VRInput()->GetActionHandle( "/actions/aardvark/in/a", &m_actionA );
+	vr::VRInput()->GetActionHandle( "/actions/aardvark/in/b", &m_actionB );
+	vr::VRInput()->GetActionHandle( "/actions/aardvark/in/squeeze", &m_actionSqueeze);
+	vr::VRInput()->GetActionHandle( "/actions/aardvark/in/detach", &m_actionDetach );
 	vr::VRInput()->GetInputSourceHandle( "/user/hand/left", &m_leftHand );
 	vr::VRInput()->GetInputSourceHandle( "/user/hand/right", &m_rightHand );
 
@@ -40,16 +43,6 @@ bool CVRManager::getUniverseFromOrigin( const std::string & originPath, glm::mat
 	}
 }
 
-
-bool CVRManager::isGrabPressed( EHand hand )
-{
-	return isGrabPressed( getDeviceForHand( hand ) );
-}
-
-bool CVRManager::isEditPressed( EHand hand )
-{
-	return isEditPressed( getDeviceForHand( hand ) );
-}
 
 glm::mat4 CVRManager::glmMatFromVrMat( const vr::HmdMatrix34_t & mat )
 {
@@ -170,43 +163,31 @@ void CVRManager::doInputWork()
 
 	vr::EVRInputError err = vr::VRInput()->UpdateActionState( actionSet, sizeof( vr::VRActiveActionSet_t ), 2 );
 
-	m_leftPressed	= GetAction( m_actionGrab, m_leftHand );
-	m_rightPressed	= GetAction( m_actionGrab, m_rightHand );
-	m_leftEdit		= GetAction( m_actionEdit, m_leftHand );
-	m_rightEdit		= GetAction( m_actionEdit, m_rightHand );
+	this->m_handActionState[(int)EHand::Left] = getActionStateForHand( EHand::Left );
+	this->m_handActionState[(int)EHand::Right] = getActionStateForHand( EHand::Right );
 }
 
-bool CVRManager::isGrabPressed( vr::VRInputValueHandle_t whichHand )
+
+CVRManager::ActionState_t CVRManager::getActionStateForHand( EHand eHand )
 {
-	if ( whichHand == m_leftHand )
-	{
-		return m_leftPressed;
-	}
-	else if ( whichHand == m_rightHand )
-	{
-		return m_rightPressed;
-	}
-	else
-	{
-		return false;
-	}
+	vr::VRInputValueHandle_t pathDevice = getDeviceForHand( eHand );
+	ActionState_t state;
+	state.a = GetAction( m_actionA, pathDevice );
+	state.b = GetAction( m_actionB, pathDevice );
+	state.grab = GetAction( m_actionGrab, pathDevice );
+	state.squeeze = GetAction( m_actionSqueeze, pathDevice );
+	state.detach = GetAction( m_actionDetach, pathDevice );
+	return state;
 }
 
-bool CVRManager::isEditPressed( vr::VRInputValueHandle_t whichHand )
+CVRManager::ActionState_t CVRManager::getCurrentActionState( EHand eHand ) const
 {
-	if ( whichHand == m_leftHand )
-	{
-		return m_leftEdit;
-	}
-	else if ( whichHand == m_rightHand )
-	{
-		return m_rightEdit;
-	}
-	else
-	{
-		return false;
-	}
+	int nHand = (int)eHand;
+	if ( nHand < 0 && nHand >= (int)EHand::Max )
+		return ActionState_t();
+	return this->m_handActionState[nHand];
 }
+
 
 vr::VRInputValueHandle_t CVRManager::getDeviceForHand( EHand hand )
 {

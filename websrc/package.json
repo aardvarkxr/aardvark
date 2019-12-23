@@ -43,6 +43,7 @@
     "bind-decorator": "^1.0.11",
     "color": "^3.1.2",
     "express": "^4.17.1",
+    "fast-deep-equal": "^3.1.1",
     "file-url": "^3.0.0",
     "is-url": "^1.2.4",
     "mobx": "^5.13.0",

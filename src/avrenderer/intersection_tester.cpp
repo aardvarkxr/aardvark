@@ -13,9 +13,9 @@ void CIntersectionTester::addActivePanel( const aardvark::EndpointAddr_t & globa
 }
 
 void CIntersectionTester::addActivePoker( const aardvark::EndpointAddr_t & globalPokerId, const glm::vec3 & posPokerInUniverse,
-	EHand hand, bool isPressed )
+	EHand hand )
 {
-	m_activePokers.push_back( { globalPokerId, hand, isPressed, posPokerInUniverse } );
+	m_activePokers.push_back( { globalPokerId, hand, posPokerInUniverse } );
 }
 
 
@@ -32,7 +32,7 @@ std::vector<PokerState_t> CIntersectionTester::updatePokerProximity()
 	{
 		PokerState_t pokerState;
 		pokerState.pokerId = poker.globalPokerId;
-		pokerState.isPressed = poker.isPressed;
+		pokerState.hand = poker.hand;
 
 		for ( auto & panel : m_activePanels )
 		{

@@ -6,9 +6,9 @@ CCollisionTester::CCollisionTester()
 }
 
 void CCollisionTester::addGrabber_Sphere( const aardvark::EndpointAddr_t & globalGrabberId, const glm::mat4 & universeFromGrabber,
-	float radius, EHand hand, bool isPressed )
+	float radius, EHand hand )
 {
-	m_activeGrabbers.push_back( { globalGrabberId, hand, isPressed, Volume_t::createSphere( universeFromGrabber, radius ) } );
+	m_activeGrabbers.push_back( { globalGrabberId, hand, Volume_t::createSphere( universeFromGrabber, radius ) } );
 }
 
 CCollisionTester::Volume_t CCollisionTester::Volume_t::createSphere( const glm::mat4 & universeFromVolume, float radius )
@@ -165,7 +165,7 @@ std::vector<GrabberCollisionState_t> CCollisionTester::updateGrabberIntersection
 	{
 		GrabberCollisionState_t grabberState;
 		grabberState.grabberGlobalId = grabber.globalGrabberId;
-		grabberState.isPressed = grabber.isPressed;
+		grabberState.hand= grabber.hand;
 
 		aardvark::EndpointAddr_t currentlyGrabbedGrabbableId = { aardvark::EEndpointType::Unknown, 0, 0 };
 		auto activeGrab = m_activeGrabs.find( grabber.globalGrabberId );

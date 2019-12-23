@@ -15,7 +15,19 @@
          "type" : "boolean"
       },
       {
-         "name" : "/actions/aardvark/in/edit",
+         "name" : "/actions/aardvark/in/a",
+         "type" : "boolean"
+      },
+      {
+         "name" : "/actions/aardvark/in/b",
+         "type" : "boolean"
+      },
+      {
+         "name" : "/actions/aardvark/in/squeeze",
+         "type" : "boolean"
+      },
+      {
+         "name" : "/actions/aardvark/in/detach",
          "type" : "boolean"
       }
    ],
