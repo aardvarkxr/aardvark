@@ -135,7 +135,7 @@ export class CGrabStateProcessor
 		for( let coll of state.grabbables )
 		{
 			let currentGrabber = this.m_context.getCurrentGrabber( coll.grabbableId );
-			if( currentGrabber )
+			if( currentGrabber && !endpointAddrsMatch( currentGrabber, state.grabberId ) )
 			{
 				// somebody is grabbing this one already
 				continue;
@@ -186,8 +186,8 @@ export class CGrabStateProcessor
 			case GrabberHighlight.None:
 				assert( this.m_lastGrabbable == null );
 
-				// if we have no grabbables, we have nothing to do
-				if( !state.grabbables || state.grabbables.length == 0 )
+				// if we have no eligible grabbables, we have nothing to do
+				if( !bestGrabbable )
 					break;
 
 				this.m_lastGrabbable = bestGrabbable.grabbableId;
