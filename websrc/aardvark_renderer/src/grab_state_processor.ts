@@ -11,6 +11,7 @@ interface GrabContext
 	sendGrabEvent( event: AvGrabEvent ): void;
 	getUniverseFromNode( nodeAddr: EndpointAddr ): mat4;
 	getActionState( hand: EHand, action: EAction ): boolean;
+	getCurrentGrabber( grabbableAddr: EndpointAddr ): EndpointAddr;
 	grabberEpa: EndpointAddr;
 }
 
@@ -133,6 +134,13 @@ export class CGrabStateProcessor
 		let best: AvGrabbableCollision = null;
 		for( let coll of state.grabbables )
 		{
+			let currentGrabber = this.m_context.getCurrentGrabber( coll.grabbableId );
+			if( currentGrabber )
+			{
+				// somebody is grabbing this one already
+				continue;
+			}
+
 			if( endpointAddrsMatch( coll.handleId, this.m_lastHandle ) )
 			{
 				last = coll;

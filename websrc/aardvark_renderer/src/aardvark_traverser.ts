@@ -363,6 +363,7 @@ export class AvDefaultTraverser
 						{
 							return getActionFromState( action, this.m_actionState[ hand ] );
 						},
+						getCurrentGrabber: this.getCurrentGrabber,
 						getUniverseFromNode: this.getLastUniverseFromNode,
 						grabberEpa: state.grabberId
 					} );
@@ -1431,6 +1432,25 @@ export class AvDefaultTraverser
 		else
 		{
 			return this.m_lastFrameUniverseFromNodeTransforms[ nodeGlobalId ];
+		}
+	}
+
+	@bind 
+	private getCurrentGrabber( grabbableAddr: EndpointAddr ): EndpointAddr
+	{
+		let grabbableIdStr = endpointAddrToString( grabbableAddr );
+		let parentInfo = this.m_nodeToNodeAnchors[ grabbableIdStr ];
+		if( !parentInfo )
+			return null;
+
+		let parentNodeData = this.getNodeDataByEpa( parentInfo.parentGlobalId );
+		if( parentNodeData && parentNodeData.nodeType == AvNodeType.Grabber )
+		{
+			return parentInfo.parentGlobalId;
+		}
+		else
+		{
+			return null;
 		}
 	}
 
