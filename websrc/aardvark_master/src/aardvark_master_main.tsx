@@ -106,97 +106,11 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 					yMin={-0.3} yMax={0.5}
 					zMin={-0.3} zMax={0.3}
 					/>
-				{ AvGadget.instance().getActionStateForHand( this.props.hand, EAction.B ) && <ControlPanel />}
 			</AvOrigin>
 		);
 	}
 }
 
-interface ControlPanelState
-{
-	active: boolean;
-	installedGadgets?: string[];
-}
-
-class ControlPanel extends React.Component< {}, ControlPanelState >
-{
-	private m_panelId: EndpointAddr;
-
-	constructor( props: any )
-	{
-		super( props );
-		this.state = 
-		{ 
-			active: false,
-		};
-
-		AvGadget.instance().getInstalledGadgets()
-		.then( ( installedGadgets: string[] ) =>
-		{
-			this.setState( { installedGadgets } );
-		} );
-	}
-
-	@bind onActivateControlPanel()
-	{
-		this.setState( { active: !this.state.active } );
-	}
-
-	private renderGadgetSeedList()
-	{
-		if( !this.state.installedGadgets )
-		{
-			return <div>No Gadgets installed.</div>;
-		}
-		else
-		{
-			let seeds: JSX.Element[] = [];
-			for( let gadget of this.state.installedGadgets )
-			{
-				seeds.push( 
-					<div className="GadgetSeed">
-						<AvPanelAnchor>
-							<AvGadgetSeed key="gadget" uri={ gadget } 
-								radius={ 0.1 }/>
-						</AvPanelAnchor>
-					</div> );
-			}
-			return <div className="GadgetSeedContainer">{ seeds }</div>;
-		}
-	}
-
-	public renderPanel()
-	{
-		if( !this.state.active )
-			return null;
-
-		return <AvTransform rotateX={ 45 } translateZ={ -0.1 }>
-				<AvTransform uniformScale={0.25}>
-					<AvTransform translateZ={ -0.55 }>
-						<AvPanel interactive={false}>
-							<div className="FullPage" >
-								<h1>This is the control panel</h1>
-								{ this.renderGadgetSeedList() }
-							</div>;
-						</AvPanel>
-					</AvTransform>
-				</AvTransform>
-			</AvTransform>;
-	}
-
-	public render()
-	{
-		return (
-			<AvTransform>
-				<AvTransform translateZ={-0.1} rotateX={ 45 }>
-					<AvGrabButton modelUri={ g_builtinModelGear } 
-						onTrigger={ this.onActivateControlPanel } />
-				</AvTransform>;
-				{ this.renderPanel() }
-
-			</AvTransform>	);
-	}
-}
 
 class MasterControls extends React.Component< {}, {} >
 {
@@ -211,7 +125,6 @@ class MasterControls extends React.Component< {}, {} >
 			<div className="FullPage">
 				<DefaultHand hand={ EHand.Left } />
 				<DefaultHand hand={ EHand.Right } />
-				<ControlPanel />
 			</div>
 		);
 	}

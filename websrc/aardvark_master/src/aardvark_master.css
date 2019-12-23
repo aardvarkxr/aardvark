@@ -40,18 +40,3 @@ body, html
 	background-color: blue;
 }
 
-.GadgetSeedContainer
-{
-	background-color: transparent;
-	display: flex;
-	flex-direction: row;
-	flex-wrap: wrap;
-	height: 100%;
-	width: 100%;
-}
-
-.GadgetSeed
-{
-	height: 30%;
-	width: 30%;
-}
