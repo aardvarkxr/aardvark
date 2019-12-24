@@ -80,7 +80,8 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 	public render()
 	{
 		return (
-			<AvGrabbable updateHighlight={ this.onUpdateHighlight } preserveDropTransform={ true }> 
+			<AvGrabbable updateHighlight={ this.onUpdateHighlight } preserveDropTransform={ true }
+				grabWithIdentityTransform={ true }> 
 				<AvTransform uniformScale={ this.state.highlight == HighlightType.InRange ? 1.1 : 1.0 } >
 					<AvModel uri={ g_builtinModelGear } />
 					<AvModelBoxHandle uri={ g_builtinModelGear }/>

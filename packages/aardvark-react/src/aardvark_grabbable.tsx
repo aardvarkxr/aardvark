@@ -86,6 +86,14 @@ interface AvGrabbableProps extends AvBaseNodeProps
 	 * @default false
 	 */
 	dropOnHooks?: boolean;
+
+	/** If this is true, the grabbable will always be grabbed with an identity transform
+	 * instead of preserving the transform between the grabbable and the grabber at the
+	 * start of the grab.
+	 * 
+	 * @default false
+	 */
+	grabWithIdentityTransform?: boolean;
 }
 
 interface AvGrabbableState
@@ -236,6 +244,7 @@ export class AvGrabbable extends AvBaseNode< AvGrabbableProps, AvGrabbableState 
 							handleId: evt.handleId,
 							grabberId: evt.grabberId,
 							requestId: evt.requestId,
+							useIdentityTransform: this.props.grabWithIdentityTransform,
 							allowed: true,
 						});
 				}

@@ -61,7 +61,7 @@ export class CGrabStateProcessor
 				if( evt.allowed )
 				{
 					// switch to the grabbable specified by the response
-					let useIdentityTransform = false;
+					let useIdentityTransform = !!evt.useIdentityTransform;
 					if( !endpointAddrsMatch( evt.grabbableId, this.m_lastGrabbable ) )
 					{
 						this.m_context.sendGrabEvent( 
