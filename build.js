@@ -114,7 +114,8 @@ async function cppBuild()
 {
 	ensureDirExists( bldDir );
 
-	runCommand( "cmake", ["-G", "\"Visual Studio 15 2017 Win64\"", ".."],
+	runCommand( "cmake", 
+		["-G", "\"Visual Studio 16 2019\"", "-A", "x64", ".."],
 		bldDir, 10, "Creating Projects" );
 
 	let vsWherePath = path.resolve( __dirname, "build_helpers/vswhere.exe" );
