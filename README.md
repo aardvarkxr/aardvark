@@ -72,7 +72,8 @@ Follow these steps:
    1. cd d:\aardvark\src
    2. mkdir build
    3. cd build
-   4. cmake -G "Visual Studio 15 2017 Win64" .. 
+   4. cmake -G "Visual Studio 16 2019" -A x64 .. 
+      * VS 2017 will probably still work too: cmake -G "Visual Studio 15 2017 Win64" .. 
    5. Open Aardvark.sln 
    6. Build in debug
 5. Make symlinks from the Aardvark build to the data directory
