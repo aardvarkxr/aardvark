@@ -3,6 +3,7 @@
 #include <vector>
 #include <memory>
 #include <mutex>
+#include <functional>
 
 class CUriRequestHandler
 {
