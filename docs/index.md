@@ -1,26 +1,7 @@
 **Aardvark in React**
 
-The @aardvark/aardvark-react package includes many components that make building Aardvark gadgets straightforward.
-These are the React components included in the core package:
-
-* AvGadgetSeed
-* AvGrabbable
-* AvGrabButton
-* AvGrabber
-* AvHook
-* AvModel
-* AvModelBoxHandle
-* AvOrigin
-* AvPanel
-* AvPanelAnchor
-* AvPoker
-* AvSlider
-* AvSphereHandle
-* AvStandardHook
-* AvTransform
-* AvTransformControl
-
-There are also useful functions available on the global AvGadget object.
+The @aardvarkxr/aardvark-react package includes many components that make building Aardvark gadgets straightforward.
+You can find documentation for those components (here)[aardvark-react/].
 
 The render function in your own root React component might look something like this:
 
