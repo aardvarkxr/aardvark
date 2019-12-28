@@ -60,9 +60,20 @@ Aardvark is made up of "gadgets".
 These are 3D objects that do something useful (or are maybe just decorative.) 
 You can install any number of gadgets in the Aardvark browser and then use them in any SteamVR application.
 
-The main thing you can do with a gadget is grab it. 
+The main thing you can do with a gadget is touch it with the controller and pull the trigger to grab it. 
 For example, here we are grabbing the gadget control panel:
-![Grabbing the gadget controls](https://aardvarkxr.github.io/aardvark/images/grab_gadget_controls.webp)
+![Grabbing the gadget controls](https://aardvarkxr.github.io/aardvark/images/grab_gadget_controls.png)
+
+You can see that the controls expand to show more information when they're grabbed.
+Exactly what is shown in each state will vary from gadget to gadget, but this is pretty common.
+While holding a gadget, it may also support various operations with the A and B buttons, or by squeezing the grip. 
+Exactly what those buttons do will also vary from gadget to gadget.
+
+It also returns to the place where it was picked up whenever the trigger is released. 
+If you want to move a gadget from one place to another, you can press the trackpad (on Knuckles. Press up on the thumbstick on Oculus Touch.)
+This will untether the gadget from its starting point.
+Dropping most untethered gadgets in the world will throw them away.
+
 
 
 
