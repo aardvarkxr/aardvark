@@ -63,7 +63,7 @@ You can install any number of gadgets in the Aardvark browser and then use them 
 The main thing you can do with a gadget is touch it with the controller and pull the trigger to grab it. 
 For example, here we are grabbing the gadget control panel:
 
-![Grabbing the gadget controls](https://aardvarkxr.github.io/aardvark/images/create_gadget_from_menu.webp)
+![Grabbing the gadget controls](https://aardvarkxr.github.io/aardvark/images/grab_gadget_controls.webp)
 
 You can see that the controls expand to show more information when they're grabbed.
 Exactly what is shown in each state will vary from gadget to gadget, but this is pretty common.
@@ -77,7 +77,7 @@ Dropping most untethered gadgets in the world will throw them away.
 
 Using these basic controls, you can create any of the gadgets in the menu. 
 
-![Grabbing the gadget controls](https://aardvarkxr.github.io/aardvark/images/grab_gadget_controls.webp)
+![Grabbing the gadget controls](https://aardvarkxr.github.io/aardvark/images/create_gadget_from_menu.webp)
 
 This test panel gadget shrinks in size when it is close to something it can attach to.
 It also supports the fine kind of interaction: clicking. 
