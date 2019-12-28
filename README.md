@@ -62,7 +62,7 @@ You can install any number of gadgets in the Aardvark browser and then use them 
 
 The main thing you can do with a gadget is touch it with the controller and pull the trigger to grab it. 
 For example, here we are grabbing the gadget control panel:
-![Grabbing the gadget controls](https://aardvarkxr.github.io/aardvark/images/grab_gadget_controls.png)
+![Grabbing the gadget controls](https://aardvarkxr.github.io/aardvark/images/grab_gadget_controls.gif)
 
 You can see that the controls expand to show more information when they're grabbed.
 Exactly what is shown in each state will vary from gadget to gadget, but this is pretty common.
