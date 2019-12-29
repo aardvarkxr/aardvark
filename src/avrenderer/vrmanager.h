@@ -12,8 +12,7 @@ public:
 	virtual bool getUniverseFromOrigin( const std::string & originPath, glm::mat4 *universeFromOrigin ) override;
 	virtual ActionState_t getCurrentActionState( EHand eHand ) const override;
 	virtual void sentHapticEventForHand( EHand hand, float amplitude, float frequency, float duration ) override;
-	virtual void updateOpenVrPoses() override;
-	virtual void doInputWork() override;
+	virtual void runFrame() override;
 	virtual void setVargglesTexture(const vr::Texture_t *pTexture) override;
 	virtual glm::mat4 getHmdFromUniverse() override { return m_hmdFromUniverse; }
 	virtual void getVargglesLookRotation(glm::mat4 &horizontalLooktransform) override;
@@ -27,6 +26,9 @@ public:
 	virtual ~CVRManager();
 
 protected:
+	void updateOpenVrPoses();
+	void doInputWork();
+
 	vr::VRActionSetHandle_t m_actionSet = vr::k_ulInvalidActionSetHandle;
 	vr::VRActionHandle_t m_actionGrab = vr::k_ulInvalidActionHandle;
 	vr::VRActionHandle_t m_actionA = vr::k_ulInvalidActionHandle;
@@ -34,6 +36,7 @@ protected:
 	vr::VRActionHandle_t m_actionSqueeze = vr::k_ulInvalidActionHandle;
 	vr::VRActionHandle_t m_actionDetach = vr::k_ulInvalidActionHandle;
 	vr::VRActionHandle_t m_actionHaptic = vr::k_ulInvalidActionHandle;
+	vr::VRActionHandle_t m_actionHand = vr::k_ulInvalidActionHandle;
 	vr::VRInputValueHandle_t m_leftHand = vr::k_ulInvalidInputValueHandle;
 	vr::VRInputValueHandle_t m_rightHand = vr::k_ulInvalidInputValueHandle;
 

@@ -14,6 +14,16 @@
                "path" : "/user/hand/right/output/haptic"
             }
          ],
+         "poses" : [
+            {
+               "output" : "/actions/aardvark/in/hand",
+               "path" : "/user/hand/left/pose/tip"
+            },
+            {
+               "output" : "/actions/aardvark/in/hand",
+               "path" : "/user/hand/right/pose/tip"
+            }
+         ],
          "sources" : [
             {
                "inputs" : {
@@ -123,7 +133,7 @@
    "category" : "steamvr_input",
    "controller_type" : "knuckles",
    "description" : "",
-   "name" : "Default Bindings for Index Controller",
+   "name" : "Default Aardvark configuration for Index Controller",
    "options" : {},
    "simulated_actions" : []
 }

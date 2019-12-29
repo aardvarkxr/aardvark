@@ -29,6 +29,10 @@
       {
          "name" : "/actions/aardvark/in/detach",
          "type" : "boolean"
+      },
+      {
+         "name" : "/actions/aardvark/in/hand",
+         "type" : "pose"
       }
    ],
    "default_bindings" : [
@@ -39,13 +43,21 @@
       {
          "binding_url" : "aardvark_binding_oculus_touch.json",
          "controller_type" : "oculus_touch"
+      },
+      {
+         "binding_url" : "aardvarkxr_aardvark_binding_vive_controller.json",
+         "controller_type" : "vive_controller"
       }
    ],
    "localization" : [
       {
          "/actions/aardvark" : "Aardvark Actions",
-         "/actions/aardvark/in/grab" : "Grab",
          "/actions/aardvark/in/edit" : "Edit This Hand",
+         "/actions/aardvark/in/grab" : "Grab",
+         "/actions/aardvark/in/squeeze" : "Gadget Squeeze",
+         "/actions/aardvark/in/a" : "Gadget A",
+         "/actions/aardvark/in/b" : "Gadget B",
+         "/actions/aardvark/in/hand" : "Hand",
          "/actions/aardvark/out/haptic" : "Haptic Feedback",
          "language_tag" : "en_US"
       }

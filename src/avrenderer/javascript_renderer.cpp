@@ -161,7 +161,7 @@ void CJavascriptRenderer::runFrame()
 
 	auto tStart = std::chrono::high_resolution_clock::now();
 
-	m_vrManager->updateOpenVrPoses();
+	m_vrManager->runFrame();
 
 	if ( m_jsTraverser )
 	{
@@ -173,13 +173,11 @@ void CJavascriptRenderer::runFrame()
 
 	}
 
-
 	m_renderer->processRenderList();
 
 	auto tEnd = std::chrono::high_resolution_clock::now();
 	auto tDiff = std::chrono::duration<double, std::milli>( tEnd - tStart ).count();
 
-	m_vrManager->doInputWork();
 
 	bool shouldQuit = false;
 	m_renderer->runFrame( &shouldQuit, tDiff / 1000.0f );

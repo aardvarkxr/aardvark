@@ -15,6 +15,7 @@ void CVRManager::init()
 	vr::VRInput()->GetActionHandle( "/actions/aardvark/in/b", &m_actionB );
 	vr::VRInput()->GetActionHandle( "/actions/aardvark/in/squeeze", &m_actionSqueeze);
 	vr::VRInput()->GetActionHandle( "/actions/aardvark/in/detach", &m_actionDetach );
+	vr::VRInput()->GetActionHandle( "/actions/aardvark/in/hand", &m_actionHand);
 	vr::VRInput()->GetInputSourceHandle( "/user/hand/left", &m_leftHand );
 	vr::VRInput()->GetInputSourceHandle( "/user/hand/right", &m_rightHand );
 
@@ -62,6 +63,12 @@ glm::mat4 CVRManager::glmMatFromVrMat( const vr::HmdMatrix34_t & mat )
 	//	r[3][y] = y < 3 ? 0.f : 1.f;
 	//}
 	return matrixObj;
+}
+
+void CVRManager::runFrame()
+{
+	updateOpenVrPoses();
+	doInputWork();
 }
 
 void CVRManager::updateOpenVrPoses()
@@ -115,24 +122,6 @@ void CVRManager::updateOpenVrPoses()
 	m_hmdFromUniverse = glm::inverse(universeFromHmd);
 	m_universeFromOriginTransforms["/user/head"] = universeFromHmd;
 
-	vr::TrackedDeviceIndex_t unLeftHand = vr::VRSystem()->GetTrackedDeviceIndexForControllerRole(
-		vr::TrackedControllerRole_LeftHand);
-
-	if (unLeftHand != vr::k_unTrackedDeviceIndexInvalid)
-	{
-		m_universeFromOriginTransforms["/user/hand/left"] = glmMatFromVrMat(
-			rRenderPoses[unLeftHand].mDeviceToAbsoluteTracking );
-	}
-
-	vr::TrackedDeviceIndex_t unRightHand = vr::VRSystem()->GetTrackedDeviceIndexForControllerRole(
-		vr::TrackedControllerRole_RightHand);
-
-	if (unRightHand != vr::k_unTrackedDeviceIndexInvalid)
-	{
-		m_universeFromOriginTransforms["/user/hand/right"] = glmMatFromVrMat(
-			rRenderPoses[unRightHand].mDeviceToAbsoluteTracking);
-	}
-
 	m_universeFromOriginTransforms["/space/stage"] = glm::mat4(1.f);
 	m_vargglesLookRotation = glm::scale(m_hmdFromUniverse, glm::vec3(1, 1, -1));
 }
@@ -165,6 +154,9 @@ void CVRManager::doInputWork()
 
 	this->m_handActionState[(int)EHand::Left] = getActionStateForHand( EHand::Left );
 	this->m_handActionState[(int)EHand::Right] = getActionStateForHand( EHand::Right );
+
+	m_universeFromOriginTransforms["/user/hand/left"] = m_handActionState[(int)EHand::Left].universeFromHand;
+	m_universeFromOriginTransforms["/user/hand/right"] = m_handActionState[(int)EHand::Right].universeFromHand;
 }
 
 
@@ -177,8 +169,21 @@ CVRManager::ActionState_t CVRManager::getActionStateForHand( EHand eHand )
 	state.grab = GetAction( m_actionGrab, pathDevice );
 	state.squeeze = GetAction( m_actionSqueeze, pathDevice );
 	state.detach = GetAction( m_actionDetach, pathDevice );
+
+	vr::InputPoseActionData_t poseData;
+	if (vr::VRInputError_None == vr::VRInput()->GetPoseActionData(m_actionHand, vr::TrackingUniverseStanding, 0, 
+		&poseData, sizeof(poseData), pathDevice) && poseData.bActive && poseData.pose.bPoseIsValid )
+	{
+		state.universeFromHand = glmMatFromVrMat(poseData.pose.mDeviceToAbsoluteTracking);
+	}
+	else
+	{
+		state.universeFromHand = glm::mat4(1.f);
+	}
+
 	return state;
 }
+
 
 CVRManager::ActionState_t CVRManager::getCurrentActionState( EHand eHand ) const
 {
