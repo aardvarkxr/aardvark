@@ -63,7 +63,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		if( this.state.highlight != HighlightType.Grabbed )
 			return null;
 
-		return <AvTransform rotateX={ 0 } translateZ={ -0.1 }>
+		return <AvTransform rotateX={ 45 } translateZ={ -0.1 }>
 				<AvTransform uniformScale={0.25}>
 					<AvTransform translateZ={ -0.55 }>
 						<AvPanel interactive={false}>
