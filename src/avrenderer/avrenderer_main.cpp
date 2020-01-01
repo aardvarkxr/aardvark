@@ -51,9 +51,10 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR cmdLine, int)
 		tools::LogDefault()->info( "started from URL %s", vecArgs[1].c_str() );
 	}
 	
+	std::filesystem::path handlerPath = tools::GetExecutablePath().replace_filename( "crashpad_handler.exe" );
 	std::string sLogFilePath = tools::getLogFile().generic_string();
 	const char* logFilePath = sLogFilePath.c_str();
-	initCrashHandler( tools::getDumpDir().generic_string().c_str(), ".", &logFilePath, 1 );
+	initCrashHandler( tools::getDumpDir().generic_string().c_str(), handlerPath.generic_string().c_str(), &logFilePath, 1 );
 
 	// give the CEF subprocess the first crack
 	  // Enable High-DPI support on Windows 7 or newer.
