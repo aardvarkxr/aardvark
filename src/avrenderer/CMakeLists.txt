@@ -58,6 +58,8 @@ message ( "out" ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/openvr_api.dll )
 add_custom_command(TARGET avrenderer POST_BUILD
                    COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${OpenVR_BIN_DIR}/openvr_api.dll" "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/"
 )
+add_custom_command(TARGET avrenderer POST_BUILD
+                   COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${CMAKE_BINARY_DIR}/crashwrapper/$<CONFIG>/crashwrapper.dll" "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/" )
 
 target_link_libraries( avrenderer Dwmapi.lib )
 
@@ -85,9 +87,14 @@ if(OS_WINDOWS)
   # Copy binary and resource files to the target output directory.
   COPY_FILES("${CEF_TARGET}" "${CEF_BINARY_FILES}" "${CEF_BINARY_DIR}" "${CEF_TARGET_OUT_DIR}")
   COPY_FILES("${CEF_TARGET}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "${CEF_TARGET_OUT_DIR}")
+
+  # copy the crash handler files too
+  COPY_FILES("${CEF_TARGET}" "${Backtrace_BinaryFiles}" "${Backtrace_BIN_DIR}" "${CEF_TARGET_OUT_DIR}")
 endif()
 
 target_include_directories( avrenderer PRIVATE ${TinyProcessLibrary_INCLUDE_DIR} )
 target_link_directories( avrenderer PRIVATE ${TinyProcessLibrary_LIB_DIR} )
 target_link_libraries( avrenderer tiny-process-library )
 target_link_libraries( avrenderer D3D11 )
+target_link_libraries( avrenderer crashwrapper )
+

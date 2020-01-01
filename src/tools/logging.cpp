@@ -18,6 +18,28 @@ public:
 
 namespace tools
 {
+	std::filesystem::path g_logFile;
+
+	std::filesystem::path getAardvarkBasePath()
+	{
+		return GetUserDocumentsPath() / "aardvark";
+	}
+
+	std::filesystem::path getDumpDir()
+	{
+		return getAardvarkBasePath() / "dumps";
+	}
+
+	std::filesystem::path getLogDir()
+	{
+		return getAardvarkBasePath() / "logs";
+	}
+
+	std::filesystem::path getLogFile()
+	{
+		return getLogDir() / "aardvark.txt";
+	}
+
 	void initLogs()
 	{
 		el::Configurations defaultConf;
@@ -27,15 +49,16 @@ namespace tools
 			el::ConfigurationType::Format, "%datetime %level %msg" );
 		// default logger uses default configurations
 
-		std::filesystem::path logDirectory = GetLogDirectory();
-		std::filesystem::create_directories( logDirectory );
-		std::filesystem::path logFile = logDirectory / "aardvark.txt";
+		std::filesystem::create_directories( getDumpDir() );
+		std::filesystem::create_directories( getLogDir() );
+		g_logFile = getLogDir() / "aardvark.txt";
 
 		defaultConf.set( el::Level::Global,
-			el::ConfigurationType::Filename, logFile.generic_string() );
+			el::ConfigurationType::Filename, g_logFile.generic_string() );
 		el::Loggers::reconfigureLogger( "default", defaultConf );
 
 		el::Helpers::installLogDispatchCallback< CDebugConsoleLogger>( "debugConsole" );
 	}
+
 
 }

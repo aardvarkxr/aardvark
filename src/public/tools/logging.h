@@ -8,6 +8,10 @@ namespace tools
 {
 	inline el::Logger *LogDefault() { return el::Loggers::getLogger( "default" ); }
 
+	std::filesystem::path getAardvarkBasePath();
+	std::filesystem::path getDumpDir();
+	std::filesystem::path getLogDir();
+	std::filesystem::path getLogFile();
 	void initLogs();
 
 }
