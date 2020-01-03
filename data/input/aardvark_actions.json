@@ -49,7 +49,7 @@
          "controller_type" : "vive_controller"
       },
       {
-         "binding_url" : "aardvark_binding_holographic_controller.json",
+         "binding_url" : "aardvarkxr_binding_holographic_controller.json",
          "controller_type" : "holographic_controller"
       }
    ],
