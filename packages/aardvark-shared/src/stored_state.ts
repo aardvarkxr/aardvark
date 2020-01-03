@@ -99,7 +99,7 @@ export function readPersistentState( path: string ): AardvarkState
 				"gadget_menu" :
 				{
 					uri: "http://localhost:23842/gadgets/gadget_menu",
-					hookPath: "/master/left_hand",
+					hookPath: "/gadget/master/left_hand",
 				},
 			},
 			installedGadgets: 
