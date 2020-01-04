@@ -8,7 +8,9 @@ import { endpointAddrToString, endpointAddrIsEmpty, MessageType, MsgNodeHaptic,
 	AvGrabEvent, MsgUpdateSceneGraph, EndpointType, MsgGrabEvent, endpointAddrsMatch, 
 	MsgUpdateActionState, EndpointAddr, Av, AvModelInstance, MsgDestroyGadget, 
 	g_builtinModelPanel, g_builtinModelPanelInverted, g_builtinModelCylinder, 
-	AvActionState, EAction, getActionFromState, emptyActionState, filterActionsForGadget
+	AvActionState, EAction, getActionFromState, emptyActionState, filterActionsForGadget,
+	MsgResourceLoadFailed,
+	stringToEndpointAddr
 } from '@aardvarkxr/aardvark-shared';
 import { computeUniverseFromLine, nodeTransformToMat4, translateMat, nodeTransformFromMat4, vec3MultiplyAndAdd, scaleAxisToFit, scaleMat, minIgnoringNulls } from './traverser_utils';
 const equal = require( 'fast-deep-equal' );
@@ -16,6 +18,7 @@ const equal = require( 'fast-deep-equal' );
 interface NodeData
 {
 	lastModelUri?: string;
+	lastFailedModelUri?: string;
 	modelInstance?: AvModelInstance;
 	grabberProcessor?: CGrabStateProcessor;
 	lastParentFromNode?: mat4;
@@ -720,13 +723,33 @@ export class AvDefaultTraverser
 		{
 			nodeData.modelInstance = null;
 		}
-
-		if ( !nodeData.modelInstance )
+		if ( nodeData.lastFailedModelUri != node.propModelUri )
 		{
-			nodeData.modelInstance = Av().renderer.createModelInstance( node.propModelUri );
-			if ( nodeData.modelInstance )
+			nodeData.lastFailedModelUri = null;
+		}
+
+		if ( !nodeData.modelInstance && nodeData.lastFailedModelUri != node.propModelUri )
+		{
+			try
 			{
-				nodeData.lastModelUri = node.propModelUri;
+				nodeData.modelInstance = Av().renderer.createModelInstance( node.propModelUri );
+				if ( nodeData.modelInstance )
+				{
+					nodeData.lastModelUri = node.propModelUri;
+				}
+			}
+			catch( e )
+			{
+				nodeData.lastFailedModelUri = node.propModelUri;
+
+				let m: MsgResourceLoadFailed =
+				{
+					nodeId: node.globalId,
+					resourceUri: node.propModelUri,
+					error: e.message,
+				};
+
+				this.m_endpoint.sendMessage( MessageType.ResourceLoadFailed, m );
 			}
 		}
 
@@ -1051,9 +1074,27 @@ export class AvDefaultTraverser
 					break;
 
 				case EVolumeType.ModelBox:
-					Av().renderer.addGrabbableHandle_ModelBox( grabbableGlobalId, node.globalId,
-						universeFromNode.all(), 
-						node.propVolume.uri, hand );
+					if( nodeData.lastFailedModelUri != node.propVolume.uri )
+					{
+						try
+						{
+							Av().renderer.addGrabbableHandle_ModelBox( grabbableGlobalId, node.globalId,
+								universeFromNode.all(), 
+								node.propVolume.uri, hand );
+						}
+						catch( e )
+						{
+							nodeData.lastFailedModelUri = node.propVolume.uri;
+							let m: MsgResourceLoadFailed =
+							{
+								nodeId: node.globalId,
+								resourceUri: node.propVolume.uri,
+								error: e.message,
+							};
+			
+							this.m_endpoint.sendMessage( MessageType.ResourceLoadFailed, m );
+						}
+					}
 					break;
 
 				default:

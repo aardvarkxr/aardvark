@@ -499,11 +499,16 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 
 		AABB_t box;
 
-		if ( !m_renderer->getModelBox( arguments[3]->GetStringValue(), &box ) )
+		std::string error;
+		if ( !m_renderer->getModelBox( arguments[3]->GetStringValue(), &box, &error ) )
 		{
 			// if we don't have a box for this model, it's either because we 
 			// haven't loaded it yet or because the URL is invalid. Either way,
 			// just don't add the handle
+			if ( !error.empty() )
+			{
+				exception = error;
+			}
 			return;
 		}
 
@@ -682,9 +687,14 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 
 		AABB_t box;
 
-		if ( !m_renderer->getModelBox( arguments[0]->GetStringValue(), &box ) )
+		std::string error;
+		if ( !m_renderer->getModelBox( arguments[ 0 ]->GetStringValue(), &box, &error ) )
 		{
 			retval = CefV8Value::CreateNull();
+			if (!error.empty())
+			{
+				exception = error;
+			}
 		}
 		else
 		{
@@ -713,9 +723,15 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 		}
 
 		std::string uri = arguments[0]->GetStringValue();
-		auto modelInstance = m_renderer->createModelInstance( uri );
+		std::string sError;
+		auto modelInstance = m_renderer->createModelInstance( uri, &sError );
 		if ( !modelInstance )
 		{
+			if (!sError.empty())
+			{
+				exception = sError;
+			}
+
 			retval = CefV8Value::CreateNull();
 		}
 		else

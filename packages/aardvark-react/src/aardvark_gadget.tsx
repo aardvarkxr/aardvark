@@ -11,7 +11,7 @@ import { MessageType, MsgUpdateSceneGraph, EndpointAddr,
 	MsgSaveSettings, MsgUpdateActionState, AvGadgetManifest, AvPanelHandler, 
 	PokerProximity, AvPanelMouseEventType, AvGrabEventProcessor, 
 	AvGrabEvent, AvNode, AvNodeType, AvPanelMouseEvent, ENodeFlags, 
-	EHand, 
+	EHand, MsgResourceLoadFailed,
 	MsgGetInstalledGadgets,
 	MsgGetInstalledGadgetsResponse} from '@aardvarkxr/aardvark-shared';
 const equal = require( 'fast-deep-equal' );
@@ -129,6 +129,7 @@ export class AvGadget
 		this.m_endpoint.registerHandler( MessageType.MouseEvent, this.onMouseEvent );
 		this.m_endpoint.registerHandler( MessageType.MasterStartGadget, this.onMasterStartGadget );
 		this.m_endpoint.registerHandler( MessageType.UpdateActionState, this.onUpdateActionState );
+		this.m_endpoint.registerHandler( MessageType.ResourceLoadFailed, this.onResourceLoadFailed );
 
 		if( this.m_onSettingsReceived )
 		{
@@ -311,6 +312,12 @@ export class AvGadget
 	@bind private onMasterStartGadget( type: MessageType, m: MsgMasterStartGadget )
 	{
 		Av().startGadget( m.uri, m.initialHook, m.persistenceUuid, null );
+	}
+
+	@bind private onResourceLoadFailed( type: MessageType, m: MsgResourceLoadFailed )
+	{
+		console.error( `Resource load failed for ${ endpointAddrToString( m.nodeId ) }.`
+			+ ` uri=${ m.resourceUri } error=${ m.error }` );
 	}
 
 	public listenForActionState( action: EAction, hand: EHand, 

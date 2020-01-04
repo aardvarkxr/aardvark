@@ -8,7 +8,8 @@ import { StoredGadget, AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, Av
 	MsgPokerProximity, MsgMouseEvent, MsgNodeHaptic, MsgUpdateActionState, 
 	MsgDetachGadgetFromHook, MessageType, EndpointType, MsgSetEndpointType, Envelope, 
 	MsgNewEndpoint, MsgLostEndpoint, parseEnvelope, MsgError, AardvarkPort,
-	MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgDestroyGadget, WebSocketCloseCodes } from '@aardvarkxr/aardvark-shared';
+	MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgDestroyGadget, WebSocketCloseCodes, 
+	MsgResourceLoadFailed } from '@aardvarkxr/aardvark-shared';
 import * as express from 'express';
 import * as http from 'http';
 import * as WebSocket from 'ws';
@@ -743,6 +744,10 @@ class CEndpoint
 		this.registerForwardHandler( MessageType.UpdateActionState, (m:MsgUpdateActionState) =>
 		{
 			return [ { type: EndpointType.Gadget, endpointId: m.gadgetId } ];
+		});
+		this.registerForwardHandler( MessageType.ResourceLoadFailed, ( m: MsgResourceLoadFailed ) =>
+		{
+			return [ EndpointType.Monitor, m.nodeId ];
 		});
 
 		this.registerEnvelopeHandler( MessageType.OverrideTransform, this.onOverrideTransform );
