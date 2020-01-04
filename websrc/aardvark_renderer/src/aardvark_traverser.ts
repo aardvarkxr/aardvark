@@ -10,7 +10,8 @@ import { endpointAddrToString, endpointAddrIsEmpty, MessageType, MsgNodeHaptic,
 	g_builtinModelPanel, g_builtinModelPanelInverted, g_builtinModelCylinder, 
 	AvActionState, EAction, getActionFromState, emptyActionState, filterActionsForGadget,
 	MsgResourceLoadFailed,
-	stringToEndpointAddr
+	stringToEndpointAddr,
+	g_builtinModelError
 } from '@aardvarkxr/aardvark-shared';
 import { computeUniverseFromLine, nodeTransformToMat4, translateMat, nodeTransformFromMat4, vec3MultiplyAndAdd, scaleAxisToFit, scaleMat, minIgnoringNulls } from './traverser_utils';
 const equal = require( 'fast-deep-equal' );
@@ -719,20 +720,22 @@ export class AvDefaultTraverser
 	{
 		let nodeData = this.getNodeData( node );
 
-		if ( nodeData.lastModelUri != node.propModelUri )
-		{
-			nodeData.modelInstance = null;
-		}
 		if ( nodeData.lastFailedModelUri != node.propModelUri )
 		{
 			nodeData.lastFailedModelUri = null;
 		}
 
-		if ( !nodeData.modelInstance && nodeData.lastFailedModelUri != node.propModelUri )
+		let modelToLoad = nodeData.lastFailedModelUri ? g_builtinModelError : node.propModelUri 
+		if ( nodeData.lastModelUri != modelToLoad )
+		{
+			nodeData.modelInstance = null;
+		}
+
+		if ( !nodeData.modelInstance )
 		{
 			try
 			{
-				nodeData.modelInstance = Av().renderer.createModelInstance( node.propModelUri );
+				nodeData.modelInstance = Av().renderer.createModelInstance( modelToLoad );
 				if ( nodeData.modelInstance )
 				{
 					nodeData.lastModelUri = node.propModelUri;
@@ -745,7 +748,7 @@ export class AvDefaultTraverser
 				let m: MsgResourceLoadFailed =
 				{
 					nodeId: node.globalId,
-					resourceUri: node.propModelUri,
+					resourceUri: modelToLoad,
 					error: e.message,
 				};
 
@@ -765,7 +768,7 @@ export class AvDefaultTraverser
 			let internalScale = 1;
 			if( node.propScaleToFit )
 			{
-				let aabb = Av().renderer.getAABBForModel( node.propModelUri );
+				let aabb = Av().renderer.getAABBForModel( modelToLoad );
 				if( !aabb )
 				{
 					// if we were told to scale the model, but it isn't loaded at this point,

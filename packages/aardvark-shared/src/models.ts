@@ -11,3 +11,4 @@ export const g_builtinModelCylinder = g_builtinModelPrefix + "cylinder.glb";
 export const g_builtinModelPlus = g_builtinModelPrefix + "plus.glb";
 export const g_builtinModelMinus = g_builtinModelPrefix + "minus.glb";
 export const g_builtinModelBracelet = g_builtinModelPrefix + "bracelet.glb";
+export const g_builtinModelError = g_builtinModelPrefix + "error.glb";
