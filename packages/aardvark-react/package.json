@@ -1,6 +1,6 @@
 {
   "name": "@aardvarkxr/aardvark-react",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "React-based utilities for Aardvark",
   "repository": "https://github.com/aardvarkxr/aardvark-react.git",
   "main": "lib/index",
@@ -32,7 +32,7 @@
     "webpack-cli": "^3.3.9"
   },
   "dependencies": {
-    "@aardvarkxr/aardvark-shared": "^0.1.0",
+    "@aardvarkxr/aardvark-shared": "^0.1.1",
     "@tlaukkan/tsm": "^0.8.5",
     "@types/uuid": "^3.4.5",
     "axios": "^0.19.0",
