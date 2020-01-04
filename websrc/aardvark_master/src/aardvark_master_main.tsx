@@ -125,6 +125,16 @@ class MasterControls extends React.Component< {}, {} >
 			<div className="FullPage">
 				<DefaultHand hand={ EHand.Left } />
 				<DefaultHand hand={ EHand.Right } />
+				<AvOrigin path="/user/head">
+					<AvTransform translateY={ 0.2 }>
+						<AvStandardBoxHook
+							xMin={-0.3} xMax={0.3}
+							yMin={-0.6} yMax={0.2}
+							zMin={-0.3} zMax={0.3}
+							outerVolumeScale={ 2.0 }
+							persistentName="head"/>
+					</AvTransform>
+				</AvOrigin>
 			</div>
 		);
 	}
