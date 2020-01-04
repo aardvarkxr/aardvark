@@ -4,7 +4,7 @@ import { CMonitorEndpoint } from '@aardvarkxr/aardvark-react';
 import { EndpointType, MessageType, EndpointAddr, MsgNewEndpoint, MsgLostEndpoint, 
 	MsgUpdateSceneGraph, AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, 
 	AvVector, AvQuaternion, AvGrabEvent, AvGrabEventType, endpointAddrToString, 
-	MsgGrabEvent, MsgPokerProximity, MsgOverrideTransform } from '@aardvarkxr/aardvark-shared';
+	MsgGrabEvent, MsgPokerProximity, MsgOverrideTransform, MsgResourceLoadFailed } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import { observable, ObservableMap, action, observe, computed } from 'mobx';
 import { observer } from 'mobx-react';
@@ -31,7 +31,7 @@ class CMonitorStore
 {
 	private m_connection: CMonitorEndpoint;
 	@observable m_endpoints: ObservableMap<number, EndpointData>;
-	m_grabEvents = observable.array<AvGrabEvent>();
+	m_events = observable.array< AvGrabEvent | MsgResourceLoadFailed >();
 
 	constructor()
 	{
@@ -43,7 +43,7 @@ class CMonitorStore
 		this.m_connection.registerHandler( MessageType.UpdateSceneGraph, this.onUpdateSceneGraph );
 		this.m_connection.registerHandler( MessageType.GrabEvent, this.onGrabEvent );
 		this.m_connection.registerHandler( MessageType.PokerProximity, this.onPokerProximity );
-
+		this.m_connection.registerHandler( MessageType.ResourceLoadFailed, this.onResourceLoadFailed );
 	}
 
 	public getConnection() { return this.m_connection; }
@@ -160,7 +160,12 @@ class CMonitorStore
 
 	@bind @action onGrabEvent( type: MessageType, message: MsgGrabEvent, sender: EndpointAddr )
 	{
-		this.m_grabEvents.push( message.event );
+		this.m_events.push( message.event );
+	}
+
+	@bind @action onResourceLoadFailed( type: MessageType, message: MsgResourceLoadFailed, sender: EndpointAddr )
+	{
+		this.m_events.push( message );
 	}
 
 	@bind @action onPokerProximity( type: MessageType, message: MsgPokerProximity )
@@ -170,7 +175,7 @@ class CMonitorStore
 
 	@computed get recentGrabEvents()
 	{
-		return this.m_grabEvents.slice( -10 );
+		return this.m_events.slice( -10 );
 	}
 
 	public sendMessage( type: MessageType, m: any )
@@ -645,7 +650,7 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 
 		return <div className="AvNode" key={node.id }>
 			<div className="AvNodeType">{AvNodeType[ node.type ] } @{ node.id } 
-				{ this.renderFlags } 
+				{ this.renderFlags( node.flags ) } 
 			</div>
 			{ node.propOrigin && <div className="AvNodeProperty">origin: {node.propOrigin }</div> }
 			{ node.propModelUri && <div className="AvNodeProperty">model: {node.propModelUri }</div> }
@@ -763,7 +768,7 @@ class RendererMonitor extends React.Component< RendererMonitorProps, RendererMon
 
 interface GrabEventProps
 {
-	event: AvGrabEvent;
+	event: AvGrabEvent | MsgResourceLoadFailed;
 }
 
 
@@ -785,14 +790,27 @@ class GrabEventMonitor extends React.Component< GrabEventProps, {} >
 
 	public render()
 	{
-		return ( <div className="GrabEvent">
-			{ AvGrabEventType[ this.props.event.type ] }
-			Sender: { this.props.event.senderId }
-			{ this.renderAddr( "Grabber", this.props.event.grabberId ) }
-			{ this.renderAddr( "Grabbable", this.props.event.grabbableId ) }
-			{ this.renderAddr( "Handle", this.props.event.handleId ) }
-			{ this.renderAddr( "Hook", this.props.event.hookId ) }
-		</div> );
+		if( this.props.event.hasOwnProperty( "type" ) )
+		{
+			let evt = this.props.event as AvGrabEvent;
+			return ( <div className="GrabEvent">
+				{ AvGrabEventType[ evt.type ] }
+				Sender: { evt.senderId }
+				{ this.renderAddr( "Grabber", evt.grabberId ) }
+				{ this.renderAddr( "Grabbable", evt.grabbableId ) }
+				{ this.renderAddr( "Handle", evt.handleId ) }
+				{ this.renderAddr( "Hook", evt.hookId ) }
+			</div> );
+		}
+		else
+		{
+			let m = this.props.event as MsgResourceLoadFailed;
+			return ( <div className="ResourceLoadFailed">
+				<div className="NodeAddr">Node: { endpointAddrToString( m.nodeId ) }</div>
+				<div className="FailedUri">URI: { m.resourceUri } </div>
+				<div className="Error">{ m.error } </div>
+			</div> );
+		}
 	}
 }
 

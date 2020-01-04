@@ -32,6 +32,7 @@ export enum MessageType
 	SaveSettings = 310,
 	UpdateActionState = 311,
 	DestroyGadget = 312,
+	ResourceLoadFailed = 313,
 
 	// System messages
 	GetInstalledGadgets = 400,
@@ -326,6 +327,13 @@ export interface MsgGetInstalledGadgetsResponse
 export interface MsgDestroyGadget
 {
 	gadgetId: number;
+}
+
+export interface MsgResourceLoadFailed
+{
+	nodeId: EndpointAddr;
+	resourceUri: string;
+	error: string;
 }
 
 export interface PokerProximity

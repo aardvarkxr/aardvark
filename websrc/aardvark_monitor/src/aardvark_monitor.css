@@ -96,6 +96,19 @@ body, html
 	margin-left: 1rem;
 }
 
+.ResourceLoadFailed
+{
+	background-color: pink;
+	padding: 0.5rem;
+}
+
+.NodeAddr,
+.FailedUri,
+.Error
+{
+	margin-left: 1rem;
+}
+
 .MonitorContainer
 {
 	display: flex;

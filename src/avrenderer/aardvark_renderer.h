@@ -103,7 +103,7 @@ public:
 
 	virtual void onWindowClose() override;
 
-	std::shared_ptr<vkglTF::Model> VulkanExample::findOrLoadModel( std::string modelUri );
+	std::shared_ptr<vkglTF::Model> VulkanExample::findOrLoadModel( std::string modelUri, std::string *psError );
 
 	glm::mat4 GetHMDMatrixProjectionEye( vr::Hmd_Eye nEye );
 
@@ -117,11 +117,11 @@ public:
 	// ----------- IRenderer implementation -------------
 	virtual void init( HINSTANCE hInstance, IVrManager *vrManager ) override;
 	virtual void runFrame( bool *shouldQuit, double frameTime ) override;
-	virtual std::unique_ptr<IModelInstance> createModelInstance( const std::string & uri ) override;
+	virtual std::unique_ptr<IModelInstance> createModelInstance( const std::string & uri, std::string *psError) override;
 	virtual void resetRenderList() override;
 	virtual void addToRenderList( IModelInstance *modelInstance ) override;
 	virtual void processRenderList() override;
-	virtual bool getModelBox( const std::string & uri, AABB_t *pBox ) override;
+	virtual bool getModelBox( const std::string & uri, AABB_t *pBox, std::string *psError ) override;
 
 protected:
 	IVrManager *m_vrManager;
@@ -189,7 +189,7 @@ protected:
 
 	std::unordered_map < std::string, std::shared_ptr< vkglTF::Model > > m_mapModels;
 	std::set< std::string > m_modelRequestsInProgress;
-	std::set< std::string > m_failedModelRequests;
+	std::unordered_map< std::string, std::string > m_failedModelRequests;
 	vks::RenderTarget leftEyeRT;
 	vks::RenderTarget rightEyeRT;
 	vks::RenderTarget vargglesRT;
