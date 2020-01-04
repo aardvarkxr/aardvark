@@ -12,6 +12,7 @@ import * as path from 'path';
 
 let program = require( 'commander' );
 
+let pkginfo = require( 'pkginfo' )( module, 'version', 'dependencies' );
 
 let showHelp = true;
 
@@ -44,7 +45,7 @@ const logger = winston.createLogger(
 )
 
 program
-	.version( '0.1.0' )
+	.version( module.exports.version )
 	.description( "Performs various functions on the local Aardvark install" )
 	.arguments( "<cmd> [arguments]" )
 
