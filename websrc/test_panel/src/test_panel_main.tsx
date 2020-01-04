@@ -99,7 +99,7 @@ class TestPanel extends React.Component< {}, TestPanelState >
 	public render()
 	{
 		let sDivClasses:string;
-		let scale = 0.4;
+		let scale = 0.1;
 		switch( this.state.grabbableHighlight )
 		{
 			case HighlightType.None:
@@ -116,7 +116,7 @@ class TestPanel extends React.Component< {}, TestPanelState >
 
 			case HighlightType.InHookRange:
 				sDivClasses = "FullPage GrabbedHighlight";
-				scale = 0.05;
+				//scale = 0.05;
 				break;
 		
 		}
