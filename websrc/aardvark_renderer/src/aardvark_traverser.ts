@@ -1145,13 +1145,14 @@ export class AvDefaultTraverser
 			if( this.isHookInUse( hookGlobalId ) )
 				return;
 
+			let outerVolumeScale = node.propOuterVolumeScale ? node.propOuterVolumeScale : 1.5;
 			switch( node.propVolume.type )
 			{
 				case EVolumeType.Sphere:
-					Av().renderer.addHook_Sphere( hookGlobalId, universeFromNode.all(), node.propVolume.radius, hand );
+					Av().renderer.addHook_Sphere( hookGlobalId, universeFromNode.all(), node.propVolume.radius, hand, outerVolumeScale );
 					break;
 				case EVolumeType.AABB:
-					Av().renderer.addHook_Aabb( hookGlobalId, universeFromNode.all(), node.propVolume.aabb, hand );
+					Av().renderer.addHook_Aabb( hookGlobalId, universeFromNode.all(), node.propVolume.aabb, hand, outerVolumeScale );
 					break;
 				default:
 					throw "unsupported volume type";

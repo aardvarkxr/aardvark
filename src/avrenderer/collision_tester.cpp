@@ -70,15 +70,15 @@ void CCollisionTester::addGrabbableHandle_Box( const aardvark::EndpointAddr_t & 
 
 
 void CCollisionTester::addHook_Sphere( const aardvark::EndpointAddr_t & globalHookId, const glm::mat4 & universeFromHook,
-	float radius, EHand hand )
+	float radius, EHand hand, float outerVolumeScale )
 {
-	m_activeHooks.push_back( { globalHookId, hand, Volume_t::createSphere( universeFromHook, radius ) } );
+	m_activeHooks.push_back( { globalHookId, hand, Volume_t::createSphere( universeFromHook, radius ), outerVolumeScale } );
 }
 
 void CCollisionTester::addHook_Aabb( const aardvark::EndpointAddr_t & globalHookId, const glm::mat4 & universeFromHook,
-	const AABB_t & aabb, EHand hand )
+	const AABB_t & aabb, EHand hand, float outerVolumeScale )
 {
-	m_activeHooks.push_back( { globalHookId, hand, Volume_t::createBox( universeFromHook, aabb ) } );
+	m_activeHooks.push_back( { globalHookId, hand, Volume_t::createBox( universeFromHook, aabb ), outerVolumeScale } );
 }
 
 
@@ -100,6 +100,29 @@ bool spheresIntersect( const CCollisionTester::Volume_t & v1, const CCollisionTe
 	float dist = glm::length( v1Center - v2Center );
 	return dist < ( v1Radius + v2Radius );
 }
+
+CCollisionTester::Volume_t scaleVolume( const CCollisionTester::Volume_t & src, double scale )
+{
+	switch (src.type)
+	{
+	case CCollisionTester::VolumeType::Box:
+	{
+		AABB_t dstBox = src.box;
+		dstBox.xMax *= scale;
+		dstBox.xMin *= scale;
+		dstBox.yMax *= scale;
+		dstBox.yMin *= scale;
+		dstBox.zMax *= scale;
+		dstBox.zMin *= scale;
+		return CCollisionTester::Volume_t::createBox( src.universeFromVolume, dstBox );
+	}
+
+	default:
+	case CCollisionTester::VolumeType::Sphere:
+		return CCollisionTester::Volume_t::createSphere( src.universeFromVolume, src.radius * scale );
+	}
+}
+
 
 template<typename T>
 T Max( T v1, T v2 )
@@ -208,9 +231,11 @@ std::vector<GrabberCollisionState_t> CCollisionTester::updateGrabberIntersection
 			if ( isSameHand( grabber.hand, hook.hand ) )
 				continue;
 
-			if ( volumesIntersect( grabber.volume, hook.volume ) )
+			bool inner = volumesIntersect( grabber.volume, hook.volume );
+			bool outer = volumesIntersect( grabber.volume, scaleVolume( hook.volume, hook.outerVolumeScale ) );
+			if( inner || outer )
 			{
-				grabberState.hooks.push_back( hook.globalHookId );
+				grabberState.hooks.push_back( { hook.globalHookId, inner ? EHookVolume::Inner : EHookVolume::Outer } );
 				break;
 			}
 		}

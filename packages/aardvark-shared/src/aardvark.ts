@@ -56,8 +56,8 @@ interface AvRenderer
 		handleGlobalId: EndpointAddr,
 		universeFromHandle: number[], uri: string, hand: EHand ): void;
 	addGrabber_Sphere( grabberGlobalId: EndpointAddr, universeFromGrabber: number[], radius: number, hand: EHand ): void;
-	addHook_Sphere( hookGlobalId: EndpointAddr, universeFromGrabber: number[], radius: number, hand: EHand  ): void;
-	addHook_Aabb( hookGlobalId: EndpointAddr, universeFromGrabber: number[], aabb: Aabb, hand: EHand  ): void;
+	addHook_Sphere( hookGlobalId: EndpointAddr, universeFromGrabber: number[], radius: number, hand: EHand, outerVolumeScale: number  ): void;
+	addHook_Aabb( hookGlobalId: EndpointAddr, universeFromGrabber: number[], aabb: Aabb, hand: EHand, outerVolumeScale: number  ): void;
 
 	startGrab( grabberGlobalId: EndpointAddr, grabbableGlobalId: EndpointAddr  ): void;
 	endGrab( grabberGlobalId: EndpointAddr, grabbableGlobalId: EndpointAddr  ): void;

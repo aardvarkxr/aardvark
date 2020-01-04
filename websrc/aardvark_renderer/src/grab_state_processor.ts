@@ -1,5 +1,5 @@
 import { EndpointAddr, indexOfEndpointAddrs, endpointAddrsMatch, MsgGrabberState,
-	AvGrabEvent, AvGrabEventType, GrabberHighlight, AvGrabbableCollision, ENodeFlags, EAction, EHand } 
+	AvGrabEvent, AvGrabEventType, GrabberHighlight, AvGrabbableCollision, ENodeFlags, EAction, EHand, GrabberHookState, EHookVolume } 
 	from '@aardvarkxr/aardvark-shared';
 import { assert } from '@aardvarkxr/aardvark-react';
 import { mat4 } from '@tlaukkan/tsm';
@@ -31,6 +31,40 @@ function isProximityOnly( handle: AvGrabbableCollision ): boolean
 {
 	return 0 != ( handle.handleFlags & ENodeFlags.NotifyProximityWithoutGrab );
 }
+
+function findBestHook( hooks: GrabberHookState[], allowOuter: boolean ): GrabberHookState
+{
+	if( !hooks )
+		return null;
+
+	for( let hook of hooks )
+	{
+		if( allowOuter || hook.whichVolume == EHookVolume.Inner )
+		{
+			return hook
+		}
+	}
+
+	return null;
+}
+
+
+function findHook( hooks: GrabberHookState[], hookId: EndpointAddr ): GrabberHookState
+{
+	if( !hooks )
+		return null;
+
+	for( let hook of hooks )
+	{
+		if( endpointAddrsMatch( hook.hookId, hookId ) )
+		{
+			return hook
+		}
+	}
+
+	return null;
+}
+
 
 export class CGrabStateProcessor
 {
@@ -305,12 +339,13 @@ export class CGrabStateProcessor
 
 				if( 0 == ( lastGrabbableCollision.grabbableFlags & ENodeFlags.Tethered ) )
 				{
+					let bestHook = findBestHook( state.hooks, false );
 					if( state.hooks && state.hooks.length > 0 
 						&& 0 != ( lastGrabbableCollision.grabbableFlags & ENodeFlags.AllowDropOnHooks ) )
 					{
 						// we handle hooks before dropping in case we got the
 						// unpress and the hook in the same update
-						this.m_lastHook = state.hooks[0];
+						this.m_lastHook = bestHook.hookId;
 						this.m_context.sendGrabEvent( 
 							{
 								type: AvGrabEventType.EnterHookRange,
@@ -342,7 +377,8 @@ export class CGrabStateProcessor
 				break;
 
 			case GrabberHighlight.NearHook:
-				if( -1 == indexOfEndpointAddrs( state.hooks, this.m_lastHook ) 
+				let oldHookState = findHook( state.hooks, this.m_lastHook)
+				if( !oldHookState 
 					|| -1 == indexOfGrabbable( state.grabbables, this.m_lastGrabbable ) )
 				{
 					// losing our hook or grabbable both kick us back to Grabbed. The 

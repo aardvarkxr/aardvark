@@ -68,6 +68,14 @@ interface AvHookProps extends AvBaseNodeProps
 
 	/** Maximum z value for axis-aligned bounding box hook volumes. */
 	zMax?: number;
+
+	/** The amount to scale up the outer volume for this hook. Hooking 
+	 * begins when the grabbable enters the inner volume and ends when it
+	 * exits the outer volume.
+	 * 
+	 * @default 1.5
+	 */
+	outerVolumeScale?: number;
 }
 
 
@@ -95,6 +103,8 @@ export class AvHook extends AvBaseNode< AvHookProps, {} >
 			node.flags |= ENodeFlags.AllowMultipleDrops;
 		}
 		
+		node.propOuterVolumeScale = this.props.outerVolumeScale;
+
 		if( this.props.xMin || this.props.xMax 
 			|| this.props.yMin || this.props.yMax 
 			|| this.props.zMin || this.props.zMax )

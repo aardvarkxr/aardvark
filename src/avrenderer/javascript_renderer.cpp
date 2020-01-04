@@ -382,7 +382,16 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 			}
 			if ( !grabberState.hooks.empty() )
 			{
-				out->SetValue( "hooks", endpointAddrVectorToJs( grabberState.hooks ), V8_PROPERTY_ATTRIBUTE_NONE );
+				CefRefPtr<CefV8Value> hooks = CefV8Value::CreateArray( (int)grabberState.hooks.size() );
+				for (uint32_t n = 0; n < grabberState.hooks.size(); n++)
+				{
+					const GrabberHookState_t & hc = grabberState.hooks[ n ];
+					CefRefPtr<CefV8Value> hook = CefV8Value::CreateObject( nullptr, nullptr );
+					hook->SetValue( "hookId", endpointAddrToJs( hc.hookId ), V8_PROPERTY_ATTRIBUTE_NONE );
+					hook->SetValue( "whichVolume", CefV8Value::CreateInt( (int)hc.whichVolume ), V8_PROPERTY_ATTRIBUTE_NONE );
+					hooks->SetValue( n, hook );
+				}
+				out->SetValue( "hooks", hooks, V8_PROPERTY_ATTRIBUTE_NONE );
 			}
 			retval->SetValue( (int)unIndex, out );
 		}
@@ -563,7 +572,7 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 
 	RegisterFunction( container, "addHook_Sphere", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
-		if ( arguments.size() != 4 )
+		if ( arguments.size() != 5 )
 		{
 			exception = "Invalid arguments";
 			return;
@@ -591,17 +600,22 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 		{
 			exception = "fourth argument must be a number (and hand enum value)";
 		}
+		if (!arguments[ 4 ]->IsInt())
+		{
+			exception = "fifth argument must be a number";
+		}
 
 		m_collisions.addHook_Sphere(
 			hookGlobalId,
 			universeFromHandle,
 			arguments[2]->GetDoubleValue(),
-			(EHand)arguments[3]->GetIntValue() );
+			(EHand)arguments[3]->GetIntValue(),
+			arguments[ 4 ]->GetDoubleValue() );
 	} );
 
 	RegisterFunction( container, "addHook_Aabb", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
-		if ( arguments.size() != 4 )
+		if ( arguments.size() != 5 )
 		{
 			exception = "Invalid arguments";
 			return;
@@ -631,12 +645,17 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 		{
 			exception = "fourth argument must be a number (and hand enum value)";
 		}
+		if (!arguments[ 4 ]->IsDouble())
+		{
+			exception = "fifth argument must be a number";
+		}
 
 		m_collisions.addHook_Aabb(
 			hookGlobalId,
 			universeFromHandle,
 			aabb,
-			(EHand)arguments[3]->GetIntValue() );
+			(EHand)arguments[3]->GetIntValue(),
+			arguments[4]->GetDoubleValue() );
 	} );
 
 	RegisterFunction( container, "getUniverseFromOriginTransform", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )

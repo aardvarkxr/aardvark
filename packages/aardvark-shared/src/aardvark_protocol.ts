@@ -214,12 +214,24 @@ export interface MsgUpdateSceneGraph
 	hookFromGadget?: AvNodeTransform;
 }
 
+export enum EHookVolume
+{
+	Inner = 0,
+	Outer = 1,
+}
+
+export interface GrabberHookState
+{
+	hookId: EndpointAddr;
+	whichVolume: EHookVolume;
+}
+
 export interface MsgGrabberState
 {
 	grabberId: EndpointAddr;
 	hand: EHand;
 	grabbables?: AvGrabbableCollision[];
-	hooks?: EndpointAddr[];
+	hooks?: GrabberHookState[];
 }
 
 export interface MsgGrabEvent
@@ -539,6 +551,7 @@ export interface AvNode
 	propTransform?: AvNodeTransform;
 	propModelUri?: string;
 	propVolume?: AvVolume;
+	propOuterVolumeScale?: number;
 	propInteractive?: boolean;
 	propCustomNodeType?: string;
 	propSharedTexture?: AvSharedTextureInfo;
