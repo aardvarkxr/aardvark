@@ -17,6 +17,7 @@ import bind from 'bind-decorator';
 import * as path from 'path';
 import { persistence } from './persistence';
 import isUrl from 'is-url';
+import { threadId } from 'worker_threads';
 
 console.log( "Data directory is", g_localInstallPathUri );
 
@@ -701,16 +702,18 @@ class CEndpoint
 {
 	private m_ws: WebSocket = null;
 	private m_id: number;
+	private m_origin: string| string[];
 	private m_type = EndpointType.Unknown;
 	private m_dispatcher: CDispatcher = null;
 	private m_gadgetData: CGadgetData = null;
 	private m_envelopeHandlers: { [ type:number]: EnvelopeHandler } = {};
 	private m_forwardHandlers: { [type: number]: ForwardHandler } = {};
 
-	constructor( ws: WebSocket, id: number, dispatcher: CDispatcher )
+	constructor( ws: WebSocket, origin: string | string[], id: number, dispatcher: CDispatcher )
 	{
-		console.log( "new connection");
+		console.log( "new connection from ", origin );
 		this.m_ws = ws;
+		this.m_origin = origin;
 		this.m_id = id;
 		this.m_dispatcher = dispatcher;
 
@@ -887,6 +890,11 @@ class CEndpoint
 		this.m_gadgetData.updateSceneGraph( m.root );
 	}
 
+	private isGadgetUriAllowed( gadgetUri: string ):boolean
+	{
+		return ( this.m_origin == "http://localhost:23842" ||  gadgetUri.startsWith( this.m_origin as string ) )
+			&& persistence.isGadgetUriInstalled( gadgetUri );
+	}
 
 	@bind private onSetEndpointType( env: Envelope, m: MsgSetEndpointType )
 	{
@@ -897,7 +905,14 @@ class CEndpoint
 				{
 					this.sendError( "SetEndpointType to gadget must provide URI",
 						MessageType.SetEndpointType );
-						return;
+					return;
+				}
+
+				if( !this.isGadgetUriAllowed( m.gadgetUri ) )
+				{
+					this.sendError( `Gadget URI is not allowed: ${ m.gadgetUri }`,
+						MessageType.SetEndpointType );
+					return;
 				}
 				break;
 
@@ -1162,10 +1177,10 @@ class CServer
 		this.m_app.use( "/models", express.static( path.resolve( g_localInstallPath, "models" ) ) );
 	}
 
-	@bind onConnection( ws: WebSocket )
+	@bind onConnection( ws: WebSocket, request: http.IncomingMessage )
 	{
 		this.m_dispatcher.addPendingEndpoint( 
-			new CEndpoint( ws, this.m_nextEndpointId++, this.m_dispatcher ) );
+			new CEndpoint( ws, request.headers.origin, this.m_nextEndpointId++, this.m_dispatcher ) );
 	}
 }
 
