@@ -212,3 +212,25 @@ export class CMonitorEndpoint extends CAardvarkEndpoint
 }
 
 
+export class CUtilityEndpoint extends CAardvarkEndpoint
+{
+	constructor( defaultHandler: MessageHandler = null )
+	{
+		super( () => { this.onOpen() }, null, defaultHandler );
+	}
+
+	@bind onOpen()
+	{
+		console.log( "Connected" );
+		let msgSetEndpointType: MsgSetEndpointType =
+		{
+			newEndpointType: EndpointType.Utility,
+		}
+
+		this.sendMessage( MessageType.SetEndpointType, msgSetEndpointType );
+	}
+
+
+}
+
+

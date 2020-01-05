@@ -9,7 +9,7 @@ import { StoredGadget, AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, Av
 	MsgDetachGadgetFromHook, MessageType, EndpointType, MsgSetEndpointType, Envelope, 
 	MsgNewEndpoint, MsgLostEndpoint, parseEnvelope, MsgError, AardvarkPort,
 	MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgDestroyGadget, WebSocketCloseCodes, 
-	MsgResourceLoadFailed } from '@aardvarkxr/aardvark-shared';
+	MsgResourceLoadFailed, 	MsgInstallGadget} from '@aardvarkxr/aardvark-shared';
 import * as express from 'express';
 import * as http from 'http';
 import * as WebSocket from 'ws';
@@ -757,6 +757,7 @@ class CEndpoint
 
 		this.registerEnvelopeHandler( MessageType.GetInstalledGadgets, this.onGetInstalledGadgets );
 		this.registerEnvelopeHandler( MessageType.DestroyGadget, this.onDestroyGadget );
+		this.registerEnvelopeHandler( MessageType.InstallGadget, this.onInstallGadget );
 	}
 
 	public getId() { return this.m_id; }
@@ -918,6 +919,7 @@ class CEndpoint
 
 			case EndpointType.Monitor:
 			case EndpointType.Renderer:
+			case EndpointType.Utility:
 				break;
 
 			default:
@@ -1067,6 +1069,13 @@ class CEndpoint
 		}
 		this.sendMessage( MessageType.GetInstalledGadgetsResponse, resp );
 	}
+
+	@bind private onInstallGadget( env: Envelope, m: MsgInstallGadget )
+	{
+		console.log( `Installing gadget from web ${ m.gadgetUri }` );
+		persistence.addInstalledGadget( m.gadgetUri );
+	}
+
 
 	@bind private onDestroyGadget( env: Envelope, m: MsgDestroyGadget )
 	{

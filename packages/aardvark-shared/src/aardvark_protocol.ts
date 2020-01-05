@@ -37,6 +37,7 @@ export enum MessageType
 	// System messages
 	GetInstalledGadgets = 400,
 	GetInstalledGadgetsResponse = 401,
+	InstallGadget = 402,
 }
 
 export enum WebSocketCloseCodes
@@ -52,6 +53,7 @@ export enum EndpointType
 	Node = 2,
 	Renderer = 3,
 	Monitor = 4,
+	Utility = 5,
 }
 
 export interface EndpointAddr
@@ -340,6 +342,12 @@ export interface MsgDestroyGadget
 {
 	gadgetId: number;
 }
+
+export interface MsgInstallGadget
+{
+	gadgetUri: string;
+}
+
 
 export interface MsgResourceLoadFailed
 {

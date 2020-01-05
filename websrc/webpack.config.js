@@ -95,6 +95,7 @@ module.exports =
 	createConfig( 'aardvark_monitor', 'Monitor', 'tsx' ),
 	createConfig( 'aardvark_renderer', 'Renderer', 'ts' ),
 	createConfig( 'test_panel', 'Test Panel', 'tsx' ),
+	createConfig( 'gadget_installer', 'Gadget Installer', 'tsx' ),
 	createConfig( 'gadget_menu', 'Gadget Menu', 'tsx' ),
 	createConfig( 'control_test', 'Control Tester', 'tsx' ),
 	{
