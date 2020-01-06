@@ -161,7 +161,7 @@ void CJavascriptRenderer::runFrame()
 
 	auto tStart = std::chrono::high_resolution_clock::now();
 
-	m_vrManager->updateOpenVrPoses();
+	m_vrManager->runFrame();
 
 	if ( m_jsTraverser )
 	{
@@ -173,13 +173,11 @@ void CJavascriptRenderer::runFrame()
 
 	}
 
-
 	m_renderer->processRenderList();
 
 	auto tEnd = std::chrono::high_resolution_clock::now();
 	auto tDiff = std::chrono::duration<double, std::milli>( tEnd - tStart ).count();
 
-	m_vrManager->doInputWork();
 
 	bool shouldQuit = false;
 	m_renderer->runFrame( &shouldQuit, tDiff / 1000.0f );
@@ -368,7 +366,7 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 			const GrabberCollisionState_t & grabberState = res[unIndex];
 			CefRefPtr<CefV8Value> out = CefV8Value::CreateObject( nullptr, nullptr );
 			out->SetValue( "grabberId", endpointAddrToJs( grabberState.grabberGlobalId ), V8_PROPERTY_ATTRIBUTE_NONE );
-			out->SetValue( "isPressed", CefV8Value::CreateBool( grabberState.isPressed ), V8_PROPERTY_ATTRIBUTE_NONE );
+			out->SetValue( "hand", CefV8Value::CreateUInt( (uint32_t)grabberState.hand ), V8_PROPERTY_ATTRIBUTE_NONE );
 			if ( !grabberState.grabbables.empty() )
 			{
 				CefRefPtr<CefV8Value> grabbables = CefV8Value::CreateArray( (int)grabberState.grabbables.size() );
@@ -384,7 +382,16 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 			}
 			if ( !grabberState.hooks.empty() )
 			{
-				out->SetValue( "hooks", endpointAddrVectorToJs( grabberState.hooks ), V8_PROPERTY_ATTRIBUTE_NONE );
+				CefRefPtr<CefV8Value> hooks = CefV8Value::CreateArray( (int)grabberState.hooks.size() );
+				for (uint32_t n = 0; n < grabberState.hooks.size(); n++)
+				{
+					const GrabberHookState_t & hc = grabberState.hooks[ n ];
+					CefRefPtr<CefV8Value> hook = CefV8Value::CreateObject( nullptr, nullptr );
+					hook->SetValue( "hookId", endpointAddrToJs( hc.hookId ), V8_PROPERTY_ATTRIBUTE_NONE );
+					hook->SetValue( "whichVolume", CefV8Value::CreateInt( (int)hc.whichVolume ), V8_PROPERTY_ATTRIBUTE_NONE );
+					hooks->SetValue( n, hook );
+				}
+				out->SetValue( "hooks", hooks, V8_PROPERTY_ATTRIBUTE_NONE );
 			}
 			retval->SetValue( (int)unIndex, out );
 		}
@@ -406,7 +413,7 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 			const PokerState_t & pokerState = res[pokerIndex];
 			CefRefPtr<CefV8Value> out = CefV8Value::CreateObject( nullptr, nullptr );
 			out->SetValue( "pokerId", endpointAddrToJs( pokerState.pokerId ), V8_PROPERTY_ATTRIBUTE_NONE );
-			out->SetValue( "isPressed", CefV8Value::CreateBool( pokerState.isPressed ), V8_PROPERTY_ATTRIBUTE_NONE );
+			out->SetValue( "hand", CefV8Value::CreateUInt( (uint32_t)pokerState.hand ), V8_PROPERTY_ATTRIBUTE_NONE );
 
 			CefRefPtr<CefV8Value> panels = CefV8Value::CreateArray( (int)pokerState.panels.size() );
 			for ( size_t panelIndex = 0; panelIndex < pokerState.panels.size(); panelIndex++ )
@@ -501,11 +508,16 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 
 		AABB_t box;
 
-		if ( !m_renderer->getModelBox( arguments[3]->GetStringValue(), &box ) )
+		std::string error;
+		if ( !m_renderer->getModelBox( arguments[3]->GetStringValue(), &box, &error ) )
 		{
 			// if we don't have a box for this model, it's either because we 
 			// haven't loaded it yet or because the URL is invalid. Either way,
 			// just don't add the handle
+			if ( !error.empty() )
+			{
+				exception = error;
+			}
 			return;
 		}
 
@@ -555,13 +567,12 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 			grabberGlobalId,
 			universeFromHandle,
 			arguments[2]->GetDoubleValue(),
-			hand,
-			m_vrManager->isGrabPressed( hand ) );
+			hand );
 	} );
 
 	RegisterFunction( container, "addHook_Sphere", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
-		if ( arguments.size() != 4 )
+		if ( arguments.size() != 5 )
 		{
 			exception = "Invalid arguments";
 			return;
@@ -589,17 +600,22 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 		{
 			exception = "fourth argument must be a number (and hand enum value)";
 		}
+		if (!arguments[ 4 ]->IsInt())
+		{
+			exception = "fifth argument must be a number";
+		}
 
 		m_collisions.addHook_Sphere(
 			hookGlobalId,
 			universeFromHandle,
 			arguments[2]->GetDoubleValue(),
-			(EHand)arguments[3]->GetIntValue() );
+			(EHand)arguments[3]->GetIntValue(),
+			arguments[ 4 ]->GetDoubleValue() );
 	} );
 
 	RegisterFunction( container, "addHook_Aabb", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
-		if ( arguments.size() != 4 )
+		if ( arguments.size() != 5 )
 		{
 			exception = "Invalid arguments";
 			return;
@@ -629,12 +645,17 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 		{
 			exception = "fourth argument must be a number (and hand enum value)";
 		}
+		if (!arguments[ 4 ]->IsDouble())
+		{
+			exception = "fifth argument must be a number";
+		}
 
 		m_collisions.addHook_Aabb(
 			hookGlobalId,
 			universeFromHandle,
 			aabb,
-			(EHand)arguments[3]->GetIntValue() );
+			(EHand)arguments[3]->GetIntValue(),
+			arguments[4]->GetDoubleValue() );
 	} );
 
 	RegisterFunction( container, "getUniverseFromOriginTransform", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
@@ -685,9 +706,14 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 
 		AABB_t box;
 
-		if ( !m_renderer->getModelBox( arguments[0]->GetStringValue(), &box ) )
+		std::string error;
+		if ( !m_renderer->getModelBox( arguments[ 0 ]->GetStringValue(), &box, &error ) )
 		{
 			retval = CefV8Value::CreateNull();
+			if (!error.empty())
+			{
+				exception = error;
+			}
 		}
 		else
 		{
@@ -716,9 +742,15 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 		}
 
 		std::string uri = arguments[0]->GetStringValue();
-		auto modelInstance = m_renderer->createModelInstance( uri );
+		std::string sError;
+		auto modelInstance = m_renderer->createModelInstance( uri, &sError );
 		if ( !modelInstance )
 		{
+			if (!sError.empty())
+			{
+				exception = sError;
+			}
+
 			retval = CefV8Value::CreateNull();
 		}
 		else
@@ -804,7 +836,7 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 		pokerInUniverse.z = arguments[1]->GetValue( 2 )->GetDoubleValue();
 
 		EHand hand = (EHand)arguments[2]->GetIntValue();
-		m_intersections.addActivePoker( pokerId, pokerInUniverse, hand, m_vrManager->isGrabPressed( hand ) );
+		m_intersections.addActivePoker( pokerId, pokerInUniverse, hand );
 	} );
 
 
@@ -859,7 +891,7 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 	} );
 
 
-	RegisterFunction( container, "isEditPressed", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	RegisterFunction( container, "getActionState", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
 		if ( arguments.size() != 1 )
 		{
@@ -872,8 +904,15 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 			exception = "argument must be a number (and a hand enum)";
 		}
 
-		EHand hand = (EHand)arguments[ 0 ]->GetIntValue();
-		retval = CefV8Value::CreateBool( m_vrManager->isEditPressed( hand ) );
+		EHand hand = (EHand)arguments[0]->GetIntValue();
+		IVrManager::ActionState_t actionState = m_vrManager->getCurrentActionState( hand );
+
+		retval = CefV8Value::CreateObject( nullptr, nullptr );
+		retval->SetValue( "a", CefV8Value::CreateBool( actionState.a ), V8_PROPERTY_ATTRIBUTE_NONE );
+		retval->SetValue( "b", CefV8Value::CreateBool( actionState.b ), V8_PROPERTY_ATTRIBUTE_NONE );
+		retval->SetValue( "grab", CefV8Value::CreateBool( actionState.grab ), V8_PROPERTY_ATTRIBUTE_NONE );
+		retval->SetValue( "squeeze", CefV8Value::CreateBool( actionState.squeeze ), V8_PROPERTY_ATTRIBUTE_NONE );
+		retval->SetValue( "detach", CefV8Value::CreateBool( actionState.detach ), V8_PROPERTY_ATTRIBUTE_NONE );
 	} );
 
 

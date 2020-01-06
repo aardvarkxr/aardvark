@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import { Av, AvStartGadgetCallback } from '@aardvarkxr/aardvark-shared';
+import { Av, AvStartGadgetCallback, AvActionState, EAction, getActionFromState } from '@aardvarkxr/aardvark-shared';
 import { IAvBaseNode } from './aardvark_base_node';
 import bind from 'bind-decorator';
 import { CGadgetEndpoint } from './gadget_endpoint';
@@ -8,12 +8,13 @@ import { MessageType, MsgUpdateSceneGraph, EndpointAddr,
 	MsgGrabEvent, stringToEndpointAddr, MsgGadgetStarted, 
 	EndpointType, endpointAddrToString, MsgPokerProximity, 
 	MsgMouseEvent, MsgNodeHaptic, MsgMasterStartGadget, 
-	MsgSaveSettings, MsgSetEditMode, AvGadgetManifest, AvPanelHandler, 
+	MsgSaveSettings, MsgUpdateActionState, AvGadgetManifest, AvPanelHandler, 
 	PokerProximity, AvPanelMouseEventType, AvGrabEventProcessor, 
 	AvGrabEvent, AvNode, AvNodeType, AvPanelMouseEvent, ENodeFlags, 
-	EHand, 
+	EHand, MsgResourceLoadFailed,
 	MsgGetInstalledGadgets,
 	MsgGetInstalledGadgetsResponse} from '@aardvarkxr/aardvark-shared';
+const equal = require( 'fast-deep-equal' );
 
 
 export interface AvPokerHandler
@@ -47,10 +48,14 @@ function parseURL(url: string)
 	return searchObject;
 }
 
-interface EditModeListener
+interface ActionStateListener
 {
-	(): void;
+	hand: EHand;
+	action: EAction;
+	rising?: () => void;
+	falling?: () => void;
 }
+
 
 /** The singleton gadget object for the browser. */
 export class AvGadget
@@ -66,7 +71,7 @@ export class AvGadget
 	m_endpoint: CGadgetEndpoint = null;
 	m_manifest: AvGadgetManifest = null;
 	m_actualGadgetUri: string = null;
-	m_editMode: { [hand:number]: boolean } = {};
+	m_actionState: { [hand:number]: AvActionState } = {};
 	private m_persistenceUuid: string;
 	private m_epToNotify: EndpointAddr = null;
 	private m_firstSceneGraph: boolean = true;
@@ -79,7 +84,7 @@ export class AvGadget
 	m_pokerProcessors: {[nodeId:number]: AvPokerHandler } = {};
 	m_panelProcessors: {[nodeId:number]: AvPanelHandler } = {};
 	m_startGadgetCallbacks: {[nodeId:number]: AvStartGadgetCallback } = {};
-	m_editModeListeners: { [listenerId: number] : EditModeListener } = {}
+	m_actionStateListeners: { [listenerId: number] : ActionStateListener } = {}
 
 	constructor()
 	{
@@ -123,7 +128,8 @@ export class AvGadget
 		this.m_endpoint.registerHandler( MessageType.PokerProximity, this.onPokerProximity );
 		this.m_endpoint.registerHandler( MessageType.MouseEvent, this.onMouseEvent );
 		this.m_endpoint.registerHandler( MessageType.MasterStartGadget, this.onMasterStartGadget );
-		this.m_endpoint.registerHandler( MessageType.SetEditMode, this.onSetEditMode );
+		this.m_endpoint.registerHandler( MessageType.UpdateActionState, this.onUpdateActionState );
+		this.m_endpoint.registerHandler( MessageType.ResourceLoadFailed, this.onResourceLoadFailed );
 
 		if( this.m_onSettingsReceived )
 		{
@@ -270,7 +276,7 @@ export class AvGadget
 		let processor = this.m_pokerProcessors[ target.nodeId ];
 		if( processor )
 		{
-			processor( m.isPressed, m.panels );
+			processor( m.actionState.grab, m.panels );
 		}
 	}
 
@@ -308,31 +314,65 @@ export class AvGadget
 		Av().startGadget( m.uri, m.initialHook, m.persistenceUuid, null );
 	}
 
-	public listenForEditMode( callback: EditModeListener ): number
+	@bind private onResourceLoadFailed( type: MessageType, m: MsgResourceLoadFailed )
+	{
+		console.error( `Resource load failed for ${ endpointAddrToString( m.nodeId ) }.`
+			+ ` uri=${ m.resourceUri } error=${ m.error }` );
+	}
+
+	public listenForActionState( action: EAction, hand: EHand, 
+		rising: () => void, falling: () =>void ): number
 	{
 		let handle = this.m_nextNodeId++;
-		this.m_editModeListeners[ handle ] = callback;
+		
+		this.m_actionStateListeners[ handle ] = 
+		{
+			hand,
+			action,
+			rising,
+			falling,
+		};
+
 		return handle;
 	}
 
-	public listenForEditModeWithComponent( comp: React.Component ): number
+
+	public listenForActionStateWithComponent( hand: EHand, action: EAction, comp: React.Component ): number
 	{
-		return this.listenForEditMode( () => { comp.forceUpdate(); } );
+		let fn = () => { comp.forceUpdate(); };
+		return this.listenForActionState( action, hand, fn, fn );
 	}
 
-	public unlistenForEditMode( handle: number )
+	public unlistenForActionState( handle: number )
 	{
-		delete this.m_editModeListeners[ handle ];
+		delete this.m_actionStateListeners[ handle ];
 	}
 
-	@bind private onSetEditMode( type: MessageType, m: MsgSetEditMode )
+	@bind private onUpdateActionState( type: MessageType, m: MsgUpdateActionState )
 	{
-		if( m.editMode != this.m_editMode[m.hand] )
+		let oldState = this.m_actionState[ m.hand ];
+		let newState = m.actionState;
+		if( !equal( newState, oldState ) )
 		{
-			this.m_editMode[m.hand] = m.editMode;
-			for( let handle in this.m_editModeListeners )
+			// Set the state first in case any of the listeners read it
+			this.m_actionState[m.hand] = m.actionState;
+			
+			for( let handle in this.m_actionStateListeners )
 			{
-				this.m_editModeListeners[ handle ]();
+				let listener = this.m_actionStateListeners[ handle ];
+				if( listener.hand == m.hand || listener.hand == EHand.Invalid )
+				{
+					let oldAction = getActionFromState( listener.action, oldState );
+					let newAction = getActionFromState( listener.action, newState );
+					if( !oldAction && newAction && listener.rising )
+					{
+						listener.rising();
+					}
+					else if( oldAction && !newAction && listener.falling )
+					{
+						listener.falling();
+					}
+				}
 			}
 		}
 	}
@@ -342,20 +382,19 @@ export class AvGadget
 	 * 
 	 * @public
 	 */
-	public getEditModeForHand( hand: EHand )
+	public getActionStateForHand( hand: EHand, action: EAction )
 	{
-		if( hand == undefined )
-			return this.editMode;
+		if( hand == undefined || hand == EHand.Invalid )
+		{
+			return getActionFromState( action, this.m_actionState[ EHand.Left] )
+				|| getActionFromState( action, this.m_actionState[ EHand.Right] );
+		}
 		else
-			return this.m_editMode[ hand ];
+		{
+			return getActionFromState( action, this.m_actionState[ hand ] )
+		}
 	}
 	
-	public get editMode()
-	{
-		return this.m_editMode[ EHand.Left ] || this.m_editMode[ EHand.Right ]
-			|| this.m_editMode[ EHand.Invalid ];
-	}
-
 	private traverseNode( domNode: HTMLElement ): AvNode[]
 	{
 		let lowerName = domNode.nodeName.toLowerCase();

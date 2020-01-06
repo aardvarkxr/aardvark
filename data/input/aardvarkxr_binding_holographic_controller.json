@@ -46,20 +46,11 @@
             {
                "inputs" : {
                   "click" : {
-                     "output" : "/actions/aardvark/in/edit"
+                     "output" : "/actions/aardvark/in/a"
                   }
                },
                "mode" : "button",
-               "path" : "/user/hand/left/input/b"
-            },
-            {
-               "inputs" : {
-                  "click" : {
-                     "output" : "/actions/aardvark/in/edit"
-                  }
-               },
-               "mode" : "button",
-               "path" : "/user/hand/right/input/b"
+               "path" : "/user/hand/left/input/application_menu"
             },
             {
                "inputs" : {
@@ -68,16 +59,7 @@
                   }
                },
                "mode" : "button",
-               "path" : "/user/hand/left/input/x"
-            },
-            {
-               "inputs" : {
-                  "click" : {
-                     "output" : "/actions/aardvark/in/a"
-                  }
-               },
-               "mode" : "button",
-               "path" : "/user/hand/right/input/x"
+               "path" : "/user/hand/right/input/application_menu"
             },
             {
                "inputs" : {
@@ -86,7 +68,7 @@
                   }
                },
                "mode" : "button",
-               "path" : "/user/hand/left/input/y"
+               "path" : "/user/hand/left/input/trackpad"
             },
             {
                "inputs" : {
@@ -95,7 +77,7 @@
                   }
                },
                "mode" : "button",
-               "path" : "/user/hand/right/input/y"
+               "path" : "/user/hand/right/input/trackpad"
             },
             {
                "inputs" : {
@@ -143,9 +125,9 @@
       }
    },
    "category" : "steamvr_input",
-   "controller_type" : "oculus_touch",
+   "controller_type" : "holographic_controller",
    "description" : "",
-   "name" : "Default Aardvark configuration for Oculus Touch",
+   "name" : "Default Aardvark configuration for Windows MR",
    "options" : {},
    "simulated_actions" : []
 }

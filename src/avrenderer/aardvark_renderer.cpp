@@ -1961,7 +1961,7 @@ void VulkanExample::onWindowClose()
 	}
 }
 
-std::shared_ptr<vkglTF::Model> VulkanExample::findOrLoadModel( std::string modelUri )
+std::shared_ptr<vkglTF::Model> VulkanExample::findOrLoadModel( std::string modelUri, std::string *psError)
 {
 	auto iModel = m_mapModels.find( modelUri );
 	if ( iModel != m_mapModels.end() )
@@ -1973,8 +1973,15 @@ std::shared_ptr<vkglTF::Model> VulkanExample::findOrLoadModel( std::string model
 	// make an async request for the model
 
 	// if we've already failed, just return nullptr and don't keep trying
-	if ( m_failedModelRequests.find( modelUri ) != m_failedModelRequests.end() )
+	auto failedRequest = m_failedModelRequests.find( modelUri );
+	if (failedRequest != m_failedModelRequests.end())
+	{
+		if (psError)
+		{
+			*psError = failedRequest->second;
+		}
 		return nullptr;
+	}
 
 	// if we already sent a request but are still waiting for the data, just return
 	// null. The caller will call again next frame.
@@ -1988,14 +1995,13 @@ std::shared_ptr<vkglTF::Model> VulkanExample::findOrLoadModel( std::string model
 		m_modelRequestsInProgress.erase( modelUri );
 		if ( !result.success )
 		{
-			m_failedModelRequests.insert( modelUri );
+			m_failedModelRequests.insert( std::make_pair( modelUri, "Missing Resource" ) );
 		}
 		else
 		{
 			auto pModel = std::make_shared<vkglTF::Model>();
 			bool bLoaded = pModel->loadFromMemory( result.data.data(), result.data.size(), vulkanDevice, m_descriptorManager, queue );
 
-			assert( bLoaded );
 			if ( bLoaded )
 			{
 				m_mapModels.insert( std::make_pair( modelUri, pModel ) );
@@ -2003,7 +2009,7 @@ std::shared_ptr<vkglTF::Model> VulkanExample::findOrLoadModel( std::string model
 			}
 			else
 			{
-				m_failedModelRequests.insert( modelUri );
+				m_failedModelRequests.insert( std::make_pair( modelUri, "Parse failed" ) );
 			}
 		}
 	} );
@@ -2166,9 +2172,9 @@ void VulkanExample::processRenderList()
 	m_uriRequests.processResults();
 }
 
-bool VulkanExample::getModelBox( const std::string & uri, AABB_t *pBox ) 
+bool VulkanExample::getModelBox( const std::string & uri, AABB_t *pBox, std::string *psError)
 {
-	auto pModel = findOrLoadModel( uri );
+	auto pModel = findOrLoadModel( uri, psError );
 	if ( !pModel )
 	{
 		return false;
@@ -2327,9 +2333,9 @@ void CVulkanRendererModelInstance::animate( float animationTimeElapsed )
 	}
 }
 
-std::unique_ptr<IModelInstance> VulkanExample::createModelInstance( const std::string & uri )
+std::unique_ptr<IModelInstance> VulkanExample::createModelInstance( const std::string & uri, std::string *psError)
 {
-	auto model = findOrLoadModel( uri );
+	auto model = findOrLoadModel( uri, psError);
 	if ( !model )
 	{
 		return nullptr;

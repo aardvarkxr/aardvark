@@ -20,6 +20,14 @@ interface StandardHookProps
 	 * not the hook should be visible based on that hand's edit mode.
 	 */
 	hand?: EHand;
+
+	/** The amount to scale up the outer volume for this hook. Hooking 
+	 * begins when the grabbable enters the inner volume and ends when it
+	 * exits the outer volume.
+	 * 
+	 * @default 1.5
+	 */
+	outerVolumeScale?: number;
 }
 
 interface StandardHookState
@@ -44,13 +52,6 @@ export class AvStandardHook extends React.Component< StandardHookProps, Standard
 			highlight: HookHighlight.None,
 			grabbableAddr: null,
 		};
-
-		this.m_editModeHandle = AvGadget.instance().listenForEditModeWithComponent( this )
-	}
-
-	componentWillUnmount()
-	{
-		AvGadget.instance().unlistenForEditMode( this.m_editModeHandle );
 	}
 
 	@bind updateHookHighlight( newHighlight: HookHighlight, grabbableAddr: EndpointAddr )
@@ -81,7 +82,7 @@ export class AvStandardHook extends React.Component< StandardHookProps, Standard
 				showHook = true;
 		}
 
-		if( showHook || AvGadget.instance().getEditModeForHand( this.props.hand ) )
+		if( showHook )
 		{
 			return <AvTransform uniformScale={ hookScale }>
 					<AvModel uri={ g_builtinModelHook } />
@@ -94,7 +95,7 @@ export class AvStandardHook extends React.Component< StandardHookProps, Standard
 	{
 		return <div>
 				<AvHook updateHighlight={ this.updateHookHighlight } radius={ 0.08 } 
-					persistentName={ this.props.persistentName } />
+					persistentName={ this.props.persistentName } outerVolumeScale={ this.props.outerVolumeScale }/>
 				{ this.renderModel() }
 			</div>;
 	}
@@ -139,13 +140,6 @@ export class AvStandardBoxHook extends React.Component< StandardBoxHookProps, St
 			highlight: HookHighlight.None,
 			grabbableAddr: null,
 		};
-
-		this.m_editModeHandle = AvGadget.instance().listenForEditModeWithComponent( this )
-	}
-
-	componentWillUnmount()
-	{
-		AvGadget.instance().unlistenForEditMode( this.m_editModeHandle );
 	}
 
 	@bind updateHookHighlight( newHighlight: HookHighlight, grabbableAddr: EndpointAddr )
@@ -179,7 +173,7 @@ export class AvStandardBoxHook extends React.Component< StandardBoxHookProps, St
 				showHook = true;
 		}
 
-		if( showHook || AvGadget.instance().getEditModeForHand( this.props.hand ) )
+		if( showHook )
 		{
 			return <AvTransform 
 					translateX = { ( this.props.xMin + this.props.xMax ) / 2 }
@@ -217,7 +211,8 @@ export class AvStandardBoxHook extends React.Component< StandardBoxHookProps, St
 					xMin={ this.props.xMin } xMax={ this.props.xMax }
 					yMin={ this.props.yMin } yMax={ this.props.yMax }
 					zMin={ this.props.zMin } zMax={ this.props.zMax }
-					persistentName={ this.props.persistentName } />
+					persistentName={ this.props.persistentName }
+					outerVolumeScale={ this.props.outerVolumeScale }/>
 				{ /*this.renderModel() */}
 				{ this.renderLine() }
 			</>;

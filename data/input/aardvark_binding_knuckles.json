@@ -1,6 +1,7 @@
 {
    "action_manifest_version" : 0,
    "alias_info" : {},
+   "app_key" : "aardvarkxr.aardvark",
    "bindings" : {
       "/actions/aardvark" : {
          "haptics" : [
@@ -11,6 +12,16 @@
             {
                "output" : "/actions/aardvark/out/haptic",
                "path" : "/user/hand/right/output/haptic"
+            }
+         ],
+         "poses" : [
+            {
+               "output" : "/actions/aardvark/in/hand",
+               "path" : "/user/hand/left/pose/tip"
+            },
+            {
+               "output" : "/actions/aardvark/in/hand",
+               "path" : "/user/hand/right/pose/tip"
             }
          ],
          "sources" : [
@@ -35,7 +46,7 @@
             {
                "inputs" : {
                   "click" : {
-                     "output" : "/actions/aardvark/in/edit"
+                     "output" : "/actions/aardvark/in/b"
                   }
                },
                "mode" : "button",
@@ -44,11 +55,77 @@
             {
                "inputs" : {
                   "click" : {
-                     "output" : "/actions/aardvark/in/edit"
+                     "output" : "/actions/aardvark/in/b"
                   }
                },
                "mode" : "button",
                "path" : "/user/hand/right/input/b"
+            },
+            {
+               "inputs" : {
+                  "click" : {
+                     "output" : "/actions/aardvark/in/a"
+                  }
+               },
+               "mode" : "button",
+               "path" : "/user/hand/left/input/a"
+            },
+            {
+               "inputs" : {
+                  "click" : {
+                     "output" : "/actions/aardvark/in/a"
+                  }
+               },
+               "mode" : "button",
+               "path" : "/user/hand/right/input/a"
+            },
+            {
+               "inputs" : {
+                  "click" : {
+                     "output" : "/actions/aardvark/in/squeeze"
+                  }
+               },
+               "mode" : "button",
+               "parameters" : {
+                  "force_input" : "force"
+               },
+               "path" : "/user/hand/left/input/grip"
+            },
+            {
+               "inputs" : {
+                  "click" : {
+                     "output" : "/actions/aardvark/in/squeeze"
+                  }
+               },
+               "mode" : "button",
+               "parameters" : {
+                  "force_input" : "force"
+               },
+               "path" : "/user/hand/right/input/grip"
+            },
+            {
+               "inputs" : {
+                  "click" : {
+                     "output" : "/actions/aardvark/in/detach"
+                  }
+               },
+               "mode" : "button",
+               "parameters" : {
+                  "force_input" : "force"
+               },
+               "path" : "/user/hand/left/input/trackpad"
+            },
+            {
+               "inputs" : {
+                  "click" : {
+                     "output" : "/actions/aardvark/in/detach"
+                  }
+               },
+               "mode" : "button",
+               "parameters" : {
+                  "force_input" : "force"
+               },
+               "path" : "/user/hand/right/input/trackpad"
             }
          ]
       }
@@ -56,7 +133,7 @@
    "category" : "steamvr_input",
    "controller_type" : "knuckles",
    "description" : "",
-   "name" : "Default Index Controller bindings for Aardvark",
+   "name" : "Default Aardvark configuration for Index Controller",
    "options" : {},
    "simulated_actions" : []
 }

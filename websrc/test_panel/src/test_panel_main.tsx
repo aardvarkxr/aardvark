@@ -4,7 +4,7 @@ import  * as ReactDOM from 'react-dom';
 import bind from 'bind-decorator';
 
 import { AvGadget, AvTransform, AvPanel, AvGrabbable, HighlightType, GrabResponse, AvSphereHandle } from '@aardvarkxr/aardvark-react';
-import { EndpointAddr, AvGrabEvent } from '@aardvarkxr/aardvark-shared';
+import { EndpointAddr, AvGrabEvent, EAction, EHand } from '@aardvarkxr/aardvark-shared';
 
 
 interface TestPanelState
@@ -21,6 +21,7 @@ interface TestSettings
 class TestPanel extends React.Component< {}, TestPanelState >
 {
 	private m_panelId: EndpointAddr;
+	private m_actionListeners: number[];
 
 	constructor( props: any )
 	{
@@ -32,6 +33,28 @@ class TestPanel extends React.Component< {}, TestPanelState >
 		};
 
 		AvGadget.instance().registerForSettings( this.onSettingsReceived );
+	}
+
+	public componentDidMount()
+	{
+		this.m_actionListeners = 
+		[
+			AvGadget.instance().listenForActionStateWithComponent( EHand.Invalid, EAction.A, this ),
+			AvGadget.instance().listenForActionStateWithComponent( EHand.Invalid, EAction.B, this ),
+			AvGadget.instance().listenForActionStateWithComponent( EHand.Invalid, EAction.Squeeze, this ),
+			AvGadget.instance().listenForActionStateWithComponent( EHand.Invalid, EAction.Grab, this ),
+			AvGadget.instance().listenForActionStateWithComponent( EHand.Invalid, EAction.Detach, this ),
+		];
+	}
+
+	public componentWillUnmount()
+	{
+		for( let listener of this.m_actionListeners )
+		{
+			AvGadget.instance().unlistenForActionState( listener );
+		}
+
+		this.m_actionListeners = [];
 	}
 
 	@bind public incrementCount()
@@ -65,10 +88,18 @@ class TestPanel extends React.Component< {}, TestPanelState >
 		}
 	}
 
+	public renderActionStateLabel( action: EAction )
+	{
+		if( AvGadget.instance().getActionStateForHand( EHand.Invalid, action ) )
+			return <div className="Label">{ EAction[ action ] }: TRUE</div>;
+		else
+			return <div className="Label">{ EAction[ action ] }: false</div>;
+	}
+
 	public render()
 	{
 		let sDivClasses:string;
-		let scale = 0.4;
+		let scale = 0.1;
 		switch( this.state.grabbableHighlight )
 		{
 			case HighlightType.None:
@@ -85,7 +116,7 @@ class TestPanel extends React.Component< {}, TestPanelState >
 
 			case HighlightType.InHookRange:
 				sDivClasses = "FullPage GrabbedHighlight";
-				scale = 0.05;
+				//scale = 0.05;
 				break;
 		
 		}
@@ -108,6 +139,11 @@ class TestPanel extends React.Component< {}, TestPanelState >
 				<div className="Button" onMouseDown={ this.incrementCount }>
 					Click Me!
 					</div> 
+				{ this.renderActionStateLabel( EAction.A ) }
+				{ this.renderActionStateLabel( EAction.B ) }
+				{ this.renderActionStateLabel( EAction.Squeeze ) }
+				{ this.renderActionStateLabel( EAction.Grab ) }
+				{ this.renderActionStateLabel( EAction.Detach ) }
 			</div>
 		)
 	}

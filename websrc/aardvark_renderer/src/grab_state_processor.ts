@@ -1,5 +1,5 @@
 import { EndpointAddr, indexOfEndpointAddrs, endpointAddrsMatch, MsgGrabberState,
-	AvGrabEvent, AvGrabEventType, GrabberHighlight, AvGrabbableCollision, ENodeFlags } 
+	AvGrabEvent, AvGrabEventType, GrabberHighlight, AvGrabbableCollision, ENodeFlags, EAction, EHand, GrabberHookState, EHookVolume } 
 	from '@aardvarkxr/aardvark-shared';
 import { assert } from '@aardvarkxr/aardvark-react';
 import { mat4 } from '@tlaukkan/tsm';
@@ -10,6 +10,8 @@ interface GrabContext
 {
 	sendGrabEvent( event: AvGrabEvent ): void;
 	getUniverseFromNode( nodeAddr: EndpointAddr ): mat4;
+	getActionState( hand: EHand, action: EAction ): boolean;
+	getCurrentGrabber( grabbableAddr: EndpointAddr ): EndpointAddr;
 	grabberEpa: EndpointAddr;
 }
 
@@ -29,6 +31,40 @@ function isProximityOnly( handle: AvGrabbableCollision ): boolean
 {
 	return 0 != ( handle.handleFlags & ENodeFlags.NotifyProximityWithoutGrab );
 }
+
+function findBestHook( hooks: GrabberHookState[], allowOuter: boolean ): GrabberHookState
+{
+	if( !hooks )
+		return null;
+
+	for( let hook of hooks )
+	{
+		if( allowOuter || hook.whichVolume == EHookVolume.Inner )
+		{
+			return hook
+		}
+	}
+
+	return null;
+}
+
+
+function findHook( hooks: GrabberHookState[], hookId: EndpointAddr ): GrabberHookState
+{
+	if( !hooks )
+		return null;
+
+	for( let hook of hooks )
+	{
+		if( endpointAddrsMatch( hook.hookId, hookId ) )
+		{
+			return hook
+		}
+	}
+
+	return null;
+}
+
 
 export class CGrabStateProcessor
 {
@@ -59,7 +95,7 @@ export class CGrabStateProcessor
 				if( evt.allowed )
 				{
 					// switch to the grabbable specified by the response
-					let useIdentityTransform = false;
+					let useIdentityTransform = !!evt.useIdentityTransform;
 					if( !endpointAddrsMatch( evt.grabbableId, this.m_lastGrabbable ) )
 					{
 						this.m_context.sendGrabEvent( 
@@ -132,6 +168,13 @@ export class CGrabStateProcessor
 		let best: AvGrabbableCollision = null;
 		for( let coll of state.grabbables )
 		{
+			let currentGrabber = this.m_context.getCurrentGrabber( coll.grabbableId );
+			if( currentGrabber && !endpointAddrsMatch( currentGrabber, state.grabberId ) )
+			{
+				// somebody is grabbing this one already
+				continue;
+			}
+
 			if( endpointAddrsMatch( coll.handleId, this.m_lastHandle ) )
 			{
 				last = coll;
@@ -158,7 +201,7 @@ export class CGrabStateProcessor
 		let bestGrabbable = this.findBestGrabbable( state );
 		if( this.m_lastGrabbable && this.m_lastHighlight == GrabberHighlight.Grabbed
 			&& ( !bestGrabbable || !endpointAddrsMatch( this.m_lastGrabbable, bestGrabbable.grabbableId ) )
-			&& state.isPressed )
+			&& this.m_context.getActionState( state.hand, EAction.Grab ) )
 		{
 			// The thing we think we're grabbing isn't in the grabbable list.
 			// This can happen if grabber intersections are in flight when the grab starts,
@@ -177,8 +220,8 @@ export class CGrabStateProcessor
 			case GrabberHighlight.None:
 				assert( this.m_lastGrabbable == null );
 
-				// if we have no grabbables, we have nothing to do
-				if( !state.grabbables || state.grabbables.length == 0 )
+				// if we have no eligible grabbables, we have nothing to do
+				if( !bestGrabbable )
 					break;
 
 				this.m_lastGrabbable = bestGrabbable.grabbableId;
@@ -217,7 +260,8 @@ export class CGrabStateProcessor
 					break;
 				}
 
-				if( !state.isPressed || isProximityOnly( bestGrabbable ) )
+				if( !this.m_context.getActionState( state.hand, EAction.Grab ) 
+				|| isProximityOnly( bestGrabbable ) )
 				{
 					// if the user didn't press grab we have nothing else to do.
 					// proximityOnly handles can't get grabbed, so wait until we
@@ -251,7 +295,7 @@ export class CGrabStateProcessor
 
 			case GrabberHighlight.WaitingForReleaseAfterRejection:
 				// when the button gets released, go back to in range
-				if( !state.isPressed )
+				if( !this.m_context.getActionState( state.hand, EAction.Grab ) )
 				{
 					this.m_lastHighlight = GrabberHighlight.InRange;
 				}
@@ -277,26 +321,46 @@ export class CGrabStateProcessor
 				}
 
 				let lastGrabbableCollision = state.grabbables[ lastGrabbableIndex ];
-				if( state.hooks && state.hooks.length > 0 
-					&& 0 != ( lastGrabbableCollision.grabbableFlags & ENodeFlags.AllowDropOnHooks ) )
+				if( 0 != ( lastGrabbableCollision.grabbableFlags & ENodeFlags.Tethered ) )
 				{
-					// we handle hooks before dropping in case we got the
-					// unpress and the hook in the same update
-					this.m_lastHook = state.hooks[0];
-					this.m_context.sendGrabEvent( 
-						{
-							type: AvGrabEventType.EnterHookRange,
-							senderId: this.m_context.grabberEpa.nodeId,
-							grabberId: this.m_context.grabberEpa,
-							grabbableId: this.m_lastGrabbable,
-							handleId: this.m_lastHandle,
-							hookId: this.m_lastHook,
-						});
-					this.m_lastHighlight = GrabberHighlight.NearHook;
-					break;
+					// see if we want to untether
+					if( this.m_context.getActionState( state.hand, EAction.Detach ) )
+					{
+						this.m_context.sendGrabEvent( 
+							{
+								type: AvGrabEventType.Detach,
+								senderId: this.m_context.grabberEpa.nodeId,
+								grabberId: this.m_context.grabberEpa,
+								grabbableId: this.m_lastGrabbable,
+								handleId: this.m_lastHandle,
+							});
+					}
 				}
 
-				if( !state.isPressed )
+				if( 0 == ( lastGrabbableCollision.grabbableFlags & ENodeFlags.Tethered ) )
+				{
+					let bestHook = findBestHook( state.hooks, false );
+					if( state.hooks && state.hooks.length > 0 
+						&& 0 != ( lastGrabbableCollision.grabbableFlags & ENodeFlags.AllowDropOnHooks ) )
+					{
+						// we handle hooks before dropping in case we got the
+						// unpress and the hook in the same update
+						this.m_lastHook = bestHook.hookId;
+						this.m_context.sendGrabEvent( 
+							{
+								type: AvGrabEventType.EnterHookRange,
+								senderId: this.m_context.grabberEpa.nodeId,
+								grabberId: this.m_context.grabberEpa,
+								grabbableId: this.m_lastGrabbable,
+								handleId: this.m_lastHandle,
+								hookId: this.m_lastHook,
+							});
+						this.m_lastHighlight = GrabberHighlight.NearHook;
+						break;
+					}
+				}
+
+				if( !this.m_context.getActionState( state.hand, EAction.Grab ) )
 				{
 					// drop not on a hook
 					this.m_context.sendGrabEvent( 
@@ -313,7 +377,8 @@ export class CGrabStateProcessor
 				break;
 
 			case GrabberHighlight.NearHook:
-				if( -1 == indexOfEndpointAddrs( state.hooks, this.m_lastHook ) 
+				let oldHookState = findHook( state.hooks, this.m_lastHook)
+				if( !oldHookState 
 					|| -1 == indexOfGrabbable( state.grabbables, this.m_lastGrabbable ) )
 				{
 					// losing our hook or grabbable both kick us back to Grabbed. The 
@@ -332,7 +397,7 @@ export class CGrabStateProcessor
 					break;
 				}
 
-				if( !state.isPressed )
+				if( !this.m_context.getActionState( state.hand, EAction.Grab ) )
 				{
 					// a drop on a hook
 					this.m_context.sendGrabEvent( 

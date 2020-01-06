@@ -1,7 +1,0 @@
-{
-	"name" : "charm bracelet",
-	"permissions" : [ "scenegraph" ],
-	"width": 16,
-	"height": 16,
-	"model" : "http://localhost:23842/models/bracelet.glb"
-}

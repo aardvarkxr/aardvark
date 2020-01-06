@@ -72,13 +72,23 @@ export function readPersistentState( path: string ): AardvarkState
 			throw `Inappropriate state format ${state.format}`;
 		}
 
+		if( !state.activeGadgets[ "gadget_menu" ] )
+		{
+			console.log( "Gadget menu was missing. Forcing that to exist." );
+			state.activeGadgets[ "gadget_menu" ]=
+			{
+				uri: "http://localhost:23842/gadgets/gadget_menu",
+				hookPath: "/gadget/master/left_hand",
+			};
+		}
+
 		console.log( `Read state from ${ path } for `
 			+ `${ Object.keys( state.activeGadgets ).length } active gadgets` );
 		return state;
 	}
 	catch( e )
 	{
-		console.log( "Failed to read state file. Using default start", e );
+		console.log( "Failed to read state file. Using default start" );
 
 		let state =
 		{
@@ -86,11 +96,15 @@ export function readPersistentState( path: string ): AardvarkState
 			activeGadgets: 
 			{
 				"master" : { uri: "http://localhost:23842/gadgets/aardvark_master" },
+				"gadget_menu" :
+				{
+					uri: "http://localhost:23842/gadgets/gadget_menu",
+					hookPath: "/gadget/master/left_hand",
+				},
 			},
 			installedGadgets: 
 			[
 				"http://localhost:23842/gadgets/test_panel",
-				"http://localhost:23842/gadgets/charm_bracelet",
 				"http://localhost:23842/gadgets/control_test",
 			],
 		}

@@ -1,3 +1,5 @@
+import { AvActionState } from './aardvark';
+
 export const AardvarkPort = 23842;
 
 export enum MessageType
@@ -28,12 +30,14 @@ export enum MessageType
 	DetachGadgetFromHook = 308,
 	MasterStartGadget = 309, // tells master to start a gadget
 	SaveSettings = 310,
-	SetEditMode = 311,
+	UpdateActionState = 311,
 	DestroyGadget = 312,
+	ResourceLoadFailed = 313,
 
 	// System messages
 	GetInstalledGadgets = 400,
 	GetInstalledGadgetsResponse = 401,
+	InstallGadget = 402,
 }
 
 export enum WebSocketCloseCodes
@@ -49,6 +53,7 @@ export enum EndpointType
 	Node = 2,
 	Renderer = 3,
 	Monitor = 4,
+	Utility = 5,
 }
 
 export interface EndpointAddr
@@ -87,9 +92,16 @@ function endpointCharacterFromType( ept: EndpointType ): string
 
 export function endpointAddrToString( epa: EndpointAddr ) : string
 {
-	return endpointCharacterFromType( epa.type )
+	if( !epa )
+	{
+		return null;
+	}
+	else
+	{
+		return endpointCharacterFromType( epa.type )
 		+ ":" + ( epa.endpointId ? epa.endpointId : 0 )
 		+ ":" + ( epa.nodeId ? epa.nodeId : 0 );
+	}
 }
 
 
@@ -120,7 +132,7 @@ export function endpointAddrsMatch( epa1: EndpointAddr, epa2: EndpointAddr ): bo
 	if( endpointAddrIsEmpty( epa1 ) )
 		return endpointAddrIsEmpty( epa2 );
 	else if( endpointAddrIsEmpty( epa2 ) )
-		return true;
+		return false;
 
 	return epa1.type == epa2.type && epa1.nodeId == epa2.nodeId && epa1.endpointId == epa2.endpointId;
 }
@@ -204,12 +216,24 @@ export interface MsgUpdateSceneGraph
 	hookFromGadget?: AvNodeTransform;
 }
 
+export enum EHookVolume
+{
+	Inner = 0,
+	Outer = 1,
+}
+
+export interface GrabberHookState
+{
+	hookId: EndpointAddr;
+	whichVolume: EHookVolume;
+}
+
 export interface MsgGrabberState
 {
 	grabberId: EndpointAddr;
-	isPressed: boolean;
+	hand: EHand;
 	grabbables?: AvGrabbableCollision[];
-	hooks?: EndpointAddr[];
+	hooks?: GrabberHookState[];
 }
 
 export interface MsgGrabEvent
@@ -248,7 +272,8 @@ export interface MsgGadgetStarted
 export interface MsgPokerProximity
 {
 	pokerId: EndpointAddr;
-	isPressed: boolean;
+	hand: EHand;
+	actionState: AvActionState;
 	panels: PokerProximity[];
 }
 
@@ -290,11 +315,11 @@ export interface MsgSaveSettings
 	settings: any;
 }
 
-export interface MsgSetEditMode
+export interface MsgUpdateActionState
 {
-	nodeId: EndpointAddr;
+	gadgetId: number;
 	hand: EHand;
-	editMode: boolean;
+	actionState: AvActionState;
 }
 
 export interface MsgOverrideTransform
@@ -316,6 +341,19 @@ export interface MsgGetInstalledGadgetsResponse
 export interface MsgDestroyGadget
 {
 	gadgetId: number;
+}
+
+export interface MsgInstallGadget
+{
+	gadgetUri: string;
+}
+
+
+export interface MsgResourceLoadFailed
+{
+	nodeId: EndpointAddr;
+	resourceUri: string;
+	error: string;
 }
 
 export interface PokerProximity
@@ -384,6 +422,7 @@ export enum AvGrabEventType
 	GrabStarted = 10,
 	UpdateGrabberHighlight = 11,
 	TransformUpdated = 12,
+	Detach = 13,
 };
 
 export enum GrabberHighlight
@@ -486,6 +525,7 @@ export enum ENodeFlags
 	NotifyProximityWithoutGrab 	= 1 << 3,
 	AllowDropOnHooks  			= 1 << 4,
 	AllowMultipleDrops			= 1 << 5,
+	Tethered					= 1 << 6,
 }
 
 export interface AvConstraint
@@ -519,6 +559,7 @@ export interface AvNode
 	propTransform?: AvNodeTransform;
 	propModelUri?: string;
 	propVolume?: AvVolume;
+	propOuterVolumeScale?: number;
 	propInteractive?: boolean;
 	propCustomNodeType?: string;
 	propSharedTexture?: AvSharedTextureInfo;
@@ -533,9 +574,9 @@ export interface AvNode
 
 export enum EHand
 {
-	Invalid = 0,
-	Left = 1,
-	Right = 2,
+	Invalid = -1,
+	Left = 0,
+	Right = 1,
 };
 
 enum ETextureType
@@ -568,5 +609,51 @@ export interface AvGadgetManifest
 	height: number;
 	model: string;
 	startAutomatically: boolean;
+}
+
+
+export enum EAction
+{
+	A = 0,
+	B = 1,
+	Squeeze = 2,
+	Grab = 3,
+	Detach = 4,
+	Max
+}
+
+export function getActionFromState( action: EAction, state: AvActionState): boolean
+{
+	if( !state )
+		return false;
+
+	switch( action )
+	{
+		case EAction.A: return state.a;
+		case EAction.B: return state.b;
+		case EAction.Grab: return state.grab;
+		case EAction.Squeeze: return state.squeeze;
+		case EAction.Detach: return state.detach;
+		default: return false;
+	}
+}
+
+export function emptyActionState(): AvActionState
+{
+	return (
+		{
+			a: false, b:false, squeeze: false,
+			grab: false, detach: false
+		} );
+}
+
+
+export function filterActionsForGadget( actionState: AvActionState ): AvActionState
+{
+	return {
+		a: actionState.a,
+		b: actionState.b,
+		squeeze: actionState.squeeze,
+	};
 }
 

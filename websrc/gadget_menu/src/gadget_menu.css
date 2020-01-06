@@ -36,12 +36,18 @@ body, html
 	background-color: #888888AA;
 }
 
-.PlusSign
+.GadgetSeedContainer
 {
-	margin: auto;
-	text-align: center;
-	font-size: 4rem;
-	color: white;
-	width: 100%;
+	background-color: transparent;
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
 	height: 100%;
+	width: 100%;
+}
+
+.GadgetSeed
+{
+	height: 30%;
+	width: 30%;
 }

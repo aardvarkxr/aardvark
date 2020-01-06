@@ -48,13 +48,47 @@ Aardvark is not associated with any of those companies.
 
 If you just want to make gadgets, your best bet is to use a <a href="https://github.com/JoeLudwig/aardvark/releases">released build</a>.
 Just download the latest release, unzip it, and run avrenderer.exe.
+You may need to start SteamVR before you start avrenderer.exe.
 
-If you need to do any development work from the source, you may want to run a local build following the instructions below.
+You can find more documentation on how to build gadgets [here](https://aardvarkxr.github.io/aardvark/).
 
+If you need to do any development work from the source, you can also [build from the source](#building-the-aardvark-browser).
 
-## Building Locally
+## How to use Aardvark
 
-All of this has been tested on Windows 10 with VS2017.
+Aardvark is made up of "gadgets". 
+These are 3D objects that do something useful (or are maybe just decorative.) 
+You can install any number of gadgets in the Aardvark browser and then use them in any SteamVR application.
+
+The main thing you can do with a gadget is touch it with the controller and pull the trigger to grab it. 
+For example, here we are grabbing the gadget control panel:
+
+![Grabbing the gadget controls](https://aardvarkxr.github.io/aardvark/images/grab_gadget_controls.webp)
+
+You can see that the controls expand to show more information when they're grabbed.
+Exactly what is shown in each state will vary from gadget to gadget, but this is pretty common.
+While holding a gadget, it may also support various operations with the A and B buttons, or by squeezing the grip. 
+Exactly what those buttons do will also vary from gadget to gadget.
+
+It also returns to the place where it was picked up whenever the trigger is released. 
+If you want to move a gadget from one place to another, you can press the trackpad (on Knuckles. Press up on the thumbstick on Oculus Touch.)
+This will untether the gadget from its starting point.
+Dropping most untethered gadgets in the world will throw them away.
+
+Using these basic controls, you can create any of the gadgets in the menu. 
+
+![Grabbing the gadget controls](https://aardvarkxr.github.io/aardvark/images/create_gadget_from_menu.webp)
+
+This test panel gadget shrinks in size when it is close to something it can attach to.
+It also supports the fine kind of interaction: clicking. 
+Any panel that supports clicking will show a line highlighting the click location when a hand gets close to it.
+
+At the moment, all the button presses you make in Aardvark will also be passed to the underlying application. 
+That is still a work in progress.
+
+# Building the Aardvark Browser
+
+All of this has been tested on Windows 10 with VS2019.
 Other platforms (including other versions of Windows) and other compilers are left as an exercise to the reader.)
 
 Follow these steps:
@@ -72,7 +106,8 @@ Follow these steps:
    1. cd d:\aardvark\src
    2. mkdir build
    3. cd build
-   4. cmake -G "Visual Studio 15 2017 Win64" .. 
+   4. cmake -G "Visual Studio 16 2019" -A x64 .. 
+      * VS 2017 will probably still work too: cmake -G "Visual Studio 15 2017 Win64" .. 
    5. Open Aardvark.sln 
    6. Build in debug
 5. Make symlinks from the Aardvark build to the data directory
@@ -83,65 +118,5 @@ Follow these steps:
    1. Open a command prompt in d:\aardvark\data and run "node server\server_bundle.js"
    1. Pick "avrenderer" as the startup project in visual studio
    2. Start Debugging from the Debug menu
-
-## Installing useful tools
-
-	npm install -g @aardvarkxr/aardvark-cli
-
-This will install "avcmd" globally, and in your path. You can do several useful things with this command. 
-
-**avcmd install <path or url>**
-
-Adds the gadget at the path or URL to the control panel that appears under the gear icon.
-Make sure <path>/gadget_manifest.json or <url>/gadget_manifest.json is valid otherwise things will break when you create the gadget.
-
-You will need to restart avrenderer (including the server if you're running that on its own) to see the change.
-
-
-**avcmd uninstall <path or url>**
-
-Removes the gadget from the control panel.
-
-You will need to restart avrenderer (including the server if you're running that on its own) to see the change.
-
-
-**avcmd list**
-
-Lists the gadgets that are currently installed.
-
-
-**avcmd reset**
-
-Resets the gadget list to the default examples.
-
-
-## Making your first gadget
-
-CD to an empty directory and type:
-	npm init @aardvarkxr
-
-This will install the @aardvarkxr/create script and then run it.
-Answer the prompts to set up your gadget.
-
-Then run:
-
-	npm install
-	npm run build
-
-After that you probably want to install your gadget with:
-	avcmd install dist
-
-
-You can open your gadget directory in Visual Studio Code to aid in react/aardvark development.
-
-
-## Debugging
-
-You can use chrome dev tools on your gadgets by browsing to <a href="http://localhost:8042/">http://localhost:8042/</a> while Aardvark is running.
-
-You can see the active scene graphs of all gadgets with the monitor.
-You can find it in aardvark/data/gadgets/aardvark_monitor/index.html; just open that in your browser and will connect to the server on localhost.
-
-If you want to run the server outside of avrenderer, you can do so. Just run it from the root Aardvark directory (i.e. the one that contains data). If you want to work on the server scripts themselves, you can run "nodemon --inspect data\server\server_bundle.js" to enable attaching the debugger and auto-restarts when the server bundle changes.
 
 

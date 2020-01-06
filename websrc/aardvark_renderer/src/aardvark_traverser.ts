@@ -6,18 +6,27 @@ import { endpointAddrToString, endpointAddrIsEmpty, MessageType, MsgNodeHaptic,
 	MsgAttachGadgetToHook, MsgDetachGadgetFromHook, AvGrabEventType, AvNode, 
 	ENodeFlags, AvNodeTransform, AvConstraint, AvNodeType, EHand, EVolumeType, 
 	AvGrabEvent, MsgUpdateSceneGraph, EndpointType, MsgGrabEvent, endpointAddrsMatch, 
-	MsgSetEditMode, EndpointAddr, Av, AvModelInstance, MsgDestroyGadget, g_builtinModelPanel, g_builtinModelPanelInverted, g_builtinModelCylinder } from '@aardvarkxr/aardvark-shared';
+	MsgUpdateActionState, EndpointAddr, Av, AvModelInstance, MsgDestroyGadget, 
+	g_builtinModelPanel, g_builtinModelPanelInverted, g_builtinModelCylinder, 
+	AvActionState, EAction, getActionFromState, emptyActionState, filterActionsForGadget,
+	MsgResourceLoadFailed,
+	stringToEndpointAddr,
+	g_builtinModelError
+} from '@aardvarkxr/aardvark-shared';
 import { computeUniverseFromLine, nodeTransformToMat4, translateMat, nodeTransformFromMat4, vec3MultiplyAndAdd, scaleAxisToFit, scaleMat, minIgnoringNulls } from './traverser_utils';
+const equal = require( 'fast-deep-equal' );
 
 interface NodeData
 {
 	lastModelUri?: string;
+	lastFailedModelUri?: string;
 	modelInstance?: AvModelInstance;
 	grabberProcessor?: CGrabStateProcessor;
 	lastParentFromNode?: mat4;
 	constraint?: AvConstraint;
 	lastFlags?: ENodeFlags;
 	lastFrameUsed: number;
+	nodeType: AvNodeType;
 }
 
 
@@ -135,6 +144,7 @@ interface NodeToNodeAnchor_t
 	handleGlobalId?: EndpointAddr;
 	grabberFromGrabbable: mat4;
 	grabbableParentFromGrabbableOrigin?: mat4;
+	anchorToRestore?: NodeToNodeAnchor_t;
 }
 
 interface AvNodeRoot
@@ -143,6 +153,8 @@ interface AvNodeRoot
 	root: AvNode;
 	hook?: string | EndpointAddr;
 	hookFromGadget?: AvNodeTransform;
+	handIsRelevant: Set<EHand>;
+	wasGadgetDraggedLastFrame: boolean;
 }
 
 export class AvDefaultTraverser
@@ -156,15 +168,16 @@ export class AvDefaultTraverser
 	private m_nodeData: { [ nodeGlobalId:string ]: NodeData } = {};
 	private m_lastFrameUniverseFromNodeTransforms: { [ nodeGlobalId:string ]: mat4 } = {};
 	private m_roots: { [gadgetId:number] : AvNodeRoot } = {};
+	private m_currentRoot: AvNodeRoot = null;
 	private m_renderList: AvModelInstance[] = [];
 	private m_nodeToNodeAnchors: { [ nodeGlobalId: string ]: NodeToNodeAnchor_t } = {};
 	private m_hooksInUse: EndpointAddr[] = [];
 	private m_endpoint: CRendererEndpoint = null;
-	private m_editMode: { [hand: number]: boolean } = { };
-	private m_editableNodesForHand: { [ hand: number ]: AvNode[] } = {}
 	private m_grabEventsToProcess: AvGrabEvent[] = [];
 	private m_grabEventTimer: number = -1;
 	private m_frameNumber: number = 1;
+	private m_actionState: { [ hand: number ] : AvActionState } = {};
+	private m_dirtyGadgetActions = new Set<number>();
 
 	constructor()
 	{
@@ -176,9 +189,6 @@ export class AvDefaultTraverser
 				this.grabEvent( m.event );
 			} );
 		this.m_endpoint.registerHandler( MessageType.NodeHaptic, this.onNodeHaptic );
-
-		this.m_editMode[ EHand.Left ] = false;
-		this.m_editMode[ EHand.Right ] = false;
 	}
 
 	@bind onEndpointOpen()
@@ -197,13 +207,21 @@ export class AvDefaultTraverser
 		else
 		{
 			this.updateGlobalIds( m.root, sender.endpointId );
-			this.m_roots[ sender.endpointId ] =
+			let rootData = this.m_roots[ sender.endpointId ];
+			if( !rootData )
 			{
-				gadgetId: sender.endpointId,
-				root: m.root,
-				hook: m.hook,
-				hookFromGadget: m.hookFromGadget,
+				rootData = this.m_roots[ sender.endpointId ] = 
+				{ 
+					gadgetId: sender.endpointId, 
+					handIsRelevant: new Set<EHand>(),
+					wasGadgetDraggedLastFrame: false,
+					root: null 
+				};
 			}
+
+			rootData.root = m.root;
+			rootData.hook = m.hook;
+			rootData.hookFromGadget = m.hookFromGadget;
 		}
 	}
 
@@ -239,9 +257,6 @@ export class AvDefaultTraverser
 		this.m_currentGrabbableGlobalId = null;
 		this.m_universeFromNodeTransforms = {};
 		this.m_renderList = [];
-		this.m_editableNodesForHand[ EHand.Invalid ] = [];
-		this.m_editableNodesForHand[ EHand.Left ] = [];
-		this.m_editableNodesForHand[ EHand.Right ] = [];
 		this.clearHooksInUse();
 		this.m_frameNumber++;
 
@@ -262,32 +277,74 @@ export class AvDefaultTraverser
 	
 		Av().renderer.renderList( this.m_renderList );
 
-		this.updateEditMode( EHand.Left );
-		this.updateEditMode( EHand.Right );
+		this.updateInput();
 		this.updateGrabberIntersections();
 		this.updatePokerProximity();
+
+		for( let gadgetId of this.m_dirtyGadgetActions )
+		{
+			this.sendUpdateActionState( gadgetId, EHand.Left );
+			this.sendUpdateActionState( gadgetId, EHand.Right );
+		}
 
 		this.cleanupOldNodeData();
 	}
 
-	private updateEditMode( hand: EHand )
+	private updateInput()
 	{
-		let editMode = Av().renderer.isEditPressed( hand );
-		if( editMode != this.m_editMode[ hand ] )
+		this.updateActionState( EHand.Left );
+		this.updateActionState( EHand.Right );
+	}
+
+	private sendUpdateActionState( gadgetId: number, hand: EHand )
+	{
+		if( this.m_inFrameTraversal )
 		{
-			for( let node of this.m_editableNodesForHand[ hand ] )
+			throw new Error( "sendUpdateActionState not valid during traversal" );
+		}
+
+		let root = this.m_roots[ gadgetId ];
+		if( !root )
+		{
+			return;
+		}
+
+		let actionState: AvActionState;
+		if( root.wasGadgetDraggedLastFrame && root.handIsRelevant.has( hand ) )
+		{
+			actionState = filterActionsForGadget( this.m_actionState[ hand ] ); 
+		}
+		else
+		{
+			actionState = emptyActionState();
+		}
+
+		let m: MsgUpdateActionState =
+		{
+			gadgetId,
+			hand,
+			actionState,
+		}
+
+		this.m_endpoint.sendMessage( MessageType.UpdateActionState, m );
+	}
+
+
+	private updateActionState( hand: EHand )
+	{
+		let newActionState = Av().renderer.getActionState( hand );
+		let oldActionState = this.m_actionState[ hand ]
+		if( !equal( newActionState, oldActionState ) )
+		{
+			for( let gadgetId in this.m_roots )
 			{
-				let m: MsgSetEditMode =
-				{
-					nodeId: node.globalId,
-					hand,
-					editMode,
-				}
+				let root = this.m_roots[ gadgetId ];
+				if( !root.handIsRelevant.has( hand ) )
+					continue;
 
-				this.m_endpoint.sendMessage( MessageType.SetEditMode, m );
+				this.m_dirtyGadgetActions.add( root.gadgetId );
 			}
-
-			this.m_editMode[ hand ] = editMode;
+			this.m_actionState[ hand ] = newActionState;
 		}
 	}
 
@@ -306,6 +363,11 @@ export class AvDefaultTraverser
 						{ 
 							this.sendGrabEvent( event );
 						},
+						getActionState: ( hand: EHand, action: EAction ) =>
+						{
+							return getActionFromState( action, this.m_actionState[ hand ] );
+						},
+						getCurrentGrabber: this.getCurrentGrabber,
 						getUniverseFromNode: this.getLastUniverseFromNode,
 						grabberEpa: state.grabberId
 					} );
@@ -348,12 +410,27 @@ export class AvDefaultTraverser
 		let proximities = Av().renderer.updatePokerProximity();
 		for( let proximity of proximities )
 		{
+			proximity.actionState = this.m_actionState[ proximity.hand ];
 			this.m_endpoint.sendMessage( MessageType.PokerProximity, proximity );
 		}
 	}
 
 	private sendGrabEvent( event: AvGrabEvent )
 	{
+		if( event.type == AvGrabEventType.EndGrab )
+		{
+			// if we're ending a grab with no hook for a tethered thing, put us back to the old hook
+			// and transform
+			let grabbableIdStr = endpointAddrToString( event.grabbableId );
+			let oldAnchor = this.m_nodeToNodeAnchors[ grabbableIdStr ];
+			if( oldAnchor && oldAnchor.anchorToRestore && !event.hookId )
+			{
+				event.hookId = oldAnchor.anchorToRestore.parentGlobalId;
+				event.hookFromGrabbable = 
+					nodeTransformFromMat4( oldAnchor.anchorToRestore.grabberFromGrabbable );
+			}
+		}
+
 		this.m_grabEventsToProcess.push( event );
 		if( this.m_grabEventTimer == -1 )
 		{
@@ -375,20 +452,25 @@ export class AvDefaultTraverser
 
 	getNodeData( node: AvNode ): NodeData
 	{
-		return this.getNodeDataByEpa( node.globalId );
+		return this.getNodeDataByEpa( node.globalId, node.type );
 	}
 
-	getNodeDataByEpa( nodeGlobalId: EndpointAddr ): NodeData
+	getNodeDataByEpa( nodeGlobalId: EndpointAddr, typeHint?: AvNodeType ): NodeData
 	{
 		if( !nodeGlobalId )
 		{
 			return null;
 		}
 
+		if( typeHint === undefined )
+		{
+			typeHint = AvNodeType.Invalid;
+		}
+
 		let nodeIdStr = endpointAddrToString( nodeGlobalId );
 		if( !this.m_nodeData.hasOwnProperty( nodeIdStr ) )
 		{
-			let nodeData = { lastFrameUsed: this.m_frameNumber };
+			let nodeData = { lastFrameUsed: this.m_frameNumber, nodeType: typeHint };
 			this.m_nodeData[ nodeIdStr] = nodeData;
 			return nodeData;
 		}
@@ -419,6 +501,11 @@ export class AvDefaultTraverser
 	{
 		if( root.root )
 		{
+			this.m_currentRoot = root;
+			let oldRelevantHands = this.m_currentRoot.handIsRelevant;
+			this.m_currentRoot.handIsRelevant = new Set<EHand>();
+			this.m_currentRoot.wasGadgetDraggedLastFrame = false;
+
 			// get the ID for node 0. We're going to use that as the parent of
 			// everything. 
 			let rootNode: AvNode;
@@ -450,6 +537,32 @@ export class AvDefaultTraverser
 			}
 
 			this.traverseNode( rootNode, null );
+
+			// send empty action data for any hand that we don't care about anymore
+			for( let hand of oldRelevantHands )
+			{
+				if( hand == EHand.Invalid )
+					continue;
+
+				if( !this.m_currentRoot.handIsRelevant.has( hand ) )
+				{
+					this.m_dirtyGadgetActions.add( root.gadgetId );
+				}
+			}
+
+			// send the current action data for any hand that we don't care about anymore
+			for( let hand of this.m_currentRoot.handIsRelevant )
+			{
+				if( hand == EHand.Invalid )
+					continue;
+
+				if( !oldRelevantHands.has( hand ) )
+				{
+					this.m_dirtyGadgetActions.add( root.gadgetId );
+				}
+			}
+			
+			this.m_currentRoot = null;
 		}
 	}
 
@@ -542,6 +655,9 @@ export class AvDefaultTraverser
 			this.m_currentGrabbableGlobalId = null;
 		}
 
+		// remember that we used this hand
+		this.m_currentRoot.handIsRelevant.add( this.m_currentHand );
+
 		this.m_currentHand = handBefore;
 		this.m_currentVisibility = visibilityBefore;
 	}
@@ -574,8 +690,6 @@ export class AvDefaultTraverser
 				{
 					this.m_currentHand = EHand.Invalid;
 				}
-
-				this.m_editableNodesForHand[ this.m_currentHand ].push( node );
 			}
 		}
 		else if( origin != null )
@@ -606,17 +720,39 @@ export class AvDefaultTraverser
 	{
 		let nodeData = this.getNodeData( node );
 
-		if ( nodeData.lastModelUri != node.propModelUri )
+		if ( nodeData.lastFailedModelUri != node.propModelUri )
+		{
+			nodeData.lastFailedModelUri = null;
+		}
+
+		let modelToLoad = nodeData.lastFailedModelUri ? g_builtinModelError : node.propModelUri 
+		if ( nodeData.lastModelUri != modelToLoad )
 		{
 			nodeData.modelInstance = null;
 		}
 
 		if ( !nodeData.modelInstance )
 		{
-			nodeData.modelInstance = Av().renderer.createModelInstance( node.propModelUri );
-			if ( nodeData.modelInstance )
+			try
 			{
-				nodeData.lastModelUri = node.propModelUri;
+				nodeData.modelInstance = Av().renderer.createModelInstance( modelToLoad );
+				if ( nodeData.modelInstance )
+				{
+					nodeData.lastModelUri = node.propModelUri;
+				}
+			}
+			catch( e )
+			{
+				nodeData.lastFailedModelUri = node.propModelUri;
+
+				let m: MsgResourceLoadFailed =
+				{
+					nodeId: node.globalId,
+					resourceUri: modelToLoad,
+					error: e.message,
+				};
+
+				this.m_endpoint.sendMessage( MessageType.ResourceLoadFailed, m );
 			}
 		}
 
@@ -632,7 +768,7 @@ export class AvDefaultTraverser
 			let internalScale = 1;
 			if( node.propScaleToFit )
 			{
-				let aabb = Av().renderer.getAABBForModel( node.propModelUri );
+				let aabb = Av().renderer.getAABBForModel( modelToLoad );
 				if( !aabb )
 				{
 					// if we were told to scale the model, but it isn't loaded at this point,
@@ -758,11 +894,19 @@ export class AvDefaultTraverser
 		{
 			let parentInfo = this.m_nodeToNodeAnchors[ nodeIdStr ];
 
+			if( parentInfo.parentGlobalId )
+			{
+				let parentNodeData = this.getNodeDataByEpa( parentInfo.parentGlobalId );
+				if( parentNodeData.nodeType == AvNodeType.Grabber )
+				{
+					this.m_currentRoot.wasGadgetDraggedLastFrame = true;
+				}
+			}
+
 			let hand = this.m_handDeviceForNode[ endpointAddrToString( parentInfo.parentGlobalId ) ];
 			if( hand != undefined )
 			{
 				this.m_currentHand = hand;
-				this.m_editableNodesForHand[ this.m_currentHand ].push( node );
 			}
 
 			if( parentInfo.parentGlobalId.type == EndpointType.Node )
@@ -933,9 +1077,27 @@ export class AvDefaultTraverser
 					break;
 
 				case EVolumeType.ModelBox:
-					Av().renderer.addGrabbableHandle_ModelBox( grabbableGlobalId, node.globalId,
-						universeFromNode.all(), 
-						node.propVolume.uri, hand );
+					if( nodeData.lastFailedModelUri != node.propVolume.uri )
+					{
+						try
+						{
+							Av().renderer.addGrabbableHandle_ModelBox( grabbableGlobalId, node.globalId,
+								universeFromNode.all(), 
+								node.propVolume.uri, hand );
+						}
+						catch( e )
+						{
+							nodeData.lastFailedModelUri = node.propVolume.uri;
+							let m: MsgResourceLoadFailed =
+							{
+								nodeId: node.globalId,
+								resourceUri: node.propVolume.uri,
+								error: e.message,
+							};
+			
+							this.m_endpoint.sendMessage( MessageType.ResourceLoadFailed, m );
+						}
+					}
 					break;
 
 				default:
@@ -983,13 +1145,14 @@ export class AvDefaultTraverser
 			if( this.isHookInUse( hookGlobalId ) )
 				return;
 
+			let outerVolumeScale = node.propOuterVolumeScale ? node.propOuterVolumeScale : 1.5;
 			switch( node.propVolume.type )
 			{
 				case EVolumeType.Sphere:
-					Av().renderer.addHook_Sphere( hookGlobalId, universeFromNode.all(), node.propVolume.radius, hand );
+					Av().renderer.addHook_Sphere( hookGlobalId, universeFromNode.all(), node.propVolume.radius, hand, outerVolumeScale );
 					break;
 				case EVolumeType.AABB:
-					Av().renderer.addHook_Aabb( hookGlobalId, universeFromNode.all(), node.propVolume.aabb, hand );
+					Av().renderer.addHook_Aabb( hookGlobalId, universeFromNode.all(), node.propVolume.aabb, hand, outerVolumeScale );
 					break;
 				default:
 					throw "unsupported volume type";
@@ -1089,13 +1252,13 @@ export class AvDefaultTraverser
 	{
 		let grabbableData = this.getNodeDataByEpa( grabEvent.grabbableId );
 		let grabbableFlags = grabbableData ? grabbableData.lastFlags : 0;
+		let grabberIdStr = endpointAddrToString( grabEvent.grabberId );
+		let grabbableIdStr = endpointAddrToString( grabEvent.grabbableId );
 		switch( grabEvent.type )
 		{
 			case AvGrabEventType.StartGrab:
 				console.log( "Traverser starting grab of " + grabEvent.grabbableId + " by " + grabEvent.grabberId );
 
-				let grabberIdStr = endpointAddrToString( grabEvent.grabberId );
-				let grabbableIdStr = endpointAddrToString( grabEvent.grabbableId );
 				if( !this.m_lastFrameUniverseFromNodeTransforms.hasOwnProperty( grabberIdStr ) )
 				{
 					throw "grabber wasn't rendered last frame";
@@ -1116,16 +1279,24 @@ export class AvDefaultTraverser
 					grabberFromGrabbable = grabberFromUniverse.multiply( universeFromGrabbable );
 				}
 
-				let oldAnchor = this.m_nodeToNodeAnchors[ grabbableIdStr ];
-				if( oldAnchor && oldAnchor.parentGlobalId.type == EndpointType.Node )
+				let anchorToRestore: NodeToNodeAnchor_t;
+				if( 0 == ( grabbableFlags & ENodeFlags.Tethered ) )
 				{
-					let msg: MsgDetachGadgetFromHook =
+					let oldAnchor = this.m_nodeToNodeAnchors[ grabbableIdStr ];
+					if( oldAnchor && oldAnchor.parentGlobalId.type == EndpointType.Node )
 					{
-						grabbableNodeId: grabEvent.grabbableId,
-						hookNodeId: oldAnchor.parentGlobalId,
-					}
-	
-					this.m_endpoint.sendMessage( MessageType.DetachGadgetFromHook, msg );
+						let msg: MsgDetachGadgetFromHook =
+						{
+							grabbableNodeId: grabEvent.grabbableId,
+							hookNodeId: oldAnchor.parentGlobalId,
+						}
+		
+						this.m_endpoint.sendMessage( MessageType.DetachGadgetFromHook, msg );
+					}	
+				}
+				else
+				{
+					anchorToRestore = this.m_nodeToNodeAnchors[ grabbableIdStr ];
 				}
 
 				let grabbableParentFromGrabbableOrigin: mat4;
@@ -1140,6 +1311,7 @@ export class AvDefaultTraverser
 					handleGlobalId: grabEvent.handleId,
 					grabberFromGrabbable,
 					grabbableParentFromGrabbableOrigin, 
+					anchorToRestore,
 				};
 				Av().renderer.startGrab( grabEvent.grabberId, grabEvent.grabbableId );
 				console.log( `telling collider about ${ endpointAddrToString( grabEvent.grabberId ) } `
@@ -1155,8 +1327,10 @@ export class AvDefaultTraverser
 				break;
 
 			case AvGrabEventType.EndGrab:
+			{
 				console.log( "Traverser ending grab of " + grabEvent.grabbableId + " by " + grabEvent.grabberId );
 				Av().renderer.endGrab( grabEvent.grabberId, grabEvent.grabbableId );
+				let oldAnchor = this.m_nodeToNodeAnchors[ grabbableIdStr ];
 				if( !endpointAddrIsEmpty( grabEvent.hookId ) )
 				{
 					let anchor: NodeToNodeAnchor_t =
@@ -1180,7 +1354,7 @@ export class AvDefaultTraverser
 						msg.hookFromGrabbable = grabEvent.hookFromGrabbable;
 					}
 
-					this.m_nodeToNodeAnchors[ endpointAddrToString( grabEvent.grabbableId ) ] = anchor;
+					this.m_nodeToNodeAnchors[ grabbableIdStr ] = anchor;
 
 					this.m_endpoint.sendMessage( MessageType.AttachGadgetToHook, msg );
 				}
@@ -1195,11 +1369,22 @@ export class AvDefaultTraverser
 				}
 				else
 				{
-
 					// we're dropping into open space
 					delete this.m_nodeToNodeAnchors[ endpointAddrToString( grabEvent.grabbableId ) ];
 				}
-				break;
+			}
+			break;
+
+			case AvGrabEventType.Detach:
+			{
+				let oldAnchor = this.m_nodeToNodeAnchors[ grabbableIdStr ];
+				if( oldAnchor )
+				{
+					// forget the point to restore
+					oldAnchor.anchorToRestore = null;
+				}
+			}
+			break;
 		}
 
 		if( grabEvent.grabberId )
@@ -1294,6 +1479,26 @@ export class AvDefaultTraverser
 			return this.m_lastFrameUniverseFromNodeTransforms[ nodeGlobalId ];
 		}
 	}
+
+	@bind 
+	private getCurrentGrabber( grabbableAddr: EndpointAddr ): EndpointAddr
+	{
+		let grabbableIdStr = endpointAddrToString( grabbableAddr );
+		let parentInfo = this.m_nodeToNodeAnchors[ grabbableIdStr ];
+		if( !parentInfo )
+			return null;
+
+		let parentNodeData = this.getNodeDataByEpa( parentInfo.parentGlobalId );
+		if( parentNodeData && parentNodeData.nodeType == AvNodeType.Grabber )
+		{
+			return parentInfo.parentGlobalId;
+		}
+		else
+		{
+			return null;
+		}
+	}
+
 }
 
 

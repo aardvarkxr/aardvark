@@ -5,7 +5,7 @@ import { AvGadget, AvOrigin, AvTransform, AvGrabber, AvModel, AvPoker, AvPanelIn
 	AvLine, AvGrabButton, AvPanel, AvPanelAnchor, AvGadgetSeed, AvStandardBoxHook } 
 	from '@aardvarkxr/aardvark-react';
 
-import { Av, EndpointAddr, AvColor, AvGadgetManifest, EHand, GrabberHighlight, g_builtinModelSphere, g_builtinModelBackfacedSphere, g_builtinModelToolbox } from '@aardvarkxr/aardvark-shared'
+import { Av, EndpointAddr, AvColor, AvGadgetManifest, EHand, GrabberHighlight, g_builtinModelSphere, g_builtinModelBackfacedSphere, g_builtinModelToolbox, EAction } from '@aardvarkxr/aardvark-shared'
 
 interface DefaultHandProps
 {
@@ -21,7 +21,7 @@ interface DefaultHandState
 
 class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 {
-	private m_editModeHandle = 0;
+	private m_actionListenerHandle = 0;
 
 	constructor( props: any )
 	{
@@ -34,7 +34,8 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 			currentPanel: null,
 		};
 
-		this.m_editModeHandle = AvGadget.instance().listenForEditModeWithComponent( this )
+		this.m_actionListenerHandle = AvGadget.instance().listenForActionStateWithComponent( this.props.hand, 
+			EAction.B, this );
 	}
 
 	@bind updateGrabberHighlight( newHighlight: GrabberHighlight )
@@ -49,7 +50,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 
 	componentWillUnmount()
 	{
-		AvGadget.instance().unlistenForEditMode( this.m_editModeHandle );
+		AvGadget.instance().unlistenForActionState( this.m_actionListenerHandle );
 	}
 	public render()
 	{
@@ -100,14 +101,12 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 					}
 				</AvPoker>
 				<AvGrabber updateHighlight = { this.updateGrabberHighlight }
-					radius={0.0} />
-					{this.props.hand == EHand.Left && 
+					radius={ 0.001 } />
 				<AvStandardBoxHook persistentName={ hookName } hand={ this.props.hand }
 					xMin={-0.3} xMax={0.3}
 					yMin={-0.3} yMax={0.5}
 					zMin={-0.3} zMax={0.3}
-					/>}
-				{ AvGadget.instance().getEditModeForHand( this.props.hand ) && <ControlPanel />}
+					/>
 			</AvOrigin>
 		);
 	}
@@ -246,7 +245,16 @@ class MasterControls extends React.Component< {}, {} >
 			<div className="FullPage">
 				<DefaultHand hand={ EHand.Left } />
 				<DefaultHand hand={ EHand.Right } />
-				<ControlPanel />
+				<AvOrigin path="/user/head">
+					<AvTransform translateY={ 0.2 }>
+						<AvStandardBoxHook
+							xMin={-0.3} xMax={0.3}
+							yMin={-0.6} yMax={0.2}
+							zMin={-0.3} zMax={0.3}
+							outerVolumeScale={ 2.0 }
+							persistentName="head"/>
+					</AvTransform>
+				</AvOrigin>
 			</div>
 		);
 	}

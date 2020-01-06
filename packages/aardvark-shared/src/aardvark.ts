@@ -20,6 +20,19 @@ export interface AvModelInstance
 }
 
 
+export interface AvActionState
+{
+	// these actions are available to held gadgets
+	a: boolean;
+	b: boolean;
+	squeeze: boolean;
+
+	// these actions are not available to gadgets
+	grab?: boolean;
+	detach?: boolean;
+}
+
+
 interface AvRenderer
 {
 	registerTraverser( traverser: AvTraversalRenderer ): void;
@@ -43,13 +56,13 @@ interface AvRenderer
 		handleGlobalId: EndpointAddr,
 		universeFromHandle: number[], uri: string, hand: EHand ): void;
 	addGrabber_Sphere( grabberGlobalId: EndpointAddr, universeFromGrabber: number[], radius: number, hand: EHand ): void;
-	addHook_Sphere( hookGlobalId: EndpointAddr, universeFromGrabber: number[], radius: number, hand: EHand  ): void;
-	addHook_Aabb( hookGlobalId: EndpointAddr, universeFromGrabber: number[], aabb: Aabb, hand: EHand  ): void;
+	addHook_Sphere( hookGlobalId: EndpointAddr, universeFromGrabber: number[], radius: number, hand: EHand, outerVolumeScale: number  ): void;
+	addHook_Aabb( hookGlobalId: EndpointAddr, universeFromGrabber: number[], aabb: Aabb, hand: EHand, outerVolumeScale: number  ): void;
 
 	startGrab( grabberGlobalId: EndpointAddr, grabbableGlobalId: EndpointAddr  ): void;
 	endGrab( grabberGlobalId: EndpointAddr, grabbableGlobalId: EndpointAddr  ): void;
 
-	isEditPressed( hand: EHand ): boolean;
+	getActionState( hand: EHand ): AvActionState;
 }
 
 export interface AvStartGadgetCallback

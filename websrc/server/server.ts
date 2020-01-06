@@ -5,10 +5,11 @@ import { StoredGadget, AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, Av
 	MsgOverrideTransform, MsgGetGadgetManifest, MsgGetGadgetManifestResponse, 
 	MsgUpdateSceneGraph, EndpointAddr, endpointAddrToString, MsgGrabEvent, 
 	endpointAddrsMatch, MsgGrabberState, MsgGadgetStarted, MsgSetEndpointTypeResponse, 
-	MsgPokerProximity, MsgMouseEvent, MsgNodeHaptic, MsgSetEditMode, 
+	MsgPokerProximity, MsgMouseEvent, MsgNodeHaptic, MsgUpdateActionState, 
 	MsgDetachGadgetFromHook, MessageType, EndpointType, MsgSetEndpointType, Envelope, 
 	MsgNewEndpoint, MsgLostEndpoint, parseEnvelope, MsgError, AardvarkPort,
-	MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgDestroyGadget, WebSocketCloseCodes } from '@aardvarkxr/aardvark-shared';
+	MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgDestroyGadget, WebSocketCloseCodes, 
+	MsgResourceLoadFailed, 	MsgInstallGadget} from '@aardvarkxr/aardvark-shared';
 import * as express from 'express';
 import * as http from 'http';
 import * as WebSocket from 'ws';
@@ -16,6 +17,7 @@ import bind from 'bind-decorator';
 import * as path from 'path';
 import { persistence } from './persistence';
 import isUrl from 'is-url';
+import { threadId } from 'worker_threads';
 
 console.log( "Data directory is", g_localInstallPathUri );
 
@@ -536,6 +538,7 @@ class CGadgetData
 						hookId: this.m_hook.hookAddr,
 						grabbableId: this.m_mainGrabbable,
 						handleId: this.m_mainHandle,
+						hookFromGrabbable: this.m_hook.hookFromGadget,
 					};
 
 					let msg: MsgGrabEvent =
@@ -551,6 +554,7 @@ class CGadgetData
 
 					this.m_dispatcher.forwardToEndpoint( this.m_hook.hookAddr, env );
 					this.m_dispatcher.forwardToEndpoint( this.m_mainGrabbable, env );
+					this.m_dispatcher.sendToAllEndpointsOfType( EndpointType.Monitor, env );
 				}
 			}
 
@@ -698,16 +702,18 @@ class CEndpoint
 {
 	private m_ws: WebSocket = null;
 	private m_id: number;
+	private m_origin: string| string[];
 	private m_type = EndpointType.Unknown;
 	private m_dispatcher: CDispatcher = null;
 	private m_gadgetData: CGadgetData = null;
 	private m_envelopeHandlers: { [ type:number]: EnvelopeHandler } = {};
 	private m_forwardHandlers: { [type: number]: ForwardHandler } = {};
 
-	constructor( ws: WebSocket, id: number, dispatcher: CDispatcher )
+	constructor( ws: WebSocket, origin: string | string[], id: number, dispatcher: CDispatcher )
 	{
-		console.log( "new connection");
+		console.log( "new connection from ", origin );
 		this.m_ws = ws;
+		this.m_origin = origin;
 		this.m_id = id;
 		this.m_dispatcher = dispatcher;
 
@@ -738,15 +744,20 @@ class CEndpoint
 		this.registerEnvelopeHandler( MessageType.AttachGadgetToHook, this.onAttachGadgetToHook );
 		this.registerEnvelopeHandler( MessageType.DetachGadgetFromHook, this.onDetachGadgetFromHook );
 		this.registerEnvelopeHandler( MessageType.SaveSettings, this.onSaveSettings );
-		this.registerForwardHandler( MessageType.SetEditMode, (m:MsgSetEditMode) =>
+		this.registerForwardHandler( MessageType.UpdateActionState, (m:MsgUpdateActionState) =>
 		{
-			return [ m.nodeId ];
+			return [ { type: EndpointType.Gadget, endpointId: m.gadgetId } ];
+		});
+		this.registerForwardHandler( MessageType.ResourceLoadFailed, ( m: MsgResourceLoadFailed ) =>
+		{
+			return [ EndpointType.Monitor, m.nodeId ];
 		});
 
 		this.registerEnvelopeHandler( MessageType.OverrideTransform, this.onOverrideTransform );
 
 		this.registerEnvelopeHandler( MessageType.GetInstalledGadgets, this.onGetInstalledGadgets );
 		this.registerEnvelopeHandler( MessageType.DestroyGadget, this.onDestroyGadget );
+		this.registerEnvelopeHandler( MessageType.InstallGadget, this.onInstallGadget );
 	}
 
 	public getId() { return this.m_id; }
@@ -880,6 +891,11 @@ class CEndpoint
 		this.m_gadgetData.updateSceneGraph( m.root );
 	}
 
+	private isGadgetUriAllowed( gadgetUri: string ):boolean
+	{
+		return ( this.m_origin == "http://localhost:23842" ||  gadgetUri.startsWith( this.m_origin as string ) )
+			&& persistence.isGadgetUriInstalled( gadgetUri );
+	}
 
 	@bind private onSetEndpointType( env: Envelope, m: MsgSetEndpointType )
 	{
@@ -890,12 +906,20 @@ class CEndpoint
 				{
 					this.sendError( "SetEndpointType to gadget must provide URI",
 						MessageType.SetEndpointType );
-						return;
+					return;
+				}
+
+				if( !this.isGadgetUriAllowed( m.gadgetUri ) )
+				{
+					this.sendError( `Gadget URI is not allowed: ${ m.gadgetUri }`,
+						MessageType.SetEndpointType );
+					return;
 				}
 				break;
 
 			case EndpointType.Monitor:
 			case EndpointType.Renderer:
+			case EndpointType.Utility:
 				break;
 
 			default:
@@ -1046,6 +1070,13 @@ class CEndpoint
 		this.sendMessage( MessageType.GetInstalledGadgetsResponse, resp );
 	}
 
+	@bind private onInstallGadget( env: Envelope, m: MsgInstallGadget )
+	{
+		console.log( `Installing gadget from web ${ m.gadgetUri }` );
+		persistence.addInstalledGadget( m.gadgetUri );
+	}
+
+
 	@bind private onDestroyGadget( env: Envelope, m: MsgDestroyGadget )
 	{
 		let ep = this.m_dispatcher.getGadgetEndpoint( m.gadgetId );
@@ -1155,10 +1186,10 @@ class CServer
 		this.m_app.use( "/models", express.static( path.resolve( g_localInstallPath, "models" ) ) );
 	}
 
-	@bind onConnection( ws: WebSocket )
+	@bind onConnection( ws: WebSocket, request: http.IncomingMessage )
 	{
 		this.m_dispatcher.addPendingEndpoint( 
-			new CEndpoint( ws, this.m_nextEndpointId++, this.m_dispatcher ) );
+			new CEndpoint( ws, request.headers.origin, this.m_nextEndpointId++, this.m_dispatcher ) );
 	}
 }
 

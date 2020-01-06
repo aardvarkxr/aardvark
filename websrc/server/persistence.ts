@@ -240,6 +240,14 @@ class CPersistenceManager
 			this.markDirty();
 		}
 	}
+
+	public isGadgetUriInstalled( gadgetUri: string ): boolean
+	{
+		return this.m_state.installedGadgets.includes( gadgetUri )
+			|| gadgetUri == "http://localhost:23842/gadgets/aardvark_master"
+			|| gadgetUri == "http://localhost:23842/gadgets/gadget_menu";
+	}
+
 }
 
 export let persistence = new CPersistenceManager();

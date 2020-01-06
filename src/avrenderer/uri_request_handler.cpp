@@ -213,7 +213,12 @@ void CUriRequest::start()
 
 void CCefUriRequest::OnRequestComplete( CefRefPtr<CefURLRequest> request )
 {
-	m_uriRequest->onRequestComplete( request->GetRequestError() == ERR_NONE );
+	bool bSuccess = request->GetRequestError() == ERR_NONE;
+	if (request->GetResponse() && request->GetResponse()->GetStatus() != 200)
+	{
+		bSuccess = false;
+	}
+	m_uriRequest->onRequestComplete( bSuccess );
 }
 
 void CCefUriRequest::OnUploadProgress( CefRefPtr<CefURLRequest> request,

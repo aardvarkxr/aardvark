@@ -46,7 +46,7 @@
             {
                "inputs" : {
                   "click" : {
-                     "output" : "/actions/aardvark/in/edit"
+                     "output" : "/actions/aardvark/in/b"
                   }
                },
                "mode" : "button",
@@ -55,7 +55,7 @@
             {
                "inputs" : {
                   "click" : {
-                     "output" : "/actions/aardvark/in/edit"
+                     "output" : "/actions/aardvark/in/b"
                   }
                },
                "mode" : "button",
@@ -68,7 +68,7 @@
                   }
                },
                "mode" : "button",
-               "path" : "/user/hand/left/input/x"
+               "path" : "/user/hand/left/input/a"
             },
             {
                "inputs" : {
@@ -77,25 +77,7 @@
                   }
                },
                "mode" : "button",
-               "path" : "/user/hand/right/input/x"
-            },
-            {
-               "inputs" : {
-                  "click" : {
-                     "output" : "/actions/aardvark/in/b"
-                  }
-               },
-               "mode" : "button",
-               "path" : "/user/hand/left/input/y"
-            },
-            {
-               "inputs" : {
-                  "click" : {
-                     "output" : "/actions/aardvark/in/b"
-                  }
-               },
-               "mode" : "button",
-               "path" : "/user/hand/right/input/y"
+               "path" : "/user/hand/right/input/a"
             },
             {
                "inputs" : {
@@ -104,6 +86,9 @@
                   }
                },
                "mode" : "button",
+               "parameters" : {
+                  "force_input" : "force"
+               },
                "path" : "/user/hand/left/input/grip"
             },
             {
@@ -113,39 +98,60 @@
                   }
                },
                "mode" : "button",
+               "parameters" : {
+                  "force_input" : "force"
+               },
                "path" : "/user/hand/right/input/grip"
             },
             {
                "inputs" : {
+                  "east" : {
+                     "output" : "/actions/aardvark/in/detach"
+                  },
                   "north" : {
+                     "output" : "/actions/aardvark/in/b"
+                  },
+                  "south" : {
+                     "output" : "/actions/aardvark/in/a"
+                  },
+                  "west" : {
                      "output" : "/actions/aardvark/in/detach"
                   }
                },
                "mode" : "dpad",
                "parameters" : {
-                  "sub_mode" : "touch"
+                  "sub_mode" : "click"
                },
-               "path" : "/user/hand/left/input/joystick"
+               "path" : "/user/hand/left/input/trackpad"
             },
             {
                "inputs" : {
+                  "east" : {
+                     "output" : "/actions/aardvark/in/detach"
+                  },
                   "north" : {
+                     "output" : "/actions/aardvark/in/b"
+                  },
+                  "south" : {
+                     "output" : "/actions/aardvark/in/a"
+                  },
+                  "west" : {
                      "output" : "/actions/aardvark/in/detach"
                   }
                },
                "mode" : "dpad",
                "parameters" : {
-                  "sub_mode" : "touch"
+                  "sub_mode" : "click"
                },
-               "path" : "/user/hand/right/input/joystick"
+               "path" : "/user/hand/right/input/trackpad"
             }
          ]
       }
    },
    "category" : "steamvr_input",
-   "controller_type" : "oculus_touch",
+   "controller_type" : "vive_controller",
    "description" : "",
-   "name" : "Default Aardvark configuration for Oculus Touch",
+   "name" : "Default Aardvark configuration for Vive Controller",
    "options" : {},
    "simulated_actions" : []
 }
