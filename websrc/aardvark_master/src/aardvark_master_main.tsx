@@ -52,6 +52,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 	{
 		AvGadget.instance().unlistenForActionState( this.m_actionListenerHandle );
 	}
+
 	public render()
 	{
 		let modelColor = "#222288FF";
@@ -109,126 +110,6 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 					/>
 			</AvOrigin>
 		);
-	}
-}
-
-interface ControlPanelState
-{
-	active: boolean;
-	installedGadgets?: string[];
-}
-
-class ControlPanel extends React.Component< {}, ControlPanelState >
-{
-	installedGadgetManifests = new Map();
-
-	private m_panelId: EndpointAddr;
-
-	constructor( props: any )
-	{
-		super( props );
-		this.state = 
-		{ 
-			active: false,
-		};
-
-		AvGadget.instance().getInstalledGadgets()
-		.then( ( installedGadgets: string[] ) =>
-		{
-			for( let gadget of this.state.installedGadgets )
-			{
-				if (!this.installedGadgetManifests.has(gadget)){
-					AvGadget.instance().loadManifest(gadget).then(  ( manifest: AvGadgetManifest ) =>{	
-						this.installedGadgetManifests.set(gadget, manifest);		  
-					});
-				}
-			}
-
-			this.setState( { installedGadgets } );
-		} );
-	}
-
-	@bind onActivateControlPanel()
-	{
-		this.setState( { active: !this.state.active } );
-	}
-
-	private arbitraryColorFromString(seedName: string){
-		if(seedName == null || seedName.length < 3){
-			let defaultColor : AvColor;
-				defaultColor.r = 1;
-				defaultColor.g = 1;
-				defaultColor.b = 1;
-				defaultColor.a = 1;
-					
-			return defaultColor
-		}
-
-		var seed1 = seedName.charCodeAt(0) ^ seedName.charCodeAt(1);
-		var seed2 = seedName.charCodeAt(1) ^ seedName.charCodeAt(2);
-		var seed3 = seedName.charCodeAt(0) ^ seedName.charCodeAt(2);
-
-		let avColor : AvColor;
-
-		avColor = {r: (seed1 * 100 % 256) / 256, g: (seed2 * 100 % 256) / 256, b: (seed3 * 100  % 256) / 256};
-  
-		return avColor
-	}
-
-
-	private renderGadgetSeedList()
-	{
-		if( !this.state.installedGadgets )
-		{
-			return <div>No Gadgets installed.</div>;
-		}
-		else
-		{
-			let seeds: JSX.Element[] = [];
-			for( let gadget of this.state.installedGadgets )
-			{
-				seeds.push( 
-					<div className="GadgetSeed">
-						<AvPanelAnchor>
-							<AvModel uri={ g_builtinModelBackfacedSphere } scaleToFit={{x: 0.125, y: 0.125, z: 0.125}} color={ this.arbitraryColorFromString(this.installedGadgetManifests.get(gadget).name)} >
-								<AvGadgetSeed key="gadget" uri={ gadget } 
-									radius={ 0.07 }/>
-							</AvModel>
-						</AvPanelAnchor>
-					</div> );
-			}
-			return <div className="GadgetSeedContainer">{ seeds }</div>;
-		}
-	}
-
-	public renderPanel()
-	{
-		if( !this.state.active )
-			return null;
-
-		return <AvTransform rotateX={ 45 } translateZ={ -0.1 }>
-				<AvTransform uniformScale={ 0.25 }>
-					<AvTransform translateZ={ -0.55 }>
-						<AvPanel interactive={false}>
-							<div className="FullPage" >
-								{ this.renderGadgetSeedList() }
-							</div>;
-						</AvPanel>
-					</AvTransform>
-				</AvTransform>
-			</AvTransform>;
-	}
-
-	public render()
-	{
-		return (
-			<AvTransform>
-				<AvTransform translateZ={-.05} rotateX={ 0 }>
-					<AvGrabButton modelUri={ g_builtinModelToolbox } 
-						onTrigger={ this.onActivateControlPanel } />
-				</AvTransform>;
-				{ this.renderPanel() }
-			</AvTransform>	);
 	}
 }
 

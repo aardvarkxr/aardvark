@@ -39,15 +39,43 @@ body, html
 .GadgetSeedContainer
 {
 	background-color: transparent;
-	display: flex;
-	flex-direction: row;
-	flex-wrap: wrap;
-	height: 100%;
 	width: 100%;
+	max-width: 900px;
+	margin: 0 auto;
+}
+
+.GadgetSeedContainer::after {
+	content: "";
+	display: block;
+	clear: both;
 }
 
 .GadgetSeed
 {
-	height: 30%;
-	width: 30%;
+	height: 31%;
+	width: 31%;
+	padding-bottom: 31%;
+	overflow: hidden;
+	float: left;
+	border-radius: 50%;
+	margin: 1%;
+	margin-top: -4%;
+}
+
+.GadgetSeed:nth-child(1),
+.GadgetSeed:nth-child(2),
+.GadgetSeed:nth-child(3){
+	margin-top: 1%;
+}
+
+.GadgetSeed:nth-child(5n+4){
+	margin-left: 17.6667%;
+}
+
+.GadgetSeed:nth-child(5n+6){
+	clear: left;
+}
+
+.GadgetSeed:nth-child(5n+6):last-of-type {
+	margin-left: 34.3334%;
 }
