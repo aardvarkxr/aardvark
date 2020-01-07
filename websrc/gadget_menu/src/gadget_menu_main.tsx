@@ -3,45 +3,54 @@ import  * as ReactDOM from 'react-dom';
 
 import bind from 'bind-decorator';
 import { AvGadget, AvTransform, AvGrabButton, AvPanelAnchor, AvGadgetSeed, AvPanel, AvGrabbable, AvModelBoxHandle, HighlightType, AvModel } from '@aardvarkxr/aardvark-react';
-import { g_builtinModelGear, EndpointAddr, AvColor, AvGadgetManifest, g_builtinModelBackfacedSphere, AvVector } from '@aardvarkxr/aardvark-shared';
+import { g_builtinModelGear, EndpointAddr, AvColor, AvGadgetManifest, g_builtinModelBackfacedSphere, AvVector, g_builtinModelToolbox } from '@aardvarkxr/aardvark-shared';
 
 
 interface ControlPanelState
 {
 	highlight: HighlightType;
+	installedGadgetManifests: Map<string, AvGadgetManifest>;
 	installedGadgets?: string[];
-	installedGadgetManifests?: Map<string, AvGadgetManifest>;
 }
 
 class ControlPanel extends React.Component< {}, ControlPanelState >
 {
 	defaultGadgetColor: AvColor = {r: 1, g: 1, b: 1, a: 1};
 	sphereGadgetConstraint: AvVector = { x: 0.125, y: 0.125, z: 0.125};
+	defaultToolboxRotation: AvVector= {x: 60, y: 0, z:0 }
 
 	constructor( props: any )
 	{
 		super( props );
 		this.state = 
 		{
+			installedGadgetManifests: new Map(),
 			highlight: HighlightType.None,
 		};
 
 		AvGadget.instance().getInstalledGadgets()
 		.then( ( installedGadgets: string[] ) =>
 		{
-			var installedGadgetManifests: Map<string, AvGadgetManifest> = new Map()
 			for( let gadget of installedGadgets )
 			{
-				if (!installedGadgetManifests.has(gadget)){
-					AvGadget.instance().loadManifest(gadget).then(( manifest: AvGadgetManifest ) =>{	
-						installedGadgetManifests.set(gadget, manifest);		  
+				if (!this.state.installedGadgetManifests.has(gadget)){
+					AvGadget.instance().loadManifest(gadget).then(( manifest: AvGadgetManifest ) => {
+						const newMapState = new Map([
+							[gadget, manifest]
+						]);
+
+						this.setState( {
+							installedGadgetManifests: new Map([
+								...this.state.installedGadgetManifests,
+								...newMapState
+							])
+						});
 					});
 				}
 			}
 
 			this.setState( { 
 				installedGadgets,
-				installedGadgetManifests,
 			} );
 		} );
 	}
@@ -103,15 +112,13 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		if( this.state.highlight != HighlightType.Grabbed )
 			return null;
 
-		return <AvTransform rotateX={ 45 } translateZ={ -0.1 }>
-				<AvTransform uniformScale={0.25}>
-					<AvTransform translateZ={ -0.55 }>
+		return <AvTransform rotateX={ this.defaultToolboxRotation.x }>
+				<AvTransform  translateZ={ -0.25 } uniformScale={0.25}>
 						<AvPanel interactive={false}>
 							<div className="FullPage" >
 								{ this.renderGadgetSeedList() }
 							</div>;
 						</AvPanel>
-					</AvTransform>
 				</AvTransform>
 			</AvTransform>;
 	}
@@ -121,9 +128,9 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		return (
 			<AvGrabbable updateHighlight={ this.onUpdateHighlight } preserveDropTransform={ true }
 				grabWithIdentityTransform={ true }> 
-				<AvTransform uniformScale={ this.state.highlight == HighlightType.InRange ? 1.1 : 1.0 } >
-					<AvModel uri={ g_builtinModelGear } />
-					<AvModelBoxHandle uri={ g_builtinModelGear }/>
+				<AvTransform rotateX= {this.defaultToolboxRotation.x} uniformScale={ this.state.highlight == HighlightType.InRange ? 1.1 : 1.0 } >
+					<AvModel uri={ g_builtinModelToolbox } />
+					<AvModelBoxHandle uri={ g_builtinModelToolbox }/>
 				</AvTransform>
 
 				{ this.renderPanel() }
