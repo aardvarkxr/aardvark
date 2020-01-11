@@ -15,6 +15,7 @@
 #include "av_cef_javascript.h"
 #include <aardvark/aardvark_gadget_manifest.h>
 
+#include <openvr.h>
 #include <processthreadsapi.h>
 
 namespace 
@@ -92,13 +93,45 @@ void CAardvarkCefApp::OnContextInitialized()
 	const bool use_views = false;
 #endif
 
+	vr::EVRInitError err;
+	vr::VR_Init( &err, vr::VRApplication_Overlay );
+	IDXGIAdapter* pAdapter = nullptr;
+	if (err != vr::VRInitError_None)
+	{
+		IDXGIFactory1* pIDXGIFactory;
+		if ( !FAILED(CreateDXGIFactory1( __uuidof(IDXGIFactory1), (void**)&pIDXGIFactory ) ) )
+		{
+			int32_t nAdapterIndex;
+			vr::VRSystem()->GetDXGIOutputInfo(&nAdapterIndex);
+
+			if ( !FAILED( pIDXGIFactory->EnumAdapters( nAdapterIndex, &pAdapter ) ) )
+			{
+				LOG(INFO) << "Using adapter " << nAdapterIndex << " for graphics device" << std::endl;
+			}
+
+		}
+
+		if (pIDXGIFactory)
+		{
+			pIDXGIFactory->Release();
+			pIDXGIFactory = nullptr;
+		}
+	}
+	vr::VR_Shutdown();
+
 	D3D_FEATURE_LEVEL featureLevel[] = { D3D_FEATURE_LEVEL_11_1 };
 	D3D_FEATURE_LEVEL createdFeatureLevel;
 
-	D3D11CreateDevice( nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, 
+	D3D11CreateDevice( pAdapter, D3D_DRIVER_TYPE_HARDWARE, nullptr, 
 		D3D11_CREATE_DEVICE_DEBUG | D3D11_CREATE_DEVICE_BGRA_SUPPORT, 
 		featureLevel, 1, D3D11_SDK_VERSION,
 		&m_pD3D11Device, &createdFeatureLevel, &m_pD3D11ImmediateContext );
+
+	if ( pAdapter )
+	{
+		pAdapter->Release();
+		pAdapter = nullptr;
+	}
 
 	startGadget( "http://localhost:23842/gadgets/aardvark_master", "", "master", aardvark::EndpointAddr_t() );
 }

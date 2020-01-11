@@ -38,6 +38,7 @@ target_link_libraries(avrenderer ${Vulkan_LIBRARY} ${WINLIBS})
 target_link_libraries( avrenderer aardvark )
 target_link_libraries( avrenderer tools )
 target_link_libraries( avrenderer ${OpenVR_LIB_DIR}/openvr_api.lib )
+target_link_libraries( avrenderer DXGI.lib )
 
 target_include_directories( avrenderer PUBLIC ${AV_SRC_THIRDPARTY} )
 target_include_directories( avrenderer PRIVATE ${OpenVR_INCLUDE_DIR} )
