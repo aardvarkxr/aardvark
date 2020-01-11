@@ -9,7 +9,7 @@ import { StoredGadget, AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, Av
 	MsgDetachGadgetFromHook, MessageType, EndpointType, MsgSetEndpointType, Envelope, 
 	MsgNewEndpoint, MsgLostEndpoint, parseEnvelope, MsgError, AardvarkPort,
 	MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgDestroyGadget, WebSocketCloseCodes, 
-	MsgResourceLoadFailed, 	MsgInstallGadget} from '@aardvarkxr/aardvark-shared';
+	MsgResourceLoadFailed, 	MsgInstallGadget, EVolumeType} from '@aardvarkxr/aardvark-shared';
 import * as express from 'express';
 import * as http from 'http';
 import * as WebSocket from 'ws';
@@ -614,6 +614,16 @@ class CGadgetData
 						type: EndpointType.Node,
 						nodeId: node.id,
 					};
+				}
+
+				switch( node.propVolume.type )
+				{
+					case EVolumeType.ModelBox:
+						if( !isUrl( node.propVolume.uri ) )
+						{
+							node.propVolume.uri = this.m_gadgetUri + "/" + node.propVolume.uri;
+						}
+						break;
 				}
 				break;
 

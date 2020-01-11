@@ -21,6 +21,13 @@ namespace tools
 			|| 0 == std::strncmp( sUri.c_str(), "FILE://", 7 );
 	}
 
+	bool IsHttpUri(const std::string& sUri)
+	{
+		std::string lowerUri = tools::stringToLower(sUri);
+		return 0 == std::strncmp(lowerUri.c_str(), "http://", 7 )
+			|| 0 == std::strncmp(lowerUri.c_str(), "https://", 8 );
+	}
+
 	std::filesystem::path FileUriToPath( const std::string & sUri )
 	{
 		if ( sUri.size() < 8 || !IsFileUri( sUri ) )

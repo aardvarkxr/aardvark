@@ -6,6 +6,7 @@
 namespace tools
 {
 	bool IsFileUri( const std::string & sUri );
+	bool IsHttpUri(const std::string& sUri);
 
 	std::filesystem::path FileUriToPath( const std::string & sUri );
 	std::string PathToFileUri( const std::filesystem::path & path );

@@ -196,7 +196,7 @@ void CUriRequest::start()
 		}
 		m_state = EState::ReadyToComplete;
 	}
-	else
+	else if( tools::IsHttpUri( m_uri ) )
 	{
 		m_cefRequestClient = new CCefUriRequest( this );
 
@@ -207,6 +207,12 @@ void CUriRequest::start()
 		m_cefRequest = CefURLRequest::Create( request, m_cefRequestClient, nullptr );
 
 		m_state = EState::Running;
+	}
+	else
+	{
+		LOG( ERROR ) << "Invalid URI %s requested " << m_uri << std::endl;
+		m_result.success = false;
+		m_state = EState::ReadyToComplete;
 	}
 }
 
