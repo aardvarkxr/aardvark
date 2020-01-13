@@ -22,6 +22,22 @@ class CAardvarkCefHandler;
 
 class IApplication;
 
+class CAardvarkResourceRequestHandler : public CefResourceRequestHandler
+{
+public:
+
+	// CefResourceRequestHandler methods:
+	virtual void OnProtocolExecution( CefRefPtr<CefBrowser> browser,
+		CefRefPtr<CefFrame> frame,
+		CefRefPtr<CefRequest> request,
+		bool& allow_os_execution ) override;
+
+private:
+	// Include the default reference counting implementation.
+	IMPLEMENT_REFCOUNTING( CAardvarkResourceRequestHandler );
+
+};
+
 class CAardvarkCefHandler : public CefClient,
                       public CefDisplayHandler,
                       public CefLifeSpanHandler,
@@ -80,6 +96,19 @@ public:
 		const RectList& dirtyRects,
 		void* shared_handle ) override;
 
+	// CefRequestHandler methods:
+	virtual CefRefPtr<CefResourceRequestHandler> GetResourceRequestHandler(
+		CefRefPtr<CefBrowser> browser,
+		CefRefPtr<CefFrame> frame,
+		CefRefPtr<CefRequest> request,
+		bool is_navigation,
+		bool is_download,
+		const CefString& request_initiator,
+		bool& disable_default_handling ) override 
+	{
+		return m_resourceRequestHandler;
+	}
+
 	bool IsClosing() const { return m_isClosing; }
 
 	void triggerClose( bool forceClose );
@@ -122,6 +151,7 @@ private:
 	bool m_firstPaint = true;
 
 	CUriRequestHandler m_uriRequestHandler;
+	CefRefPtr< CAardvarkResourceRequestHandler > m_resourceRequestHandler;
 
 	// Include the default reference counting implementation.
 	IMPLEMENT_REFCOUNTING(CAardvarkCefHandler);

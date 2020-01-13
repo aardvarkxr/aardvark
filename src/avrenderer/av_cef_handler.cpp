@@ -18,6 +18,7 @@
 #include "include/wrapper/cef_helpers.h"
 #include <tools/pathtools.h>
 #include <tools/logging.h>
+#include <tools/stringtools.h>
 
 #include <json/json.hpp>
 
@@ -161,6 +162,7 @@ void CAardvarkCefHandler::OnAfterCreated(CefRefPtr<CefBrowser> browser)
 	CEF_REQUIRE_UI_THREAD();
 
 	m_browser = browser;
+	m_resourceRequestHandler = new CAardvarkResourceRequestHandler;
 
 	CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "gadget_info" );
 	msg->GetArgumentList()->SetString( 0, m_gadgetUri );
@@ -191,6 +193,7 @@ void CAardvarkCefHandler::OnBeforeClose(CefRefPtr<CefBrowser> browser)
 {
 	CEF_REQUIRE_UI_THREAD();
 	m_browser = nullptr;
+	m_resourceRequestHandler = nullptr;
 }
 
 void CAardvarkCefHandler::OnLoadError(CefRefPtr<CefBrowser> browser,
@@ -376,7 +379,6 @@ void CAardvarkCefHandler::RunFrame()
 }
 
 
-
 void CAardvarkCefHandler::triggerClose( bool forceClose )
 {
 	if ( !CefCurrentlyOn( TID_UI ) )
@@ -390,4 +392,18 @@ void CAardvarkCefHandler::triggerClose( bool forceClose )
 	m_browser->GetHost()->CloseBrowser( forceClose );
 }
 
+
+void CAardvarkResourceRequestHandler::OnProtocolExecution( CefRefPtr<CefBrowser> browser,
+	CefRefPtr<CefFrame> frame,
+	CefRefPtr<CefRequest> request,
+	bool& allow_os_execution )
+{
+	std::string url = request->GetURL();
+	allow_os_execution = tools::stringIsPrefix( "pluto://", url )
+		|| tools::stringIsPrefix( "steam://", url )
+		|| tools::stringIsPrefix( "aardvark://", url );
+
+	// we never want to keep these dead windows around
+	browser->GetHost()->CloseBrowser( true );
+}
 
