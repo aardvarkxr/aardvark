@@ -54,4 +54,10 @@ namespace tools
 
 		return true;
 	}
+
+	void invokeURL( const std::string& url )
+	{
+		::ShellExecuteA( nullptr, url.c_str(), nullptr, nullptr, nullptr, SW_SHOW );
+	}
+
 }
