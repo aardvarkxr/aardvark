@@ -2,8 +2,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { URL } from 'url';
 import * as fileUrl from 'file-url';
-import axios, { AxiosResponse } from 'axios';import { AvNodeTransform } from '@aardvarkxr/aardvark-shared';
-1
+import axios, { AxiosResponse } from 'axios';
+import { AvNodeTransform } from '@aardvarkxr/aardvark-shared';
 
 export let g_localInstallPath = path.resolve( path.dirname( __filename ), ".." );
 export let g_localInstallPathUri = fileUrl( g_localInstallPath );
