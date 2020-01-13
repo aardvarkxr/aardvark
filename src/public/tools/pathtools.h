@@ -22,5 +22,8 @@ namespace tools
 
 	/** Returns the current executable's path */
 	std::filesystem::path GetExecutablePath();
+
+	/** returns the log path */
+	std::filesystem::path GetLogDirectory();
 };
 

@@ -27,8 +27,7 @@ namespace tools
 			el::ConfigurationType::Format, "%datetime %level %msg" );
 		// default logger uses default configurations
 
-		std::filesystem::path logDirectory = GetUserDocumentsPath();
-		logDirectory /= std::filesystem::path( "aardvark" ) / "logs";
+		std::filesystem::path logDirectory = GetLogDirectory();
 		std::filesystem::create_directories( logDirectory );
 		std::filesystem::path logFile = logDirectory / "aardvark.txt";
 

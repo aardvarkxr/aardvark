@@ -123,4 +123,10 @@ namespace tools
 		return buf;
 	}
 
+	/** returns the log path */
+	std::filesystem::path GetLogDirectory()
+	{
+		return GetUserDocumentsPath() / "aardvark" / "logs";
+	}
+
 }
