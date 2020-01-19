@@ -340,7 +340,7 @@ export class CGrabStateProcessor
 				if( 0 == ( lastGrabbableCollision.grabbableFlags & ENodeFlags.Tethered ) )
 				{
 					let bestHook = findBestHook( state.hooks, false );
-					if( state.hooks && state.hooks.length > 0 
+					if( bestHook 
 						&& 0 != ( lastGrabbableCollision.grabbableFlags & ENodeFlags.AllowDropOnHooks ) )
 					{
 						// we handle hooks before dropping in case we got the
