@@ -11,7 +11,8 @@ import { endpointAddrToString, endpointAddrIsEmpty, MessageType, MsgNodeHaptic,
 	AvActionState, EAction, getActionFromState, emptyActionState, filterActionsForGadget,
 	MsgResourceLoadFailed,
 	stringToEndpointAddr,
-	g_builtinModelError
+	g_builtinModelError,
+	parseEndpointFieldUri
 } from '@aardvarkxr/aardvark-shared';
 import { computeUniverseFromLine, nodeTransformToMat4, translateMat, nodeTransformFromMat4, vec3MultiplyAndAdd, scaleAxisToFit, scaleMat, minIgnoringNulls } from './traverser_utils';
 const equal = require( 'fast-deep-equal' );
@@ -27,6 +28,7 @@ interface NodeData
 	lastFlags?: ENodeFlags;
 	lastFrameUsed: number;
 	nodeType: AvNodeType;
+	lastNode?: AvNode;
 }
 
 
@@ -641,6 +643,7 @@ export class AvDefaultTraverser
 
 		let nodeData = this.getNodeData( node );
 		nodeData.lastFlags = node.flags;
+		nodeData.lastNode = node;
 		
 		let thisNodeTransform = this.getTransform( node.globalId );
 		if ( thisNodeTransform.needsUpdate() )
@@ -774,7 +777,27 @@ export class AvDefaultTraverser
 			nodeData.lastFailedModelUri = null;
 		}
 
-		let modelToLoad = nodeData.lastFailedModelUri ? g_builtinModelError : node.propModelUri 
+		let filteredUri: string;
+		let endpointFieldUri = parseEndpointFieldUri( node.propModelUri );
+		if( !endpointFieldUri )
+		{
+			filteredUri = node.propModelUri;
+		}
+		else
+		{
+			let [ epa, field ] = endpointFieldUri;
+			let nodeData = this.getNodeDataByEpa( epa );
+			if( nodeData && nodeData.lastNode )
+			{
+				let fieldValue = ( nodeData.lastNode as any )[ field ];
+				if( typeof fieldValue == "string" )
+				{
+					filteredUri = fieldValue;
+				}
+			}
+		}
+
+		let modelToLoad = nodeData.lastFailedModelUri ? g_builtinModelError : filteredUri 
 		if ( nodeData.lastModelUri != modelToLoad )
 		{
 			nodeData.modelInstance = null;
@@ -787,7 +810,7 @@ export class AvDefaultTraverser
 				nodeData.modelInstance = Av().renderer.createModelInstance( modelToLoad );
 				if ( nodeData.modelInstance )
 				{
-					nodeData.lastModelUri = node.propModelUri;
+					nodeData.lastModelUri = filteredUri;
 				}
 			}
 			catch( e )

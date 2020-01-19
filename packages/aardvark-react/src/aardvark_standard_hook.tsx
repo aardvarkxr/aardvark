@@ -9,6 +9,7 @@ import { AvLine } from './aardvark_line';
 import { AvModelBoxHandle } from './aardvark_handles';
 import { AvParentTransform } from './aardvark_parent_transform';
 import { AvHeadFacingTransform } from './aardvark_head_facing_transform';
+import { AvDropIndicator } from './aardvark_drop_indicator';
 
 
 interface StandardHookProps
@@ -41,6 +42,7 @@ interface StandardHookState
 {
 	highlight: HookHighlight;
 	grabbableAddr: EndpointAddr;
+	thisAddr?: EndpointAddr;
 }
 
 /** A hook for attaching grabbables to that uses a standard plus-in-circle icon and is made visible
@@ -102,6 +104,7 @@ export class AvStandardHook extends React.Component< StandardHookProps, Standard
 	{
 		return <div>
 				<AvHook updateHighlight={ this.updateHookHighlight } radius={ 0.08 } 
+					dropIconUri={ this.props.dropIconUri }
 					persistentName={ this.props.persistentName } outerVolumeScale={ this.props.outerVolumeScale }/>
 				{ this.renderModel() }
 			</div>;
@@ -197,22 +200,15 @@ export class AvStandardBoxHook extends React.Component< StandardBoxHookProps, St
 
 	private renderLine()
 	{
-		if( !this.state.grabbableAddr || this.state.highlight != HookHighlight.InRange )
+		if( !this.state.grabbableAddr || this.state.highlight != HookHighlight.InRange 
+			|| !this.state.thisAddr )
 		{
 			return null;
 		}
 		else
 		{
-			return (
-				<AvParentTransform parentId={ this.state.grabbableAddr }>
-					<AvHeadFacingTransform>
-						<AvTransform rotateX={ 90 } translateY={ -0.1 }>
-							<AvModel
-								uri={ this.props.dropIconUri }
-								scaleToFit={ { x: 0.05, y: 0.05, z: 0.05 } }/>
-						</AvTransform>
-					</AvHeadFacingTransform>
-				</AvParentTransform> );
+			return <AvDropIndicator grabbable={ this.state.grabbableAddr }
+				hook={ this.state.thisAddr } allowStageDrop={ false } attached={ true } />;
 		}
 	}
 
@@ -220,6 +216,8 @@ export class AvStandardBoxHook extends React.Component< StandardBoxHookProps, St
 	{
 		return <>
 				<AvHook updateHighlight={ this.updateHookHighlight } 
+					onIdAssigned={ ( addr: EndpointAddr ) => { this.setState( { thisAddr: addr } ) } }
+					dropIconUri={ this.props.dropIconUri }
 					preserveDropTransform={ true }
 					allowMultipleDrops={ true }
 					xMin={ this.props.xMin } xMax={ this.props.xMax }
