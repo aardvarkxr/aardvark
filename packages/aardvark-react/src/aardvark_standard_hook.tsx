@@ -6,6 +6,9 @@ import { HookHighlight, AvHook } from './aardvark_hook';
 import { AvGadget } from './aardvark_gadget';
 import { EHand, EndpointAddr, g_builtinModelHook, g_builtinModelBoundingBox } from '@aardvarkxr/aardvark-shared';
 import { AvLine } from './aardvark_line';
+import { AvModelBoxHandle } from './aardvark_handles';
+import { AvParentTransform } from './aardvark_parent_transform';
+import { AvHeadFacingTransform } from './aardvark_head_facing_transform';
 
 
 interface StandardHookProps
@@ -15,6 +18,10 @@ interface StandardHookProps
 	 * state with the same hook or grabbable from run to run.
 	 */
 	persistentName: string;
+
+	/** The model to show as an icon when this hook is the drop point for the grabbable.
+	 */
+	dropIconUri: string;
 
 	/** The hand that this hook is parented to. This is used to determine whether or
 	 * not the hook should be visible based on that hand's edit mode.
@@ -190,15 +197,22 @@ export class AvStandardBoxHook extends React.Component< StandardBoxHookProps, St
 
 	private renderLine()
 	{
-		console.log( "renderLine called", this.state.highlight, this.state.grabbableAddr );
 		if( !this.state.grabbableAddr || this.state.highlight != HookHighlight.InRange )
 		{
 			return null;
 		}
 		else
 		{
-			return <AvLine endId={ this.state.grabbableAddr } color="lightgreen"
-				startGap={ 0.02 } endGap={ 0.04 } thickness={ 0.002 }/>
+			return (
+				<AvParentTransform parentId={ this.state.grabbableAddr }>
+					<AvHeadFacingTransform>
+						<AvTransform rotateX={ 90 } translateY={ -0.1 }>
+							<AvModel
+								uri={ this.props.dropIconUri }
+								scaleToFit={ { x: 0.05, y: 0.05, z: 0.05 } }/>
+						</AvTransform>
+					</AvHeadFacingTransform>
+				</AvParentTransform> );
 		}
 	}
 

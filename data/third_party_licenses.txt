@@ -314,8 +314,16 @@ COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+== Aardvark uses the following third party icons and images
+
+* Head icon made by Pixel perfect from https://www.flaticon.com
+
+
 
 == Aardvark also uses many Javascript/node packages that it obtains via NPM. You can find those in web_third_party_licenses.txt
+
+
+
 
 
 

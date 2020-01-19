@@ -12,3 +12,6 @@ export const g_builtinModelPlus = g_builtinModelPrefix + "plus.glb";
 export const g_builtinModelMinus = g_builtinModelPrefix + "minus.glb";
 export const g_builtinModelBracelet = g_builtinModelPrefix + "bracelet.glb";
 export const g_builtinModelError = g_builtinModelPrefix + "error.glb";
+export const g_builtinModelHand = g_builtinModelPrefix + "hand.glb";
+export const g_builtinModelHead = g_builtinModelPrefix + "head.glb";
+export const g_builtinModelTrashcan = g_builtinModelPrefix + "trashcan.glb";
