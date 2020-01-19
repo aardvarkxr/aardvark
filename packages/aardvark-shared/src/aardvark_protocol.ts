@@ -380,6 +380,8 @@ export enum AvNodeType
 	Hook = 9,
 	Line = 10,
 	PanelIntersection = 11,
+	ParentTransform = 12,
+	HeadFacingTransform = 13,
 }
 
 
@@ -560,6 +562,7 @@ export interface AvNode
 	propModelUri?: string;
 	propVolume?: AvVolume;
 	propOuterVolumeScale?: number;
+	propParentAddr?: EndpointAddr;
 	propInteractive?: boolean;
 	propCustomNodeType?: string;
 	propSharedTexture?: AvSharedTextureInfo;

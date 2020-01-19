@@ -626,6 +626,14 @@ export class AvDefaultTraverser
 				this.traversePanelIntersection( node, defaultParent );
 				break;
 			
+			case AvNodeType.ParentTransform:
+				this.traverseParentTransform( node, defaultParent );
+				break;
+			
+			case AvNodeType.HeadFacingTransform:
+				this.traverseHeadFacingTransform( node, defaultParent );
+				break;
+			
 			default:
 				throw "Invalid node type";
 			}
@@ -714,6 +722,47 @@ export class AvDefaultTraverser
 			let mat = nodeTransformToMat4( node.propTransform );
 			this.updateTransform( node.globalId, defaultParent, mat, null );
 		}
+	}
+
+	traverseParentTransform( node: AvNode, defaultParent: PendingTransform )
+	{
+		if( node.propParentAddr )
+		{
+			let parentTransform = this.getTransform( node.propParentAddr );
+			this.updateTransform( node.globalId, parentTransform, null, null );
+		}
+	}
+
+	traverseHeadFacingTransform( node: AvNode, defaultParent: PendingTransform )
+	{
+		let universeFromHead = new mat4( Av().renderer.getUniverseFromOriginTransform( "/user/head" ) );
+		this.updateTransformWithCompute( node.globalId, [ defaultParent ], null, null,
+			( universeFromParents: mat4[], parentFromNode ) =>
+			{
+				let yAxisRough = new vec3( [ 0, 1, 0 ] );
+				let hmdUp = universeFromHead.multiplyVec3( new vec3( [ 0, 1, 0 ] ) );
+				if( vec3.dot( yAxisRough, hmdUp ) < 0.1 )
+				{
+					yAxisRough = hmdUp;
+				}
+
+				let universeFromNodeTranslation = universeFromParents[0].multiply( parentFromNode );
+				let nodeTranslation = universeFromNodeTranslation.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) );
+				let headTranslation = universeFromHead.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) );
+				let zAxis = new vec3( headTranslation.subtract( nodeTranslation ).xyz ).normalize();
+				let xAxis = vec3.cross( yAxisRough, zAxis, new vec3() ).normalize();
+				let yAxis = vec3.cross( zAxis, xAxis );
+
+				let universeFromNode = new mat4(
+					[ 
+						xAxis.x, xAxis.y, xAxis.z, 0,
+						yAxis.x, yAxis.y, yAxis.z, 0,
+						zAxis.x, zAxis.y, zAxis.z, 0,
+						nodeTranslation.x, nodeTranslation.y, nodeTranslation.z, 1,
+					]
+				);				
+				return universeFromNode;
+			} );
 	}
 
 	traverseModel( node: AvNode, defaultParent: PendingTransform )
