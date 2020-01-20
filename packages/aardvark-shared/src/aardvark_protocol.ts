@@ -459,6 +459,7 @@ export interface AvGrabEvent
 	type: AvGrabEventType;
 	senderId?: number;
 	grabbableId?: EndpointAddr;
+	grabbableFlags?: number;
 	handleId?: EndpointAddr;
 	grabberId?: EndpointAddr;
 	hookId?: EndpointAddr;
@@ -482,6 +483,7 @@ export interface AvGrabbableCollision
 	handleId: EndpointAddr;
 	handleFlags: number;
 	grabbableFlags: number;
+	currentHook?: EndpointAddr;
 }
 
 export interface AvVector

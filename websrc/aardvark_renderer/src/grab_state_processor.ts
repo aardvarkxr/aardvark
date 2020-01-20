@@ -70,6 +70,7 @@ export class CGrabStateProcessor
 {
 	m_lastHighlight = GrabberHighlight.None;
 	m_lastGrabbable:EndpointAddr = null;
+	m_lastGrabbableFlags: number = 0;
 	m_lastHandle: EndpointAddr = null;
 	m_grabStartTime: DOMHighResTimeStamp = null;
 	m_lastHook: EndpointAddr = null;
@@ -83,6 +84,9 @@ export class CGrabStateProcessor
 
 	public onGrabEvent( evt: AvGrabEvent )
 	{
+		let prevGrabbable = this.m_lastGrabbable;
+		let prevGrabbableFlags = this.m_lastGrabbableFlags;
+		let prevHook = this.m_lastHook;
 		let prevHighlight = this.m_lastHighlight;
 		switch( evt.type )
 		{
@@ -115,6 +119,7 @@ export class CGrabStateProcessor
 								handleId: this.m_lastHandle,
 							});
 						this.m_lastGrabbable = evt.grabbableId;
+						this.m_lastGrabbableFlags = evt.grabbableFlags;
 						this.m_lastHandle = evt.handleId;
 						useIdentityTransform = true;
 					}
@@ -146,12 +151,16 @@ export class CGrabStateProcessor
 				break;
 		}
 
-		if( prevHighlight != this.m_lastHighlight )
+		if( prevHighlight != this.m_lastHighlight || prevGrabbable != this.m_lastGrabbable
+			|| prevGrabbableFlags != this.m_lastGrabbableFlags || prevHook != this.m_lastHook )
 		{
+			//console.log( "Sending grabbableflags ", this.m_lastGrabbableFlags, this.m_context.grabberEpa );
 			this.m_context.sendGrabEvent( 
 				{ 
 					type: AvGrabEventType.UpdateGrabberHighlight, 
 					grabberId: this.m_context.grabberEpa,
+					grabbableFlags: this.m_lastGrabbableFlags,
+					hookId: this.m_lastHook,
 					highlight: this.m_lastHighlight,
 				} );
 		}
@@ -214,6 +223,10 @@ export class CGrabStateProcessor
 		}
 
 		//console.log( `grabberIntersections for ${ endpointAddrToString( this.m_context.grabberEpa )}` );
+		let lastGrabbableIndex = indexOfGrabbable( state.grabbables, this.m_lastGrabbable );
+		let prevGrabbable = this.m_lastGrabbable;
+		let prevGrabbableFlags = this.m_lastGrabbableFlags;
+		let prevHook = this.m_lastHook;
 		let prevHighlight = this.m_lastHighlight;
 		switch( this.m_lastHighlight )
 		{
@@ -225,8 +238,10 @@ export class CGrabStateProcessor
 					break;
 
 				this.m_lastGrabbable = bestGrabbable.grabbableId;
+				this.m_lastGrabbableFlags = bestGrabbable.grabbableFlags;
 				this.m_lastHandle = bestGrabbable.handleId
 				this.m_lastHighlight = GrabberHighlight.InRange;
+				this.m_lastHook = bestGrabbable.currentHook;
 				
 				this.m_context.sendGrabEvent( 
 					{
@@ -254,6 +269,7 @@ export class CGrabStateProcessor
 							grabbableId: this.m_lastGrabbable,
 							handleId: this.m_lastHandle,
 						});
+					this.m_lastGrabbableFlags = 0;
 					this.m_lastGrabbable = null;
 					this.m_lastHandle = null;
 					this.m_lastHighlight = GrabberHighlight.None;
@@ -261,7 +277,7 @@ export class CGrabStateProcessor
 				}
 
 				if( !this.m_context.getActionState( state.hand, EAction.Grab ) 
-				|| isProximityOnly( bestGrabbable ) )
+					|| isProximityOnly( bestGrabbable ) )
 				{
 					// if the user didn't press grab we have nothing else to do.
 					// proximityOnly handles can't get grabbed, so wait until we
@@ -302,7 +318,6 @@ export class CGrabStateProcessor
 				break;
 				
 			case GrabberHighlight.Grabbed:
-				let lastGrabbableIndex = indexOfGrabbable( state.grabbables, this.m_lastGrabbable );
 				if( -1 == lastGrabbableIndex )
 				{
 					// cancel grabbing
@@ -317,10 +332,12 @@ export class CGrabStateProcessor
 							handleId: this.m_lastHandle,
 						});
 					this.m_lastHighlight = GrabberHighlight.InRange;
+					this.m_lastGrabbableFlags = 0;
 					break;
 				}
 
 				let lastGrabbableCollision = state.grabbables[ lastGrabbableIndex ];
+				this.m_lastGrabbableFlags = lastGrabbableCollision.grabbableFlags;
 				if( 0 != ( lastGrabbableCollision.grabbableFlags & ENodeFlags.Tethered ) )
 				{
 					// see if we want to untether
@@ -332,6 +349,7 @@ export class CGrabStateProcessor
 								senderId: this.m_context.grabberEpa.nodeId,
 								grabberId: this.m_context.grabberEpa,
 								grabbableId: this.m_lastGrabbable,
+								grabbableFlags: lastGrabbableCollision.grabbableFlags,
 								handleId: this.m_lastHandle,
 							});
 					}
@@ -352,6 +370,7 @@ export class CGrabStateProcessor
 								senderId: this.m_context.grabberEpa.nodeId,
 								grabberId: this.m_context.grabberEpa,
 								grabbableId: this.m_lastGrabbable,
+								grabbableFlags: lastGrabbableCollision.grabbableFlags,
 								handleId: this.m_lastHandle,
 								hookId: this.m_lastHook,
 							});
@@ -369,6 +388,7 @@ export class CGrabStateProcessor
 							senderId: this.m_context.grabberEpa.nodeId,
 							grabberId: this.m_context.grabberEpa,
 							grabbableId: this.m_lastGrabbable,
+							grabbableFlags: lastGrabbableCollision.grabbableFlags,
 							handleId: this.m_lastHandle,
 						});
 					this.m_lastHighlight = GrabberHighlight.InRange;
@@ -378,8 +398,7 @@ export class CGrabStateProcessor
 
 			case GrabberHighlight.NearHook:
 				let oldHookState = findHook( state.hooks, this.m_lastHook)
-				if( !oldHookState 
-					|| -1 == indexOfGrabbable( state.grabbables, this.m_lastGrabbable ) )
+				if( !oldHookState || -1 == lastGrabbableIndex )
 				{
 					// losing our hook or grabbable both kick us back to Grabbed. The 
 					// next update will change our phase from there. 
@@ -389,6 +408,7 @@ export class CGrabStateProcessor
 							senderId: this.m_context.grabberEpa.nodeId,
 							grabberId: this.m_context.grabberEpa,
 							grabbableId: this.m_lastGrabbable,
+							grabbableFlags: this.m_lastGrabbableFlags,
 							handleId: this.m_lastHandle,
 							hookId: this.m_lastHook,
 						});
@@ -397,6 +417,8 @@ export class CGrabStateProcessor
 					break;
 				}
 
+				let grabberCollision = state.grabbables[ lastGrabbableIndex ];
+				this.m_lastGrabbableFlags = grabberCollision.grabbableFlags;
 				if( !this.m_context.getActionState( state.hand, EAction.Grab ) )
 				{
 					// a drop on a hook
@@ -406,6 +428,7 @@ export class CGrabStateProcessor
 							senderId: this.m_context.grabberEpa.nodeId,
 							grabberId: this.m_context.grabberEpa,
 							grabbableId: this.m_lastGrabbable,
+							grabbableFlags: this.m_lastGrabbableFlags,
 							handleId: this.m_lastHandle,
 							hookId: this.m_lastHook,
 						});
@@ -421,6 +444,7 @@ export class CGrabStateProcessor
 							senderId: this.m_context.grabberEpa.nodeId,
 							grabberId: this.m_context.grabberEpa,
 							grabbableId: this.m_lastGrabbable,
+							grabbableFlags: this.m_lastGrabbableFlags,
 							handleId: this.m_lastHandle,
 							hookId: this.m_lastHook,
 							hookFromGrabbable: nodeTransformFromMat4( hookFromGrabbable ),
@@ -431,12 +455,16 @@ export class CGrabStateProcessor
 				break;
 		}
 
-		if( prevHighlight != this.m_lastHighlight )
+		if( prevHighlight != this.m_lastHighlight || prevGrabbable != this.m_lastGrabbable
+			|| prevGrabbableFlags != this.m_lastGrabbableFlags || prevHook != this.m_lastHook )
 		{
+			//console.log( "Sending grabbableflags ", this.m_lastGrabbableFlags, this.m_context.grabberEpa );
 			this.m_context.sendGrabEvent( 
 				{ 
 					type: AvGrabEventType.UpdateGrabberHighlight, 
 					grabberId: this.m_context.grabberEpa,
+					grabbableFlags: this.m_lastGrabbableFlags,
+					hookId: this.m_lastHook,
 					highlight: this.m_lastHighlight,
 				} );
 		}

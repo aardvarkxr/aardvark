@@ -400,6 +400,19 @@ export class AvDefaultTraverser
 						intersection.grabbableFlags = 0;
 					}
 
+					let grabbableIdStr = endpointAddrToString( intersection.grabbableId );
+					let anchor = this.m_nodeToNodeAnchors[ grabbableIdStr ];
+					if( anchor )
+					{
+						if( anchor.anchorToRestore )
+						{
+							intersection.currentHook = anchor.anchorToRestore.parentGlobalId;
+						}
+						else
+						{
+							intersection.currentHook = anchor.parentGlobalId;
+						}
+					}
 				}
 			}
 

@@ -3,13 +3,7 @@ import { AvTransform } from './aardvark_transform';
 import bind from 'bind-decorator';
 import { AvModel } from './aardvark_model';
 import { HookHighlight, AvHook } from './aardvark_hook';
-import { AvGadget } from './aardvark_gadget';
 import { EHand, EndpointAddr, g_builtinModelHook, g_builtinModelBoundingBox } from '@aardvarkxr/aardvark-shared';
-import { AvLine } from './aardvark_line';
-import { AvModelBoxHandle } from './aardvark_handles';
-import { AvParentTransform } from './aardvark_parent_transform';
-import { AvHeadFacingTransform } from './aardvark_head_facing_transform';
-import { AvDropIndicator } from './aardvark_drop_indicator';
 
 
 interface StandardHookProps
@@ -198,20 +192,6 @@ export class AvStandardBoxHook extends React.Component< StandardBoxHookProps, St
 		}
 	}
 
-	private renderLine()
-	{
-		if( !this.state.grabbableAddr || this.state.highlight != HookHighlight.InRange 
-			|| !this.state.thisAddr )
-		{
-			return null;
-		}
-		else
-		{
-			return <AvDropIndicator grabbable={ this.state.grabbableAddr }
-				hook={ this.state.thisAddr } allowStageDrop={ false } attached={ true } />;
-		}
-	}
-
 	public render()
 	{
 		return <>
@@ -225,8 +205,6 @@ export class AvStandardBoxHook extends React.Component< StandardBoxHookProps, St
 					zMin={ this.props.zMin } zMax={ this.props.zMax }
 					persistentName={ this.props.persistentName }
 					outerVolumeScale={ this.props.outerVolumeScale }/>
-				{ /*this.renderModel() */}
-				{ this.renderLine() }
 			</>;
 	}
 }
