@@ -40,8 +40,10 @@ export class AvDropIndicator extends React.Component< DropIndicatorProps >
 	{
 		let stateModel: string;
 		let destModel: string;
+		let destModelColor: string;
 		if( this.props.hook )
 		{
+			destModelColor = "#3333FF";
 			destModel = computeEndpointFieldUri( this.props.hook, "propModelUri" );
 		}
 		else
@@ -74,6 +76,7 @@ export class AvDropIndicator extends React.Component< DropIndicatorProps >
 					</AvTransform> }
 				{ destModel && <AvTransform rotateX={ 90 } translateY={ -0.1 } translateX={ 0.05 }>
 					<AvModel uri={ destModel }
+						color={ destModelColor }
 						scaleToFit={ { x: 0.05, y: 0.05, z: 0.05 } }/> 
 					</AvTransform> }
 			</AvHeadFacingTransform>

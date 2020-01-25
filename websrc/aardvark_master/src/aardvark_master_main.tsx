@@ -2,9 +2,10 @@ import * as React from 'react';
 import  * as ReactDOM from 'react-dom';
 import bind from 'bind-decorator';
 import { AvGadget,AvOrigin, AvTransform, AvGrabber, AvModel, AvPoker, AvPanelIntersection,
-	AvLine,	AvStandardHook, AvGrabButton, AvPanel, AvPanelAnchor, AvGadgetSeed, AvStandardBoxHook } 
+	AvLine,	AvStandardBoxHook } 
 	from '@aardvarkxr/aardvark-react';
-import { Av, EndpointAddr, EHand, GrabberHighlight, g_builtinModelSphere, g_builtinModelGear, EAction, g_builtinModelHand, g_builtinModelHead } from '@aardvarkxr/aardvark-shared'
+import { Av, EndpointAddr, EHand, GrabberHighlight, g_builtinModelSphere, EAction, g_builtinModelHead,
+	g_builtinModelHandRight, g_builtinModelHandLeft } from '@aardvarkxr/aardvark-shared'
 
 interface DefaultHandProps
 {
@@ -79,12 +80,12 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 		case EHand.Left:
 			originPath = "/user/hand/left";
 			hookName = "left_hand";
-			dropIcon = g_builtinModelHand;
+			dropIcon = g_builtinModelHandLeft;
 			break;
 		case EHand.Right:
 			originPath = "/user/hand/right";
 			hookName = "right_hand";
-			dropIcon = g_builtinModelHand;
+			dropIcon = g_builtinModelHandRight;
 			break;
 		}
 
@@ -106,9 +107,10 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 					radius={ 0.001 } />
 				<AvStandardBoxHook persistentName={ hookName } hand={ this.props.hand }
 					dropIconUri={ dropIcon }
-					xMin={-0.3} xMax={0.3}
-					yMin={-0.3} yMax={0.5}
-					zMin={-0.3} zMax={0.3}
+					outerVolumeScale={ 2 }
+					xMin={-0.15} xMax={0.15}
+					yMin={-0.15} yMax={0.25}
+					zMin={-0.15} zMax={0.15}
 					/>
 			</AvOrigin>
 		);
