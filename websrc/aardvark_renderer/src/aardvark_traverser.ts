@@ -406,11 +406,22 @@ export class AvDefaultTraverser
 					{
 						if( anchor.anchorToRestore )
 						{
+							// console.log( `Figuring out current hook for ${ grabbableIdStr } - anchorToRestore=${ endpointAddrToString( anchor.anchorToRestore.parentGlobalId ) }` );
 							intersection.currentHook = anchor.anchorToRestore.parentGlobalId;
 						}
 						else
 						{
-							intersection.currentHook = anchor.parentGlobalId;
+							let possibleHookData = this.getNodeDataByEpa( anchor.parentGlobalId );
+							if( possibleHookData.lastNode 
+								&& possibleHookData.lastNode.type == AvNodeType.Hook )
+							{
+								// console.log( `Figuring out current hook for ${ grabbableIdStr } - Using parent ${ endpointAddrToString( anchor.parentGlobalId ) }` );
+								intersection.currentHook = anchor.parentGlobalId;
+							}
+							// else
+							// {
+							// 	console.log( `Figuring out current hook for ${ grabbableIdStr } - No current hook` );
+							// }
 						}
 					}
 				}
@@ -1467,6 +1478,7 @@ export class AvDefaultTraverser
 				{
 					// forget the point to restore
 					oldAnchor.anchorToRestore = null;
+					// console.log( `Detaching ${ grabbableIdStr }` );
 				}
 			}
 			break;

@@ -298,6 +298,7 @@ export class CGrabStateProcessor
 						requestId: this.m_grabRequestId,
 					});
 				this.m_lastHighlight = GrabberHighlight.WaitingForConfirmation;
+				this.m_lastHook = bestGrabbable.currentHook;
 				break;
 
 			case GrabberHighlight.WaitingForConfirmation:
@@ -352,6 +353,7 @@ export class CGrabStateProcessor
 								grabbableFlags: lastGrabbableCollision.grabbableFlags,
 								handleId: this.m_lastHandle,
 							});
+						this.m_lastHook = null;
 					}
 				}
 
