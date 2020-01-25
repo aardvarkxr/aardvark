@@ -317,6 +317,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 == Aardvark uses the following third party icons and images
 
 * Head icon made by Pixel perfect from https://www.flaticon.com
+* Parquet floor icon from SVG Repo: https://www.svgrepo.com/svg/199204/parquet-floor
+* Recycle icon from SVG Repo: https://www.svgrepo.com/svg/7913/triangular-arrows-sign-for-recycle
 
 
 
