@@ -154,6 +154,22 @@ export function indexOfEndpointAddrs( epaArray: EndpointAddr[], epa: EndpointAdd
 	return -1;
 }
 
+export function computeEndpointFieldUri( epa: EndpointAddr, fieldName: string )
+{
+	return `nodefield://${ endpointAddrToString( epa ) }/${ fieldName }`;
+}
+
+export function parseEndpointFieldUri( uri: string ): null | [ EndpointAddr, string ]
+{
+	let re = /^nodefield:\/\/(.*)\/(.*)$/;
+
+	let res = re.exec( uri );
+	if( !res )
+		return null;
+
+	return [ stringToEndpointAddr( res[1] ), res[2] ];
+}
+
 export interface Envelope
 {
 	type: MessageType;
@@ -380,6 +396,8 @@ export enum AvNodeType
 	Hook = 9,
 	Line = 10,
 	PanelIntersection = 11,
+	ParentTransform = 12,
+	HeadFacingTransform = 13,
 }
 
 
@@ -441,6 +459,7 @@ export interface AvGrabEvent
 	type: AvGrabEventType;
 	senderId?: number;
 	grabbableId?: EndpointAddr;
+	grabbableFlags?: number;
 	handleId?: EndpointAddr;
 	grabberId?: EndpointAddr;
 	hookId?: EndpointAddr;
@@ -464,6 +483,7 @@ export interface AvGrabbableCollision
 	handleId: EndpointAddr;
 	handleFlags: number;
 	grabbableFlags: number;
+	currentHook?: EndpointAddr;
 }
 
 export interface AvVector
@@ -560,6 +580,7 @@ export interface AvNode
 	propModelUri?: string;
 	propVolume?: AvVolume;
 	propOuterVolumeScale?: number;
+	propParentAddr?: EndpointAddr;
 	propInteractive?: boolean;
 	propCustomNodeType?: string;
 	propSharedTexture?: AvSharedTextureInfo;

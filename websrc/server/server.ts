@@ -9,7 +9,7 @@ import { StoredGadget, AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, Av
 	MsgDetachGadgetFromHook, MessageType, EndpointType, MsgSetEndpointType, Envelope, 
 	MsgNewEndpoint, MsgLostEndpoint, parseEnvelope, MsgError, AardvarkPort,
 	MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgDestroyGadget, WebSocketCloseCodes, 
-	MsgResourceLoadFailed, 	MsgInstallGadget, EVolumeType} from '@aardvarkxr/aardvark-shared';
+	MsgResourceLoadFailed, 	MsgInstallGadget, EVolumeType, parseEndpointFieldUri} from '@aardvarkxr/aardvark-shared';
 import * as express from 'express';
 import * as http from 'http';
 import * as WebSocket from 'ws';
@@ -619,7 +619,7 @@ class CGadgetData
 				switch( node.propVolume.type )
 				{
 					case EVolumeType.ModelBox:
-						if( !isUrl( node.propVolume.uri ) )
+						if( !isUrl( node.propVolume.uri ) && !parseEndpointFieldUri( node.propVolume.uri ) )
 						{
 							node.propVolume.uri = this.m_gadgetUri + "/" + node.propVolume.uri;
 						}
@@ -639,7 +639,7 @@ class CGadgetData
 				break;
 		
 			case AvNodeType.Model:
-				if( !isUrl( node.propModelUri ) )
+				if( !isUrl( node.propModelUri ) && !parseEndpointFieldUri( node.propModelUri ) )
 				{
 					node.propModelUri = this.m_gadgetUri + "/" + node.propModelUri;
 				}

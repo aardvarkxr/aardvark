@@ -11,7 +11,8 @@ import { endpointAddrToString, endpointAddrIsEmpty, MessageType, MsgNodeHaptic,
 	AvActionState, EAction, getActionFromState, emptyActionState, filterActionsForGadget,
 	MsgResourceLoadFailed,
 	stringToEndpointAddr,
-	g_builtinModelError
+	g_builtinModelError,
+	parseEndpointFieldUri
 } from '@aardvarkxr/aardvark-shared';
 import { computeUniverseFromLine, nodeTransformToMat4, translateMat, nodeTransformFromMat4, vec3MultiplyAndAdd, scaleAxisToFit, scaleMat, minIgnoringNulls } from './traverser_utils';
 const equal = require( 'fast-deep-equal' );
@@ -27,6 +28,7 @@ interface NodeData
 	lastFlags?: ENodeFlags;
 	lastFrameUsed: number;
 	nodeType: AvNodeType;
+	lastNode?: AvNode;
 }
 
 
@@ -398,6 +400,30 @@ export class AvDefaultTraverser
 						intersection.grabbableFlags = 0;
 					}
 
+					let grabbableIdStr = endpointAddrToString( intersection.grabbableId );
+					let anchor = this.m_nodeToNodeAnchors[ grabbableIdStr ];
+					if( anchor )
+					{
+						if( anchor.anchorToRestore )
+						{
+							// console.log( `Figuring out current hook for ${ grabbableIdStr } - anchorToRestore=${ endpointAddrToString( anchor.anchorToRestore.parentGlobalId ) }` );
+							intersection.currentHook = anchor.anchorToRestore.parentGlobalId;
+						}
+						else
+						{
+							let possibleHookData = this.getNodeDataByEpa( anchor.parentGlobalId );
+							if( possibleHookData.lastNode 
+								&& possibleHookData.lastNode.type == AvNodeType.Hook )
+							{
+								// console.log( `Figuring out current hook for ${ grabbableIdStr } - Using parent ${ endpointAddrToString( anchor.parentGlobalId ) }` );
+								intersection.currentHook = anchor.parentGlobalId;
+							}
+							// else
+							// {
+							// 	console.log( `Figuring out current hook for ${ grabbableIdStr } - No current hook` );
+							// }
+						}
+					}
 				}
 			}
 
@@ -626,6 +652,14 @@ export class AvDefaultTraverser
 				this.traversePanelIntersection( node, defaultParent );
 				break;
 			
+			case AvNodeType.ParentTransform:
+				this.traverseParentTransform( node, defaultParent );
+				break;
+			
+			case AvNodeType.HeadFacingTransform:
+				this.traverseHeadFacingTransform( node, defaultParent );
+				break;
+			
 			default:
 				throw "Invalid node type";
 			}
@@ -633,6 +667,7 @@ export class AvDefaultTraverser
 
 		let nodeData = this.getNodeData( node );
 		nodeData.lastFlags = node.flags;
+		nodeData.lastNode = node;
 		
 		let thisNodeTransform = this.getTransform( node.globalId );
 		if ( thisNodeTransform.needsUpdate() )
@@ -716,6 +751,47 @@ export class AvDefaultTraverser
 		}
 	}
 
+	traverseParentTransform( node: AvNode, defaultParent: PendingTransform )
+	{
+		if( node.propParentAddr )
+		{
+			let parentTransform = this.getTransform( node.propParentAddr );
+			this.updateTransform( node.globalId, parentTransform, null, null );
+		}
+	}
+
+	traverseHeadFacingTransform( node: AvNode, defaultParent: PendingTransform )
+	{
+		let universeFromHead = new mat4( Av().renderer.getUniverseFromOriginTransform( "/user/head" ) );
+		this.updateTransformWithCompute( node.globalId, [ defaultParent ], null, null,
+			( universeFromParents: mat4[], parentFromNode ) =>
+			{
+				let yAxisRough = new vec3( [ 0, 1, 0 ] );
+				let hmdUp = universeFromHead.multiplyVec3( new vec3( [ 0, 1, 0 ] ) );
+				if( vec3.dot( yAxisRough, hmdUp ) < 0.1 )
+				{
+					yAxisRough = hmdUp;
+				}
+
+				let universeFromNodeTranslation = universeFromParents[0].multiply( parentFromNode );
+				let nodeTranslation = universeFromNodeTranslation.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) );
+				let headTranslation = universeFromHead.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) );
+				let zAxis = new vec3( headTranslation.subtract( nodeTranslation ).xyz ).normalize();
+				let xAxis = vec3.cross( yAxisRough, zAxis, new vec3() ).normalize();
+				let yAxis = vec3.cross( zAxis, xAxis );
+
+				let universeFromNode = new mat4(
+					[ 
+						xAxis.x, xAxis.y, xAxis.z, 0,
+						yAxis.x, yAxis.y, yAxis.z, 0,
+						zAxis.x, zAxis.y, zAxis.z, 0,
+						nodeTranslation.x, nodeTranslation.y, nodeTranslation.z, 1,
+					]
+				);				
+				return universeFromNode;
+			} );
+	}
+
 	traverseModel( node: AvNode, defaultParent: PendingTransform )
 	{
 		let nodeData = this.getNodeData( node );
@@ -725,7 +801,27 @@ export class AvDefaultTraverser
 			nodeData.lastFailedModelUri = null;
 		}
 
-		let modelToLoad = nodeData.lastFailedModelUri ? g_builtinModelError : node.propModelUri 
+		let filteredUri: string;
+		let endpointFieldUri = parseEndpointFieldUri( node.propModelUri );
+		if( !endpointFieldUri )
+		{
+			filteredUri = node.propModelUri;
+		}
+		else
+		{
+			let [ epa, field ] = endpointFieldUri;
+			let nodeData = this.getNodeDataByEpa( epa );
+			if( nodeData && nodeData.lastNode )
+			{
+				let fieldValue = ( nodeData.lastNode as any )[ field ];
+				if( typeof fieldValue == "string" )
+				{
+					filteredUri = fieldValue;
+				}
+			}
+		}
+
+		let modelToLoad = nodeData.lastFailedModelUri ? g_builtinModelError : filteredUri 
 		if ( nodeData.lastModelUri != modelToLoad )
 		{
 			nodeData.modelInstance = null;
@@ -738,7 +834,7 @@ export class AvDefaultTraverser
 				nodeData.modelInstance = Av().renderer.createModelInstance( modelToLoad );
 				if ( nodeData.modelInstance )
 				{
-					nodeData.lastModelUri = node.propModelUri;
+					nodeData.lastModelUri = filteredUri;
 				}
 			}
 			catch( e )
@@ -1382,6 +1478,7 @@ export class AvDefaultTraverser
 				{
 					// forget the point to restore
 					oldAnchor.anchorToRestore = null;
+					// console.log( `Detaching ${ grabbableIdStr }` );
 				}
 			}
 			break;

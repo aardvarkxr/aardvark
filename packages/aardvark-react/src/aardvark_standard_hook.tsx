@@ -3,9 +3,7 @@ import { AvTransform } from './aardvark_transform';
 import bind from 'bind-decorator';
 import { AvModel } from './aardvark_model';
 import { HookHighlight, AvHook } from './aardvark_hook';
-import { AvGadget } from './aardvark_gadget';
 import { EHand, EndpointAddr, g_builtinModelHook, g_builtinModelBoundingBox } from '@aardvarkxr/aardvark-shared';
-import { AvLine } from './aardvark_line';
 
 
 interface StandardHookProps
@@ -15,6 +13,10 @@ interface StandardHookProps
 	 * state with the same hook or grabbable from run to run.
 	 */
 	persistentName: string;
+
+	/** The model to show as an icon when this hook is the drop point for the grabbable.
+	 */
+	dropIconUri: string;
 
 	/** The hand that this hook is parented to. This is used to determine whether or
 	 * not the hook should be visible based on that hand's edit mode.
@@ -34,6 +36,7 @@ interface StandardHookState
 {
 	highlight: HookHighlight;
 	grabbableAddr: EndpointAddr;
+	thisAddr?: EndpointAddr;
 }
 
 /** A hook for attaching grabbables to that uses a standard plus-in-circle icon and is made visible
@@ -95,6 +98,7 @@ export class AvStandardHook extends React.Component< StandardHookProps, Standard
 	{
 		return <div>
 				<AvHook updateHighlight={ this.updateHookHighlight } radius={ 0.08 } 
+					dropIconUri={ this.props.dropIconUri }
 					persistentName={ this.props.persistentName } outerVolumeScale={ this.props.outerVolumeScale }/>
 				{ this.renderModel() }
 			</div>;
@@ -188,24 +192,12 @@ export class AvStandardBoxHook extends React.Component< StandardBoxHookProps, St
 		}
 	}
 
-	private renderLine()
-	{
-		console.log( "renderLine called", this.state.highlight, this.state.grabbableAddr );
-		if( !this.state.grabbableAddr || this.state.highlight != HookHighlight.InRange )
-		{
-			return null;
-		}
-		else
-		{
-			return <AvLine endId={ this.state.grabbableAddr } color="lightgreen"
-				startGap={ 0.02 } endGap={ 0.04 } thickness={ 0.002 }/>
-		}
-	}
-
 	public render()
 	{
 		return <>
 				<AvHook updateHighlight={ this.updateHookHighlight } 
+					onIdAssigned={ ( addr: EndpointAddr ) => { this.setState( { thisAddr: addr } ) } }
+					dropIconUri={ this.props.dropIconUri }
 					preserveDropTransform={ true }
 					allowMultipleDrops={ true }
 					xMin={ this.props.xMin } xMax={ this.props.xMax }
@@ -213,8 +205,6 @@ export class AvStandardBoxHook extends React.Component< StandardBoxHookProps, St
 					zMin={ this.props.zMin } zMax={ this.props.zMax }
 					persistentName={ this.props.persistentName }
 					outerVolumeScale={ this.props.outerVolumeScale }/>
-				{ /*this.renderModel() */}
-				{ this.renderLine() }
 			</>;
 	}
 }

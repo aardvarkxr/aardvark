@@ -795,9 +795,10 @@ class GrabEventMonitor extends React.Component< GrabEventProps, {} >
 			let evt = this.props.event as AvGrabEvent;
 			return ( <div className="GrabEvent">
 				{ AvGrabEventType[ evt.type ] }
-				Sender: { evt.senderId }
+				<div className="GrabEventField">Sender: { evt.senderId }</div>
 				{ this.renderAddr( "Grabber", evt.grabberId ) }
 				{ this.renderAddr( "Grabbable", evt.grabbableId ) }
+				<div className="GrabEventField">Grabbable Flags: { evt.grabbableFlags }</div>
 				{ this.renderAddr( "Handle", evt.handleId ) }
 				{ this.renderAddr( "Hook", evt.hookId ) }
 			</div> );
