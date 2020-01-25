@@ -94,6 +94,11 @@ export class AvGrabber extends AvBaseNode< AvGrabberProps, AvGrabberState >
 	
 	renderDropIndicator()
 	{
+		if( !this.state.grabbableFlags || 0 == ( ENodeFlags.ShowGrabIndicator & this.state.grabbableFlags ) )
+		{
+			return null;
+		}
+
 		switch( this.state.highlight )
 		{
 			default:

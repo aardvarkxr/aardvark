@@ -94,6 +94,13 @@ interface AvGrabbableProps extends AvBaseNodeProps
 	 * @default false
 	 */
 	grabWithIdentityTransform?: boolean;
+
+	/** Show the grab indicator when this grabbable is grabbed.
+	 * 
+	 * @default true
+	 */
+	showGrabIndicator?: boolean;
+
 }
 
 interface AvGrabbableState
@@ -164,6 +171,10 @@ export class AvGrabbable extends AvBaseNode< AvGrabbableProps, AvGrabbableState 
 		if( this.state.hook )
 		{
 			node.flags |= ENodeFlags.Tethered;
+		}
+		if( typeof this.props.showGrabIndicator !== "boolean" || this.props.showGrabIndicator )
+		{
+			node.flags |= ENodeFlags.ShowGrabIndicator;
 		}
 
 		return node;
