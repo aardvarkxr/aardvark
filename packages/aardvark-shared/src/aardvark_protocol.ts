@@ -12,7 +12,7 @@ export enum MessageType
 	GetGadgetManifest = 103,
 	GetGadgetManifestResponse = 104,
 	UserInfo = 105,
-		
+
 	// Monitor messages
 	// these are send to monitors to give them meta context
 	NewEndpoint = 200,
@@ -199,9 +199,6 @@ export interface MsgSetEndpointTypeResponse
 	endpointId: number;
 	settings?: any;
 	persistenceUuid?: string;
-	localUserUuid?: string;
-	localUserDisplayName?: string;
-	localUserPublicKey?: string;
 }
 
 export interface MsgUserInfo

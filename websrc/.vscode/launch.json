@@ -74,6 +74,20 @@
 				"${workspaceFolder}/../data/**/*.js",
 				"${workspaceFolder}/../data/**/*.js.map" 
 			]
+		},
+		{
+			"name": "Debug Jest Tests",
+			"type": "node",
+			"request": "launch",
+			"runtimeArgs": [
+				"--inspect-brk",
+				"${workspaceRoot}/node_modules/jest/bin/jest.js",
+				"--runInBand",
+				"--detectOpenHandles"
+			],
+			"console": "integratedTerminal",
+			"internalConsoleOptions": "neverOpen",
+			"port": 9229
 		}
 	]
 }

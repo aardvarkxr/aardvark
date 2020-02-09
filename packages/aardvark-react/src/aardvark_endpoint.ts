@@ -28,6 +28,7 @@ export class CAardvarkEndpoint
 	private m_endpointId: number = null;
 	private m_queuedMessages: Envelope[] = [];
 	private m_pendingManifestLoads: { [gadgetUri: string ]: PendingGadgetManifestLoad[] } = {};
+	private m_allowReconnect = false;
 
 	constructor( openHandler: OpenHandler, handshakeComplete: OpenHandler, defaultHandler: MessageHandler = null )
 	{
@@ -40,6 +41,8 @@ export class CAardvarkEndpoint
 	}
 
 	public getEndpointId() { return this.m_endpointId; }
+
+	public allowReconnect() { this.m_allowReconnect = true; }
 
 	@bind private connectToServer()
 	{
@@ -181,11 +184,11 @@ export class CAardvarkEndpoint
 			// work as possible
 			window.close();
 		}
-		else
+		else if ( this.m_allowReconnect )
 		{
 			// The socket closed from the other end. Schedule a reconnect for when
 			// the server comes back up
-			window.setTimeout( this.connectToServer, 2000 );
+			setTimeout( this.connectToServer, 2000 );
 		}
 	}
 }
@@ -195,6 +198,7 @@ export class CMonitorEndpoint extends CAardvarkEndpoint
 	constructor( defaultHandler: MessageHandler = null )
 	{
 		super( () => { this.onOpen() }, null, defaultHandler );
+		this.allowReconnect();
 	}
 
 	@bind onOpen()

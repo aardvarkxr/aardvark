@@ -13,6 +13,7 @@ export class CGadgetEndpoint extends CAardvarkEndpoint
 		openHandler: OpenHandler, defaultHandler: MessageHandler = null )
 	{
 		super( () => { this.onOpen() }, openHandler, defaultHandler );
+		this.allowReconnect();
 		this.m_gadgetUri = gadgetUri;
 		this.m_initialHook = initialHook;
 		this.m_persistenceUuid = persistenceUuid;

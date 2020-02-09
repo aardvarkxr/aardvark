@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "jest",
+    "test:watch": "jest --watch",
     "build": "webpack --env=production",
     "start": "webpack --env=dev --watch --progress",
     "updatelicense": "node build_license_file.js"
