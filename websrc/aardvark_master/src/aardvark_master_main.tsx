@@ -6,6 +6,7 @@ import { AvGadget,AvOrigin, AvTransform, AvGrabber, AvModel, AvPoker, AvPanelInt
 	from '@aardvarkxr/aardvark-react';
 import { Av, EndpointAddr, EHand, GrabberHighlight, g_builtinModelSphere, EAction, g_builtinModelHead,
 	g_builtinModelHandRight, g_builtinModelHandLeft } from '@aardvarkxr/aardvark-shared'
+import { CMasterModel } from './master_model';
 
 interface DefaultHandProps
 {
@@ -146,6 +147,8 @@ class MasterControls extends React.Component< {}, {} >
 		);
 	}
 }
+
+let masterModel = new CMasterModel();
 
 ReactDOM.render( <MasterControls/>, document.getElementById( "root" ) );
 

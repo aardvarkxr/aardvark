@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import { Av, AvStartGadgetCallback, AvActionState, EAction, getActionFromState } from '@aardvarkxr/aardvark-shared';
+import { Av, AvStartGadgetCallback, AvActionState, EAction, getActionFromState, MsgUserInfo } from '@aardvarkxr/aardvark-shared';
 import { IAvBaseNode } from './aardvark_base_node';
 import bind from 'bind-decorator';
 import { CGadgetEndpoint } from './gadget_endpoint';
@@ -79,6 +79,8 @@ export class AvGadget
 	private m_mainHandle: AvNode = null;
 	private m_mainGrabbableComponent: IAvBaseNode = null;
 	private m_mainHandleComponent: IAvBaseNode = null;
+	private m_userInfo: MsgUserInfo = null;
+	private m_userInfoListeners: (()=>void)[] = [];
 
 	m_grabEventProcessors: {[nodeId:number]: AvGrabEventProcessor } = {};
 	m_pokerProcessors: {[nodeId:number]: AvPokerHandler } = {};
@@ -130,6 +132,7 @@ export class AvGadget
 		this.m_endpoint.registerHandler( MessageType.MasterStartGadget, this.onMasterStartGadget );
 		this.m_endpoint.registerHandler( MessageType.UpdateActionState, this.onUpdateActionState );
 		this.m_endpoint.registerHandler( MessageType.ResourceLoadFailed, this.onResourceLoadFailed );
+		this.m_endpoint.registerHandler( MessageType.UserInfo, this.onUserInfo );
 
 		if( this.m_onSettingsReceived )
 		{
@@ -624,6 +627,53 @@ export class AvGadget
 			endpointId: this.getEndpointId(),
 			nodeId: nodeId,
 		}
+	}
+
+	@bind
+	private onUserInfo( type: MessageType, msg: MsgUserInfo )
+	{
+		this.m_userInfo = msg;
+		if( this.m_userInfoListeners )
+		{
+			for( let listener of this.m_userInfoListeners )
+			{
+				listener();
+			}
+		}
+	}
+
+	/** Adds a listener for user info updates */
+	public addUserInfoListener( fn: ()=>void ) 
+	{
+		this.m_userInfoListeners.push( fn );
+	}
+
+	/** Removes a listener for user info updates */
+	public removeUserInfoListener( fn: ()=>void ) 
+	{
+		let i = this.m_userInfoListeners.findIndex( fn );
+		if( i != -1 )
+		{
+			this.m_userInfoListeners.splice( i, 1 );
+		}
+	}
+
+	/** Returns the local user's uuid. */
+	public get localUserUuid() : string
+	{
+		return this.m_userInfo?.localUserUuid;
+	}
+
+	/** Returns the local user's uuid. */
+	public get localUserDisplayName() : string
+	{
+		return this.m_userInfo?.localUserDisplayName;
+	}
+
+	/** Returns the local user's uuid. */
+	public get localUserPublicKey() : string
+	{
+		return this.m_userInfo?.localUserPublicKey;
 	}
 }
 

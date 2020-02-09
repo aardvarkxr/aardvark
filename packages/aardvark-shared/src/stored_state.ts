@@ -1,4 +1,5 @@
 import { AvNodeTransform } from './aardvark_protocol';
+import { v4 as uuid } from 'uuid';
 
 interface GadgetPersistence
 {
@@ -20,6 +21,8 @@ export interface AardvarkState
 	format: number;
 	activeGadgets: { [uuid:string]: GadgetPersistence };
 	installedGadgets: string[];
+	localUserUuid: string;
+	localUserDisplayName: string;
 }
 
 
@@ -36,13 +39,55 @@ export function getStandardPersistencePath(): string
 	return path.join( getStandardAardvarkPath(), "state.json" );
 }
 
+const firstNames = 
+[
+	"Green",
+	"Blue",
+	"Red", 
+	"Orange",
+	"Teal",
+	"Purple",
+	"Pink",
+	"Yellow",
+	"Black",
+	"White",
+	"Brown",
+	"Beige"
+];
+
+const lastNames =
+[
+	"Apple",
+	"Banana",
+	"Lemon",
+	"Pineapple",
+	"Coconut",
+	"Lime",
+	"Kiwi",
+	"Pear",
+	"Cherry",
+	"Strawberry",
+	"Grape",
+	"Mango"
+];
+
+
+function generateRandomName( ):string
+{
+	let firstIndex = Math.random() * firstNames.length;
+	let lastIndex = Math.random() * lastNames.length;
+	return `${ firstNames[ firstIndex ] } ${ lastNames[ lastIndex ] }`;
+}
+
 export function v1ToV2( from: AardvarkState ): AardvarkState
 {
 	let to: AardvarkState = 
 	{ 
 		format: 2,
 		activeGadgets: from.activeGadgets,
-		installedGadgets: [] 
+		installedGadgets: [],
+		localUserUuid: uuid(),
+		localUserDisplayName: generateRandomName(),
 	};
 
 	for( let installed of from.installedGadgets )
@@ -82,6 +127,11 @@ export function readPersistentState( path: string ): AardvarkState
 			};
 		}
 
+		if( !state.localUserDisplayName )
+		{
+			state.localUserDisplayName = generateRandomName();
+		}
+
 		console.log( `Read state from ${ path } for `
 			+ `${ Object.keys( state.activeGadgets ).length } active gadgets` );
 		return state;
@@ -107,6 +157,8 @@ export function readPersistentState( path: string ): AardvarkState
 				"http://localhost:23842/gadgets/test_panel",
 				"http://localhost:23842/gadgets/control_test",
 			],
+			localUserUuid: uuid(),
+			localUserDisplayName: generateRandomName(),
 		}
 		return state;
 	}

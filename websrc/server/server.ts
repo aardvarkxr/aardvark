@@ -9,7 +9,7 @@ import { StoredGadget, AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, Av
 	MsgDetachGadgetFromHook, MessageType, EndpointType, MsgSetEndpointType, Envelope, 
 	MsgNewEndpoint, MsgLostEndpoint, parseEnvelope, MsgError, AardvarkPort,
 	MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgDestroyGadget, WebSocketCloseCodes, 
-	MsgResourceLoadFailed, 	MsgInstallGadget, EVolumeType, parseEndpointFieldUri} from '@aardvarkxr/aardvark-shared';
+	MsgResourceLoadFailed, 	MsgInstallGadget, EVolumeType, parseEndpointFieldUri, MsgUserInfo} from '@aardvarkxr/aardvark-shared';
 import * as express from 'express';
 import * as http from 'http';
 import * as WebSocket from 'ws';
@@ -960,9 +960,20 @@ class CEndpoint
 			}
 
 			msgResponse.persistenceUuid = this.m_gadgetData.getPersistenceUuid();
+			msgResponse.localUserUuid = persistence.localUserUuid;
+			msgResponse.localUserDisplayName = persistence.localUserDisplayName;
+			msgResponse.localUserPublicKey = persistence.localUserPublicKey;
 		}
 
 		this.sendMessage( MessageType.SetEndpointTypeResponse, msgResponse );
+
+		let msgUserInfo: MsgUserInfo =
+		{
+			localUserUuid: persistence.localUserUuid,
+			localUserDisplayName: persistence.localUserDisplayName,
+			localUserPublicKey: persistence.localUserPublicKey,
+		}
+		this.sendMessage( MessageType.UserInfo, msgUserInfo );
 		
 		this.m_dispatcher.setEndpointType( this );
 

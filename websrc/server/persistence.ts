@@ -248,6 +248,20 @@ class CPersistenceManager
 			|| gadgetUri == "http://localhost:23842/gadgets/gadget_menu";
 	}
 
+	public get localUserUuid() : string
+	{
+		return this.m_state.localUserUuid;
+	}
+
+	public get localUserDisplayName() : string
+	{
+		return this.m_state.localUserDisplayName;
+	}
+
+	public get localUserPublicKey() : string
+	{
+		return "PUB" + this.m_state.localUserUuid;
+	}
 }
 
 export let persistence = new CPersistenceManager();
