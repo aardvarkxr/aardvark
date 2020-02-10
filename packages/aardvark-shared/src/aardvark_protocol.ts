@@ -174,6 +174,8 @@ export function parseEndpointFieldUri( uri: string ): null | [ EndpointAddr, str
 export interface Envelope
 {
 	type: MessageType;
+	sequenceNumber: number;
+	replyTo?: number;
 	sender?: EndpointAddr;
 	target?: EndpointAddr; 
 	payload?: string;

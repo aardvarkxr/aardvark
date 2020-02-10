@@ -29,6 +29,7 @@ export class CAardvarkEndpoint
 	private m_queuedMessages: Envelope[] = [];
 	private m_pendingManifestLoads: { [gadgetUri: string ]: PendingGadgetManifestLoad[] } = {};
 	private m_allowReconnect = false;
+	private m_nextSequenceNumber = 1;
 
 	constructor( openHandler: OpenHandler, handshakeComplete: OpenHandler, defaultHandler: MessageHandler = null )
 	{
@@ -108,6 +109,7 @@ export class CAardvarkEndpoint
 		let env: Envelope =
 		{
 			type,
+			sequenceNumber: this.m_nextSequenceNumber++,
 		};
 		if( msg != undefined )
 		{

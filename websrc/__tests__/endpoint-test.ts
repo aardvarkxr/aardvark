@@ -2,11 +2,9 @@ import { EndpointAddr, MessageType, AardvarkPort, MsgSetEndpointType, EndpointTy
 import { CAardvarkEndpoint } from "@aardvarkxr/aardvark-react";
 import { WS  } from 'jest-websocket-mock';
 import { WebSocket } from 'mock-socket';
-import { resolve } from 'dns';
 
 ( global as any).WebSocket = WebSocket;
 
-//jest.useFakeTimers();
 jest.useRealTimers();
 
 let server: WS = null;
@@ -19,10 +17,29 @@ beforeEach( async() =>
 
 	server.connected.then( async () =>
 	{
+		let nextSequence = 394;
+		let sendMessage = ( type: MessageType, payload: any, replyTo?: Envelope ) =>
+		{
+			let env: Envelope =
+			{
+				type: type,
+				sequenceNumber: nextSequence++,
+				payload: JSON.stringify( payload ),
+			}
+
+			if( replyTo )
+			{
+				env.target = replyTo.sender;
+				env.replyTo = replyTo.sequenceNumber;
+			}
+
+			server.send( env );
+		}
+
 		while( true )
 		{
-			let msg: Envelope = await server.nextMessage as Envelope;
-			switch( msg.type )
+			let env: Envelope = await server.nextMessage as Envelope;
+			switch( env.type )
 			{
 				case MessageType.SetEndpointType:
 					{
@@ -31,12 +48,7 @@ beforeEach( async() =>
 							endpointId: endpointId++,
 						}
 						
-						let env: Envelope =
-						{
-							type: MessageType.SetEndpointTypeResponse,
-							payload: JSON.stringify( msgSetEndpointTypeResponse ),
-						}
-						server.send( env );
+						sendMessage( MessageType.SetEndpointTypeResponse, msgSetEndpointTypeResponse, env );
 					}
 					break;
 			}

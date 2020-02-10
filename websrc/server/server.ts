@@ -35,9 +35,15 @@ class CDispatcher
 	private m_renderers: CEndpoint[] = [];
 	private m_gadgets: CEndpoint[] = [];
 	private m_gadgetsByUuid: { [ uuid: string ] : CEndpoint } = {};
+	private m_nextSequenceNumber = 1;
 
 	constructor()
 	{
+	}
+
+	public get nextSequenceNumber()
+	{
+		return this.m_nextSequenceNumber++;
 	}
 
 	private getListForType( ept: EndpointType )
@@ -172,6 +178,7 @@ class CDispatcher
 			let packedEnv: Envelope =
 			{
 				type: env.type,
+				sequenceNumber: this.nextSequenceNumber,
 				sender: env.sender,
 				target: env.target,
 			}
@@ -230,6 +237,7 @@ class CDispatcher
 		return (
 		{
 			type: MessageType.UpdateSceneGraph,
+			sequenceNumber: this.nextSequenceNumber,
 			sender: { type: EndpointType.Gadget, endpointId: gadgetId },
 			payloadUnpacked: msg,
 		} );
@@ -253,6 +261,7 @@ class CDispatcher
 		{
 			sender: { type: EndpointType.Hub },
 			type: MessageType.NewEndpoint,
+			sequenceNumber: this.nextSequenceNumber,
 			payloadUnpacked: newEpMsg,
 		} );
 	}
@@ -549,6 +558,7 @@ class CGadgetData
 					let env: Envelope =
 					{
 						type: MessageType.GrabEvent,
+						sequenceNumber: this.m_dispatcher.nextSequenceNumber,
 						payloadUnpacked: msg,
 					}
 
@@ -960,9 +970,6 @@ class CEndpoint
 			}
 
 			msgResponse.persistenceUuid = this.m_gadgetData.getPersistenceUuid();
-			msgResponse.localUserUuid = persistence.localUserUuid;
-			msgResponse.localUserDisplayName = persistence.localUserDisplayName;
-			msgResponse.localUserPublicKey = persistence.localUserPublicKey;
 		}
 
 		this.sendMessage( MessageType.SetEndpointTypeResponse, msgResponse );
@@ -1124,6 +1131,7 @@ class CEndpoint
 		let env: Envelope =
 		{
 			type,
+			sequenceNumber: this.m_dispatcher.nextSequenceNumber,
 			sender: sender ? sender : { type: EndpointType.Hub, endpointId: 0 },
 			target,
 			payload: JSON.stringify( msg ),
@@ -1177,6 +1185,7 @@ class CEndpoint
 			{
 				sender: { type: EndpointType.Hub },
 				type: MessageType.LostEndpoint,
+				sequenceNumber: this.m_dispatcher.nextSequenceNumber,
 				payloadUnpacked: lostEpMsg,
 			} );
 		
