@@ -4,7 +4,7 @@ import { CMonitorEndpoint } from '@aardvarkxr/aardvark-react';
 import { EndpointType, MessageType, EndpointAddr, MsgNewEndpoint, MsgLostEndpoint, 
 	MsgUpdateSceneGraph, AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, 
 	AvVector, AvQuaternion, AvGrabEvent, AvGrabEventType, endpointAddrToString, 
-	MsgGrabEvent, MsgPokerProximity, MsgOverrideTransform, MsgResourceLoadFailed } from '@aardvarkxr/aardvark-shared';
+	MsgGrabEvent, MsgPokerProximity, MsgOverrideTransform, MsgResourceLoadFailed, Envelope } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import { observable, ObservableMap, action, observe, computed } from 'mobx';
 import { observer } from 'mobx-react';
@@ -81,12 +81,12 @@ class CMonitorStore
 		return gadgetData.nodes[ nodeId.nodeId ];
 	}
 
-	@bind onUnhandledMessage( type: MessageType, message: any, sender: EndpointAddr )
+	@bind onUnhandledMessage( message: any, env: Envelope )
 	{
-		console.log( "received unhandled message", type, message, sender );
+		console.log( "received unhandled message", env.type, message, env.sender );
 	}
 
-	@bind @action onNewEndpoint( type: MessageType, message: MsgNewEndpoint, sender: EndpointAddr )
+	@bind @action onNewEndpoint( message: MsgNewEndpoint )
 	{
 		console.log( "New endpoint!", message );
 		let data: EndpointData;
@@ -129,12 +129,12 @@ class CMonitorStore
 		}
 	}
 
-	@bind @action onUpdateSceneGraph( type: MessageType, message: MsgUpdateSceneGraph, sender: EndpointAddr )
+	@bind @action onUpdateSceneGraph( message: MsgUpdateSceneGraph, env: Envelope )
 	{
-		if( !this.m_endpoints.has( sender.endpointId ) )
+		if( !this.m_endpoints.has( env.sender.endpointId ) )
 			return;
 
-		let epData = this.m_endpoints.get( sender.endpointId );
+		let epData = this.m_endpoints.get( env.sender.endpointId );
 		if( !epData || epData.type != EndpointType.Gadget )
 		{
 			console.log( "UpdateSceneGraph for invalid endpoint", epData );
@@ -152,23 +152,23 @@ class CMonitorStore
 		}
 	}
 
-	@bind @action onLostEndpoint( type: MessageType, message: MsgLostEndpoint, sender: EndpointAddr )
+	@bind @action onLostEndpoint( message: MsgLostEndpoint )
 	{
 		console.log( "Lost endpoint!", message );
 		this.m_endpoints.delete( message.endpointId );
 	}
 
-	@bind @action onGrabEvent( type: MessageType, message: MsgGrabEvent, sender: EndpointAddr )
+	@bind @action onGrabEvent( message: MsgGrabEvent )
 	{
 		this.m_events.push( message.event );
 	}
 
-	@bind @action onResourceLoadFailed( type: MessageType, message: MsgResourceLoadFailed, sender: EndpointAddr )
+	@bind @action onResourceLoadFailed( message: MsgResourceLoadFailed )
 	{
 		this.m_events.push( message );
 	}
 
-	@bind @action onPokerProximity( type: MessageType, message: MsgPokerProximity )
+	@bind @action onPokerProximity(  message: MsgPokerProximity )
 	{
 		// nothing here yet
 	}

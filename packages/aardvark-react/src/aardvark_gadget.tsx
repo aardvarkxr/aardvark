@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import { Av, AvStartGadgetCallback, AvActionState, EAction, getActionFromState, MsgUserInfo } from '@aardvarkxr/aardvark-shared';
+import { Av, AvStartGadgetCallback, AvActionState, EAction, getActionFromState, MsgUserInfo, Envelope } from '@aardvarkxr/aardvark-shared';
 import { IAvBaseNode } from './aardvark_base_node';
 import bind from 'bind-decorator';
 import { CGadgetEndpoint } from './gadget_endpoint';
@@ -200,7 +200,7 @@ export class AvGadget
 		return new Promise<string[]>( ( resolve, reject ) =>
 		{
 			this.m_endpoint.waitForResponse( MessageType.GetInstalledGadgetsResponse, 
-				( type: MessageType, resp: MsgGetInstalledGadgetsResponse ) =>
+				( resp: MsgGetInstalledGadgetsResponse ) =>
 				{
 					resolve( resp.installedGadgets );
 				});
@@ -249,22 +249,22 @@ export class AvGadget
 		return this.m_endpoint.getEndpointId();
 	}
 
-	@bind onGrabEvent( type:MessageType, m: MsgGrabEvent, sender: EndpointAddr, target: EndpointAddr ):void
+	@bind onGrabEvent( m: MsgGrabEvent, env: Envelope ):void
 	{
-		let processor = this.m_grabEventProcessors[ target.nodeId ];
+		let processor = this.m_grabEventProcessors[ env.target.nodeId ];
 		if( processor )
 		{
 			processor( m.event );
 		}
 	}
 
-	@bind onGadgetStarted( type:MessageType, m: MsgGadgetStarted, sender: EndpointAddr, target: EndpointAddr ):void
+	@bind onGadgetStarted( m: MsgGadgetStarted, env: Envelope ):void
 	{
-		let processor = this.m_startGadgetCallbacks[ target.nodeId ];
+		let processor = this.m_startGadgetCallbacks[ env.target.nodeId ];
 		if( processor )
 		{
 			processor( true, m.mainGrabbableGlobalId, m.mainHandleGlobalId );
-			delete this.m_startGadgetCallbacks[ target.nodeId ];
+			delete this.m_startGadgetCallbacks[ env.target.nodeId ];
 		}
 	}
 
@@ -274,9 +274,9 @@ export class AvGadget
 	}
 
 
-	@bind private onPokerProximity( type:MessageType, m: MsgPokerProximity, sender: EndpointAddr, target: EndpointAddr )
+	@bind private onPokerProximity( m: MsgPokerProximity, env: Envelope )
 	{
-		let processor = this.m_pokerProcessors[ target.nodeId ];
+		let processor = this.m_pokerProcessors[ env.target.nodeId ];
 		if( processor )
 		{
 			processor( m.actionState.grab, m.panels );
@@ -303,21 +303,21 @@ export class AvGadget
 		this.m_endpoint.sendMessage( MessageType.MouseEvent, msg );
 	}
 
-	@bind private onMouseEvent( type:MessageType, m: MsgMouseEvent, sender: EndpointAddr, target: EndpointAddr )
+	@bind private onMouseEvent( m: MsgMouseEvent, env: Envelope  )
 	{
-		let processor = this.m_panelProcessors[ target.nodeId ];
+		let processor = this.m_panelProcessors[ env.target.nodeId ];
 		if( processor )
 		{
 			processor( m.event );
 		}
 	}
 
-	@bind private onMasterStartGadget( type: MessageType, m: MsgMasterStartGadget )
+	@bind private onMasterStartGadget( m: MsgMasterStartGadget )
 	{
 		Av().startGadget( m.uri, m.initialHook, m.persistenceUuid, null );
 	}
 
-	@bind private onResourceLoadFailed( type: MessageType, m: MsgResourceLoadFailed )
+	@bind private onResourceLoadFailed( m: MsgResourceLoadFailed )
 	{
 		console.error( `Resource load failed for ${ endpointAddrToString( m.nodeId ) }.`
 			+ ` uri=${ m.resourceUri } error=${ m.error }` );
@@ -351,7 +351,7 @@ export class AvGadget
 		delete this.m_actionStateListeners[ handle ];
 	}
 
-	@bind private onUpdateActionState( type: MessageType, m: MsgUpdateActionState )
+	@bind private onUpdateActionState( m: MsgUpdateActionState, env: Envelope )
 	{
 		let oldState = this.m_actionState[ m.hand ];
 		let newState = m.actionState;
@@ -630,7 +630,7 @@ export class AvGadget
 	}
 
 	@bind
-	private onUserInfo( type: MessageType, msg: MsgUserInfo )
+	private onUserInfo( msg: MsgUserInfo )
 	{
 		this.m_userInfo = msg;
 		if( this.m_userInfoListeners )

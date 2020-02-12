@@ -3,7 +3,7 @@ import { AvGadgetManifest, AvGrabEvent, EndpointType, MessageType, EndpointAddr,
 
 export interface MessageHandler
 {
-	( type:MessageType, payload: any, sender: EndpointAddr, target: EndpointAddr ):void;
+	( payload: any, env: Envelope ):void;
 }
 
 export interface OpenHandler
@@ -71,16 +71,16 @@ export class CAardvarkEndpoint
 
 		if( this.m_handlers[ env.type ] )
 		{
-			this.m_handlers[ env.type ]( env.type, env.payloadUnpacked, env.sender, env.target );
+			this.m_handlers[ env.type ]( env.payloadUnpacked, env );
 		} 
 		else if( this.m_callbacks[ env.type ] )
 		{
-			this.m_callbacks[ env.type]( env.type, env.payloadUnpacked, env.sender, env.target );
+			this.m_callbacks[ env.type]( env.payloadUnpacked, env );
 			delete this.m_callbacks[ env.type ];
 		}
 		else if( this.m_defaultHandler )
 		{
-			this.m_defaultHandler( env.type, env.payloadUnpacked, env.sender, env.target );
+			this.m_defaultHandler( env.payloadUnpacked, env );
 		}
 		else
 		{
@@ -88,7 +88,7 @@ export class CAardvarkEndpoint
 		}
 	}
 
-	@bind public onSetEndpointTypeResponse( type: MessageType, m: MsgSetEndpointTypeResponse )
+	@bind public onSetEndpointTypeResponse( m: MsgSetEndpointTypeResponse )
 	{
 		this.m_endpointId = m.endpointId;
 		if( this.m_handshakeComplete )
@@ -157,7 +157,7 @@ export class CAardvarkEndpoint
 		} );
 	}
 
-	@bind private onGetGadgetManifestResponse( type: MessageType, m: MsgGetGadgetManifestResponse )
+	@bind private onGetGadgetManifestResponse( m: MsgGetGadgetManifestResponse )
 	{
 		let pendingRequests = this.m_pendingManifestLoads[ m.gadgetUri ];
 		if( pendingRequests )

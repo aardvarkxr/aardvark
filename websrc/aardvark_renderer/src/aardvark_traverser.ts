@@ -12,7 +12,8 @@ import { endpointAddrToString, endpointAddrIsEmpty, MessageType, MsgNodeHaptic,
 	MsgResourceLoadFailed,
 	stringToEndpointAddr,
 	g_builtinModelError,
-	parseEndpointFieldUri
+	parseEndpointFieldUri,
+	Envelope
 } from '@aardvarkxr/aardvark-shared';
 import { computeUniverseFromLine, nodeTransformToMat4, translateMat, nodeTransformFromMat4, vec3MultiplyAndAdd, scaleAxisToFit, scaleMat, minIgnoringNulls } from './traverser_utils';
 const equal = require( 'fast-deep-equal' );
@@ -186,7 +187,7 @@ export class AvDefaultTraverser
 		this.m_endpoint = new CRendererEndpoint( this.onEndpointOpen );
 		this.m_endpoint.registerHandler( MessageType.UpdateSceneGraph, this.onUpdateSceneGraph )
 		this.m_endpoint.registerHandler( MessageType.GrabEvent, 
-			( type: MessageType, m: MsgGrabEvent ) =>
+			( m: MsgGrabEvent ) =>
 			{
 				this.grabEvent( m.event );
 			} );
@@ -198,23 +199,23 @@ export class AvDefaultTraverser
 
 	}
 
-	@bind onUpdateSceneGraph( type:MessageType, payload: any, sender: EndpointAddr )
+	@bind onUpdateSceneGraph( payload: any, env: Envelope )
 	{
 		let m = payload as MsgUpdateSceneGraph;
 		if( !m.root )
 		{
 			// TODO: Clean up drags and such?
-			delete this.m_roots[ sender.endpointId ];
+			delete this.m_roots[ env.sender.endpointId ];
 		}
 		else
 		{
-			this.updateGlobalIds( m.root, sender.endpointId );
-			let rootData = this.m_roots[ sender.endpointId ];
+			this.updateGlobalIds( m.root, env.sender.endpointId );
+			let rootData = this.m_roots[ env.sender.endpointId ];
 			if( !rootData )
 			{
-				rootData = this.m_roots[ sender.endpointId ] = 
+				rootData = this.m_roots[ env.sender.endpointId ] = 
 				{ 
-					gadgetId: sender.endpointId, 
+					gadgetId: env.sender.endpointId, 
 					handIsRelevant: new Set<EHand>(),
 					wasGadgetDraggedLastFrame: false,
 					root: null 
@@ -1528,7 +1529,7 @@ export class AvDefaultTraverser
 
 	
 	@bind
-	public onNodeHaptic( messageType: MessageType, m: MsgNodeHaptic  )
+	public onNodeHaptic( m: MsgNodeHaptic  )
 	{
 		let hapticHand = this.m_handDeviceForNode[ endpointAddrToString( m.nodeId ) ];
 		if( hapticHand )

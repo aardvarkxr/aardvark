@@ -2,7 +2,7 @@ import * as React from 'react';
 import  * as ReactDOM from 'react-dom';
 import { CUtilityEndpoint } from '@aardvarkxr/aardvark-react';
 import bind from 'bind-decorator';
-import { MessageType, EndpointAddr, MsgInstallGadget } from '@aardvarkxr/aardvark-shared';
+import { MessageType, MsgInstallGadget, Envelope } from '@aardvarkxr/aardvark-shared';
 
 
 class GadgetInstaller extends React.Component< {}, {} >
@@ -17,9 +17,9 @@ class GadgetInstaller extends React.Component< {}, {} >
 		this.m_connection = new CUtilityEndpoint( this.onUnhandledMessage );
 	}
 	
-	@bind onUnhandledMessage( type: MessageType, message: any, sender: EndpointAddr )
+	@bind onUnhandledMessage( message: any, env: Envelope )
 	{
-		console.log( "received unhandled message", type, message, sender );
+		console.log( "received unhandled message", env.type, message, env.sender );
 	}
 
 	@bind private onInstall()
