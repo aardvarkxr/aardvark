@@ -886,7 +886,7 @@ class CEndpoint
 				response.manifest.model = m.gadgetUri + "/" + response.manifest.model;
 			}
 
-			this.sendMessage( MessageType.GetGadgetManifestResponse, response );
+			this.sendReply( MessageType.GetGadgetManifestResponse, response, env );
 		})
 		.catch( (reason:any ) =>
 		{
@@ -895,7 +895,7 @@ class CEndpoint
 				error: "Unable to load manifest " + reason,
 				gadgetUri: m.gadgetUri,
 			}
-			this.sendMessage( MessageType.GetGadgetManifestResponse, response );
+			this.sendReply( MessageType.GetGadgetManifestResponse, response, env );
 		})
 
 	}
@@ -1095,7 +1095,7 @@ class CEndpoint
 		{
 			installedGadgets: persistence.getInstalledGadgets()
 		}
-		this.sendMessage( MessageType.GetInstalledGadgetsResponse, resp );
+		this.sendReply( MessageType.GetInstalledGadgetsResponse, resp, env );
 	}
 
 	@bind private onInstallGadget( env: Envelope, m: MsgInstallGadget )
@@ -1134,6 +1134,20 @@ class CEndpoint
 			sequenceNumber: this.m_dispatcher.nextSequenceNumber,
 			sender: sender ? sender : { type: EndpointType.Hub, endpointId: 0 },
 			target,
+			payload: JSON.stringify( msg ),
+		}
+		this.sendMessageString( JSON.stringify( env ) )
+	}
+
+	public sendReply( type: MessageType, msg: any, replyTo: Envelope, sender:EndpointAddr = undefined  )
+	{
+		let env: Envelope =
+		{
+			type,
+			sequenceNumber: this.m_dispatcher.nextSequenceNumber,
+			sender: sender ? sender : { type: EndpointType.Hub, endpointId: 0 },
+			target: replyTo.sender,
+			replyTo: replyTo.sequenceNumber,
 			payload: JSON.stringify( msg ),
 		}
 		this.sendMessageString( JSON.stringify( env ) )

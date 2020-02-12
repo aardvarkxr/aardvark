@@ -19,6 +19,8 @@ class MasterModel extends Croquet.Model
 }
 
 
+MasterModel.register();
+
 class MasterView extends Croquet.View
 {
 	public masterModel: MasterModel;

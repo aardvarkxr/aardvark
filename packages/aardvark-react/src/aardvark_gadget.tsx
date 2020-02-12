@@ -193,17 +193,18 @@ export class AvGadget
 	*/
 	public getInstalledGadgets(): Promise< string[] >
 	{
-		let m: MsgGetInstalledGadgets = {};
-		this.m_endpoint.sendMessage( MessageType.GetInstalledGadgets, m );
 		console.log( "Requesting installed gadgets" );
 
 		return new Promise<string[]>( ( resolve, reject ) =>
 		{
-			this.m_endpoint.waitForResponse( MessageType.GetInstalledGadgetsResponse, 
-				( resp: MsgGetInstalledGadgetsResponse ) =>
-				{
-					resolve( resp.installedGadgets );
-				});
+			let m: MsgGetInstalledGadgets = {};
+			this.m_endpoint.sendMessageAndWaitForResponse<MsgGetInstalledGadgetsResponse>( 
+				MessageType.GetInstalledGadgets, m, 
+				MessageType.GetInstalledGadgetsResponse )
+			.then( ( [ resp, env ]: [ MsgGetInstalledGadgetsResponse, Envelope ]) =>
+			{
+				resolve( resp.installedGadgets );
+			});
 		});
 	}
 

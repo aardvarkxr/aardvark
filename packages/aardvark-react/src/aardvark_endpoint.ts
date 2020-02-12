@@ -1,5 +1,9 @@
 import bind from 'bind-decorator';
-import { AvGadgetManifest, AvGrabEvent, EndpointType, MessageType, EndpointAddr, Envelope, parseEnvelope, MsgSetEndpointType, MsgGetGadgetManifest, MsgGetGadgetManifestResponse, MsgGrabEvent, MsgSetEndpointTypeResponse, AardvarkPort, WebSocketCloseCodes } from '@aardvarkxr/aardvark-shared';
+import { AvGadgetManifest, AvGrabEvent, EndpointType, MessageType, 
+	Envelope, parseEnvelope, MsgSetEndpointType, MsgGetGadgetManifest, 
+	MsgGetGadgetManifestResponse, MsgGrabEvent, 
+	MsgSetEndpointTypeResponse, AardvarkPort, WebSocketCloseCodes } from '@aardvarkxr/aardvark-shared';
+import { ENFILE } from 'constants';
 
 export interface MessageHandler
 {
@@ -11,25 +15,34 @@ export interface OpenHandler
 	( settings: any, persistenceUuid?: string ):void;
 }
 
-interface PendingGadgetManifestLoad
+
+interface PendingResponse
 {
-	resolve ( manifest: AvGadgetManifest ): void;
-	reject ( reason: any ): void;
+	resolve( resp: [ any, Envelope ] ): void;
+	reject( reason: any ): void;
 }
+
 
 export class CAardvarkEndpoint
 {
 	private m_ws:WebSocket = null;
 	private m_handlers: { [ msgType: number ]: MessageHandler } = {};
-	private m_callbacks: { [ msgType: number ]: MessageHandler } = {};
 	private m_defaultHandler: MessageHandler = null;
 	private m_realOpenHandler: OpenHandler = null;
 	private m_handshakeComplete: OpenHandler = null;
 	private m_endpointId: number = null;
 	private m_queuedMessages: Envelope[] = [];
-	private m_pendingManifestLoads: { [gadgetUri: string ]: PendingGadgetManifestLoad[] } = {};
 	private m_allowReconnect = false;
 	private m_nextSequenceNumber = 1;
+	private m_pendingResponses: 
+	{ 
+		[ responseType: number ]: 
+		{ 
+			[ sequenceNumber: number ]: 
+			PendingResponse 
+		}
+		
+	} = {};
 
 	constructor( openHandler: OpenHandler, handshakeComplete: OpenHandler, defaultHandler: MessageHandler = null )
 	{
@@ -38,7 +51,22 @@ export class CAardvarkEndpoint
 		this.m_handshakeComplete = handshakeComplete;
 		this.connectToServer();
 		this.registerHandler( MessageType.SetEndpointTypeResponse, this.onSetEndpointTypeResponse );
-		this.registerHandler( MessageType.GetGadgetManifestResponse, this.onGetGadgetManifestResponse );
+	}
+
+	public sendMessageAndWaitForResponse<T>( type: MessageType, msg: any, responseType: MessageType ):
+		Promise< [ T, Envelope ] >
+	{
+		return new Promise( ( resolve, reject ) =>
+		{
+			let seqNumber = this.sendMessage( type, msg );
+
+			if( !this.m_pendingResponses[ responseType ] )
+			{
+				this.m_pendingResponses[ responseType ] = {};
+			}
+
+			this.m_pendingResponses[ responseType ][ seqNumber ] = { resolve, reject };
+		} );
 	}
 
 	public getEndpointId() { return this.m_endpointId; }
@@ -58,11 +86,6 @@ export class CAardvarkEndpoint
 		this.m_handlers[ type ] = handler;
 	}
 
-	public waitForResponse( type: MessageType, callback: MessageHandler )
-	{
-		this.m_callbacks[ type ] = callback;
-	}
-
 	@bind onMessage( msgEvent: MessageEvent )
 	{
 		let env = parseEnvelope( msgEvent.data );
@@ -73,10 +96,19 @@ export class CAardvarkEndpoint
 		{
 			this.m_handlers[ env.type ]( env.payloadUnpacked, env );
 		} 
-		else if( this.m_callbacks[ env.type ] )
+		else if( this.m_pendingResponses[ env.type ] )
 		{
-			this.m_callbacks[ env.type]( env.payloadUnpacked, env );
-			delete this.m_callbacks[ env.type ];
+			let pendingResponse = this.m_pendingResponses[ env.type ][ env.replyTo ];
+			if( !pendingResponse )
+			{
+				console.log( `Received message of type ${ MessageType[ env.type ] } that didn't `
+					+ `have a matching sequence number ${ env.replyTo }` );
+			}
+			else
+			{
+				pendingResponse.resolve( [ env.payloadUnpacked, env ] );
+				delete this.m_pendingResponses[ env.type ][ env.replyTo ];
+			}
 		}
 		else if( this.m_defaultHandler )
 		{
@@ -84,7 +116,7 @@ export class CAardvarkEndpoint
 		}
 		else
 		{
-			console.log( "Unhandled message", env );
+			console.log( `Unhandled ${ MessageType[ env.type ] }: ${ env.payload }` );
 		}
 	}
 
@@ -125,6 +157,7 @@ export class CAardvarkEndpoint
 		{
 			this.m_ws.send( JSON.stringify( env ) );
 		}
+		return env.sequenceNumber;
 	}
 
 	public sendGrabEvent( event: AvGrabEvent )
@@ -145,37 +178,21 @@ export class CAardvarkEndpoint
 			{
 				gadgetUri,
 			}
-	
-			if( !this.m_pendingManifestLoads.hasOwnProperty( gadgetUri ) )
+			let prom = this.sendMessageAndWaitForResponse( MessageType.GetGadgetManifest, 
+				msgGetGadgetManifest, MessageType.GetGadgetManifestResponse );
+
+			prom.then( ( [ msg, env ] : [ MsgGetGadgetManifestResponse, Envelope ] ) =>
 			{
-				this.m_pendingManifestLoads[ gadgetUri ] = [];
-			}
-
-			this.m_pendingManifestLoads[ gadgetUri ].push( { resolve, reject } );
-
-			this.sendMessage( MessageType.GetGadgetManifest, msgGetGadgetManifest );
-		} );
-	}
-
-	@bind private onGetGadgetManifestResponse( m: MsgGetGadgetManifestResponse )
-	{
-		let pendingRequests = this.m_pendingManifestLoads[ m.gadgetUri ];
-		if( pendingRequests )
-		{
-			for( let req of pendingRequests )
-			{
-				if( m.manifest )
+				if( msg.manifest )
 				{
-					req.resolve( m.manifest );
+					resolve( msg.manifest );
 				}
 				else
 				{
-					req.reject( m.error );
+					reject( msg.error );
 				}
-			}
-
-			delete this.m_pendingManifestLoads[ m.gadgetUri ];
-		}
+			} );
+		} );
 	}
 
 	@bind onClose( ev: CloseEvent )
