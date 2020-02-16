@@ -1,6 +1,6 @@
 import { Model, View, CroquetSession, startSession } from '@croquet/croquet';
 import { AuthedRequest, verifySignature, MsgUpdatePose, MsgActuallyJoinChamber, 
-	MsgActuallyLeaveChamber, chamberIdToPath } from '@aardvarkxr/aardvark-shared';
+	MsgActuallyLeaveChamber } from '@aardvarkxr/aardvark-shared';
 
 
 interface ChamberMemberOptions

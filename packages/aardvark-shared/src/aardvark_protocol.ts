@@ -740,7 +740,27 @@ export function filterActionsForGadget( actionState: AvActionState ): AvActionSt
 	};
 }
 
-export function chamberIdToPath( gadgetName: string, chamberId: string )
+export function gadgetDetailsToId( gadgetName: string, gadgetUri: string )
 {
-	return `/aardvark/${ gadgetName }/chamber/${ chamberId }`;
+	let filteredName = gadgetName.replace( /\W/g, "_" ).toLowerCase();
+	if( filteredName.length > 24 )
+	{
+		filteredName = filteredName.substr( 0, 24 );
+	}
+
+	let hash = 0;
+	for ( let i = 0; i < gadgetUri.length; i++) 
+	{
+		let char = gadgetUri.charCodeAt(i);
+		hash = ((hash<<5)-hash)+char;
+		hash = hash & hash; // Convert to 32bit integer
+	}
+
+	return filteredName + hash.toString( 16 );
+}
+
+
+export function chamberIdToPath( gadgetId: string, chamberId: string )
+{
+	return `/aardvark/${ gadgetId }/chamber/${ chamberId }`;
 }

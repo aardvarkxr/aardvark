@@ -11,7 +11,7 @@ import { StoredGadget, AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, Av
 	MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgDestroyGadget, WebSocketCloseCodes, 
 	MsgResourceLoadFailed, 	MsgInstallGadget, EVolumeType, parseEndpointFieldUri, MsgUserInfo, 
 	MsgRequestJoinChamber, MsgActuallyJoinChamber, MsgRequestLeaveChamber, MsgActuallyLeaveChamber, 
-	MsgChamberList, chamberIdToPath
+	MsgChamberList, chamberIdToPath, gadgetDetailsToId
 } from '@aardvarkxr/aardvark-shared';
 import * as express from 'express';
 import * as http from 'http';
@@ -512,6 +512,7 @@ class CGadgetData
 	}
 
 	public getUri() { return this.m_gadgetUri; }
+	public getId() { return gadgetDetailsToId( this.getName(), this.getUri() ); }
 	public getName() { return this.m_manifest.name; }
 	public getRoot() { return this.m_root; }
 	public getHook() { return this.m_hook; }
@@ -1176,7 +1177,7 @@ class CEndpoint
 		this.verifyPermission( "chamber" );
 		let req: MsgActuallyJoinChamber =
 		{
-			chamberPath: chamberIdToPath( this.getGadgetData().getName(), m.chamberId ),
+			chamberPath: chamberIdToPath( this.getGadgetData().getId(), m.chamberId ),
 			userUuid: persistence.localUserInfo.userUuid,
 			userPublicKey: persistence.localUserInfo.userPublicKey,
 		}
@@ -1190,7 +1191,7 @@ class CEndpoint
 		this.verifyPermission( "chamber" );
 		let req: MsgActuallyLeaveChamber =
 		{
-			chamberPath: chamberIdToPath( this.getGadgetData().getName(), m.chamberId ),
+			chamberPath: chamberIdToPath( this.getGadgetData().getId(), m.chamberId ),
 			userUuid: persistence.localUserInfo.userUuid,
 		}
 		let reqSigned = persistence.signRequest( req );
