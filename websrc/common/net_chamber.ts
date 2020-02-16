@@ -1,18 +1,12 @@
 import { Model, View, CroquetSession, startSession } from '@croquet/croquet';
-import { AuthedRequest, verifySignature } from '@aardvarkxr/aardvark-shared';
+import { AuthedRequest, verifySignature, MsgUpdatePose, MsgActuallyJoinChamber, 
+	MsgActuallyLeaveChamber, chamberIdToPath } from '@aardvarkxr/aardvark-shared';
 
 
 interface ChamberMemberOptions
 {
 	userUuid: string;
 	userPublicKey: string;
-}
-
-interface UpdatePoseArgs extends AuthedRequest
-{
-	userUuid: string;
-	whichPose: string;
-	newPose: number[];
 }
 
 
@@ -29,7 +23,7 @@ export class ChamberMember extends Model
 		this.subscribe( this.id, "updatePose", this.updatePose );
 	}
 
-	public updatePose( args: UpdatePoseArgs )
+	public updatePose( args: MsgUpdatePose )
 	{
 		//( this as any ).modelOnly();
 		verifySignature( args, this.userPublicKey );
@@ -50,30 +44,18 @@ export class ChamberMember extends Model
 
 interface ChamberOptions
 {
-	uuid: string;
+	path: string;
 }
-
-interface JoinChamberArgs extends AuthedRequest
-{
-	userUuid: string;
-	userPublicKey: string;
-}
-
-interface LeaveChamberArgs extends AuthedRequest
-{
-	userUuid: string;
-}
-
 
 
 export class Chamber extends Model
 {
-	public uuid: string;
+	public path: string;
 	private members: ChamberMember[] = [];
 
 	public init( options: ChamberOptions )
 	{
-		this.uuid = options.uuid;
+		this.path = options.path;
 
 		this.subscribe( this.id, "joinChamber", this.joinChamber );
 		this.subscribe( this.id, "leaveChamber", this.leaveChamber );
@@ -106,11 +88,21 @@ export class Chamber extends Model
 		return member;
 	}
 
+	private verifyChamber( chamberPath: string ) 
+	{
+		if ( chamberPath != this.path ) 
+		{
+			throw new Error( "request to join chamber " + this.path
+				+ " came from the wrong chamber " + chamberPath );
+		}
+	}
 
-	public joinChamber( args: JoinChamberArgs )
+
+	public joinChamber( args: MsgActuallyJoinChamber )
 	{
 		//( this as any ).modelOnly();
 		verifySignature( args, args.userPublicKey );
+		this.verifyChamber( args.chamberPath );
 
 		let userOptions: ChamberMemberOptions =
 		{
@@ -122,28 +114,30 @@ export class Chamber extends Model
 		this.publish( this.id, "member_joined", args.userUuid );
 	}
 
-	public leaveChamber( args: LeaveChamberArgs )
+	public leaveChamber( args: MsgActuallyLeaveChamber )
 	{
-		let member = this.findAndAuthMember( args.userUuid, args );
+		let member = this.findAndAuthMember( args.userUuid, args);
+		this.verifyChamber( args.chamberPath );
+
 		let index = this.members.indexOf( member );
 		delete this.members[ index ];
 		member.destroy();
 	}
 
-	public updatePose( args: UpdatePoseArgs )
+	public updatePose( args: MsgUpdatePose )
 	{
 		let member = this.findAndAuthMember( args.userUuid, args );
-
+		this.verifyChamber( args.chamberPath );
 		member.updatePose( args );
 	}
 }
 
 export interface ChamberSubscription
 {
-	readonly chamberUuid: string;
-	joinChamber( args: JoinChamberArgs ): void;
-	leaveChamber( args: LeaveChamberArgs ): void;
-	updatePose( args: UpdatePoseArgs ): void;
+	readonly chamberPath: string;
+	joinChamber( args: MsgActuallyJoinChamber ): void;
+	leaveChamber( args: MsgActuallyLeaveChamber ): void;
+	updatePose( args: MsgUpdatePose ): void;
 }
 
 
@@ -157,22 +151,22 @@ export class ChamberView extends View implements ChamberSubscription
 		this.chamber = chamber;
 	}
 
-	public get chamberUuid(): string
+	public get chamberPath(): string
 	{
-		return this.chamber.uuid;
+		return this.chamber.path;
 	}
 
-	public joinChamber( args: JoinChamberArgs ): void
+	public joinChamber( args: MsgActuallyJoinChamber ): void
 	{
 		this.publish( this.chamber.id, "joinChamber", args );
 	}
 
-	public leaveChamber( args: LeaveChamberArgs ): void
+	public leaveChamber( args: MsgActuallyLeaveChamber ): void
 	{
 		this.publish( this.chamber.id, "leaveChamber", args );
 	}
 
-	public updatePose( args: UpdatePoseArgs ): void
+	public updatePose( args: MsgUpdatePose ): void
 	{
 		this.publish( this.chamber.id, "updatePose", args );
 	}
@@ -181,11 +175,10 @@ export class ChamberView extends View implements ChamberSubscription
 
 let g_subscriptions: { [ userPath: string ] : CroquetSession< ChamberView >} = {};
 
-export function findChamber( uuid: string ) : Promise< ChamberView >
+export function findChamber( path: string ) : Promise< ChamberView >
 {
 	return new Promise( async ( resolve, reject ) =>
 	{
-		let path = Chamber.uuidToPath( uuid );
 		if( g_subscriptions[ path ] )
 		{
 			resolve( g_subscriptions[ path ].view );

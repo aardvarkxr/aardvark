@@ -40,6 +40,15 @@ export enum MessageType
 	GetInstalledGadgets = 400,
 	GetInstalledGadgetsResponse = 401,
 	InstallGadget = 402,
+
+	// Chamber messages - Gadgets can send these on behalf of a user if that 
+	// gadget has "chamber" permissions
+	RequestJoinChamber = 500,	// sent by gadgets that want to join a chamber
+	RequestLeaveChamber = 501,	// sent by gadgets that want to leave a chamber
+	UpdatePose = 502,			// sent to master periodically so it can update all chambers
+	ChamberList = 503, 			// sent to monitors when the list changes
+	ActuallyJoinChamber = 504,	// sent to master to join a chamber
+	ActuallyLeaveChamber = 505,	// sent to master to leave a chamber
 }
 
 export enum WebSocketCloseCodes
@@ -388,6 +397,42 @@ export interface MsgResourceLoadFailed
 	error: string;
 }
 
+export interface MsgRequestJoinChamber
+{
+	chamberId: string; 
+}
+
+export interface MsgRequestLeaveChamber
+{
+	chamberId: string; 
+}
+
+export interface MsgUpdatePose extends AuthedRequest
+{
+	chamberPath: string;
+	userUuid: string;
+	whichPose: string;
+	newPose: number[];
+}
+
+export interface MsgActuallyJoinChamber extends AuthedRequest
+{
+	chamberPath: string;
+	userUuid: string;
+	userPublicKey: string;
+}
+
+export interface MsgActuallyLeaveChamber extends AuthedRequest
+{
+	chamberPath: string;
+	userUuid: string;
+}
+
+export interface MsgChamberList
+{
+	chamberPaths: string[];
+}
+
 export interface PokerProximity
 {
 	panelId: EndpointAddr;
@@ -695,3 +740,7 @@ export function filterActionsForGadget( actionState: AvActionState ): AvActionSt
 	};
 }
 
+export function chamberIdToPath( gadgetName: string, chamberId: string )
+{
+	return `/aardvark/${ gadgetName }/chamber/${ chamberId }`;
+}

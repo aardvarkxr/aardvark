@@ -2,6 +2,6 @@
 	"name" : "Aardvark Master Gadget",
 	"width": 1024,
 	"height": 1024,
-	"permissions" : [ "master", "scenegraph" ],
+	"permissions" : [ "master", "scenegraph", "chamber" ],
 	"model" : ""
 }

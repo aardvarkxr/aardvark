@@ -186,3 +186,14 @@ body, html
     height: 0;
     z-index: -1;
 }
+
+.UserInfo
+{
+	display: flex;
+	flex-direction: column;
+}
+
+.InfoSection
+{
+	margin-bottom: 5px;
+}

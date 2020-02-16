@@ -1,4 +1,4 @@
-import { AardvarkState, StoredGadget, readPersistentState, AvGadgetManifest, AvNodeTransform, LocalUserInfo, signRequest } from '@aardvarkxr/aardvark-shared';
+import { AardvarkState, StoredGadget, readPersistentState, AvGadgetManifest, AvNodeTransform, LocalUserInfo, signRequest, AuthedRequest } from '@aardvarkxr/aardvark-shared';
 import { v4 as uuid } from 'uuid';
 import * as os from 'os';
 import * as path from 'path';
@@ -14,6 +14,7 @@ class CPersistenceManager
 	private m_pendingFileReload: NodeJS.Timeout = null;
 	private m_lastWriteTime: number = 0;
 	private m_localUserInfo: LocalUserInfo = null;
+	private m_privateKey: string = null;
 
 	constructor()
 	{
@@ -207,6 +208,7 @@ class CPersistenceManager
 			userPublicKey: key,
 		}
 		this.m_localUserInfo = signRequest( userInfo, key );
+		this.m_privateKey = key;
 	}
 
 
@@ -263,6 +265,12 @@ class CPersistenceManager
 	{
 		return this.m_localUserInfo;
 	}
+
+	public signRequest( req: AuthedRequest ): AuthedRequest
+	{
+		return signRequest( req, this.m_privateKey );
+	}
 }
+
 
 export let persistence = new CPersistenceManager();

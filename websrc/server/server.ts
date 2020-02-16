@@ -9,7 +9,10 @@ import { StoredGadget, AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, Av
 	MsgDetachGadgetFromHook, MessageType, EndpointType, MsgSetEndpointType, Envelope, 
 	MsgNewEndpoint, MsgLostEndpoint, parseEnvelope, MsgError, AardvarkPort,
 	MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgDestroyGadget, WebSocketCloseCodes, 
-	MsgResourceLoadFailed, 	MsgInstallGadget, EVolumeType, parseEndpointFieldUri, MsgUserInfo} from '@aardvarkxr/aardvark-shared';
+	MsgResourceLoadFailed, 	MsgInstallGadget, EVolumeType, parseEndpointFieldUri, MsgUserInfo, 
+	MsgRequestJoinChamber, MsgActuallyJoinChamber, MsgRequestLeaveChamber, MsgActuallyLeaveChamber, 
+	MsgChamberList, chamberIdToPath
+} from '@aardvarkxr/aardvark-shared';
 import * as express from 'express';
 import * as http from 'http';
 import * as WebSocket from 'ws';
@@ -17,7 +20,6 @@ import bind from 'bind-decorator';
 import * as path from 'path';
 import { persistence } from './persistence';
 import isUrl from 'is-url';
-import { threadId } from 'worker_threads';
 
 console.log( "Data directory is", g_localInstallPathUri );
 
@@ -36,6 +38,7 @@ class CDispatcher
 	private m_gadgets: CEndpoint[] = [];
 	private m_gadgetsByUuid: { [ uuid: string ] : CEndpoint } = {};
 	private m_nextSequenceNumber = 1;
+	private m_chambers = new Set<string>();
 
 	constructor()
 	{
@@ -165,6 +168,8 @@ class CDispatcher
 					break;
 			}
 		}
+
+		this.sendChamberUpdate();
 	}
 
 	public buildPackedEnvelope( env: Envelope )
@@ -382,6 +387,38 @@ class CDispatcher
 		}
 	}
 
+	public sendMessageToAllEndpointsOfType( ept: EndpointType, type: MessageType, m: object )
+	{
+		this.sendToAllEndpointsOfType( ept,
+		{
+			sender: { type: EndpointType.Hub },
+			type,
+			sequenceNumber: this.nextSequenceNumber,
+			payloadUnpacked: m,
+		} );
+	}
+
+	private sendChamberUpdate()
+	{
+		let m: MsgChamberList =
+		{
+			chamberPaths: Array.from( this.m_chambers.values() )
+		}
+
+		this.sendMessageToAllEndpointsOfType( EndpointType.Monitor, MessageType.ChamberList, m );
+	}
+	
+	public addChamber( chamberPath: string )
+	{
+		this.m_chambers.add( chamberPath );
+		this.sendChamberUpdate();
+	}
+
+	public removeChamber( chamberPath: string )
+	{
+		this.m_chambers.delete( chamberPath );
+		this.sendChamberUpdate();
+	}
 }
 
 interface HookNodeData
@@ -457,19 +494,21 @@ class CGadgetData
 				};
 			}
 		}
+	}
 
-
-		getJSONFromUri( this.m_gadgetUri + "/gadget_manifest.json")
-		.then( ( response: any ) => 
+	public async init()
+	{
+		try
 		{
-			this.m_manifest = response as AvGadgetManifest;
+			let manifestJson = await getJSONFromUri( this.m_gadgetUri + "/gadget_manifest.json" );
+			this.m_manifest = manifestJson as AvGadgetManifest;
 			console.log( `Gadget ${ this.m_ep.getId() } is ${ this.getName() }` );
-		})
-		.catch( (reason: any ) =>
+		}
+		catch( e )
 		{
-			console.log( `failed to load manifest from ${ this.m_gadgetUri }`, reason );
+			console.log( `failed to load manifest from ${ this.m_gadgetUri }`, e );
 			this.m_ep.close();
-		})
+		}
 	}
 
 	public getUri() { return this.m_gadgetUri; }
@@ -481,6 +520,19 @@ class CGadgetData
 	public isMaster() { return this.m_persistenceUuid == "master"; }
 	public setHook( newHook: string | GadgetHookAddr ) { this.m_hook = newHook; }
 	public isBeingDestroyed() { return this.m_gadgetBeingDestroyed; }
+
+	public verifyPermission( permissionName: string )
+	{
+		if( !this.m_manifest )
+		{
+			throw new Error( `Verify permission ${ permissionName } on gadget with no manifest` );
+		}
+
+		if( !this.m_manifest?.permissions.includes( permissionName ) )
+		{
+			throw new Error( `Verify permission ${ permissionName } on gadget ${ this.m_gadgetUri } FAILED` );
+		}
+	}
 
 	public getHookNodeByPersistentName( hookPersistentName: string )
 	{
@@ -778,6 +830,8 @@ class CEndpoint
 		this.registerEnvelopeHandler( MessageType.GetInstalledGadgets, this.onGetInstalledGadgets );
 		this.registerEnvelopeHandler( MessageType.DestroyGadget, this.onDestroyGadget );
 		this.registerEnvelopeHandler( MessageType.InstallGadget, this.onInstallGadget );
+		this.registerEnvelopeHandler( MessageType.RequestJoinChamber, this.onRequestJoinChamber );
+		this.registerEnvelopeHandler( MessageType.RequestLeaveChamber, this.onRequestLeaveChamber );
 	}
 
 	public getId() { return this.m_id; }
@@ -801,7 +855,7 @@ class CEndpoint
 			catch( e )
 			{
 				console.log( `Error processing message of type ${ MessageType[ env.type ] } `
-					+ `from ${ endpointAddrToString( env.sender ) }`)
+					+ `from ${ endpointAddrToString( env.sender ) }: ${ e }`)
 			}
 			return true;
 		}
@@ -917,7 +971,7 @@ class CEndpoint
 			&& persistence.isGadgetUriInstalled( gadgetUri );
 	}
 
-	@bind private onSetEndpointType( env: Envelope, m: MsgSetEndpointType )
+	@bind private async onSetEndpointType( env: Envelope, m: MsgSetEndpointType )
 	{
 		switch( m.newEndpointType )
 		{
@@ -962,6 +1016,11 @@ class CEndpoint
 			console.log( " initial hook is " + m.initialHook );
 			this.m_gadgetData = new CGadgetData( this, m.gadgetUri, m.initialHook, m.persistenceUuid,
 				this.m_dispatcher );
+
+			// Don't reply to the SetEndpointType until we've inited the gadget.
+			// This loads the manifest for the gadget and has the chance to verify
+			// some stuff.
+			await this.m_gadgetData.init(); 
 
 			let settings = persistence.getGadgetSettings( this.m_gadgetData.getPersistenceUuid() );
 			if( settings )
@@ -1102,6 +1161,42 @@ class CEndpoint
 		persistence.addInstalledGadget( m.gadgetUri );
 	}
 
+	public verifyPermission( permissionName: string )
+	{
+		if( !this.getGadgetData() )
+		{
+			throw new Error( "No gadget data on check for permission " + permissionName );
+		}
+
+		this.getGadgetData().verifyPermission( permissionName );
+	}
+
+	@bind private onRequestJoinChamber( env: Envelope, m: MsgRequestJoinChamber )
+	{
+		this.verifyPermission( "chamber" );
+		let req: MsgActuallyJoinChamber =
+		{
+			chamberPath: chamberIdToPath( this.getGadgetData().getName(), m.chamberId ),
+			userUuid: persistence.localUserInfo.userUuid,
+			userPublicKey: persistence.localUserInfo.userPublicKey,
+		}
+		let reqSigned = persistence.signRequest( req );
+		this.m_dispatcher.sendToMaster( MessageType.ActuallyJoinChamber, reqSigned );
+		this.m_dispatcher.addChamber( req.chamberPath );
+	}
+
+	@bind private onRequestLeaveChamber( env: Envelope, m: MsgRequestLeaveChamber )
+	{
+		this.verifyPermission( "chamber" );
+		let req: MsgActuallyLeaveChamber =
+		{
+			chamberPath: chamberIdToPath( this.getGadgetData().getName(), m.chamberId ),
+			userUuid: persistence.localUserInfo.userUuid,
+		}
+		let reqSigned = persistence.signRequest( req );
+		this.m_dispatcher.sendToMaster( MessageType.ActuallyLeaveChamber, reqSigned );
+		this.m_dispatcher.removeChamber( req.chamberPath );
+	}
 
 	@bind private onDestroyGadget( env: Envelope, m: MsgDestroyGadget )
 	{

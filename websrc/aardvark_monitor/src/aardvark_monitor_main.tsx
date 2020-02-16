@@ -6,7 +6,8 @@ import { EndpointType, MessageType, EndpointAddr, MsgNewEndpoint, MsgLostEndpoin
 	AvVector, AvQuaternion, AvGrabEvent, AvGrabEventType, endpointAddrToString, 
 	MsgGrabEvent, MsgPokerProximity, MsgOverrideTransform, MsgResourceLoadFailed, Envelope, 
 	LocalUserInfo, 
-	MsgUserInfo
+	MsgUserInfo,
+	MsgChamberList
 } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import { observable, ObservableMap, action, observe, computed } from 'mobx';
@@ -37,6 +38,7 @@ class CMonitorStore
 	@observable m_endpoints: ObservableMap<number, EndpointData>;
 	m_events = observable.array< AvGrabEvent | MsgResourceLoadFailed >();
 	@observable m_userInfo: UserSubscription = null;
+	@observable m_chamberPaths: string[] = null;
 
 	constructor()
 	{
@@ -50,6 +52,7 @@ class CMonitorStore
 		this.m_connection.registerHandler( MessageType.PokerProximity, this.onPokerProximity );
 		this.m_connection.registerHandler( MessageType.ResourceLoadFailed, this.onResourceLoadFailed );
 		this.m_connection.registerHandler( MessageType.UserInfo, this.onUserInfo );
+		this.m_connection.registerHandler( MessageType.ChamberList, this.onChamberList );
 	}
 
 	public getConnection() { return this.m_connection; }
@@ -131,6 +134,12 @@ class CMonitorStore
 		{
 			this.m_userInfo = user;
 		} );
+	}
+
+	@bind 
+	onChamberList( message: MsgChamberList )
+	{
+		this.m_chamberPaths = message.chamberPaths;
 	}
 
 	@action private updateNode( gadgetData: GadgetData, node: AvNode )
@@ -841,19 +850,39 @@ class UserInfoMonitor extends React.Component< {}, {} >
 		super( props );
 	}
 
-
-
-	public render()
+	public renderUser()
 	{
 		let user = MonitorStore.m_userInfo;
 		if( !user )
 		{
-			return <div className="UserInfo">No user yet.</div>
+			return <div className="InfoSection">No user yet.</div>
 		}
 		else
 		{
-			return <div className="UserInfo">{ user.uuid } - { user.displayName } </div>
+			return <div className="InfoSection">
+				<div>UUID: { user.uuid }</div>
+				<div>Name: { user.displayName }</div>
+			</div>;
 		}
+	}
+
+	public renderChambers()
+	{
+		return <div className="InfoSection">
+			{ MonitorStore.m_chamberPaths?.map( ( value: string ) =>
+				{
+					return <div>{ value }</div>;
+				} )
+			}
+		</div>;
+	}
+
+	public render()
+	{
+		return <div className="UserInfo">
+			{ this.renderUser() }
+			{ this.renderChambers()	}
+		</div>;
 	}
 }
 

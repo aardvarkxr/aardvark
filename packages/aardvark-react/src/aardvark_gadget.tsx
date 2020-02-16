@@ -1,6 +1,8 @@
 import * as React from 'react';
 
-import { Av, AvStartGadgetCallback, AvActionState, EAction, getActionFromState, MsgUserInfo, Envelope, LocalUserInfo } from '@aardvarkxr/aardvark-shared';
+import { Av, AvStartGadgetCallback, AvActionState, EAction, getActionFromState, 
+	MsgUserInfo, Envelope, LocalUserInfo, MsgRequestJoinChamber, MsgRequestLeaveChamber
+} from '@aardvarkxr/aardvark-shared';
 import { IAvBaseNode } from './aardvark_base_node';
 import bind from 'bind-decorator';
 import { CGadgetEndpoint } from './gadget_endpoint';
@@ -14,6 +16,7 @@ import { MessageType, MsgUpdateSceneGraph, EndpointAddr,
 	EHand, MsgResourceLoadFailed,
 	MsgGetInstalledGadgets,
 	MsgGetInstalledGadgetsResponse} from '@aardvarkxr/aardvark-shared';
+import { MessageHandler } from './aardvark_endpoint';
 const equal = require( 'fast-deep-equal' );
 
 
@@ -663,6 +666,38 @@ export class AvGadget
 	public get localUserInfo() : LocalUserInfo
 	{
 		return this.m_userInfo;
+	}
+
+	/** Asks to join a chamber on the user's behalf. This gadget must have the "chamber" permission.
+	 * 
+	 * The provided chamber ID will be namespaced with the gadget's name.
+	 */
+	public joinChamber( chamberId: string )
+	{
+		let msg: MsgRequestJoinChamber =
+		{
+			chamberId,
+		}
+		this.m_endpoint.sendMessage( MessageType.RequestJoinChamber, msg );
+	}
+
+	/** Asks to leave a chamber on the user's behalf. This gadget must have the "chamber" permission.
+	 * 
+	 * The provided chamber ID will be namespaced with the gadget's name.
+	 */
+	public leaveChamber( chamberId: string )
+	{
+		let msg: MsgRequestLeaveChamber =
+		{
+			chamberId,
+		}
+		this.m_endpoint.sendMessage( MessageType.RequestLeaveChamber, msg );
+	}
+
+	/** Adds a handler for a raw Aardvark message. You probably don't need this. */
+	public registerMessageHandler( type: MessageType, handler: MessageHandler )
+	{
+		this.m_endpoint.registerHandler( type, handler );
 	}
 }
 
