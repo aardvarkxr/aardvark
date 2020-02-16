@@ -1,5 +1,5 @@
 {
-	"name" : "Aardvark Master Gadget",
+	"name" : "Master Gadget",
 	"width": 1024,
 	"height": 1024,
 	"permissions" : [ "master", "scenegraph", "chamber" ],
