@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import { Av, AvStartGadgetCallback, AvActionState, EAction, getActionFromState, MsgUserInfo, Envelope } from '@aardvarkxr/aardvark-shared';
+import { Av, AvStartGadgetCallback, AvActionState, EAction, getActionFromState, MsgUserInfo, Envelope, LocalUserInfo } from '@aardvarkxr/aardvark-shared';
 import { IAvBaseNode } from './aardvark_base_node';
 import bind from 'bind-decorator';
 import { CGadgetEndpoint } from './gadget_endpoint';
@@ -79,7 +79,7 @@ export class AvGadget
 	private m_mainHandle: AvNode = null;
 	private m_mainGrabbableComponent: IAvBaseNode = null;
 	private m_mainHandleComponent: IAvBaseNode = null;
-	private m_userInfo: MsgUserInfo = null;
+	private m_userInfo: LocalUserInfo = null;
 	private m_userInfoListeners: (()=>void)[] = [];
 
 	m_grabEventProcessors: {[nodeId:number]: AvGrabEventProcessor } = {};
@@ -633,7 +633,7 @@ export class AvGadget
 	@bind
 	private onUserInfo( msg: MsgUserInfo )
 	{
-		this.m_userInfo = msg;
+		this.m_userInfo = msg.info;
 		if( this.m_userInfoListeners )
 		{
 			for( let listener of this.m_userInfoListeners )
@@ -660,21 +660,9 @@ export class AvGadget
 	}
 
 	/** Returns the local user's uuid. */
-	public get localUserUuid() : string
+	public get localUserInfo() : LocalUserInfo
 	{
-		return this.m_userInfo?.localUserUuid;
-	}
-
-	/** Returns the local user's uuid. */
-	public get localUserDisplayName() : string
-	{
-		return this.m_userInfo?.localUserDisplayName;
-	}
-
-	/** Returns the local user's uuid. */
-	public get localUserPublicKey() : string
-	{
-		return this.m_userInfo?.localUserPublicKey;
+		return this.m_userInfo;
 	}
 }
 

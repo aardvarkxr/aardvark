@@ -1,4 +1,4 @@
-import { AardvarkState, StoredGadget, readPersistentState, AvGadgetManifest, AvNodeTransform } from '@aardvarkxr/aardvark-shared';
+import { AardvarkState, StoredGadget, readPersistentState, AvGadgetManifest, AvNodeTransform, LocalUserInfo, signRequest } from '@aardvarkxr/aardvark-shared';
 import { v4 as uuid } from 'uuid';
 import * as os from 'os';
 import * as path from 'path';
@@ -13,6 +13,7 @@ class CPersistenceManager
 	private m_writeTimer: NodeJS.Timeout = null;
 	private m_pendingFileReload: NodeJS.Timeout = null;
 	private m_lastWriteTime: number = 0;
+	private m_localUserInfo: LocalUserInfo = null;
 
 	constructor()
 	{
@@ -196,6 +197,16 @@ class CPersistenceManager
 				}
 			}
 		}
+
+		// create our local user info
+		let key = "PUB" + this.m_state.localUserUuid;
+		let userInfo: LocalUserInfo =
+		{
+			userUuid: this.m_state.localUserUuid,
+			userDisplayName: this.m_state.localUserDisplayName,
+			userPublicKey: key,
+		}
+		this.m_localUserInfo = signRequest( userInfo, key );
 	}
 
 
@@ -248,19 +259,9 @@ class CPersistenceManager
 			|| gadgetUri == "http://localhost:23842/gadgets/gadget_menu";
 	}
 
-	public get localUserUuid() : string
+	public get localUserInfo() : LocalUserInfo
 	{
-		return this.m_state.localUserUuid;
-	}
-
-	public get localUserDisplayName() : string
-	{
-		return this.m_state.localUserDisplayName;
-	}
-
-	public get localUserPublicKey() : string
-	{
-		return "PUB" + this.m_state.localUserUuid;
+		return this.m_localUserInfo;
 	}
 }
 

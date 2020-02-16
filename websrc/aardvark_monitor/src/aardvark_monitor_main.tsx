@@ -4,11 +4,15 @@ import { CMonitorEndpoint } from '@aardvarkxr/aardvark-react';
 import { EndpointType, MessageType, EndpointAddr, MsgNewEndpoint, MsgLostEndpoint, 
 	MsgUpdateSceneGraph, AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, 
 	AvVector, AvQuaternion, AvGrabEvent, AvGrabEventType, endpointAddrToString, 
-	MsgGrabEvent, MsgPokerProximity, MsgOverrideTransform, MsgResourceLoadFailed, Envelope } from '@aardvarkxr/aardvark-shared';
+	MsgGrabEvent, MsgPokerProximity, MsgOverrideTransform, MsgResourceLoadFailed, Envelope, 
+	LocalUserInfo, 
+	MsgUserInfo
+} from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import { observable, ObservableMap, action, observe, computed } from 'mobx';
 import { observer } from 'mobx-react';
 import { QuaternionToEulerAngles, RadiansToDegrees, DegreesToRadians, EulerAnglesToQuaternion } from '@aardvarkxr/aardvark-react';
+import { findUser, UserSubscription, initLocalUser } from 'common/net_user';
 
 interface EndpointData
 {
@@ -32,6 +36,7 @@ class CMonitorStore
 	private m_connection: CMonitorEndpoint;
 	@observable m_endpoints: ObservableMap<number, EndpointData>;
 	m_events = observable.array< AvGrabEvent | MsgResourceLoadFailed >();
+	@observable m_userInfo: UserSubscription = null;
 
 	constructor()
 	{
@@ -44,6 +49,7 @@ class CMonitorStore
 		this.m_connection.registerHandler( MessageType.GrabEvent, this.onGrabEvent );
 		this.m_connection.registerHandler( MessageType.PokerProximity, this.onPokerProximity );
 		this.m_connection.registerHandler( MessageType.ResourceLoadFailed, this.onResourceLoadFailed );
+		this.m_connection.registerHandler( MessageType.UserInfo, this.onUserInfo );
 	}
 
 	public getConnection() { return this.m_connection; }
@@ -115,6 +121,16 @@ class CMonitorStore
 		{
 			this.m_endpoints.set( message.endpointId, data );
 		}
+	}
+
+	@bind
+	onUserInfo( message: MsgUserInfo )
+	{
+		findUser( message.info.userUuid )
+		.then( ( user: UserSubscription ) =>
+		{
+			this.m_userInfo = user;
+		} );
 	}
 
 	@action private updateNode( gadgetData: GadgetData, node: AvNode )
@@ -815,6 +831,32 @@ class GrabEventMonitor extends React.Component< GrabEventProps, {} >
 	}
 }
 
+
+
+@observer
+class UserInfoMonitor extends React.Component< {}, {} >
+{
+	constructor( props: any )
+	{
+		super( props );
+	}
+
+
+
+	public render()
+	{
+		let user = MonitorStore.m_userInfo;
+		if( !user )
+		{
+			return <div className="UserInfo">No user yet.</div>
+		}
+		else
+		{
+			return <div className="UserInfo">{ user.uuid } - { user.displayName } </div>
+		}
+	}
+}
+
 interface AardvarkMonitorState
 {
 }
@@ -863,6 +905,7 @@ class AardvarkMonitor extends React.Component< {}, AardvarkMonitorState >
 			return <div className="MonitorContainer">
 				<div className="EndpointList">{ endpoints }</div>
 				<div className="EventList">{ events }</div>
+				<UserInfoMonitor />
 			</div>;
 		}
 	}

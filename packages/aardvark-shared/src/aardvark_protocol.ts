@@ -1,4 +1,5 @@
 import { AvActionState } from './aardvark';
+import { AuthedRequest } from './auth';
 
 export const AardvarkPort = 23842;
 
@@ -203,11 +204,16 @@ export interface MsgSetEndpointTypeResponse
 	persistenceUuid?: string;
 }
 
+export interface LocalUserInfo extends AuthedRequest
+{
+	userUuid: string;
+	userDisplayName: string;
+	userPublicKey: string;
+}
+
 export interface MsgUserInfo
 {
-	localUserUuid?: string;
-	localUserDisplayName?: string;
-	localUserPublicKey?: string;
+	info: LocalUserInfo;
 }
 
 export interface MsgNewEndpoint

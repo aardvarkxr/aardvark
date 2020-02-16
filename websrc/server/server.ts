@@ -976,9 +976,7 @@ class CEndpoint
 
 		let msgUserInfo: MsgUserInfo =
 		{
-			localUserUuid: persistence.localUserUuid,
-			localUserDisplayName: persistence.localUserDisplayName,
-			localUserPublicKey: persistence.localUserPublicKey,
+			info: persistence.localUserInfo,
 		}
 		this.sendMessage( MessageType.UserInfo, msgUserInfo );
 		
