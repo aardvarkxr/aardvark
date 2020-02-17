@@ -7,13 +7,16 @@ import { EndpointType, MessageType, EndpointAddr, MsgNewEndpoint, MsgLostEndpoin
 	MsgGrabEvent, MsgPokerProximity, MsgOverrideTransform, MsgResourceLoadFailed, Envelope, 
 	LocalUserInfo, 
 	MsgUserInfo,
-	MsgChamberList
+	MsgChamberList,
+	MsgActuallyJoinChamber,
+	signRequest
 } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import { observable, ObservableMap, action, observe, computed } from 'mobx';
 import { observer } from 'mobx-react';
 import { QuaternionToEulerAngles, RadiansToDegrees, DegreesToRadians, EulerAnglesToQuaternion } from '@aardvarkxr/aardvark-react';
 import { findUser, UserSubscription, initLocalUser } from 'common/net_user';
+import { findChamber, ChamberSubscription, ChamberMemberInfo } from 'common/net_chamber';
 
 interface EndpointData
 {
@@ -38,7 +41,7 @@ class CMonitorStore
 	@observable m_endpoints: ObservableMap<number, EndpointData>;
 	m_events = observable.array< AvGrabEvent | MsgResourceLoadFailed >();
 	@observable m_userInfo: UserSubscription = null;
-	@observable m_chamberPaths: string[] = null;
+	@observable m_chambers: ChamberSubscription[] = null;
 
 	constructor()
 	{
@@ -127,19 +130,20 @@ class CMonitorStore
 	}
 
 	@bind
-	onUserInfo( message: MsgUserInfo )
+	async onUserInfo( message: MsgUserInfo )
 	{
-		findUser( message.info.userUuid )
-		.then( ( user: UserSubscription ) =>
-		{
-			this.m_userInfo = user;
-		} );
+		this.m_userInfo = await findUser( message.info.userUuid );
 	}
 
 	@bind 
-	onChamberList( message: MsgChamberList )
+	async onChamberList( message: MsgChamberList )
 	{
-		this.m_chamberPaths = message.chamberPaths;
+		let promises = [];
+		for( let chamberPath of message.chamberPaths )
+		{
+			promises.push( findChamber( chamberPath ) );
+		}
+		this.m_chambers = await Promise.all( promises );
 	}
 
 	@action private updateNode( gadgetData: GadgetData, node: AvNode )
@@ -868,13 +872,23 @@ class UserInfoMonitor extends React.Component< {}, {} >
 
 	public renderChambers()
 	{
-		return <div className="InfoSection">
-			{ MonitorStore.m_chamberPaths?.map( ( value: string ) =>
+		return ( <div className="InfoSection">
+			{ MonitorStore.m_chambers?.map( ( chamber: ChamberSubscription ) =>
 				{
-					return <div>{ value }</div>;
+					return ( <div className="ChamberInfo" key={ chamber.chamberPath }>
+							<div>{ chamber.chamberPath }</div>
+							<div className="ChamberInfoMembers">Members:
+								{ 
+									chamber.members?.map( ( memberInfo: ChamberMemberInfo) =>
+									{
+										return <div key={ memberInfo.uuid }>{ memberInfo.uuid }</div>;		
+									} )
+								}
+							</div> 
+						</div> );					
 				} )
 			}
-		</div>;
+		</div> )
 	}
 
 	public render()
@@ -942,3 +956,34 @@ class AardvarkMonitor extends React.Component< {}, AardvarkMonitorState >
 
 let MonitorStore = new CMonitorStore();
 ReactDOM.render( <AardvarkMonitor/>, document.getElementById( "root" ) );
+
+// let userRes: LocalUserInfo =
+// {
+// 	userUuid: "1234",
+// 	userDisplayName: "TEst GUy",
+// 	userPublicKey: "key",
+// }
+
+// initLocalUser( signRequest( userRes , "key" ) )
+// .then( ( user ) =>
+// {
+// 	console.log( user.uuid, user.displayName );
+// });
+
+// findChamber( "/blargh")
+// .then( async (chamber: ChamberSubscription ) =>
+// {
+// 	console.log( chamber.chamberPath );
+
+// 	let jm: MsgActuallyJoinChamber = 
+// 	{
+// 		userUuid: "1234",
+// 		userPublicKey: "key",
+// 		chamberPath: chamber.chamberPath,
+// 	};
+// 	let jms = signRequest( jm, "key" );
+// 	let res = await chamber.joinChamber( jms );
+
+// 	console.log( "res", res );
+// 	console.log( chamber.members.length );
+// })

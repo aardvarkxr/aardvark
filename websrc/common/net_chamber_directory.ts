@@ -1,4 +1,3 @@
-import { Chamber } from './net_chamber';
 import { Model, View, CroquetSession, startSession } from '@croquet/croquet';
 
 export interface ChamberDetails

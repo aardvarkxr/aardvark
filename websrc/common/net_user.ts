@@ -1,5 +1,7 @@
+import { ACModel, ACView } from './croquet_utils';
 import { Model, View, CroquetSession, startSession } from '@croquet/croquet';
 import { verifySignature, AuthedRequest } from '@aardvarkxr/aardvark-shared';
+import bind from 'bind-decorator';
 
 export interface UserModelOptions
 {
@@ -8,7 +10,7 @@ export interface UserModelOptions
 	displayName: string;
 }
 
-class UserModel extends Model
+class UserModel extends ACModel
 {
 
 	public uuid: string;
@@ -22,17 +24,30 @@ class UserModel extends Model
 
 	public init( options: UserModelOptions )
 	{
+		super.init( options );
+
 		this.uuid = options.uuid;
 		this.publicKey = options.publicKey;
 		this.displayName = options.displayName;
 
-		this.subscribe( this.id, "initOwner", this.onInitOwner );
+		this.subscribeAckable( "initOwner", this.onInitOwner );
 	}
 
 	public onInitOwner( args: InitOwnerArguments )
 	{
-		//( Model as any ).modelOnly();
-
+		if( !args )
+		{
+			// somebody wants to know if this user is initialized.
+			if( this.uuid || this.displayName || this.publicKey )
+			{
+				return false; // Yes, but it wasn't us
+			}
+			else
+			{
+				return ACModel.deferResult;
+			}
+			
+		}
 		if( this.uuid || this.displayName || this.publicKey )
 		{
 			if( this.uuid != args.userUuid || this.publicKey != args.userPublicKey )
@@ -42,6 +57,7 @@ class UserModel extends Model
 
 			verifySignature( args, this.publicKey );
 			this.displayName = args.userDisplayName;
+			return false;
 		}
 		else
 		{
@@ -49,9 +65,8 @@ class UserModel extends Model
 			this.uuid = args.userUuid;
 			this.displayName = args.userDisplayName;
 			this.publicKey = args.userPublicKey;
+			return true;
 		}
-
-		this.publish( this.id, "ownerInitialized", {} );
 	}
 }
 
@@ -63,49 +78,24 @@ export interface UserSubscription
 	readonly uuid: string;
 }
 
-export class UserView extends View implements UserSubscription
+export class UserView extends ACView implements UserSubscription
 {
 	private userModel: UserModel;
-	private initListener: () => void = null;
 
 	constructor( userModel: UserModel )
 	{
 		super( userModel );
 		this.userModel = userModel;
-		this.subscribe( this.userModel.id, "ownerInitialized", this.onOwnerInitialized );
 	}
 
-	public async initOwner( args: InitOwnerArguments )
+	public initOwner( args: InitOwnerArguments ) : Promise< boolean >
 	{
-		return new Promise( ( resolve, reject ) =>
-		{
-			this.initListener = resolve;
-			this.publish( this.userModel.id, "initOwner", args );
-		} );
+		return this.publishAckable( this.userModel.id, "initOwner", args );
 	}
 
-	public async waitForOwner()
+	public waitForOwner()
 	{
-		return new Promise( ( resolve, reject ) =>
-		{
-			if( this.userModel.uuid )
-			{
-				resolve();
-			}
-			else
-			{
-				this.initListener = resolve;
-			}
-		} );
-	}
-
-	public onOwnerInitialized()
-	{
-		if( this.initListener )
-		{
-			this.initListener();
-			this.initListener = null;
-		}
+		return this.publishAckable( this.userModel.id, "initOwner", null );
 	}
 
 	public get uuid(): string
@@ -153,9 +143,10 @@ interface InitOwnerArguments extends AuthedRequest
 	userPublicKey: string;
 }
 
-export async function initLocalUser( args: InitOwnerArguments )
+export async function initLocalUser( args: InitOwnerArguments ) 
 {
 	let user = await findUserInternal( args.userUuid );
-	return user.initOwner( args );
+	let weInitialized = await user.initOwner( args );
+	return user as UserSubscription;
 }
 

@@ -1,7 +1,7 @@
 import { Model, View, CroquetSession, startSession } from '@croquet/croquet';
 import { AuthedRequest, verifySignature, MsgUpdatePose, MsgActuallyJoinChamber, 
 	MsgActuallyLeaveChamber } from '@aardvarkxr/aardvark-shared';
-
+import { ACModel, ACView } from './croquet_utils';
 
 interface ChamberMemberOptions
 {
@@ -9,8 +9,12 @@ interface ChamberMemberOptions
 	userPublicKey: string;
 }
 
+export interface ChamberMemberInfo
+{
+	readonly uuid: string;
+};
 
-export class ChamberMember extends Model
+class ChamberMember extends ACModel implements ChamberMemberInfo
 {
 	private userUuid: string;
 	private userPublicKey: string;
@@ -18,6 +22,7 @@ export class ChamberMember extends Model
 
 	public init( options: ChamberMemberOptions )
 	{
+		super.init( options );
 		this.userUuid = options.userUuid;
 		this.userPublicKey = options.userPublicKey;
 		this.subscribe( this.id, "updatePose", this.updatePose );
@@ -41,6 +46,7 @@ export class ChamberMember extends Model
 	}
 }
 
+ChamberMember.register();
 
 interface ChamberOptions
 {
@@ -48,17 +54,19 @@ interface ChamberOptions
 }
 
 
-export class Chamber extends Model
+class Chamber extends ACModel
 {
 	public path: string;
-	private members: ChamberMember[] = [];
+	public members: ChamberMember[] = [];
 
 	public init( options: ChamberOptions )
 	{
+		super.init( options );
 		this.path = options.path;
 
-		this.subscribe( this.id, "joinChamber", this.joinChamber );
-		this.subscribe( this.id, "leaveChamber", this.leaveChamber );
+		this.subscribeAckable( "initChamber", this.initChamber );
+		this.subscribeAckable( "joinChamber", this.joinChamber );
+		this.subscribeAckable( "leaveChamber", this.leaveChamber );
 		this.subscribe( this.id, "updatePose", this.updatePose );
 	}
 
@@ -92,11 +100,18 @@ export class Chamber extends Model
 	{
 		if ( chamberPath != this.path ) 
 		{
-			throw new Error( "request to join chamber " + this.path
+			throw new Error( "request to interact with chamber " + this.path
 				+ " came from the wrong chamber " + chamberPath );
 		}
 	}
 
+	public initChamber( path: string )
+	{
+		if( !this.path )
+		{
+			this.path = path;
+		}
+	}
 
 	public joinChamber( args: MsgActuallyJoinChamber )
 	{
@@ -104,14 +119,20 @@ export class Chamber extends Model
 		verifySignature( args, args.userPublicKey );
 		this.verifyChamber( args.chamberPath );
 
+		if( this.findMember( args.userUuid ) )
+		{
+			return false;
+		}
+		
 		let userOptions: ChamberMemberOptions =
 		{
 			userUuid: args.userUuid,
 			userPublicKey: args.userPublicKey,
 		};
 
-		this.members.push( Model.create( userOptions ) as ChamberMember );
+		this.members.push( ChamberMember.create( userOptions ) as ChamberMember );
 		this.publish( this.id, "member_joined", args.userUuid );
+		return true;
 	}
 
 	public leaveChamber( args: MsgActuallyLeaveChamber )
@@ -122,6 +143,7 @@ export class Chamber extends Model
 		let index = this.members.indexOf( member );
 		delete this.members[ index ];
 		member.destroy();
+		return true;
 	}
 
 	public updatePose( args: MsgUpdatePose )
@@ -132,16 +154,19 @@ export class Chamber extends Model
 	}
 }
 
+Chamber.register();
+
 export interface ChamberSubscription
 {
 	readonly chamberPath: string;
-	joinChamber( args: MsgActuallyJoinChamber ): void;
-	leaveChamber( args: MsgActuallyLeaveChamber ): void;
+	readonly members: ChamberMemberInfo[];
+	joinChamber( args: MsgActuallyJoinChamber ): Promise< boolean >;
+	leaveChamber( args: MsgActuallyLeaveChamber ): Promise< boolean >;
 	updatePose( args: MsgUpdatePose ): void;
 }
 
 
-export class ChamberView extends View implements ChamberSubscription
+export class ChamberView extends ACView implements ChamberSubscription
 {
 	private chamber: Chamber;
 
@@ -156,14 +181,32 @@ export class ChamberView extends View implements ChamberSubscription
 		return this.chamber.path;
 	}
 
-	public joinChamber( args: MsgActuallyJoinChamber ): void
+	public get members()
 	{
-		this.publish( this.chamber.id, "joinChamber", args );
+		let members: ChamberMemberInfo[] = [];
+		for( let member of this.chamber.members )
+		{
+			members.push( 
+				{
+					uuid: member.uuid
+				} );
+		}
+		return members;
 	}
 
-	public leaveChamber( args: MsgActuallyLeaveChamber ): void
+	public initChamber( path: string )
 	{
-		this.publish( this.chamber.id, "leaveChamber", args );
+		return this.publishAckable( this.chamber.id, "initChamber", path );
+	}
+
+	public joinChamber( args: MsgActuallyJoinChamber )
+	{
+		return this.publishAckable( this.chamber.id, "joinChamber", args );
+	}
+
+	public leaveChamber( args: MsgActuallyLeaveChamber )
+	{
+		return this.publishAckable( this.chamber.id, "leaveChamber", args );
 	}
 
 	public updatePose( args: MsgUpdatePose ): void
@@ -175,7 +218,7 @@ export class ChamberView extends View implements ChamberSubscription
 
 let g_subscriptions: { [ userPath: string ] : CroquetSession< ChamberView >} = {};
 
-export function findChamber( path: string ) : Promise< ChamberView >
+export function findChamber( path: string ) : Promise< ChamberSubscription >
 {
 	return new Promise( async ( resolve, reject ) =>
 	{
@@ -186,7 +229,8 @@ export function findChamber( path: string ) : Promise< ChamberView >
 		}
 	
 		let session = await startSession( path, Chamber, ChamberView );
-
+		await session.view.initChamber( path ); // this is a no-op in all but the first session
+		
 		g_subscriptions[ path ] = session;
 		resolve( session.view );
 	});
