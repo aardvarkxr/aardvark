@@ -155,3 +155,6 @@ ReactDOM.render( <MasterControls/>, document.getElementById( "root" ) );
 // always start the renderer
 Av().startGadget( "http://localhost:23842/gadgets/aardvark_renderer", "", "", null );
 
+AvGadget.instance().joinChamber( "fred" );
+
+
