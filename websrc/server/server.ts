@@ -11,7 +11,7 @@ import { StoredGadget, AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, Av
 	MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgDestroyGadget, WebSocketCloseCodes, 
 	MsgResourceLoadFailed, 	MsgInstallGadget, EVolumeType, parseEndpointFieldUri, MsgUserInfo, 
 	MsgRequestJoinChamber, MsgActuallyJoinChamber, MsgRequestLeaveChamber, MsgActuallyLeaveChamber, 
-	MsgChamberList, chamberIdToPath, gadgetDetailsToId
+	MsgChamberList, chamberIdToPath, gadgetDetailsToId, MsgUpdatePose
 } from '@aardvarkxr/aardvark-shared';
 import * as express from 'express';
 import * as http from 'http';
@@ -833,6 +833,8 @@ class CEndpoint
 		this.registerEnvelopeHandler( MessageType.InstallGadget, this.onInstallGadget );
 		this.registerEnvelopeHandler( MessageType.RequestJoinChamber, this.onRequestJoinChamber );
 		this.registerEnvelopeHandler( MessageType.RequestLeaveChamber, this.onRequestLeaveChamber );
+
+		this.registerEnvelopeHandler( MessageType.UpdatePose, this.onUpdatePose );
 	}
 
 	public getId() { return this.m_id; }
@@ -1197,6 +1199,13 @@ class CEndpoint
 		let reqSigned = persistence.signRequest( req );
 		this.m_dispatcher.sendToMaster( MessageType.ActuallyLeaveChamber, reqSigned );
 		this.m_dispatcher.removeChamber( req.chamberPath );
+	}
+
+	@bind
+	private onUpdatePose( env: Envelope, m: MsgUpdatePose )
+	{
+		let signed = persistence.signRequest( m );
+		this.m_dispatcher.sendToMaster( MessageType.UpdatePose, signed );
 	}
 
 	@bind private onDestroyGadget( env: Envelope, m: MsgDestroyGadget )

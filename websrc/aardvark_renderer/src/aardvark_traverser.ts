@@ -13,7 +13,10 @@ import { endpointAddrToString, endpointAddrIsEmpty, MessageType, MsgNodeHaptic,
 	stringToEndpointAddr,
 	g_builtinModelError,
 	parseEndpointFieldUri,
-	Envelope
+	Envelope,
+	MsgUpdatePose,
+	MsgUserInfo,
+	LocalUserInfo
 } from '@aardvarkxr/aardvark-shared';
 import { computeUniverseFromLine, nodeTransformToMat4, translateMat, nodeTransformFromMat4, vec3MultiplyAndAdd, scaleAxisToFit, scaleMat, minIgnoringNulls } from './traverser_utils';
 const equal = require( 'fast-deep-equal' );
@@ -181,6 +184,7 @@ export class AvDefaultTraverser
 	private m_frameNumber: number = 1;
 	private m_actionState: { [ hand: number ] : AvActionState } = {};
 	private m_dirtyGadgetActions = new Set<number>();
+	private m_localUserInfo: LocalUserInfo;
 
 	constructor()
 	{
@@ -192,12 +196,49 @@ export class AvDefaultTraverser
 				this.grabEvent( m.event );
 			} );
 		this.m_endpoint.registerHandler( MessageType.NodeHaptic, this.onNodeHaptic );
+		this.m_endpoint.registerHandler( MessageType.UserInfo, this.onUserInfo );
 	}
 
 	@bind onEndpointOpen()
 	{
 
 	}
+
+	@bind
+	private onUserInfo( m: MsgUserInfo )
+	{
+		this.m_localUserInfo = m.info;
+
+		setInterval( () => 
+		{
+			this.sendPoseUpdate( "/user/head" );	
+			this.sendPoseUpdate( "/user/hand/right" );	
+			this.sendPoseUpdate( "/user/hand/left" );	
+		}, 1000 );
+	}
+
+	@bind
+	private sendPoseUpdate( originPath: string )
+	{
+		let msgUpdatePose: MsgUpdatePose =
+		{
+			originPath,
+			userUuid: this.m_localUserInfo.userUuid,
+			newPose: null,
+		};
+
+		let stageFromOriginArray = Av().renderer.getUniverseFromOriginTransform( originPath );
+		if( stageFromOriginArray )
+		{
+			let stageFromOrigin = new mat4( stageFromOriginArray );
+			let rot = stageFromOrigin.toMat3().toQuat();
+			let pos = stageFromOrigin.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) );
+			msgUpdatePose.newPose = [ pos.x, pos.y, pos.z, rot.w, rot.x, rot.y, rot.z ];
+		}
+
+		this.m_endpoint.sendMessage( MessageType.UpdatePose, msgUpdatePose );
+	}
+
 
 	@bind onUpdateSceneGraph( payload: any, env: Envelope )
 	{

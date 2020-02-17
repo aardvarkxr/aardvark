@@ -407,12 +407,14 @@ export interface MsgRequestLeaveChamber
 	chamberId: string; 
 }
 
+// tx, ty, tz, rw, rx, ry, rz
+export type MinimalPose = [ number, number, number, number, number, number, number ];
+
 export interface MsgUpdatePose extends AuthedRequest
 {
-	chamberPath: string;
 	userUuid: string;
-	whichPose: string;
-	newPose: number[];
+	originPath: string;
+	newPose: MinimalPose; 
 }
 
 export interface MsgActuallyJoinChamber extends AuthedRequest

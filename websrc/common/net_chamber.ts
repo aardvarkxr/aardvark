@@ -1,10 +1,12 @@
-import { Model, View, CroquetSession, startSession } from '@croquet/croquet';
+import { CroquetSession, startSession } from '@croquet/croquet';
 import { AuthedRequest, verifySignature, MsgUpdatePose, MsgActuallyJoinChamber, 
-	MsgActuallyLeaveChamber } from '@aardvarkxr/aardvark-shared';
+	MsgActuallyLeaveChamber, 
+	MinimalPose} from '@aardvarkxr/aardvark-shared';
 import { ACModel, ACView } from './croquet_utils';
 
 interface ChamberMemberOptions
 {
+	chamberModelId: string;
 	userUuid: string;
 	userPublicKey: string;
 }
@@ -14,15 +16,24 @@ export interface ChamberMemberInfo
 	readonly uuid: string;
 };
 
+export interface PoseUpdatedArgs
+{
+	userUuid: string;
+	originPath: string;
+	pose: MinimalPose;
+}
+
 class ChamberMember extends ACModel implements ChamberMemberInfo
 {
+	private chamberModelId: string;
 	private userUuid: string;
 	private userPublicKey: string;
-	private poses: { [path: string ]: number[] } = {};
+	private poses: { [path: string ]: [ number, number, number, number, number, number, number ] } = {};
 
 	public init( options: ChamberMemberOptions )
 	{
 		super.init( options );
+		this.chamberModelId = options.chamberModelId;
 		this.userUuid = options.userUuid;
 		this.userPublicKey = options.userPublicKey;
 		this.subscribe( this.id, "updatePose", this.updatePose );
@@ -32,7 +43,16 @@ class ChamberMember extends ACModel implements ChamberMemberInfo
 	{
 		//( this as any ).modelOnly();
 		verifySignature( args, this.userPublicKey );
-		this.poses[ args.whichPose ] = args.newPose;
+		this.poses[ args.originPath ] = args.newPose;
+
+		let outboundPose: PoseUpdatedArgs =
+		{
+			userUuid: this.userUuid,
+			originPath: args.originPath,
+			pose: args.newPose,
+		}
+
+		this.publish( this.chamberModelId, "poseUpdated", outboundPose );
 	}
 
 	public get uuid() : string
@@ -121,11 +141,12 @@ class Chamber extends ACModel
 
 		if( this.findMember( args.userUuid ) )
 		{
-			return false;
+			return true; // true means we're in the chamber now
 		}
-		
+
 		let userOptions: ChamberMemberOptions =
 		{
+			chamberModelId: this.id,
 			userUuid: args.userUuid,
 			userPublicKey: args.userPublicKey,
 		};
@@ -149,12 +170,16 @@ class Chamber extends ACModel
 	public updatePose( args: MsgUpdatePose )
 	{
 		let member = this.findAndAuthMember( args.userUuid, args );
-		this.verifyChamber( args.chamberPath );
 		member.updatePose( args );
 	}
 }
 
 Chamber.register();
+
+export interface PoseUpdateHandler
+{
+	( chamber: ChamberSubscription, newPose: PoseUpdatedArgs ): void;
+}
 
 export interface ChamberSubscription
 {
@@ -163,17 +188,22 @@ export interface ChamberSubscription
 	joinChamber( args: MsgActuallyJoinChamber ): Promise< boolean >;
 	leaveChamber( args: MsgActuallyLeaveChamber ): Promise< boolean >;
 	updatePose( args: MsgUpdatePose ): void;
+	addPoseHandler( fn: PoseUpdateHandler ): void;
+	removePoseHandler( fn: PoseUpdateHandler ): void;
+	removeAllPoseHandlers(): void;
 }
 
 
 export class ChamberView extends ACView implements ChamberSubscription
 {
 	private chamber: Chamber;
+	private poseHandlers: PoseUpdateHandler[] = [];
 
 	constructor( chamber: Chamber )
 	{
 		super( chamber );
 		this.chamber = chamber;
+		this.subscribe( chamber.id, "poseUpdated", this.onPoseUpdated );
 	}
 
 	public get chamberPath(): string
@@ -213,6 +243,34 @@ export class ChamberView extends ACView implements ChamberSubscription
 	{
 		this.publish( this.chamber.id, "updatePose", args );
 	}
+
+	public onPoseUpdated( args: PoseUpdatedArgs )
+	{
+		for( let handler of this.poseHandlers )
+		{
+			handler( this, args );
+		}
+	}
+
+	public addPoseHandler( fn: PoseUpdateHandler ): void
+	{
+		this.poseHandlers.push( fn );
+	}
+
+	public removePoseHandler( fn: PoseUpdateHandler ): void
+	{
+		let handlerIndex = this.poseHandlers.indexOf( fn );
+		if( handlerIndex != -1 )
+		{
+			this.poseHandlers.splice( handlerIndex, 1 );
+		}
+	}
+
+	public removeAllPoseHandlers(): void
+	{
+		this.poseHandlers = [];
+	}
+
 }
 
 

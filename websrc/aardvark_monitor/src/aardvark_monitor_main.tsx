@@ -9,14 +9,15 @@ import { EndpointType, MessageType, EndpointAddr, MsgNewEndpoint, MsgLostEndpoin
 	MsgUserInfo,
 	MsgChamberList,
 	MsgActuallyJoinChamber,
-	signRequest
+	signRequest,
+	MinimalPose
 } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import { observable, ObservableMap, action, observe, computed } from 'mobx';
 import { observer } from 'mobx-react';
 import { QuaternionToEulerAngles, RadiansToDegrees, DegreesToRadians, EulerAnglesToQuaternion } from '@aardvarkxr/aardvark-react';
 import { findUser, UserSubscription, initLocalUser } from 'common/net_user';
-import { findChamber, ChamberSubscription, ChamberMemberInfo } from 'common/net_chamber';
+import { findChamber, ChamberSubscription, ChamberMemberInfo, PoseUpdatedArgs } from 'common/net_chamber';
 
 interface EndpointData
 {
@@ -35,13 +36,25 @@ interface GadgetData extends EndpointData
 	nodes?: { [ nodeId: number]: AvNode };
 }
 
+interface ChamberMemberObservable
+{
+	info: ChamberMemberInfo;
+	poses: ObservableMap< string, MinimalPose>;
+}
+
+interface ChamberInfo
+{
+	chamber: ChamberSubscription;
+	members: ObservableMap< string, ChamberMemberObservable >;
+}
+
 class CMonitorStore
 {
 	private m_connection: CMonitorEndpoint;
 	@observable m_endpoints: ObservableMap<number, EndpointData>;
 	m_events = observable.array< AvGrabEvent | MsgResourceLoadFailed >();
 	@observable m_userInfo: UserSubscription = null;
-	@observable m_chambers: ChamberSubscription[] = null;
+	@observable m_chambers = new ObservableMap<string, ChamberInfo>();
 
 	constructor()
 	{
@@ -138,12 +151,67 @@ class CMonitorStore
 	@bind 
 	async onChamberList( message: MsgChamberList )
 	{
-		let promises = [];
+		let setToDelete = new Set<string>();
+		let setToAdd = new Set< string > ();
+		for( let chamberPath in this.m_chambers.keys() )
+		{
+			setToDelete.add( chamberPath );
+		}
 		for( let chamberPath of message.chamberPaths )
+		{
+			if( setToDelete.has( chamberPath ) )
+			{
+				setToDelete.delete( chamberPath );
+			}
+			else
+			{
+				setToAdd.add( chamberPath );
+			}
+		}
+
+		for( let chamberToDelete of setToDelete )
+		{
+			this.m_chambers.get( chamberToDelete ).chamber.removePoseHandler( this.onPoseUpdated );
+			this.m_chambers.delete( chamberToDelete );
+		}
+
+		let promises = [];
+		for( let chamberPath of setToAdd )
 		{
 			promises.push( findChamber( chamberPath ) );
 		}
-		this.m_chambers = await Promise.all( promises );
+		let newChambers = await Promise.all( promises );
+
+		for( let newChamber of newChambers )
+		{
+			newChamber.addPoseHandler( this.onPoseUpdated );
+
+			let chamberInfo = 
+			{
+				chamber: newChamber,
+				members: new ObservableMap<string, ChamberMemberObservable > ()
+			};
+
+			this.m_chambers.set( newChamber.chamberPath, chamberInfo );
+			
+			for( let member of chamberInfo.chamber.members )
+			{
+				let chamberMember =
+				{
+					info: member,
+					poses: new ObservableMap< string, MinimalPose>(),
+				}
+
+				chamberInfo.members.set( member.uuid, chamberMember );
+			}
+		}
+	}
+
+	@bind
+	private onPoseUpdated( chamber: ChamberSubscription, args: PoseUpdatedArgs )
+	{
+		this.m_chambers.get( chamber.chamberPath )?.members.get( args.userUuid )
+			?.poses.set( args.originPath, args.pose );
 	}
 
 	@action private updateNode( gadgetData: GadgetData, node: AvNode )
@@ -870,24 +938,67 @@ class UserInfoMonitor extends React.Component< {}, {} >
 		}
 	}
 
+	public renderPose( originPath: string, pose: MinimalPose )
+	{
+		return <div className="ChamberMemberPose" key={ originPath }>
+			<div>{ originPath }</div>
+			{
+				pose 
+					? <>
+						<div>{ pose[0].toFixed(2) }, { pose[1].toFixed(2) }, { pose[2].toFixed(2) }</div>
+						<div>{ pose[3].toFixed(2) }, { pose[4].toFixed(2) }, { pose[5].toFixed(2) }, { pose[6].toFixed(2) }</div>
+					</>
+					: <div>None</div>
+			}
+			
+		</div>;
+	}
+
+	public renderMember( member: ChamberMemberObservable )
+	{
+		let poses: JSX.Element[] = [];
+		member.poses.forEach( ( pose: MinimalPose, originPath: string ) =>
+		{
+			poses.push( this.renderPose( originPath, pose ) );
+		} );
+
+		return ( <div className="ChamberMemberInfo" key={ member.info.uuid }>
+			<div>{ member.info.uuid }</div>
+			<div className="ChamberInfoPoses">
+				{ poses }
+			</div> 
+		</div> );					
+
+	}
+	
+	public renderChamber( chamber: ChamberInfo )
+	{
+		let members: JSX.Element[] = [];
+		chamber.members.forEach( ( member: ChamberMemberObservable ) =>
+		{
+			members.push( this.renderMember( member ) );
+		} );
+
+		return ( <div className="ChamberInfo" key={ chamber.chamber.chamberPath }>
+			<div>{ chamber.chamber.chamberPath }</div>
+			<div className="ChamberInfoMembers">Members:
+				{ members }
+			</div> 
+		</div> );					
+
+	}
+
 	public renderChambers()
 	{
-		return ( <div className="InfoSection">
-			{ MonitorStore.m_chambers?.map( ( chamber: ChamberSubscription ) =>
-				{
-					return ( <div className="ChamberInfo" key={ chamber.chamberPath }>
-							<div>{ chamber.chamberPath }</div>
-							<div className="ChamberInfoMembers">Members:
-								{ 
-									chamber.members?.map( ( memberInfo: ChamberMemberInfo) =>
-									{
-										return <div key={ memberInfo.uuid }>{ memberInfo.uuid }</div>;		
-									} )
-								}
-							</div> 
-						</div> );					
-				} )
+		let chambers: JSX.Element[] = [];
+		MonitorStore.m_chambers.forEach( ( value: ChamberInfo ) =>
+			{
+				chambers.push( this.renderChamber( value ) );
 			}
+		)
+
+		return ( <div className="InfoSection">
+			{ chambers }
 		</div> )
 	}
 
