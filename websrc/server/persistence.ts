@@ -56,7 +56,7 @@ class CPersistenceManager
 		let timeSinceLastWrite = Date.now() - this.m_lastWriteTime;
 		if( !this.m_pendingFileReload && timeSinceLastWrite > 1000 )
 		{
-			this.m_pendingFileReload = setTimeout( ()=>
+			this.m_pendingFileReload = global.setTimeout( ()=>
 			{
 				this.m_pendingFileReload = null;
 				this.reload();
@@ -151,7 +151,7 @@ class CPersistenceManager
 
 	private markDirty()
 	{
-		this.m_writeTimer = setTimeout( () => {
+		this.m_writeTimer = global.setTimeout( () => {
 			this.m_writeTimer = null;
 			this.writeNow();
 		}, 500 );
