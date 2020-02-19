@@ -23,10 +23,10 @@ export class ACModel extends Model
 {
 	private ackedEventSubscriptions: { [ eventId: string ]: AckableEventSubscription } = {};
 
-	// static create<T extends typeof Model>(this: T, options: any): InstanceType<T>
-	// {
-	// 	return this.create( options ) as InstanceType< T >;
-	// }
+	static createT<T extends typeof Model>(this: T, options: any): InstanceType<T>
+	{
+		return this.create( options ) as InstanceType< T >;
+	}
 
 	init( options: any )
 	{
