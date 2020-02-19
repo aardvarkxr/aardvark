@@ -11,7 +11,7 @@ import { StoredGadget, AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, Av
 	MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgDestroyGadget, WebSocketCloseCodes, 
 	MsgResourceLoadFailed, 	MsgInstallGadget, EVolumeType, parseEndpointFieldUri, MsgUserInfo, 
 	MsgRequestJoinChamber, MsgActuallyJoinChamber, MsgRequestLeaveChamber, MsgActuallyLeaveChamber, 
-	MsgChamberList, chamberIdToPath, gadgetDetailsToId, MsgUpdatePose, Permission
+	MsgChamberList, chamberIdToPath, gadgetDetailsToId, MsgUpdatePose, Permission, SharedGadget
 } from '@aardvarkxr/aardvark-shared';
 import * as express from 'express';
 import * as http from 'http';
@@ -419,6 +419,42 @@ class CDispatcher
 		this.m_chambers.delete( chamberPath );
 		this.sendChamberUpdate();
 	}
+
+	public gatherSharedGadgets(): SharedGadget[]
+	{
+		let gadgets: SharedGadget[] = [];
+
+		for( let ep of this.getListForType( EndpointType.Gadget ) )
+		{
+			if( !ep.getGadgetData() || !ep.getGadgetData().getShareInChamber() )
+			{
+				continue;
+			}
+
+			let gadgetData = ep.getGadgetData();
+
+			let hook: string;
+			if( typeof gadgetData.getHook() == "string" )
+			{
+				hook = gadgetData.getHook() as string;
+			}
+			else if( gadgetData.getHook() )
+			{
+				let hookParts = gadgetData.getHook() as HookPathParts;
+				hook = buildPersistentHookPath( hookParts.gadgetUuid, hookParts.hookPersistentName, 
+					hookParts.hookFromGadget );
+			}
+
+			gadgets.push(
+				{
+					persistenceUuid: gadgetData.getPersistenceUuid(),
+					gadgetUri: gadgetData.getUri(),
+					hook,
+				} );
+		}
+
+		return gadgets;
+	}
 }
 
 interface HookNodeData
@@ -518,6 +554,10 @@ class CGadgetData
 	public getHook() { return this.m_hook; }
 	public getHookNodes() { return this.m_hookNodes; }
 	public getPersistenceUuid() { return this.m_persistenceUuid; }
+	public getShareInChamber() 
+	{ 
+		return typeof this.m_manifest.shareInChamber == "boolean" ? this.m_manifest.shareInChamber : true; 
+	}
 	public isMaster() { return this.m_persistenceUuid == "master"; }
 	public setHook( newHook: string | GadgetHookAddr ) { this.m_hook = newHook; }
 	public isBeingDestroyed() { return this.m_gadgetBeingDestroyed; }
@@ -1182,6 +1222,7 @@ class CEndpoint
 			chamberPath: chamberIdToPath( this.getGadgetData().getId(), m.chamberId ),
 			userUuid: persistence.localUserInfo.userUuid,
 			userPublicKey: persistence.localUserInfo.userPublicKey,
+			gadgets: this.m_dispatcher.gatherSharedGadgets(),
 		}
 		let reqSigned = persistence.signRequest( req );
 		this.m_dispatcher.sendToMaster( MessageType.ActuallyJoinChamber, reqSigned );

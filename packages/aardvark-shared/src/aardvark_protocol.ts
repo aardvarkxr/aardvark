@@ -417,11 +417,20 @@ export interface MsgUpdatePose extends AuthedRequest
 	newPose: MinimalPose; 
 }
 
+export interface SharedGadget
+{
+	gadgetUri: string;
+	persistenceUuid: string;
+	hook?: string;
+}
+
+
 export interface MsgActuallyJoinChamber extends AuthedRequest
 {
 	chamberPath: string;
 	userUuid: string;
 	userPublicKey: string;
+	gadgets?: SharedGadget[];
 }
 
 export interface MsgActuallyLeaveChamber extends AuthedRequest

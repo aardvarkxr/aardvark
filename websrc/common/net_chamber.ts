@@ -1,19 +1,61 @@
 import { CroquetSession, startSession } from '@croquet/croquet';
 import { AuthedRequest, verifySignature, MsgUpdatePose, MsgActuallyJoinChamber, 
 	MsgActuallyLeaveChamber, 
-	MinimalPose} from '@aardvarkxr/aardvark-shared';
+	MinimalPose,
+	SharedGadget} from '@aardvarkxr/aardvark-shared';
 import { ACModel, ACView } from './croquet_utils';
+
+
+interface ChamberGadgetOptions extends SharedGadget
+{
+	chamberModelId: string;
+}
+
+export interface ChamberGadgetInfo
+{
+	readonly persistenceUuid: string;
+	readonly gadgetUri: string;
+	readonly hook: string;
+};
+
+class ChamberGadget extends ACModel implements ChamberGadgetInfo
+{
+	private m_persistenceUuid: string;
+	private m_gadgetUri: string;
+	private m_hook: string;
+	private chamberModelId: string;
+
+	public init( options: ChamberGadgetOptions )
+	{
+		super.init( options );
+		this.chamberModelId = options.chamberModelId;
+		this.m_persistenceUuid = options.persistenceUuid;
+		this.m_gadgetUri = options.gadgetUri;
+		this.m_hook = options.hook;
+
+		// TODO: Moving gadgets around from their initial hook
+		// this.subscribe( this.id, "updatePose", this.updatePose );
+	}
+
+	public get persistenceUuid() { return this.m_persistenceUuid; }
+	public get gadgetUri() { return this.m_gadgetUri; }
+	public get hook() { return this.m_hook; }
+}
+
+ChamberGadget.register();
 
 interface ChamberMemberOptions
 {
 	chamberModelId: string;
 	userUuid: string;
 	userPublicKey: string;
+	gadgets: SharedGadget[];
 }
 
 export interface ChamberMemberInfo
 {
 	readonly uuid: string;
+	gadgets: ChamberGadgetInfo[];
 };
 
 export interface PoseUpdatedArgs
@@ -28,7 +70,8 @@ class ChamberMember extends ACModel implements ChamberMemberInfo
 	private chamberModelId: string;
 	private userUuid: string;
 	private userPublicKey: string;
-	private poses: { [path: string ]: [ number, number, number, number, number, number, number ] } = {};
+	private poses: { [path: string ]: MinimalPose } = {};
+	private m_gadgets: { [ persistenceUuid: string ]: ChamberGadget } = {};
 
 	public init( options: ChamberMemberOptions )
 	{
@@ -37,6 +80,20 @@ class ChamberMember extends ACModel implements ChamberMemberInfo
 		this.userUuid = options.userUuid;
 		this.userPublicKey = options.userPublicKey;
 		this.subscribe( this.id, "updatePose", this.updatePose );
+
+		if( options.gadgets )
+		{
+			for( let sharedGadget of options.gadgets )
+			{
+				let gadgetOptions: ChamberGadgetOptions =
+				{
+					...sharedGadget,
+					chamberModelId: options.chamberModelId,
+				};
+
+				this.m_gadgets[ gadgetOptions.persistenceUuid ] = ChamberGadget.createT( gadgetOptions );
+			}
+		}
 	}
 
 	public updatePose( args: MsgUpdatePose )
@@ -63,6 +120,11 @@ class ChamberMember extends ACModel implements ChamberMemberInfo
 	public get publicKey() : string
 	{
 		return this.userPublicKey;
+	}
+
+	public get gadgets() : ChamberGadgetInfo[]
+	{
+		return Object.values( this.m_gadgets );
 	}
 }
 
@@ -149,6 +211,7 @@ class Chamber extends ACModel
 			chamberModelId: this.id,
 			userUuid: args.userUuid,
 			userPublicKey: args.userPublicKey,
+			gadgets: args.gadgets,
 		};
 
 		this.members.push( ChamberMember.create( userOptions ) as ChamberMember );
@@ -216,10 +279,7 @@ export class ChamberView extends ACView implements ChamberSubscription
 		let members: ChamberMemberInfo[] = [];
 		for( let member of this.chamber.members )
 		{
-			members.push( 
-				{
-					uuid: member.uuid
-				} );
+			members.push( member );
 		}
 		return members;
 	}

@@ -10,7 +10,8 @@ import { EndpointType, MessageType, EndpointAddr, MsgNewEndpoint, MsgLostEndpoin
 	MsgChamberList,
 	MsgActuallyJoinChamber,
 	signRequest,
-	MinimalPose
+	MinimalPose,
+	SharedGadget
 } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import { observable, ObservableMap, action, observe, computed } from 'mobx';
@@ -40,6 +41,7 @@ interface ChamberMemberObservable
 {
 	info: ChamberMemberInfo;
 	poses: ObservableMap< string, MinimalPose>;
+	gadgets: ObservableMap< string, SharedGadget>;
 }
 
 interface ChamberInfo
@@ -200,6 +202,12 @@ class CMonitorStore
 				{
 					info: member,
 					poses: new ObservableMap< string, MinimalPose>(),
+					gadgets: new ObservableMap< string, SharedGadget>(),
+				}
+
+				for( let gadget of member.gadgets )
+				{
+					chamberMember.gadgets.set( gadget.persistenceUuid, gadget );
 				}
 
 				chamberInfo.members.set( member.uuid, chamberMember );
@@ -954,6 +962,15 @@ class UserInfoMonitor extends React.Component< {}, {} >
 		</div>;
 	}
 
+	public renderGadget( persistenceUuid: string, gadget: SharedGadget )
+	{
+		return <div className="ChamberMemberPose" key={ persistenceUuid }>
+			<div>{ persistenceUuid }</div>
+			<div>{ gadget.gadgetUri }</div>
+			<div>{ gadget.hook }</div>
+		</div>;
+	}
+
 	public renderMember( member: ChamberMemberObservable )
 	{
 		let poses: JSX.Element[] = [];
@@ -962,10 +979,19 @@ class UserInfoMonitor extends React.Component< {}, {} >
 			poses.push( this.renderPose( originPath, pose ) );
 		} );
 
+		let gadgets: JSX.Element[] = [];
+		member.gadgets.forEach( ( gadget: SharedGadget, persistenceUuid: string ) =>
+		{
+			poses.push( this.renderGadget( persistenceUuid, gadget ) );
+		} );
+
 		return ( <div className="ChamberMemberInfo" key={ member.info.uuid }>
 			<div>{ member.info.uuid }</div>
 			<div className="ChamberInfoPoses">
 				{ poses }
+			</div> 
+			<div className="ChamberInfoGadgets">
+				{ gadgets }
 			</div> 
 		</div> );					
 
@@ -1091,6 +1117,13 @@ ReactDOM.render( <AardvarkMonitor/>, document.getElementById( "root" ) );
 // 		userUuid: "1234",
 // 		userPublicKey: "key",
 // 		chamberPath: chamber.chamberPath,
+// 		gadgets: [
+// 			{ 
+// 				gadgetUri: "http://mygadget.com",
+// 				persistenceUuid: "gadgAABB",
+// 				hook: "/somehook",
+// 			}
+// 		]
 // 	};
 // 	let jms = signRequest( jm, "key" );
 // 	let res = await chamber.joinChamber( jms );
