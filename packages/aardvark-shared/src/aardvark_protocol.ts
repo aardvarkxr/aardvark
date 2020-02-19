@@ -686,14 +686,22 @@ export interface AvSharedTextureInfo
 	height: number;
 }
 
+export enum Permission
+{
+	Master = "master",
+	SceneGraph = "scenegraph",
+	Chamber = "chamber",
+}
+
 export interface AvGadgetManifest
 {
 	name: string;
-	permissions: string[];
+	permissions: Permission[];
 	width: number;
 	height: number;
 	model: string;
 	startAutomatically: boolean;
+	shareInChamber?: boolean; // defaults to true
 }
 
 

@@ -11,7 +11,7 @@ import { StoredGadget, AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, Av
 	MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgDestroyGadget, WebSocketCloseCodes, 
 	MsgResourceLoadFailed, 	MsgInstallGadget, EVolumeType, parseEndpointFieldUri, MsgUserInfo, 
 	MsgRequestJoinChamber, MsgActuallyJoinChamber, MsgRequestLeaveChamber, MsgActuallyLeaveChamber, 
-	MsgChamberList, chamberIdToPath, gadgetDetailsToId, MsgUpdatePose
+	MsgChamberList, chamberIdToPath, gadgetDetailsToId, MsgUpdatePose, Permission
 } from '@aardvarkxr/aardvark-shared';
 import * as express from 'express';
 import * as http from 'http';
@@ -522,7 +522,7 @@ class CGadgetData
 	public setHook( newHook: string | GadgetHookAddr ) { this.m_hook = newHook; }
 	public isBeingDestroyed() { return this.m_gadgetBeingDestroyed; }
 
-	public verifyPermission( permissionName: string )
+	public verifyPermission( permissionName: Permission )
 	{
 		if( !this.m_manifest )
 		{
@@ -1164,7 +1164,7 @@ class CEndpoint
 		persistence.addInstalledGadget( m.gadgetUri );
 	}
 
-	public verifyPermission( permissionName: string )
+	public verifyPermission( permissionName: Permission )
 	{
 		if( !this.getGadgetData() )
 		{
@@ -1176,7 +1176,7 @@ class CEndpoint
 
 	@bind private onRequestJoinChamber( env: Envelope, m: MsgRequestJoinChamber )
 	{
-		this.verifyPermission( "chamber" );
+		this.verifyPermission( Permission.Chamber );
 		let req: MsgActuallyJoinChamber =
 		{
 			chamberPath: chamberIdToPath( this.getGadgetData().getId(), m.chamberId ),
@@ -1190,7 +1190,7 @@ class CEndpoint
 
 	@bind private onRequestLeaveChamber( env: Envelope, m: MsgRequestLeaveChamber )
 	{
-		this.verifyPermission( "chamber" );
+		this.verifyPermission( Permission.Chamber );
 		let req: MsgActuallyLeaveChamber =
 		{
 			chamberPath: chamberIdToPath( this.getGadgetData().getId(), m.chamberId ),
