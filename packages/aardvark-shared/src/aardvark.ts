@@ -65,9 +65,11 @@ interface AvRenderer
 	getActionState( hand: EHand ): AvActionState;
 }
 
-export interface AvStartGadgetCallback
+export interface AvStartGadgetResult
 {
-	(success: boolean, mainGrabbableGlobalId: EndpointAddr, mainHandleId: EndpointAddr ) : void;
+	success: boolean;
+	mainGrabbableGlobalId: EndpointAddr;
+	mainHandleId: EndpointAddr;
 }
 
 export interface AvGadgetManifestCallback

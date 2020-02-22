@@ -52,46 +52,40 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 		})
 	}
 
-	@bind public onGrabRequest( grabRequest: AvGrabEvent ): Promise< GrabResponse >
+	@bind 
+	public async onGrabRequest( grabRequest: AvGrabEvent ): Promise< GrabResponse >
 	{
-		return new Promise<GrabResponse>( ( resolve, reject ) =>
+		let res = await AvGadget.instance().startGadget( this.props.uri, "" );
+
+		if( !res.success )
 		{
-			AvGadget.instance().startGadget( this.props.uri, "", 
-				( success: boolean, mainGrabbableId: EndpointAddr, mainHandleId: EndpointAddr ):void =>
-				{
-					if( success )
-					{
-						if( endpointAddrIsEmpty( mainGrabbableId ) )
-						{
-							// If the gadget started, but there's no main grabbable,
-							// we want to reject the grab so that the seed itself doesn't end
-							// up being grabbed. The gadget has started, so the user got what 
-							// they wanted.
-							let response: GrabResponse =
-							{
-								allowed: false,
-							};
-							resolve( response );
-						}
-						else
-						{
-							// Otherwise, start the grab with the newly created grabbable in the 
-							// newly started gadget
-							let response: GrabResponse =
-							{
-								allowed: true,
-								proxyGrabbableGlobalId: mainGrabbableId,
-								proxyHandleGlobalId: mainHandleId,
-							};
-							resolve( response );
-						}
-					}
-					else
-					{
-						reject( "startGadget failed");
-					}
-				});
-		} );
+			throw new Error( "startGadget failed" );
+		}
+
+		if( endpointAddrIsEmpty( res.mainGrabbableGlobalId ) )
+		{
+			// If the gadget started, but there's no main grabbable,
+			// we want to reject the grab so that the seed itself doesn't end
+			// up being grabbed. The gadget has started, so the user got what 
+			// they wanted.
+			let response: GrabResponse =
+			{
+				allowed: false,
+			};
+			return response;
+		}
+		else
+		{
+			// Otherwise, start the grab with the newly created grabbable in the 
+			// newly started gadget
+			let response: GrabResponse =
+			{
+				allowed: true,
+				proxyGrabbableGlobalId: res.mainGrabbableGlobalId,
+				proxyHandleGlobalId: res.mainHandleId,
+			};
+			return response;
+		}
 	}
 
 	@bind public onGadgetStarted( success: boolean, mainGrabbableId: string ) 

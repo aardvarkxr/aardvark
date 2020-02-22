@@ -1,7 +1,8 @@
 import * as React from 'react';
 
-import { Av, AvStartGadgetCallback, AvActionState, EAction, getActionFromState, 
-	MsgUserInfo, Envelope, LocalUserInfo, MsgRequestJoinChamber, MsgRequestLeaveChamber
+import { Av, AvActionState, EAction, getActionFromState, 
+	MsgUserInfo, Envelope, LocalUserInfo, MsgRequestJoinChamber, MsgRequestLeaveChamber, 
+	AvStartGadgetResult,
 } from '@aardvarkxr/aardvark-shared';
 import { IAvBaseNode } from './aardvark_base_node';
 import bind from 'bind-decorator';
@@ -88,7 +89,8 @@ export class AvGadget
 	m_grabEventProcessors: {[nodeId:number]: AvGrabEventProcessor } = {};
 	m_pokerProcessors: {[nodeId:number]: AvPokerHandler } = {};
 	m_panelProcessors: {[nodeId:number]: AvPanelHandler } = {};
-	m_startGadgetCallbacks: {[nodeId:number]: AvStartGadgetCallback } = {};
+	m_startGadgetPromises: {[nodeId:number]: 
+		[ ( res: AvStartGadgetResult ) => void, ( reason: any ) => void ] } = {};
 	m_actionStateListeners: { [listenerId: number] : ActionStateListener } = {}
 
 	constructor()
@@ -264,11 +266,17 @@ export class AvGadget
 
 	@bind onGadgetStarted( m: MsgGadgetStarted, env: Envelope ):void
 	{
-		let processor = this.m_startGadgetCallbacks[ env.target.nodeId ];
+		let processor = this.m_startGadgetPromises[ env.target.nodeId ];
 		if( processor )
 		{
-			processor( true, m.mainGrabbableGlobalId, m.mainHandleGlobalId );
-			delete this.m_startGadgetCallbacks[ env.target.nodeId ];
+			processor[0](
+				{
+					success: true,
+					mainGrabbableGlobalId: m.mainGrabbableGlobalId,
+					mainHandleId: m.mainHandleGlobalId,
+				}
+			);
+			delete this.m_startGadgetPromises[ env.target.nodeId ];
 		}
 	}
 
@@ -558,22 +566,21 @@ export class AvGadget
 		this.m_endpoint.sendMessage( MessageType.NodeHaptic, msg );
 	}
 
-	public startGadget( uri: string, initialHook: string, callback: AvStartGadgetCallback )
+	public startGadget( uri: string, initialHook: string ) : Promise<AvStartGadgetResult>
 	{
-		let epToNotify: EndpointAddr = null;
-		if( callback )
+		return new Promise( ( resolve, reject ) =>
 		{
 			let notifyNodeId = this.m_nextNodeId++;
-			this.m_startGadgetCallbacks[ notifyNodeId ] = callback;
+			this.m_startGadgetPromises[ notifyNodeId ] = [ resolve, reject ];
 
-			epToNotify = 
+			let epToNotify: EndpointAddr = 
 			{
 				type: EndpointType.Node,
 				endpointId: this.m_endpoint.getEndpointId(),
 				nodeId: notifyNodeId,
 			}
-		}
-		Av().startGadget( uri, initialHook, "", epToNotify );
+			Av().startGadget( uri, initialHook, "", epToNotify );
+		} );
 	} 
 
 	/** Persists the gadget's settings. These weill be passed to the gadget 
