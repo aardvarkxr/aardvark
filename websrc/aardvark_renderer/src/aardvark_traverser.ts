@@ -161,6 +161,14 @@ interface AvNodeRoot
 	hookFromGadget?: AvNodeTransform;
 	handIsRelevant: Set<EHand>;
 	wasGadgetDraggedLastFrame: boolean;
+	remoteUniverse?: string;
+}
+
+interface RemoteUniverse
+{
+	uuid: string;
+	universeFromRemote: PendingTransform;
+	remoteFromOrigin: { [originPath: string] : PendingTransform };
 }
 
 export class AvDefaultTraverser
@@ -170,6 +178,7 @@ export class AvDefaultTraverser
 	private m_currentHand = EHand.Invalid;
 	private m_currentVisibility = true;
 	private m_currentGrabbableGlobalId:EndpointAddr = null;
+	private m_currentRemoteUniverse: RemoteUniverse = null; // This is valid while traversing the universe itself
 	private m_universeFromNodeTransforms: { [ nodeGlobalId:string ]: PendingTransform } = {};
 	private m_nodeData: { [ nodeGlobalId:string ]: NodeData } = {};
 	private m_lastFrameUniverseFromNodeTransforms: { [ nodeGlobalId:string ]: mat4 } = {};
@@ -185,6 +194,7 @@ export class AvDefaultTraverser
 	private m_actionState: { [ hand: number ] : AvActionState } = {};
 	private m_dirtyGadgetActions = new Set<number>();
 	private m_localUserInfo: LocalUserInfo;
+	private m_remoteUniverse: { [ universeUuid: string ]: RemoteUniverse } = {};
 
 	constructor()
 	{
@@ -299,6 +309,7 @@ export class AvDefaultTraverser
 		this.m_currentHand = EHand.Invalid;
 		this.m_currentVisibility = true;
 		this.m_currentGrabbableGlobalId = null;
+		this.m_currentRemoteUniverse = null;
 		this.m_universeFromNodeTransforms = {};
 		this.m_renderList = [];
 		this.clearHooksInUse();
@@ -634,6 +645,28 @@ export class AvDefaultTraverser
 		}
 	}
 
+	private getRemoteUniverse( universeUuid?: string ): RemoteUniverse
+	{
+		if( !universeUuid )
+			return null;
+
+		let remoteUniverse = this.m_remoteUniverse[ universeUuid ];
+		if( !remoteUniverse )
+		{
+			remoteUniverse = 
+			{
+				uuid: universeUuid,
+				universeFromRemote: null,
+				remoteFromOrigin: {},
+			};
+			
+			this.m_remoteUniverse[ universeUuid ] = remoteUniverse;
+		}
+		return remoteUniverse;
+	}
+
+	@bind 
+
 	traverseNode( node: AvNode, defaultParent: PendingTransform ): void
 	{
 		let handBefore = this.m_currentHand;
@@ -702,6 +735,14 @@ export class AvDefaultTraverser
 				this.traverseHeadFacingTransform( node, defaultParent );
 				break;
 			
+			case AvNodeType.RemoteUniverse:
+				this.traverseRemoteUniverse( node, defaultParent );
+				break;
+
+			case AvNodeType.RemoteOrigin:
+				this.traverseRemoteOrigin( node, defaultParent );
+				break;
+				
 			default:
 				throw "Invalid node type";
 			}
@@ -727,9 +768,15 @@ export class AvDefaultTraverser
 			}
 		}
 
-		if ( node.type == AvNodeType.Grabbable )
+		switch( node.type )
 		{
-			this.m_currentGrabbableGlobalId = null;
+			case AvNodeType.Grabbable:
+				this.m_currentGrabbableGlobalId = null;
+				break;
+
+			case AvNodeType.RemoteUniverse:
+				this.m_currentRemoteUniverse = null;
+				break;
 		}
 
 		// remember that we used this hand
@@ -750,23 +797,40 @@ export class AvDefaultTraverser
 	{
 		if( typeof origin === "string" )
 		{
-			let universeFromOrigin = Av().renderer.getUniverseFromOriginTransform( origin );
-			if ( universeFromOrigin )
+			if( this.m_currentRoot.remoteUniverse )
 			{
-				this.updateTransform( node.globalId, null, new mat4( universeFromOrigin ), null );
-	
-				if ( origin == "/user/hand/left" )
+				let remoteUniverse = this.getRemoteUniverse( this.m_currentRoot.remoteUniverse );
+				let universeFromRemoteOrigin = remoteUniverse.remoteFromOrigin[ origin ];
+				if( !universeFromRemoteOrigin )
 				{
-					this.m_currentHand = EHand.Left;
+					// we haven't traversed the remote universe yet. Set the origin pending transform
+					// here for when we do
+					universeFromRemoteOrigin = new PendingTransform();
+					remoteUniverse.remoteFromOrigin[ origin ] = universeFromRemoteOrigin;
 				}
-				else if ( origin == "/user/hand/right" )
+
+				this.updateTransform( node.globalId, universeFromRemoteOrigin, null, null );
+			}
+			else
+			{
+				let parentFromOriginArray = Av().renderer.getUniverseFromOriginTransform( origin );
+				if( parentFromOriginArray )
 				{
-					this.m_currentHand = EHand.Right;
+					this.updateTransform( node.globalId, null, new mat4( parentFromOriginArray ), null );
 				}
-				else
-				{
-					this.m_currentHand = EHand.Invalid;
-				}
+			}
+
+			if ( origin == "/user/hand/left" )
+			{
+				this.m_currentHand = EHand.Left;
+			}
+			else if ( origin == "/user/hand/right" )
+			{
+				this.m_currentHand = EHand.Right;
+			}
+			else
+			{
+				this.m_currentHand = EHand.Invalid;
 			}
 		}
 		else if( origin != null )
@@ -1384,6 +1448,35 @@ export class AvDefaultTraverser
 			} );
 	}
 
+	traverseRemoteUniverse( node: AvNode, defaultParent: PendingTransform )
+	{
+		this.m_currentRemoteUniverse = this.getRemoteUniverse( node.propUniverseName );
+
+		let universeFromRemote = nodeTransformToMat4( node.propTransform );
+		this.updateTransform( node.globalId, null, universeFromRemote, null );
+	}
+
+	traverseRemoteOrigin( node: AvNode, defaultParent: PendingTransform )
+	{
+		if( !this.m_currentRemoteUniverse )
+		{
+			return;
+		}
+
+		let remoteFromOriginTransform = nodeTransformToMat4( node.propTransform );
+		let remoteFromOrigin = this.m_currentRemoteUniverse.remoteFromOrigin[ node.propOrigin ];
+		if( !remoteFromOrigin )
+		{
+			// we were traversed before anybody that uses us
+			this.m_currentRemoteUniverse.remoteFromOrigin[ node.propOrigin ] = 
+				this.updateTransform( node.globalId, defaultParent, remoteFromOriginTransform, null );
+		}
+		else
+		{
+			remoteFromOrigin.update( [ defaultParent ], remoteFromOriginTransform );
+			this.setTransform( node.globalId, remoteFromOrigin );
+		}
+	}
 
 	@bind
 	public grabEvent( grabEvent: AvGrabEvent )
@@ -1536,7 +1629,7 @@ export class AvDefaultTraverser
 		}
 	}
 
-	getTransform( globalNodeId: EndpointAddr  ): PendingTransform
+	getTransform( globalNodeId: EndpointAddr ): PendingTransform
 	{
 		let idStr = endpointAddrToString( globalNodeId );
 		if( idStr == "0" )
@@ -1547,6 +1640,19 @@ export class AvDefaultTraverser
 			this.m_universeFromNodeTransforms[ idStr ] = new PendingTransform();
 		}
 		return this.m_universeFromNodeTransforms[ idStr ];
+	}
+
+	// This is only useful in certain special circumstances where the fact that a 
+	// transform will be needed is known before the endpoint ID of the node that 
+	// will provide the transform is known. You probably want updateTransform(...)
+	setTransform( globalNodeId: EndpointAddr, newTransform: PendingTransform )
+	{
+		let idStr = endpointAddrToString( globalNodeId );
+		if( idStr != "0" )
+		if( !this.m_universeFromNodeTransforms.hasOwnProperty( idStr ) )
+		{
+			this.m_universeFromNodeTransforms[ idStr ] = newTransform;
+		}
 	}
 
 	updateTransform( globalNodeId: EndpointAddr,

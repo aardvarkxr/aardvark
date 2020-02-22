@@ -492,6 +492,8 @@ export enum AvNodeType
 	PanelIntersection = 11,
 	ParentTransform = 12,
 	HeadFacingTransform = 13,
+	RemoteUniverse = 14,
+	RemoteOrigin = 15,
 }
 
 
@@ -671,6 +673,7 @@ export interface AvNode
 	children?: AvNode[];
 
 	propOrigin?: string;
+	propUniverseName?: string;
 	propTransform?: AvNodeTransform;
 	propModelUri?: string;
 	propVolume?: AvVolume;

@@ -7,6 +7,7 @@ import { AvGadget,AvOrigin, AvTransform, AvGrabber, AvModel, AvPoker, AvPanelInt
 import { Av, EndpointAddr, EHand, GrabberHighlight, g_builtinModelSphere, EAction, g_builtinModelHead,
 	g_builtinModelHandRight, g_builtinModelHandLeft } from '@aardvarkxr/aardvark-shared'
 import { CMasterModel } from './master_model';
+import { Chamber } from './remote_universe';
 
 interface DefaultHandProps
 {
@@ -118,18 +119,32 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 	}
 }
 
-
 class MasterControls extends React.Component< {}, {} >
 {
+	private model: CMasterModel = new CMasterModel( this.onChambersUpdated );
+
 	constructor( props: any )
 	{
 		super( props );
 	}
 
+	@bind
+	private onChambersUpdated()
+	{
+		this.forceUpdate();
+	}
+
 	public render()
 	{
+		let chambers: JSX.Element[] = [];
+		for( let chamber of this.model.activeChambers)
+		{
+			chambers.push( Chamber( { chamber } ) );
+		}
+
 		return (
-			<div className="FullPage">
+			<>
+			argle bargle
 				<DefaultHand hand={ EHand.Left } />
 				<DefaultHand hand={ EHand.Right } />
 				<AvOrigin path="/user/head">
@@ -143,12 +158,12 @@ class MasterControls extends React.Component< {}, {} >
 							persistentName="head"/>
 					</AvTransform>
 				</AvOrigin>
-			</div>
+
+				{ chambers }
+			</>
 		);
 	}
 }
-
-let masterModel = new CMasterModel();
 
 ReactDOM.render( <MasterControls/>, document.getElementById( "root" ) );
 

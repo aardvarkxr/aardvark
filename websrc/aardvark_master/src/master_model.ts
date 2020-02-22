@@ -8,8 +8,11 @@ import { findChamber, ChamberSubscription } from 'common/net_chamber';
 export class CMasterModel
 {
 	private chambers: ChamberSubscription[] = [];
-	constructor()
+	private chamberListener: () => void;
+	constructor( listener: () => void )
 	{
+		this.chamberListener = listener;
+
 		AvGadget.instance().addUserInfoListener( this.onUserInfo );
 		AvGadget.instance().registerMessageHandler( MessageType.ActuallyJoinChamber, this.onActuallyJoinChamber );
 		AvGadget.instance().registerMessageHandler( MessageType.ActuallyLeaveChamber, this.onActuallyLeaveChamber );
@@ -22,6 +25,11 @@ export class CMasterModel
 
 	}
 
+	public get activeChambers() 
+	{
+		return this.chambers;
+	}
+	
 	@bind
 	private async onUserInfo()
 	{
@@ -36,6 +44,7 @@ export class CMasterModel
 		if( chamber.joinChamber( m ) )
 		{
 			this.chambers.push( chamber );
+			this.chamberListener?.();
 		}
 	}
 
@@ -44,6 +53,12 @@ export class CMasterModel
 	{
 		let chamber = await findChamber( m.chamberPath );
 		chamber.leaveChamber( m );
+		let chamberIndex = this.chambers.indexOf( chamber );
+		if( chamberIndex != -1 )
+		{
+			this.chambers.splice( chamberIndex, 1 );
+			this.chamberListener?.();
+		}
 	}
 
 	@bind
@@ -82,5 +97,4 @@ export class CMasterModel
 		}
 	}
 }
-
 

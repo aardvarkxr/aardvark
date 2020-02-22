@@ -800,9 +800,9 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 			{ node.propOrigin && <div className="AvNodeProperty">origin: {node.propOrigin }</div> }
 			{ node.propModelUri && <div className="AvNodeProperty">model: {node.propModelUri }</div> }
 			{ node.propColor && <div className="AvNodeProperty">Color: 
-				{ node.propColor.r },
-				{ node.propColor.g },
-				{ node.propColor.b }
+				{ node.propColor.r.toFixed( 2 ) },
+				{ node.propColor.g.toFixed( 2 ) },
+				{ node.propColor.b.toFixed( 2 ) }
 				{ node.propColor.r != undefined && ( ", " + node.propColor.a ) }
 				</div> }
 			{ node.propVolume && <div className="AvNodeProperty">volume: radius={node.propVolume.radius }</div> }

@@ -60,6 +60,7 @@ export interface ChamberMemberInfo
 {
 	readonly uuid: string;
 	gadgets: ChamberGadgetInfo[];
+	readonly poses: { [path: string] : MinimalPose };
 };
 
 export interface PoseUpdatedArgs
@@ -85,7 +86,7 @@ class ChamberMember extends ACModel implements ChamberMemberInfo
 	private chamberModelId: string;
 	private userUuid: string;
 	private userPublicKey: string;
-	private poses: { [path: string ]: MinimalPose } = {};
+	private m_poses: { [path: string ]: MinimalPose } = {};
 	private m_gadgets: { [ persistenceUuid: string ]: ChamberGadget } = {};
 
 	public init( options: ChamberMemberOptions )
@@ -109,7 +110,7 @@ class ChamberMember extends ACModel implements ChamberMemberInfo
 	{
 		//( this as any ).modelOnly();
 		verifySignature( args, this.userPublicKey );
-		this.poses[ args.originPath ] = args.newPose;
+		this.m_poses[ args.originPath ] = args.newPose;
 
 		let outboundPose: PoseUpdatedArgs =
 		{
@@ -187,6 +188,11 @@ class ChamberMember extends ACModel implements ChamberMemberInfo
 	public get gadgets() : ChamberGadgetInfo[]
 	{
 		return Object.values( this.m_gadgets );
+	}
+	
+	public get poses()
+	{
+		return this.m_poses;
 	}
 }
 
