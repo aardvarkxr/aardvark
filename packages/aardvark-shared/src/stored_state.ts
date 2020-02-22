@@ -74,8 +74,8 @@ const lastNames =
 
 function generateRandomName( ):string
 {
-	let firstIndex = Math.random() * firstNames.length;
-	let lastIndex = Math.random() * lastNames.length;
+	let firstIndex = Math.floor( Math.random() * firstNames.length );
+	let lastIndex = Math.floor( Math.random() * lastNames.length );
 	return `${ firstNames[ firstIndex ] } ${ lastNames[ lastIndex ] }`;
 }
 
