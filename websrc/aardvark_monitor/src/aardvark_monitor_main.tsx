@@ -18,7 +18,7 @@ import { observable, ObservableMap, action, observe, computed } from 'mobx';
 import { observer } from 'mobx-react';
 import { QuaternionToEulerAngles, RadiansToDegrees, DegreesToRadians, EulerAnglesToQuaternion } from '@aardvarkxr/aardvark-react';
 import { findUser, UserSubscription, initLocalUser } from 'common/net_user';
-import { findChamber, ChamberSubscription, ChamberMemberInfo, PoseUpdatedArgs } from 'common/net_chamber';
+import { findChamber, ChamberSubscription, ChamberMemberInfo, PoseUpdatedArgs, ChamberGadgetInfo } from 'common/net_chamber';
 
 interface EndpointData
 {
@@ -187,6 +187,8 @@ class CMonitorStore
 		for( let newChamber of newChambers )
 		{
 			newChamber.addPoseHandler( this.onPoseUpdated );
+			newChamber.addGadgetListUpdateHandler( this.onGadgetListUpdated );
+			newChamber.addGadgetUpdateHandler( this.onGadgetUpdated );
 
 			let chamberInfo = 
 			{
@@ -207,7 +209,13 @@ class CMonitorStore
 
 				for( let gadget of member.gadgets )
 				{
-					chamberMember.gadgets.set( gadget.persistenceUuid, gadget );
+					let gadgetInfo: SharedGadget =
+					{
+						gadgetUri: gadget.gadgetUri,
+						persistenceUuid: gadget.persistenceUuid,
+						hook: gadget.hook,
+					}
+					chamberMember.gadgets.set( gadget.persistenceUuid, gadgetInfo );
 				}
 
 				chamberInfo.members.set( member.uuid, chamberMember );
@@ -220,6 +228,38 @@ class CMonitorStore
 	{
 		this.m_chambers.get( chamber.chamberPath )?.members.get( args.userUuid )
 			?.poses.set( args.originPath, args.pose );
+	}
+
+	@bind
+	private onGadgetListUpdated( chamber: ChamberSubscription, member: ChamberMemberInfo )
+	{
+		let memberView = this.m_chambers.get( chamber.chamberPath )?.members.get( member.uuid );
+		if( memberView )
+		{
+			memberView.gadgets.clear();
+			for( let gadget of member.gadgets )
+			{
+				let gadgetInfo: SharedGadget =
+				{
+					gadgetUri: gadget.gadgetUri,
+					persistenceUuid: gadget.persistenceUuid,
+					hook: gadget.hook,
+				}
+				memberView.gadgets.set( gadget.persistenceUuid, gadgetInfo );
+		}
+		}
+	}
+
+	@bind
+	private onGadgetUpdated( chamber: ChamberSubscription, member: ChamberMemberInfo, 
+		gadget: ChamberGadgetInfo )
+	{
+		let gadgetView = this.m_chambers.get( chamber.chamberPath )?.members.get( member.uuid )
+			?.gadgets.get( gadget.persistenceUuid );
+		if( gadgetView )
+		{
+			gadgetView.hook = gadget.hook;
+		}
 	}
 
 	@action private updateNode( gadgetData: GadgetData, node: AvNode )
@@ -964,7 +1004,7 @@ class UserInfoMonitor extends React.Component< {}, {} >
 
 	public renderGadget( persistenceUuid: string, gadget: SharedGadget )
 	{
-		return <div className="ChamberMemberPose" key={ persistenceUuid }>
+		return <div className="ChamberGadget" key={ persistenceUuid }>
 			<div>{ persistenceUuid }</div>
 			<div>{ gadget.gadgetUri }</div>
 			<div>{ gadget.hook }</div>

@@ -2,13 +2,17 @@ import { CroquetSession, startSession } from '@croquet/croquet';
 import { AuthedRequest, verifySignature, MsgUpdatePose, MsgActuallyJoinChamber, 
 	MsgActuallyLeaveChamber, 
 	MinimalPose,
-	SharedGadget} from '@aardvarkxr/aardvark-shared';
+	SharedGadget,
+	MsgAddGadgetToChambers,
+	MsgRemoveGadgetFromChambers,
+	MsgUpdateChamberGadgetHook} from '@aardvarkxr/aardvark-shared';
 import { ACModel, ACView } from './croquet_utils';
 
 
 interface ChamberGadgetOptions extends SharedGadget
 {
 	chamberModelId: string;
+	userUuid: string;
 }
 
 export interface ChamberGadgetInfo
@@ -23,18 +27,18 @@ class ChamberGadget extends ACModel implements ChamberGadgetInfo
 	private m_persistenceUuid: string;
 	private m_gadgetUri: string;
 	private m_hook: string;
-	private chamberModelId: string;
 
 	public init( options: ChamberGadgetOptions )
 	{
 		super.init( options );
-		this.chamberModelId = options.chamberModelId;
 		this.m_persistenceUuid = options.persistenceUuid;
 		this.m_gadgetUri = options.gadgetUri;
 		this.m_hook = options.hook;
+	}
 
-		// TODO: Moving gadgets around from their initial hook
-		// this.subscribe( this.id, "updatePose", this.updatePose );
+	public updateHook( hook: string )
+	{
+		this.m_hook = hook;
 	}
 
 	public get persistenceUuid() { return this.m_persistenceUuid; }
@@ -65,6 +69,17 @@ export interface PoseUpdatedArgs
 	pose: MinimalPose;
 }
 
+export interface GadgetUpdatedArgs
+{
+	userUuid: string;
+	gadgetPersistenceUuid: string;
+}
+
+export interface GadgetListUpdatedArgs
+{
+	userUuid: string;
+}
+
 class ChamberMember extends ACModel implements ChamberMemberInfo
 {
 	private chamberModelId: string;
@@ -85,13 +100,7 @@ class ChamberMember extends ACModel implements ChamberMemberInfo
 		{
 			for( let sharedGadget of options.gadgets )
 			{
-				let gadgetOptions: ChamberGadgetOptions =
-				{
-					...sharedGadget,
-					chamberModelId: options.chamberModelId,
-				};
-
-				this.m_gadgets[ gadgetOptions.persistenceUuid ] = ChamberGadget.createT( gadgetOptions );
+				this.addGadget( sharedGadget );
 			}
 		}
 	}
@@ -110,6 +119,59 @@ class ChamberMember extends ACModel implements ChamberMemberInfo
 		}
 
 		this.publish( this.chamberModelId, "poseUpdated", outboundPose );
+	}
+
+	public addGadget( sharedGadget: SharedGadget )
+	{
+		let gadgetOptions: ChamberGadgetOptions =
+		{
+			...sharedGadget,
+			chamberModelId: this.chamberModelId,
+			userUuid: this.userUuid,
+		};
+
+		this.m_gadgets[ gadgetOptions.persistenceUuid ] = ChamberGadget.createT( gadgetOptions );
+
+		this.sendGadgetListUpdate();
+	}
+
+	public removeGadget( args: MsgRemoveGadgetFromChambers )
+	{
+		if( this.m_gadgets[ args.persistenceUuid ] )
+		{
+			this.m_gadgets[ args.persistenceUuid ].destroy();
+			delete this.m_gadgets[ args.persistenceUuid ];
+			this.sendGadgetListUpdate();
+		}
+	}
+
+	private sendGadgetListUpdate()
+	{
+		let args: GadgetListUpdatedArgs =
+		{
+			userUuid: this.uuid
+		};
+
+		this.publish( this.chamberModelId, "gadgetListUpdated", args);
+	}
+
+	public updateGadgetHook( args: MsgUpdateChamberGadgetHook )
+	{
+		if( this.m_gadgets[ args.persistenceUuid ] )
+		{
+			this.m_gadgets[ args.persistenceUuid ].updateHook( args.hook );
+			let gadgetUpdated: GadgetUpdatedArgs =
+			{
+				userUuid: this.uuid,
+				gadgetPersistenceUuid: args.persistenceUuid,
+			}
+			this.publish( this.chamberModelId, "gadgetUpdated", gadgetUpdated );
+		}
+	}
+
+	public findGadget( gadgetPersistenceUuid: string )
+	{
+		return this.m_gadgets[ gadgetPersistenceUuid ];
 	}
 
 	public get uuid() : string
@@ -150,6 +212,9 @@ class Chamber extends ACModel
 		this.subscribeAckable( "joinChamber", this.joinChamber );
 		this.subscribeAckable( "leaveChamber", this.leaveChamber );
 		this.subscribe( this.id, "updatePose", this.updatePose );
+		this.subscribe( this.id, "addGadget", this.addGadget );
+		this.subscribe( this.id, "removeGadget", this.removeGadget );
+		this.subscribe( this.id, "updateGadgetHook", this.updateGadgetHook );
 	}
 
 	public static uuidToPath( uuid: string )
@@ -157,7 +222,7 @@ class Chamber extends ACModel
 		return "/aardvark/chamber/" + uuid;
 	}
 
-	private findMember( userUuid: string )
+	public findMember( userUuid: string )
 	{
 		return this.members.find( ( member: ChamberMember ) =>
 		{
@@ -230,10 +295,28 @@ class Chamber extends ACModel
 		return true;
 	}
 
-	public updatePose( args: MsgUpdatePose )
+	private updatePose( args: MsgUpdatePose )
 	{
 		let member = this.findAndAuthMember( args.userUuid, args );
 		member.updatePose( args );
+	}
+
+	private addGadget( args: MsgAddGadgetToChambers )
+	{
+		let member = this.findAndAuthMember( args.userUuid, args );
+		member.addGadget( args.gadget );
+	}
+
+	private removeGadget( args: MsgRemoveGadgetFromChambers )
+	{
+		let member = this.findAndAuthMember( args.userUuid, args );
+		member.removeGadget( args );
+	}
+
+	private updateGadgetHook( args: MsgUpdateChamberGadgetHook )
+	{
+		let member = this.findAndAuthMember( args.userUuid, args );
+		member.updateGadgetHook( args );
 	}
 }
 
@@ -242,6 +325,16 @@ Chamber.register();
 export interface PoseUpdateHandler
 {
 	( chamber: ChamberSubscription, newPose: PoseUpdatedArgs ): void;
+}
+
+export interface GadgetUpdateHandler
+{
+	( chamber: ChamberSubscription, member: ChamberMemberInfo, gadget: ChamberGadgetInfo ): void;
+}
+
+export interface GadgetListUpdateHandler
+{
+	( chamber: ChamberSubscription, member: ChamberMemberInfo ): void;
 }
 
 export interface ChamberSubscription
@@ -254,6 +347,13 @@ export interface ChamberSubscription
 	addPoseHandler( fn: PoseUpdateHandler ): void;
 	removePoseHandler( fn: PoseUpdateHandler ): void;
 	removeAllPoseHandlers(): void;
+	addGadget( m: MsgAddGadgetToChambers ): void;
+	removeGadget( m: MsgRemoveGadgetFromChambers): void;
+	updateGadgetHook( m: MsgUpdateChamberGadgetHook ): void;
+	addGadgetUpdateHandler( fn: GadgetUpdateHandler ): void;
+	removeGadgetUpdateHandler( fn: GadgetUpdateHandler ): void;
+	addGadgetListUpdateHandler( fn: GadgetListUpdateHandler ): void;
+	removeGadgetListUpdateHandler( fn: GadgetListUpdateHandler ): void;
 }
 
 
@@ -261,12 +361,16 @@ export class ChamberView extends ACView implements ChamberSubscription
 {
 	private chamber: Chamber;
 	private poseHandlers: PoseUpdateHandler[] = [];
+	private gadgetHookUpdateHandlers: GadgetUpdateHandler[] = [];
+	private gadgetListUpdateHandlers: GadgetListUpdateHandler[] = [];
 
 	constructor( chamber: Chamber )
 	{
 		super( chamber );
 		this.chamber = chamber;
 		this.subscribe( chamber.id, "poseUpdated", this.onPoseUpdated );
+		this.subscribe( chamber.id, "gadgetUpdated", this.onGadgetUpdated );
+		this.subscribe( chamber.id, "gadgetListUpdated", this.onGadgetListUpdated );
 	}
 
 	public get chamberPath(): string
@@ -304,11 +408,46 @@ export class ChamberView extends ACView implements ChamberSubscription
 		this.publish( this.chamber.id, "updatePose", args );
 	}
 
+	public addGadget( args: MsgAddGadgetToChambers ): void
+	{
+		this.publish( this.chamber.id, "addGadget", args );
+	}
+
+	public removeGadget( args: MsgRemoveGadgetFromChambers): void
+	{
+		this.publish( this.chamber.id, "removeGadget", args );
+	}
+	
+	public updateGadgetHook( args: MsgUpdateChamberGadgetHook ): void
+	{
+		this.publish( this.chamber.id, "updateGadgetHook", args );
+	}
+	
 	public onPoseUpdated( args: PoseUpdatedArgs )
 	{
 		for( let handler of this.poseHandlers )
 		{
 			handler( this, args );
+		}
+	}
+
+	public onGadgetUpdated( args: GadgetUpdatedArgs )
+	{
+		let chamberMember = this.chamber.findMember( args.userUuid );
+		let chamberGadget = chamberMember.findGadget( args.gadgetPersistenceUuid );
+
+		for( let handler of this.gadgetHookUpdateHandlers )
+		{
+			handler( this, chamberMember, chamberGadget );
+		}
+	}
+
+	public onGadgetListUpdated( args: GadgetListUpdatedArgs )
+	{
+		let chamberMember = this.chamber.findMember( args.userUuid );
+		for( let handler of this.gadgetListUpdateHandlers )
+		{
+			handler( this, chamberMember );
 		}
 	}
 
@@ -331,6 +470,33 @@ export class ChamberView extends ACView implements ChamberSubscription
 		this.poseHandlers = [];
 	}
 
+	public addGadgetListUpdateHandler( fn: GadgetListUpdateHandler ): void
+	{
+		this.gadgetListUpdateHandlers.push( fn );
+	}
+
+	public removeGadgetListUpdateHandler( fn: GadgetListUpdateHandler ) : void
+	{
+		let handlerIndex = this.gadgetListUpdateHandlers.indexOf( fn );
+		if( handlerIndex != -1 )
+		{
+			this.gadgetListUpdateHandlers.splice( handlerIndex, 1 );
+		}
+	}
+
+	addGadgetUpdateHandler( fn: GadgetUpdateHandler ): void
+	{
+		this.gadgetHookUpdateHandlers.push( fn );
+	}
+
+	removeGadgetUpdateHandler( fn: GadgetUpdateHandler ): void
+	{
+		let handlerIndex = this.gadgetHookUpdateHandlers.indexOf( fn );
+		if( handlerIndex != -1 )
+		{
+			this.gadgetHookUpdateHandlers.splice( handlerIndex, 1 );
+		}
+	}
 }
 
 

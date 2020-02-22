@@ -49,6 +49,9 @@ export enum MessageType
 	ChamberList = 503, 			// sent to monitors when the list changes
 	ActuallyJoinChamber = 504,	// sent to master to join a chamber
 	ActuallyLeaveChamber = 505,	// sent to master to leave a chamber
+	AddGadgetToChambers = 506,  // sent to master to update the chamber
+	RemoveGadgetFromChambers = 507,  // sent to master to update the chamber
+	UpdateChamberGadgetHook = 508, // Updates the hook field of a gadget on all chambers
 }
 
 export enum WebSocketCloseCodes
@@ -442,6 +445,25 @@ export interface MsgActuallyLeaveChamber extends AuthedRequest
 export interface MsgChamberList
 {
 	chamberPaths: string[];
+}
+
+export interface MsgAddGadgetToChambers extends AuthedRequest
+{
+	userUuid: string;
+	gadget: SharedGadget;
+}
+
+export interface MsgRemoveGadgetFromChambers extends AuthedRequest
+{
+	userUuid: string;
+	persistenceUuid: string;
+}
+
+export interface MsgUpdateChamberGadgetHook extends AuthedRequest
+{
+	userUuid: string;
+	persistenceUuid: string;
+	hook?: string;
 }
 
 export interface PokerProximity
