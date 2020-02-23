@@ -3,7 +3,8 @@ import { v4 as uuid } from 'uuid';
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
-import { buildPersistentHookPath, getJSONFromUri } from './serverutils';
+import { getJSONFromUri } from './serverutils';
+import { buildPersistentHookPath } from 'common/hook_utils';
 import bind from 'bind-decorator';
 
 

@@ -3,6 +3,7 @@ import bind from 'bind-decorator';
 import { initLocalUser } from 'common/net_user';
 import { MessageType, MsgActuallyJoinChamber, MsgActuallyLeaveChamber, MsgUpdatePose, MsgAddGadgetToChambers, MsgRemoveGadgetFromChambers, MsgUpdateChamberGadgetHook, AvStartGadgetResult } from '@aardvarkxr/aardvark-shared';
 import { findChamber, ChamberSubscription, ChamberMemberInfo, ChamberGadgetInfo } from 'common/net_chamber';
+import { parsePersistentHookPath, buildPersistentHookPath, buildPersistentHookPathFromParts } from 'common/hook_utils';
 
 
 interface GadgetTracker
@@ -22,6 +23,12 @@ interface ChamberTracker
 {
 	chamber: ChamberSubscription;
 	members: { [ uuid: string ] : MemberTracker };
+}
+
+function computeRemotePersistenceUuid( gadgetPersistenceUuid: string, remoteUniversePath: string )
+{
+	let newGadgetPersistenceUuid = remoteUniversePath + "/g/" + gadgetPersistenceUuid;
+	return newGadgetPersistenceUuid.replace( /\W/g, "_" ).toLowerCase();
 }
 
 export class CMasterModel
@@ -181,8 +188,22 @@ export class CMasterModel
 		};
 		memberTracker.gadgets[ gadgetInfo.persistenceUuid ] = gadgetTracker;
 
-		AvGadget.instance().startGadget( gadgetInfo.gadgetUri, gadgetInfo.hook, 
-			memberTracker.remoteUniversePath )
+		// make a unique ID for the new gadget namespaced by the remote universe
+		let newGadgetPersistenceUuid = computeRemotePersistenceUuid( gadgetInfo.persistenceUuid, 
+			memberTracker.remoteUniversePath );
+
+		// parse the hook path lookig for gadget UUIDs to fix up
+		let hookToUse = gadgetInfo.hook;
+		let hookParts = parsePersistentHookPath( gadgetInfo.hook );
+		if( hookParts && hookParts.gadgetUuid )
+		{
+			hookParts.gadgetUuid = computeRemotePersistenceUuid( hookParts.gadgetUuid, 
+				memberTracker.remoteUniversePath );
+			hookToUse = buildPersistentHookPathFromParts( hookParts );
+		}
+
+		AvGadget.instance().startGadget( gadgetInfo.gadgetUri, hookToUse, 
+			memberTracker.remoteUniversePath, newGadgetPersistenceUuid )
 		.then( ( res: AvStartGadgetResult ) =>
 		{
 			if( res.success )

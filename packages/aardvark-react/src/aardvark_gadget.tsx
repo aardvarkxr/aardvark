@@ -575,7 +575,8 @@ export class AvGadget
 		this.m_endpoint.sendMessage( MessageType.NodeHaptic, msg );
 	}
 
-	public startGadget( uri: string, initialHook: string, remoteUniverse?: string ) : 
+	public startGadget( uri: string, initialHook: string, remoteUniverse?: string,
+		persistenceUuid?: string ) : 
 		Promise<AvStartGadgetResult>
 	{
 		return new Promise( ( resolve, reject ) =>
@@ -589,7 +590,7 @@ export class AvGadget
 				endpointId: this.m_endpoint.getEndpointId(),
 				nodeId: notifyNodeId,
 			}
-			Av().startGadget( uri, initialHook, "", epToNotify, remoteUniverse );
+			Av().startGadget( uri, initialHook, persistenceUuid ?? "", epToNotify, remoteUniverse );
 		} );
 	} 
 

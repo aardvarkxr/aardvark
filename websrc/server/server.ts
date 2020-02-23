@@ -1,5 +1,6 @@
-import { g_localInstallPathUri, g_localInstallPath,	parsePersistentHookPath, 
-	HookPathParts, getJSONFromUri, buildPersistentHookPath } from './serverutils';
+import { g_localInstallPathUri, g_localInstallPath,	getJSONFromUri } from './serverutils';
+import { parsePersistentHookPath, 
+	HookPathParts,  buildPersistentHookPath } from 'common/hook_utils';
 import { StoredGadget, AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, AvGrabEvent, 
 	AvGrabEventType, MsgAttachGadgetToHook, MsgMasterStartGadget, MsgSaveSettings, 
 	MsgOverrideTransform, MsgGetGadgetManifest, MsgGetGadgetManifestResponse, 
@@ -764,8 +765,11 @@ class CGadgetData
 	public updateGadgetSceneGraph( sendHook?: boolean )
 	{
 		let env = this.buildUpdateSceneGraphMessage( sendHook );
-		this.m_dispatcher.sendToAllEndpointsOfType( EndpointType.Monitor, env );
 		this.m_dispatcher.sendToAllEndpointsOfType( EndpointType.Renderer, env );
+
+		// monitor wants the hooks
+		env = this.buildUpdateSceneGraphMessage( true );
+		this.m_dispatcher.sendToAllEndpointsOfType( EndpointType.Monitor, env );
 	}
 
 	public buildUpdateSceneGraphMessage( sendHook?: boolean ): Envelope
