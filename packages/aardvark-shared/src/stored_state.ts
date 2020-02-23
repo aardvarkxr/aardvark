@@ -123,7 +123,7 @@ export function readPersistentState( path: string ): AardvarkState
 			state.activeGadgets[ "gadget_menu" ]=
 			{
 				uri: "http://localhost:23842/gadgets/gadget_menu",
-				hookPath: "/gadget/master/left_hand",
+				hookPath: "/gadget/hands/left_hand",
 			};
 		}
 
@@ -149,7 +149,7 @@ export function readPersistentState( path: string ): AardvarkState
 				"gadget_menu" :
 				{
 					uri: "http://localhost:23842/gadgets/gadget_menu",
-					hookPath: "/gadget/master/left_hand",
+					hookPath: "/gadget/hands/left_hand",
 				},
 			},
 			installedGadgets: 
