@@ -787,7 +787,7 @@ export function filterActionsForGadget( actionState: AvActionState ): AvActionSt
 	};
 }
 
-export function gadgetDetailsToId( gadgetName: string, gadgetUri: string )
+export function gadgetDetailsToId( gadgetName: string, gadgetUri: string, gadgetPersistenceUuid: string )
 {
 	let filteredName = gadgetName.replace( /\W/g, "_" ).toLowerCase();
 	if( filteredName.length > 24 )
@@ -795,10 +795,11 @@ export function gadgetDetailsToId( gadgetName: string, gadgetUri: string )
 		filteredName = filteredName.substr( 0, 24 );
 	}
 
+	let keyToHash = gadgetUri + gadgetPersistenceUuid;
 	let hash = 0;
-	for ( let i = 0; i < gadgetUri.length; i++) 
+	for ( let i = 0; i < keyToHash.length; i++) 
 	{
-		let char = gadgetUri.charCodeAt(i);
+		let char = keyToHash.charCodeAt(i);
 		hash = ((hash<<5)-hash)+char;
 		hash = hash & hash; // Convert to 32bit integer
 	}

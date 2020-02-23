@@ -520,7 +520,7 @@ class CGadgetData
 	}
 
 	public getUri() { return this.m_gadgetUri; }
-	public getId() { return gadgetDetailsToId( this.getName(), this.getUri() ); }
+	public getId() { return gadgetDetailsToId( this.getName(), this.getUri(), this.getPersistenceUuid() ); }
 	public getName() { return this.m_manifest.name; }
 	public getRoot() { return this.m_root; }
 	public getHook() { return this.m_hook; }
