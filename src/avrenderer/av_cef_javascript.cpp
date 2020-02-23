@@ -159,7 +159,7 @@ bool CAardvarkObject::init( CefRefPtr<CefV8Value> container )
 			std::string sHook = arguments[1]->IsString() ? arguments[1]->GetStringValue() : "";
 
 			CefString remoteUniversePath;
-			if ( arguments.size() >= 5 )
+			if ( arguments.size() >= 5 && !arguments[ 4 ]->IsNull() && !arguments[4]->IsUndefined() )
 			{
 				if ( !arguments[ 4 ]->IsString() )
 				{
