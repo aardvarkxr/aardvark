@@ -56,6 +56,11 @@ body, html
 	border-style: solid;
 }
 
+.GadgetRemote
+{
+	border: dashed red 2px;
+}
+
 .AvNode
 {
 	margin-left: 1rem;

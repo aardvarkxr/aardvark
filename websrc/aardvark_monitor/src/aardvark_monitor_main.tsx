@@ -882,7 +882,7 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 				{ hookInfo && <span className="GadgetUri">({ hookInfo })</span> }
 			</div>
 			{ gadgetData.remoteUniversePath && 
-				<div className="GadgetName">{ gadgetData.remoteUniversePath } </div> }
+				<div className="GadgetRemote">{ gadgetData.remoteUniversePath } </div> }
 			{ gadgetData.gadgetRoot && this.renderNode( gadgetData.gadgetRoot ) }
 			{ this.renderGrabberState() }
 
