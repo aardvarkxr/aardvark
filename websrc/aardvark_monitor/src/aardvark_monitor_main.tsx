@@ -35,6 +35,7 @@ interface GadgetData extends EndpointData
 	grabbables?: EndpointAddr[];
 	hooks?: EndpointAddr[];
 	nodes?: { [ nodeId: number]: AvNode };
+	remoteUniversePath?: string;
 }
 
 interface ChamberMemberObservable
@@ -289,6 +290,7 @@ class CMonitorStore
 		let gadgetData = epData as GadgetData;
 		gadgetData.gadgetHook = message.hook;
 		gadgetData.gadgetRoot = message.root;
+		gadgetData.remoteUniversePath = message.remoteUniversePath;
 
 		gadgetData.nodes = {};
 		if( gadgetData.gadgetRoot )
@@ -879,6 +881,8 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 				<span className="GadgetUri">({ gadgetData.gadgetUri })</span>
 				{ hookInfo && <span className="GadgetUri">({ hookInfo })</span> }
 			</div>
+			{ gadgetData.remoteUniversePath && 
+				<div className="GadgetName">{ gadgetData.remoteUniversePath } </div> }
 			{ gadgetData.gadgetRoot && this.renderNode( gadgetData.gadgetRoot ) }
 			{ this.renderGrabberState() }
 
