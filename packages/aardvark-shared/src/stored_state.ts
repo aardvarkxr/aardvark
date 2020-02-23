@@ -14,7 +14,7 @@ export interface StoredGadget
 	uuid: string;
 }
 
-const AardvarkStateFormat = 2;
+const AardvarkStateFormat = 3;
 
 export interface AardvarkState
 {
@@ -107,9 +107,9 @@ export function readPersistentState( path: string ): AardvarkState
 		let previousState = fs.readFileSync( path, 'utf8' );
 		let state:AardvarkState = JSON.parse( previousState );
 
-		if( state.format == 1 )
+		if( state.format == 1 || state.format == 2 )
 		{
-			state = v1ToV2( state );
+			throw `Stored state ${state.format} is no longer supported.`;
 		}
 
 		if( state.format != AardvarkStateFormat )
@@ -138,14 +138,13 @@ export function readPersistentState( path: string ): AardvarkState
 	}
 	catch( e )
 	{
-		console.log( "Failed to read state file. Using default start" );
+		console.log( `Failed to read state file because ${ e } Using default start` );
 
 		let state =
 		{
 			format: AardvarkStateFormat,
 			activeGadgets: 
 			{
-				"master" : { uri: "http://localhost:23842/gadgets/aardvark_master" },
 				"gadget_menu" :
 				{
 					uri: "http://localhost:23842/gadgets/gadget_menu",

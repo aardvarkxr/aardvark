@@ -799,6 +799,7 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 			<div className="AvNodeType">{AvNodeType[ node.type ] } @{ node.id } 
 				{ this.renderFlags( node.flags ) } 
 			</div>
+			{ node.propUniverseName && <div className="AvNodeProperty">remote: {node.propUniverseName }</div> }
 			{ node.propOrigin && <div className="AvNodeProperty">origin: {node.propOrigin }</div> }
 			{ node.propModelUri && <div className="AvNodeProperty">model: {node.propModelUri }</div> }
 			{ node.propColor && <div className="AvNodeProperty">Color: 
@@ -1009,7 +1010,7 @@ class UserInfoMonitor extends React.Component< {}, {} >
 	public renderGadget( persistenceUuid: string, gadget: SharedGadget )
 	{
 		return <div className="ChamberGadget" key={ persistenceUuid }>
-			<div>{ persistenceUuid }</div>
+			<div>PU: { persistenceUuid }</div>
 			<div>{ gadget.gadgetUri }</div>
 			<div>{ gadget.hook }</div>
 		</div>;
@@ -1030,7 +1031,7 @@ class UserInfoMonitor extends React.Component< {}, {} >
 		} );
 
 		return ( <div className="ChamberMemberInfo" key={ member.info.uuid }>
-			<div>{ member.info.uuid }</div>
+			<div className="ChamberMemberName">{ member.info.uuid }</div>
 			<div className="ChamberInfoPoses">
 				{ poses }
 			</div> 

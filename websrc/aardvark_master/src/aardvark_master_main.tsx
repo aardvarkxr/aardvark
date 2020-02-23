@@ -22,19 +22,19 @@ class MasterControls extends React.Component< {}, {} >
 	@bind
 	private onChambersUpdated()
 	{
+		console.log( "onChambersUpdated()" );
 		this.forceUpdate();
 	}
 
 	public render()
 	{
+		console.log( `render with ${ this.model.activeChambers.length } chambers in the list` );
+		
 		let chambers: JSX.Element[] = [];
-		if( this.model )
+		for( let chamber of this.model.activeChambers)
 		{
-			for( let chamber of this.model.activeChambers)
-			{
-				chambers.push( Chamber( { chamber } ) );
-			}	
-		}
+			chambers.push( Chamber( { chamber } ) );
+		}	
 
 		return (
 			<>

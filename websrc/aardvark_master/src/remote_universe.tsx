@@ -73,7 +73,7 @@ export function ChamberMemberPoses( props: ChamberPosesProps )
 		{
 			if( args.userUuid == props.member.uuid )
 			{
-				setPoses( props.member.poses );
+				setPoses( { ...props.member.poses } );
 			}
 		}
 
@@ -109,14 +109,16 @@ export interface ChamberProps
 export function Chamber( props: ChamberProps )
 {
 	let members: JSX.Element[] = [];
+	console.log( `Render chamber ${ props.chamber.chamberPath } with ${ props.chamber.members.length } members`)
 	for( let member of props.chamber.members )
 	{
 		members.push(
-			<ChamberMemberPoses key={ props.chamber.chamberPath } chamber={ props.chamber } 
-				member={ member } />
+			<ChamberMemberPoses key={ props.chamber.chamberPath + "/" + member.uuid } 
+				chamber={ props.chamber } member={ member } />
 		);
 	}
 
-	return <>{ members }</>;
+	return <div key={ props.chamber.chamberPath }>
+		{ members }</div>;
 
 }

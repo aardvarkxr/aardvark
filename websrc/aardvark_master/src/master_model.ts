@@ -76,7 +76,7 @@ export class CMasterModel
 	private async onActuallyJoinChamber( m: MsgActuallyJoinChamber )
 	{
 		let chamber = await findChamber( m.chamberPath );
-		if( chamber.joinChamber( m ) )
+		if( await chamber.joinChamber( m ) )
 		{
 			this.addChamber( chamber );
 			this.chamberListener?.();
@@ -87,7 +87,7 @@ export class CMasterModel
 	private async onActuallyLeaveChamber( m: MsgActuallyLeaveChamber )
 	{
 		let chamber = await findChamber( m.chamberPath );
-		chamber.leaveChamber( m );
+		await chamber.leaveChamber( m );
 		this.removeChamber( chamber );
 		this.chamberListener?.();
 	}
@@ -202,6 +202,8 @@ export class CMasterModel
 			hookToUse = buildPersistentHookPathFromParts( hookParts );
 		}
 
+		console.log( `master starting gadget ${ newGadgetPersistenceUuid } on ${ hookToUse } `
+			+ `via ${ gadgetInfo.gadgetUri }` );
 		AvGadget.instance().startGadget( gadgetInfo.gadgetUri, hookToUse, 
 			memberTracker.remoteUniversePath, newGadgetPersistenceUuid )
 		.then( ( res: AvStartGadgetResult ) =>

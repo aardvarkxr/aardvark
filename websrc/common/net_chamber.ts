@@ -88,6 +88,7 @@ class ChamberMember extends ACModel implements ChamberMemberInfo
 	private userPublicKey: string;
 	private m_poses: { [path: string ]: MinimalPose } = {};
 	private m_gadgets: { [ persistenceUuid: string ]: ChamberGadget } = {};
+	private m_lastPoseTime: number;
 
 	public init( options: ChamberMemberOptions )
 	{
@@ -96,6 +97,7 @@ class ChamberMember extends ACModel implements ChamberMemberInfo
 		this.userUuid = options.userUuid;
 		this.userPublicKey = options.userPublicKey;
 		this.subscribe( this.id, "updatePose", this.updatePose );
+		this.m_lastPoseTime = this.callNow();
 
 		if( options.gadgets )
 		{
@@ -109,8 +111,10 @@ class ChamberMember extends ACModel implements ChamberMemberInfo
 	public updatePose( args: MsgUpdatePose )
 	{
 		//( this as any ).modelOnly();
+		// silently ignore poses from non-members
 		verifySignature( args, this.userPublicKey );
 		this.m_poses[ args.originPath ] = args.newPose;
+		this.m_lastPoseTime = this.callNow();
 
 		let outboundPose: PoseUpdatedArgs =
 		{
@@ -189,10 +193,15 @@ class ChamberMember extends ACModel implements ChamberMemberInfo
 	{
 		return Object.values( this.m_gadgets );
 	}
-	
+
 	public get poses()
 	{
 		return this.m_poses;
+	}
+
+	public get lastPoseTime(): number
+	{
+		return this.m_lastPoseTime;
 	}
 }
 
@@ -287,6 +296,8 @@ class Chamber extends ACModel
 
 		this.members.push( ChamberMember.create( userOptions ) as ChamberMember );
 		this.publish( this.id, "member_joined", args.userUuid );
+	
+		this.cleanupIdleMembers();
 		return true;
 	}
 
@@ -295,16 +306,26 @@ class Chamber extends ACModel
 		let member = this.findAndAuthMember( args.userUuid, args);
 		this.verifyChamber( args.chamberPath );
 
+		this.removeMember( member );
+		return true;
+	}
+
+	private removeMember( member: ChamberMember )
+	{
 		let index = this.members.indexOf( member );
 		delete this.members[ index ];
 		member.destroy();
-		return true;
 	}
 
 	private updatePose( args: MsgUpdatePose )
 	{
+		// silently drop pose updates from non-members
+		if( !this.findMember( args.userUuid ) )
+			return;
+
 		let member = this.findAndAuthMember( args.userUuid, args );
 		member.updatePose( args );
+		this.cleanupIdleMembers();
 	}
 
 	private addGadget( args: MsgAddGadgetToChambers )
@@ -323,6 +344,18 @@ class Chamber extends ACModel
 	{
 		let member = this.findAndAuthMember( args.userUuid, args );
 		member.updateGadgetHook( args );
+	}
+
+	private cleanupIdleMembers()
+	{
+		// let expirationTime = this.callNow() - 5 * 60 * 1000;
+		// for( let member of this.members )
+		// {
+		// 	if( member.lastPoseTime < expirationTime )
+		// 	{
+		// 		this.removeMember( member );
+		// 	}
+		// }
 	}
 }
 

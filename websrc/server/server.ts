@@ -41,9 +41,30 @@ class CDispatcher
 	private m_gadgetsByUuid: { [ uuid: string ] : CEndpoint } = {};
 	private m_nextSequenceNumber = 1;
 	private m_chambers = new Set<string>();
+	private m_gadgetsWithWaiters: { [ persistenceUuid: string ]: (( gadg: CGadgetData) => void)[] } = {};
 
 	constructor()
 	{
+	}
+
+	public async init()
+	{
+	}
+
+	public startAllGadgets()
+	{
+		// Either start the gadget or schedule a start of the gadget when the hook it depends on arrives.
+		let gadgetsToStart = persistence.getActiveGadgets();
+		for( let gadget of gadgetsToStart )
+		{
+			let gadgetHookPath = persistence.getGadgetHookPath( gadget.uuid );
+			let hookParts = parsePersistentHookPath( gadgetHookPath )
+			this.findGadget( hookParts?.gadgetUuid ?? "master" )
+			.then( () =>
+			{
+				this.startOrRehookGadget( gadget.uri, gadgetHookPath, gadget.uuid );
+			} );
+		}		
 	}
 
 	public get nextSequenceNumber()
@@ -297,7 +318,7 @@ class CDispatcher
 		}
 	}
 
-	public startOrRehookGadget( uri: string, initialHookPath: string, persistenceUuid: string )
+	public async startOrRehookGadget( uri: string, initialHookPath: string, persistenceUuid: string )
 	{
 		// see if this gadget already exists
 		let gadget = this.m_gadgetsByUuid[ persistenceUuid ];
@@ -309,7 +330,7 @@ class CDispatcher
 
 		// tell the gadget to move to the newly available hook
 		let gadgetData = gadget.getGadgetData();
-		gadgetData.attachToHook( initialHookPath );
+		await gadgetData.attachToHook( initialHookPath );
 		gadgetData.sendSceneGraphToRenderer( false, true );
 	}
 
@@ -329,17 +350,45 @@ class CDispatcher
 		}
 	}
 
-	public findHook( hookInfo:HookPathParts ): EndpointAddr
+	public findGadget( gadgetPersistenceUuid: string ): Promise<CGadgetData>
 	{
-		let gadgetEp = this.m_gadgetsByUuid[ hookInfo.gadgetUuid ];
-		if( gadgetEp )
+		return new Promise( ( resolve, reject ) =>
 		{
-			return gadgetEp.getGadgetData().getHookNodeByPersistentName( hookInfo.hookPersistentName );
-		}
-		else
+			let gadgetEp = this.m_gadgetsByUuid[ gadgetPersistenceUuid ];
+			if( gadgetEp )
+			{
+				resolve( gadgetEp.getGadgetData() );
+			}
+			else
+			{
+				if( !this.m_gadgetsWithWaiters[ gadgetPersistenceUuid ] )
+				{
+					this.m_gadgetsWithWaiters[ gadgetPersistenceUuid ] = [];
+				}
+				this.m_gadgetsWithWaiters[ gadgetPersistenceUuid ].push( resolve );
+			}
+		} );
+	}
+
+	public notifyGadgetWaiters( persistenceUuid: string )
+	{
+		let gadgetData = this.m_gadgetsByUuid[ persistenceUuid ]?.getGadgetData();
+		if( this.m_gadgetsWithWaiters[ persistenceUuid ] && gadgetData )
 		{
-			return null;
+			console.log( `Notifying anyone waiting on ${ persistenceUuid }` );
+			for( let waiter of this.m_gadgetsWithWaiters[ persistenceUuid ] )
+			{
+				waiter( gadgetData );
+			}
+			delete this.m_gadgetsWithWaiters[ persistenceUuid ];
 		}
+	}
+	
+
+	public async findHook( hookInfo:HookPathParts )
+	{
+		let gadgetData = await this.findGadget( hookInfo.gadgetUuid );
+		return gadgetData.getHookNodeByPersistentName( hookInfo.hookPersistentName );
 	}
 
 	public sendMessageToAllEndpointsOfType( ept: EndpointType, type: MessageType, m: object )
@@ -429,13 +478,9 @@ class CGadgetData
 	constructor( ep: CEndpoint, uri: string, initialHook: string, persistenceUuid:string,
 		remoteUniversePath: string, dispatcher: CDispatcher )
 	{
-		if( remoteUniversePath )
+		if( persistenceUuid )
 		{
-			// skip local persistence for remote gadgets
-		}
-		else if( persistenceUuid )
-		{
-			if( !initialHook )
+			if( !initialHook && !remoteUniversePath )
 			{
 				initialHook = persistence.getGadgetHookPath( persistenceUuid );
 			}
@@ -490,25 +535,40 @@ class CGadgetData
 	public isMaster() { return this.m_persistenceUuid == "master"; }
 	public isBeingDestroyed() { return this.m_gadgetBeingDestroyed; }
 
-	public attachToHook( hookPath: string )
+	public get debugName()
 	{
-		console.log( `Attaching ${ this.m_persistenceUuid } (${ this.m_gadgetUri }) to ${ hookPath }`)
+		if( this.m_persistenceUuid )
+			return this.m_persistenceUuid;
+		else if( this.m_remoteUniversePath )
+			return "REMOTE";
+		else
+			return "Gadget with unspeakable name";
+	}
+
+	public async attachToHook( hookPath: string )
+	{
+		console.log( `Attaching ${ this.debugName } (${ this.m_gadgetUri }) to ${ hookPath }`)
 		let hookParts = parsePersistentHookPath( hookPath );
 		if( hookParts )
 		{
-			let hookAddr = this.m_dispatcher.findHook( hookParts );
-			if( hookAddr )
+			let hookAddr = await this.m_dispatcher.findHook( hookParts );
+			if( !hookAddr )
 			{
-				this.m_hook = { ...hookParts, hookAddr };
+				console.log( `Expected to find hook ${ hookPath } for ${ this.m_ep.getId() }. Attach failed` );
+				return;
 			}
-			else
-			{
-				console.log( `Expected to find hook ${ hookPath } for ${ this.m_ep.getId() }` );
-			}
+
+			this.m_hook = { ...hookParts, hookAddr };
 		}
 		else
 		{
 			this.m_hook = hookPath;
+		}
+
+		if( this.m_root )
+		{
+			// if we've already send a scene graph, send it again with the new hook
+			this.sendSceneGraphToRenderer( false, true );
 		}
 	}
 
@@ -624,17 +684,7 @@ class CGadgetData
 				}
 			}
 
-			let gadgetsToStart = persistence.getActiveGadgets();
-			for( let gadget of gadgetsToStart )
-			{
-				let gadgetHookPath = persistence.getGadgetHookPath( gadget.uuid );
-				let hookParts = parsePersistentHookPath( gadgetHookPath )
-				if( ( !hookParts && this.isMaster() )
-					|| ( hookParts && hookParts.gadgetUuid == this.getPersistenceUuid() ) )
-				{
-					this.m_dispatcher.startOrRehookGadget( gadget.uri, gadgetHookPath, gadget.uuid );
-				}
-			}
+			this.m_dispatcher.notifyGadgetWaiters( this.getPersistenceUuid() );
 		}
 	}
 
@@ -759,7 +809,10 @@ class CGadgetData
 	public destroyPersistence()
 	{
 		this.m_gadgetBeingDestroyed = true;
-		persistence.destroyGadgetPersistence( this.m_gadgetUri, this.m_persistenceUuid );
+		if( !this.m_remoteUniversePath )
+		{
+			persistence.destroyGadgetPersistence( this.m_gadgetUri, this.m_persistenceUuid );
+		}
 	}
 
 	public updateGadgetSceneGraph( sendHook?: boolean )
@@ -1084,13 +1137,21 @@ class CEndpoint
 			// some stuff.
 			await this.m_gadgetData.init(); 
 
-			let settings = persistence.getGadgetSettings( this.m_gadgetData.getPersistenceUuid() );
-			if( settings )
+			if( !m.remoteUniversePath )
 			{
-				msgResponse.settings = settings;
+				let settings = persistence.getGadgetSettings( this.m_gadgetData.getPersistenceUuid() );
+				if( settings )
+				{
+					msgResponse.settings = settings;
+				}	
 			}
 
 			msgResponse.persistenceUuid = this.m_gadgetData.getPersistenceUuid();
+
+			if( this.m_gadgetData.isMaster() )
+			{
+				this.m_dispatcher.startAllGadgets();
+			}
 
 			// Tell any chambers this user is in about the new gadget
 			if( this.m_gadgetData.getShareInChamber() )
@@ -1194,7 +1255,7 @@ class CEndpoint
 		gadget.detachFromHook( m.hookNodeId );
 	}
 
-	private attachToHook( hookId: EndpointAddr, hookFromGrabbable: AvNodeTransform )
+	private async attachToHook( hookId: EndpointAddr, hookFromGrabbable: AvNodeTransform )
 	{
 		let hookPath = this.m_dispatcher.getPersistentNodePath( hookId, hookFromGrabbable );
 		if( !hookPath )
@@ -1204,7 +1265,7 @@ class CEndpoint
 			return;
 		}
 
-		this.getGadgetData().attachToHook( hookPath );
+		await this.getGadgetData().attachToHook( hookPath );
 
 		let msgUpdateHook: MsgUpdateChamberGadgetHook =
 		{
@@ -1214,7 +1275,10 @@ class CEndpoint
 		};
 		this.m_dispatcher.sendToMasterSigned( MessageType.UpdateChamberGadgetHook, msgUpdateHook );
 
-		persistence.setGadgetHookPath( this.m_gadgetData.getPersistenceUuid(), hookPath );
+		if( !this.getGadgetData().getRemoteUniversePath() )
+		{
+			persistence.setGadgetHookPath( this.m_gadgetData.getPersistenceUuid(), hookPath );
+		}
 	}
 
 	private detachFromHook( hookId: EndpointAddr )
@@ -1227,7 +1291,8 @@ class CEndpoint
 
 	@bind private onSaveSettings( env: Envelope, m: MsgSaveSettings )
 	{
-		if( this.m_gadgetData && !this.m_gadgetData.isBeingDestroyed() )
+		if( this.m_gadgetData && !this.m_gadgetData.isBeingDestroyed() 
+			&& !this.m_gadgetData.getRemoteUniversePath() )
 		{
 			persistence.setGadgetSettings( this.m_gadgetData.getPersistenceUuid(), m.settings );
 		}
@@ -1426,6 +1491,12 @@ class CServer
 		this.m_app.use( "/models", express.static( path.resolve( g_localInstallPath, "models" ) ) );
 	}
 
+	async init()
+	{
+		await persistence.init();
+		this.m_dispatcher.init();
+	}
+
 	@bind onConnection( ws: WebSocket, request: http.IncomingMessage )
 	{
 		this.m_dispatcher.addPendingEndpoint( 
@@ -1446,7 +1517,7 @@ let server:CServer;
 async function startup()
 {
 	server = new CServer( Number( process.env.PORT ) || AardvarkPort );
-	await persistence.init();
+	server.init();
 }
 
 startup();

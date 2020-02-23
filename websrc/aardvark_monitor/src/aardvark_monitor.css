@@ -214,6 +214,11 @@ body, html
 	margin-left: 5px;
 }
 
+.ChamberMemberName
+{
+	font-size: 1.2rem;
+}
+
 .ChamberGadget
 {
 	margin-left: 5px;

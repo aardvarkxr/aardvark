@@ -53,6 +53,11 @@ export class ACModel extends Model
 		return "DEFERRED";
 	}
 
+	protected callNow() : number
+	{
+		return (this as any).now();
+	}
+	
 	public onAckableEvent( req: AckableEventArgs )
 	{
 		let sub = this.ackedEventSubscriptions[ req.event ];
