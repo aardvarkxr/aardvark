@@ -31,6 +31,7 @@ export class CMasterModel
 
 	constructor( listener: () => void )
 	{
+		console.log( "Starting master model" );
 		this.chamberListener = listener;
 
 		AvGadget.instance().addUserInfoListener( this.onUserInfo );

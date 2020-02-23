@@ -290,6 +290,7 @@ export class AvDefaultTraverser
 		rootData.root = m.root;
 		rootData.hook = m.hook;
 		rootData.hookFromGadget = m.hookFromGadget;
+		rootData.remoteUniverse = m.remoteUniversePath;
 	}
 
 	private updateGlobalIds( node: AvNode, gadgetId: number )

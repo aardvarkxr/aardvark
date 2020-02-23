@@ -773,6 +773,7 @@ class CGadgetData
 		let msg: MsgUpdateSceneGraph = 
 		{
 			root: this.getRoot(),
+			remoteUniversePath: this.getRemoteUniversePath(),
 		};
 
 		let hookToSend = this.getHook();
@@ -1068,7 +1069,9 @@ class CEndpoint
 
 		if( this.getType() == EndpointType.Gadget )
 		{
-			console.log( " initial hook is " + m.initialHook );
+			console.log( `  initial hook:  ${ m.initialHook }` );
+			console.log(  `  remote universe: ${ m.remoteUniversePath }`);
+			
 			this.m_gadgetData = new CGadgetData( this, m.gadgetUri, m.initialHook, m.persistenceUuid,
 				m.remoteUniversePath, this.m_dispatcher );
 
@@ -1088,6 +1091,7 @@ class CEndpoint
 			// Tell any chambers this user is in about the new gadget
 			if( this.m_gadgetData.getShareInChamber() )
 			{
+				console.log( `SHARING ${ this.m_gadgetData.getUri() } == ${ this.m_gadgetData.getRemoteUniversePath() }`)
 				let msgAddGadget: MsgAddGadgetToChambers =
 				{
 					userUuid: persistence.localUserInfo.userUuid,

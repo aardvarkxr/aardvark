@@ -259,6 +259,7 @@ export interface MsgUpdateSceneGraph
 	root?: AvNode;
 	hook?: string|EndpointAddr;
 	hookFromGadget?: AvNodeTransform;
+	remoteUniversePath?: string;
 }
 
 export enum EHookVolume
