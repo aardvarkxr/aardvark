@@ -353,6 +353,15 @@ class Spinner extends React.Component< SpinnerProps, SpinnerState >
 		this.state = { value: this.props.initialValue };
 	}
 
+	public componentDidUpdate( prevProps: SpinnerProps, prevState: SpinnerState )
+	{
+		if( prevProps.initialValue == prevState.value && this.props.initialValue != prevProps.initialValue )
+		{
+			// if we haven't changed the value, but our initial value has changed, update the state
+			this.setState( { value: this.props.initialValue } );
+		}
+	}
+
 	@bind onClickUp( event: React.MouseEvent )
 	{
 		event.preventDefault();
@@ -816,7 +825,7 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 				[ { node.propConstraint.minZ }, {node.propConstraint.maxZ } ]
 				</div> }
 			{ node.propSharedTexture && <div className="AvNodeProperty">{ JSON.stringify( node.propSharedTexture ) }</div> }
-			{ node.type == AvNodeType.Transform && <TransformMonitor 
+			{ node.propTransform && <TransformMonitor 
 				nodeId={ { type: EndpointType.Node, endpointId: this.props.gadgetId, nodeId: node.id } } /> }
 			{ childElements }
 		</div>
