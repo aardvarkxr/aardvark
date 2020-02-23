@@ -5,7 +5,7 @@ import { AvGadget,AvOrigin, AvTransform, AvGrabber, AvModel, AvPoker, AvPanelInt
 	AvLine,	AvStandardBoxHook } 
 	from '@aardvarkxr/aardvark-react';
 import { Av, EndpointAddr, EHand, GrabberHighlight, g_builtinModelSphere, EAction, g_builtinModelHead,
-	g_builtinModelHandRight, g_builtinModelHandLeft } from '@aardvarkxr/aardvark-shared'
+	g_builtinModelHandRight, g_builtinModelHandLeft, Permission } from '@aardvarkxr/aardvark-shared'
 import { CMasterModel } from './master_model';
 import { Chamber } from './remote_universe';
 
@@ -121,11 +121,16 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 
 class MasterControls extends React.Component< {}, {} >
 {
-	private model: CMasterModel = new CMasterModel( this.onChambersUpdated );
+	private model: CMasterModel;
 
 	constructor( props: any )
 	{
 		super( props );
+
+		if( Av().hasPermission( Permission.Master ) )
+		{
+			this.model = new CMasterModel( this.onChambersUpdated );
+		}
 	}
 
 	@bind
@@ -137,9 +142,12 @@ class MasterControls extends React.Component< {}, {} >
 	public render()
 	{
 		let chambers: JSX.Element[] = [];
-		for( let chamber of this.model.activeChambers)
+		if( this.model )
 		{
-			chambers.push( Chamber( { chamber } ) );
+			for( let chamber of this.model.activeChambers)
+			{
+				chambers.push( Chamber( { chamber } ) );
+			}	
 		}
 
 		return (
@@ -167,8 +175,11 @@ class MasterControls extends React.Component< {}, {} >
 
 ReactDOM.render( <MasterControls/>, document.getElementById( "root" ) );
 
-// always start the renderer
-Av().startGadget( "http://localhost:23842/gadgets/aardvark_renderer", "", "", null );
+if( Av().hasPermission( Permission.Master ) )
+{
+	// always start the renderer
+	Av().startGadget( "http://localhost:23842/gadgets/aardvark_renderer", "", "", null );
+}
 
 
 

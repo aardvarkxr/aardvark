@@ -96,8 +96,7 @@ class CDispatcher
 					if( gadgetData )
 					{
 						ep.sendMessageString(
-							this.buildPackedEnvelope( 
-								this.buildUpdateSceneGraphMessage( existingEp.getId(), gadgetData.getRoot(), gadgetData.getHook() ) ) );
+							this.buildPackedEnvelope( gadgetData.buildUpdateSceneGraphMessage( true ) ) );
 					}
 				}
 			}
@@ -162,8 +161,7 @@ class CDispatcher
 					if( gadgetData )
 					{
 						targetEp.sendMessageString(
-							this.buildPackedEnvelope( 
-								this.buildUpdateSceneGraphMessage( ep.getId(), gadgetData.getRoot(), gadgetData.getHook() ) ) );
+							this.buildPackedEnvelope( gadgetData.buildUpdateSceneGraphMessage( true ) ) );
 					}
 					break;
 
@@ -216,44 +214,6 @@ class CDispatcher
 			}
 		}
 	}
-
-	public updateGadgetSceneGraph( gadgetId: number, root: AvNode, hook: string | GadgetHookAddr )
-	{
-		let env = this.buildUpdateSceneGraphMessage( gadgetId, root, hook );
-		this.sendToAllEndpointsOfType( EndpointType.Monitor, env );
-		this.sendToAllEndpointsOfType( EndpointType.Renderer, env );
-	}
-
-	private buildUpdateSceneGraphMessage( gadgetId: number, root: AvNode, 
-		hook: string | GadgetHookAddr ): Envelope
-	{
-		let msg: MsgUpdateSceneGraph = 
-		{
-			root,
-		};
-
-		if( hook )
-		{
-			if( typeof hook === "string" )
-			{
-				msg.hook = hook;
-			}
-			else
-			{
-				msg.hook = hook.hookAddr;
-				msg.hookFromGadget = hook.hookFromGadget;
-			}	
-		}
-
-		return (
-		{
-			type: MessageType.UpdateSceneGraph,
-			sequenceNumber: this.nextSequenceNumber,
-			sender: { type: EndpointType.Gadget, endpointId: gadgetId },
-			payloadUnpacked: msg,
-		} );
-	}
-
 
 	public buildNewEndpointMessage( ep: CEndpoint ): Envelope
 	{
@@ -459,15 +419,20 @@ class CGadgetData
 	private m_mainGrabbable: EndpointAddr = null;
 	private m_mainHandle: EndpointAddr = null;
 	private m_persistenceUuid: string = null;
+	private m_remoteUniversePath: string = null;
 	private m_dispatcher: CDispatcher = null;
 	private m_hookNodes:HookNodeData[] = [];
 	private m_transformOverrides: { [ nodeId: number ]: AvNodeTransform } = {}
 	private m_gadgetBeingDestroyed = false;
 
 	constructor( ep: CEndpoint, uri: string, initialHook: string, persistenceUuid:string,
-		dispatcher: CDispatcher )
+		remoteUniversePath: string, dispatcher: CDispatcher )
 	{
-		if( persistenceUuid )
+		if( remoteUniversePath )
+		{
+			// skip local persistence for remote gadgets
+		}
+		else if( persistenceUuid )
 		{
 			if( !initialHook )
 			{
@@ -487,6 +452,7 @@ class CGadgetData
 
 		this.m_ep = ep;
 		this.m_gadgetUri = uri;
+		this.m_remoteUniversePath = remoteUniversePath;
 		this.m_dispatcher = dispatcher;
 
 		this.attachToHook( initialHook );
@@ -514,9 +480,11 @@ class CGadgetData
 	public getHook() { return this.m_hook; }
 	public getHookNodes() { return this.m_hookNodes; }
 	public getPersistenceUuid() { return this.m_persistenceUuid; }
+	public getRemoteUniversePath() { return this.m_remoteUniversePath; }
 	public getShareInChamber() 
 	{ 
-		return typeof this.m_manifest.shareInChamber == "boolean" ? this.m_manifest.shareInChamber : true; 
+		return ( typeof this.m_manifest.shareInChamber == "boolean" ? this.m_manifest.shareInChamber : true )
+			&& !this.m_remoteUniversePath; 
 	}
 	public isMaster() { return this.m_persistenceUuid == "master"; }
 	public isBeingDestroyed() { return this.m_gadgetBeingDestroyed; }
@@ -572,6 +540,12 @@ class CGadgetData
 		{
 			throw new Error( `Verify permission ${ permissionName } on gadget ${ this.m_gadgetUri } FAILED` );
 		}
+
+		if( permissionName != "scenegraph" && this.getRemoteUniversePath() )
+		{
+			throw new Error( `Verify permission ${ permissionName } on remote gadget ${ this.m_gadgetUri } FAILED.`
+				+ ` remote gadgets only have at most the scenegraph permission` );
+		}
 	}
 
 	public getHookNodeByPersistentName( hookPersistentName: string )
@@ -590,22 +564,11 @@ class CGadgetData
 
 	public sendSceneGraphToRenderer( firstUpdate: boolean, forceResendHook?: boolean )
 	{
-		let hookToSend = this.m_hook;
-		if( !firstUpdate && !forceResendHook )
-		{
-			// Only send endpoint hooks once so the main grabbable
-			// can actually be grabbed.
-			if( typeof this.m_hook !== "string" )
-			{
-				hookToSend = null;
-			}
-		}
-
 		this.m_hookNodes = [];
 		this.m_mainGrabbable = null;
 		this.m_mainHandle = null;
 		this.updateNode( this.m_root );
-		this.m_dispatcher.updateGadgetSceneGraph( this.m_ep.getId(), this.m_root, hookToSend );
+		this.updateGadgetSceneGraph( firstUpdate || forceResendHook );
 	}
 
 	public updateSceneGraph( root: AvNode ) 
@@ -797,6 +760,56 @@ class CGadgetData
 		this.m_gadgetBeingDestroyed = true;
 		persistence.destroyGadgetPersistence( this.m_gadgetUri, this.m_persistenceUuid );
 	}
+
+	public updateGadgetSceneGraph( sendHook?: boolean )
+	{
+		let env = this.buildUpdateSceneGraphMessage( sendHook );
+		this.m_dispatcher.sendToAllEndpointsOfType( EndpointType.Monitor, env );
+		this.m_dispatcher.sendToAllEndpointsOfType( EndpointType.Renderer, env );
+	}
+
+	public buildUpdateSceneGraphMessage( sendHook?: boolean ): Envelope
+	{
+		let msg: MsgUpdateSceneGraph = 
+		{
+			root: this.getRoot(),
+		};
+
+		let hookToSend = this.getHook();
+		if( !sendHook )
+		{
+			// Only send endpoint hooks once so the main grabbable
+			// can actually be grabbed.
+			if( typeof hookToSend !== "string" )
+			{
+				hookToSend = null;
+			}
+		}
+
+		if( hookToSend )
+		{
+			if( typeof hookToSend === "string" )
+			{
+				msg.hook = hookToSend;
+			}
+			else
+			{
+				msg.hook = hookToSend.hookAddr;
+				msg.hookFromGadget = hookToSend.hookFromGadget;
+			}	
+		}
+
+		return (
+		{
+			type: MessageType.UpdateSceneGraph,
+			sequenceNumber: this.m_dispatcher.nextSequenceNumber,
+			sender: { type: EndpointType.Gadget, endpointId: this.m_ep.getId() },
+			payloadUnpacked: msg,
+		} );
+	}
+
+
+
 }
 
 
@@ -1057,7 +1070,7 @@ class CEndpoint
 		{
 			console.log( " initial hook is " + m.initialHook );
 			this.m_gadgetData = new CGadgetData( this, m.gadgetUri, m.initialHook, m.persistenceUuid,
-				this.m_dispatcher );
+				m.remoteUniversePath, this.m_dispatcher );
 
 			// Don't reply to the SetEndpointType until we've inited the gadget.
 			// This loads the manifest for the gadget and has the chance to verify
@@ -1156,6 +1169,7 @@ class CEndpoint
 				nodeId: m.mainHandle,
 			};
 		}
+		m.startedGadgetEndpointId = this.m_id;
 
 		this.m_dispatcher.forwardToEndpoint( m.epToNotify, env );
 	}
@@ -1197,7 +1211,10 @@ class CEndpoint
 
 	private detachFromHook( hookId: EndpointAddr )
 	{
-		persistence.setGadgetHook( this.m_gadgetData.getPersistenceUuid(), null, null );
+		if( !this.m_gadgetData.getRemoteUniversePath() )
+		{
+			persistence.setGadgetHook( this.m_gadgetData.getPersistenceUuid(), null, null );
+		}
 	}
 
 	@bind private onSaveSettings( env: Envelope, m: MsgSaveSettings )
@@ -1363,19 +1380,16 @@ class CEndpoint
 			endpointId: this.m_id,
 		}
 
-		if( this.m_type == EndpointType.Gadget && this.m_gadgetData && this.m_gadgetData.getRoot() )
+		let lostEndpointEnv: Envelope =
 		{
-			// Let renderers know that this gadget is no more.
-			this.m_dispatcher.updateGadgetSceneGraph( this.m_id, null, null );
-		}
+			sender: { type: EndpointType.Hub },
+			type: MessageType.LostEndpoint,
+			sequenceNumber: this.m_dispatcher.nextSequenceNumber,
+			payloadUnpacked: lostEpMsg,
+		};
 
-		this.m_dispatcher.sendToAllEndpointsOfType( EndpointType.Monitor,
-			{
-				sender: { type: EndpointType.Hub },
-				type: MessageType.LostEndpoint,
-				sequenceNumber: this.m_dispatcher.nextSequenceNumber,
-				payloadUnpacked: lostEpMsg,
-			} );
+		this.m_dispatcher.sendToAllEndpointsOfType( EndpointType.Renderer, lostEndpointEnv );
+		this.m_dispatcher.sendToAllEndpointsOfType( EndpointType.Monitor, lostEndpointEnv );
 		
 		this.m_gadgetData = null;
 	}

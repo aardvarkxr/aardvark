@@ -35,7 +35,7 @@ public:
 	void CloseAllBrowsers( bool force_close );
 
 	void startGadget( const std::string & uri, const std::string & initialHook, const std::string & persistentUuid,
-		const aardvark::EndpointAddr_t & epToNotify );
+		const aardvark::EndpointAddr_t& epToNotify,	const std::string& remoteUniversePath );
 
 	virtual void quitRequested() override;
 	virtual void browserClosed( CAardvarkCefHandler *handler ) override;

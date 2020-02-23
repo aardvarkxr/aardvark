@@ -77,6 +77,7 @@ export class AvGadget
 	m_actualGadgetUri: string = null;
 	m_actionState: { [hand:number]: AvActionState } = {};
 	private m_persistenceUuid: string;
+	private m_remoteUniversePath: string;
 	private m_epToNotify: EndpointAddr = null;
 	private m_firstSceneGraph: boolean = true;
 	private m_mainGrabbable: AvNode = null;
@@ -116,8 +117,9 @@ export class AvGadget
 		}
 
 		this.m_persistenceUuid = params[ "persistenceUuid" ];
+		this.m_remoteUniversePath = params[ "remoteUniversePath" ];
 		this.m_endpoint = new CGadgetEndpoint( this.m_actualGadgetUri, 
-			params["initialHook"], params[ "persistenceUuid" ], 
+			params["initialHook"], params[ "persistenceUuid" ], params[ "remoteUniversePath" ],
 			this.onEndpointOpen );
 	}
 
@@ -272,6 +274,7 @@ export class AvGadget
 			processor[0](
 				{
 					success: true,
+					startedGadgetEndpointId: m.startedGadgetEndpointId,
 					mainGrabbableGlobalId: m.mainGrabbableGlobalId,
 					mainHandleId: m.mainHandleGlobalId,
 				}
@@ -522,6 +525,7 @@ export class AvGadget
 				let msgStarted: MsgGadgetStarted = 
 				{
 					epToNotify: this.m_epToNotify,
+					startedGadgetEndpointId: this.m_endpoint.getEndpointId(),
 				}
 
 				if( this.m_mainGrabbable && this.m_mainHandle )
@@ -566,7 +570,8 @@ export class AvGadget
 		this.m_endpoint.sendMessage( MessageType.NodeHaptic, msg );
 	}
 
-	public startGadget( uri: string, initialHook: string ) : Promise<AvStartGadgetResult>
+	public startGadget( uri: string, initialHook: string, remoteUniverse?: string ) : 
+		Promise<AvStartGadgetResult>
 	{
 		return new Promise( ( resolve, reject ) =>
 		{

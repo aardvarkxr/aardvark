@@ -207,6 +207,7 @@ export interface MsgSetEndpointType
 	gadgetUri?: string;
 	initialHook?: string;
 	persistenceUuid?: string;
+	remoteUniversePath?: string;
 }
 
 export interface MsgSetEndpointTypeResponse
@@ -306,6 +307,7 @@ export function parseEnvelope( envString: string, parsePayload: boolean = true )
 export interface MsgGadgetStarted
 {
 	epToNotify: EndpointAddr;
+	startedGadgetEndpointId: number;
 	mainGrabbable?: number;
 	mainHandle?: number;
 	mainGrabbableGlobalId?: EndpointAddr;

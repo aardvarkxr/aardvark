@@ -1,14 +1,34 @@
 import { AvGadget } from '@aardvarkxr/aardvark-react';
 import bind from 'bind-decorator';
 import { initLocalUser } from 'common/net_user';
-import { MessageType, MsgActuallyJoinChamber, MsgActuallyLeaveChamber, MsgUpdatePose, MsgAddGadgetToChambers, MsgRemoveGadgetFromChambers, MsgUpdateChamberGadgetHook } from '@aardvarkxr/aardvark-shared';
-import { findChamber, ChamberSubscription } from 'common/net_chamber';
+import { MessageType, MsgActuallyJoinChamber, MsgActuallyLeaveChamber, MsgUpdatePose, MsgAddGadgetToChambers, MsgRemoveGadgetFromChambers, MsgUpdateChamberGadgetHook, AvStartGadgetResult } from '@aardvarkxr/aardvark-shared';
+import { findChamber, ChamberSubscription, ChamberMemberInfo, ChamberGadgetInfo } from 'common/net_chamber';
 
+
+interface GadgetTracker
+{
+	gadget: ChamberGadgetInfo;
+	endpointId: number;
+}
+
+interface MemberTracker
+{
+	member: ChamberMemberInfo;
+	remoteUniversePath: string;
+	gadgets: { [ persistenceUuid: string ] : GadgetTracker };
+}
+
+interface ChamberTracker
+{
+	chamber: ChamberSubscription;
+	members: { [ uuid: string ] : MemberTracker };
+}
 
 export class CMasterModel
 {
-	private chambers: ChamberSubscription[] = [];
+	private chambers: { [ chamberPath: string ]: ChamberTracker } = {};
 	private chamberListener: () => void;
+
 	constructor( listener: () => void )
 	{
 		this.chamberListener = listener;
@@ -25,11 +45,18 @@ export class CMasterModel
 
 	}
 
-	public get activeChambers() 
+	public get activeChambers()
 	{
-		return this.chambers;
+		let chambers: ChamberSubscription[] = [];
+		for( let chamberPath in this.chambers )
+		{
+			let chamber = this.chambers[ chamberPath ];
+			chambers.push( chamber.chamber );
+		}
+		return chambers;
 	}
-	
+
+
 	@bind
 	private async onUserInfo()
 	{
@@ -43,7 +70,7 @@ export class CMasterModel
 		let chamber = await findChamber( m.chamberPath );
 		if( chamber.joinChamber( m ) )
 		{
-			this.chambers.push( chamber );
+			this.addChamber( chamber );
 			this.chamberListener?.();
 		}
 	}
@@ -53,48 +80,168 @@ export class CMasterModel
 	{
 		let chamber = await findChamber( m.chamberPath );
 		chamber.leaveChamber( m );
-		let chamberIndex = this.chambers.indexOf( chamber );
-		if( chamberIndex != -1 )
-		{
-			this.chambers.splice( chamberIndex, 1 );
-			this.chamberListener?.();
-		}
+		this.removeChamber( chamber );
+		this.chamberListener?.();
 	}
 
 	@bind
 	private async onUpdatePose( m: MsgUpdatePose )
 	{
-		for( let chamber of this.chambers )
+		for( let chamberPath in this.chambers )
 		{
-			chamber.updatePose( m );
+			this.chambers[ chamberPath ].chamber.updatePose( m );
 		}
 	}
 
 	@bind
 	private onAddGadgetToChambers( m: MsgAddGadgetToChambers )
 	{
-		for( let chamber of this.chambers )
+		for( let chamberPath in this.chambers )
 		{
-			chamber.addGadget( m );
+			this.chambers[ chamberPath ].chamber.addGadget( m );
 		}
 	}
 
 	@bind
 	private onRemoveGadgetFromChambers( m: MsgRemoveGadgetFromChambers)
 	{
-		for( let chamber of this.chambers )
+		for( let chamberPath in this.chambers )
 		{
-			chamber.removeGadget( m );
+			this.chambers[ chamberPath ].chamber.removeGadget( m );
 		}
 	}
 
 	@bind
 	private onUpdateChamberGadgetHook( m: MsgUpdateChamberGadgetHook )
 	{
-		for( let chamber of this.chambers )
+		for( let chamberPath in this.chambers )
 		{
-			chamber.updateGadgetHook( m );
+			this.chambers[ chamberPath ].chamber.updateGadgetHook( m );
 		}
+	}
+
+	private addChamber( chamberSub: ChamberSubscription )
+	{
+		this.chambers[ chamberSub.chamberPath ] =
+		{
+			chamber: chamberSub,
+			members: {},
+		};
+
+		for( let memberInfo of chamberSub.members )
+		{
+			this.addChamberMember( chamberSub, memberInfo );
+		}
+	}
+
+	private addChamberMember( chamberSub: ChamberSubscription, memberInfo: ChamberMemberInfo )
+	{
+		let chamber = this.chambers[ chamberSub.chamberPath ];
+		if( !chamber )
+			return;
+
+		if( chamber.members[ memberInfo.uuid ] )
+			return;
+
+		chamber.members[ memberInfo.uuid ] =
+		{
+			member: memberInfo,
+			remoteUniversePath: chamberSub.chamberPath + "/" + memberInfo.uuid,
+			gadgets: {},
+		};
+
+		for( let gadgetInfo of memberInfo.gadgets )
+		{
+			this.addChamberMemberGadget( chamberSub, memberInfo, gadgetInfo );
+		}
+	}
+
+	private addChamberMemberGadget( chamberSub: ChamberSubscription, memberInfo: ChamberMemberInfo,
+		gadgetInfo: ChamberGadgetInfo )
+	{
+		let memberTracker = this.chambers[ chamberSub.chamberPath ]?.members[ memberInfo.uuid ];
+		if( !memberTracker )
+		{
+			return;
+		}
+
+		let gadgetTracker = memberTracker.gadgets[ gadgetInfo.persistenceUuid ];
+		if( gadgetTracker )
+		{
+			// don't add a gadget twice
+			return;
+		}
+
+		// remember we tried to start the gadget
+		gadgetTracker =
+		{
+			gadget: gadgetInfo,
+			endpointId: 0,
+		};
+		memberTracker.gadgets[ gadgetInfo.persistenceUuid ] = gadgetTracker;
+
+		AvGadget.instance().startGadget( gadgetInfo.gadgetUri, gadgetInfo.hook, 
+			memberTracker.remoteUniversePath )
+		.then( ( res: AvStartGadgetResult ) =>
+		{
+			if( res.success )
+			{
+				gadgetTracker.endpointId = res.startedGadgetEndpointId;
+			}
+		})
+	}
+
+	private removeChamber( chamberSub: ChamberSubscription )
+	{
+		let chamberTracker = this.chambers[ chamberSub.chamberPath ];
+		if( !chamberTracker )
+			return;
+
+		for( let memberUuid in chamberTracker.members )
+		{
+			this.removeChamberMember( chamberSub, chamberTracker.members[ memberUuid ].member );
+		}
+
+		delete this.chambers[ chamberSub.chamberPath ];
+	}
+
+	private removeChamberMember( chamberSub: ChamberSubscription, memberInfo: ChamberMemberInfo )
+	{
+		let chamberTracker = this.chambers[ chamberSub.chamberPath ];
+		if( !chamberTracker )
+			return;
+
+		let memberTracker = chamberTracker.members[ memberInfo.uuid ];
+		if( !memberTracker )
+			return;
+
+		for( let gadgetPersistenceUuid in memberTracker.gadgets )
+		{
+			this.removeChamberMemberGadget( chamberSub, memberInfo, 
+				memberTracker.gadgets[ gadgetPersistenceUuid ].gadget );
+		}
+	
+		delete chamberTracker.members[ memberInfo.uuid ];
+	}
+
+	private removeChamberMemberGadget( chamberSub: ChamberSubscription, memberInfo: ChamberMemberInfo,
+		gadgetInfo: ChamberGadgetInfo )
+	{
+		let memberTracker = this.chambers[ chamberSub.chamberPath ]?.members[ memberInfo.uuid ];
+		if( !memberTracker )
+		{
+			return;
+		}
+
+		let gadgetTracker = memberTracker.gadgets[ gadgetInfo.persistenceUuid ];
+		if( !gadgetTracker )
+		{
+			// don't add a gadget twice
+			return;
+		}
+
+		// TODO: destroy the gadget
+		delete memberTracker.gadgets[ gadgetInfo.persistenceUuid ];
 	}
 }
 

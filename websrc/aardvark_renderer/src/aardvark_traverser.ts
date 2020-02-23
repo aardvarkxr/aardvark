@@ -16,7 +16,8 @@ import { endpointAddrToString, endpointAddrIsEmpty, MessageType, MsgNodeHaptic,
 	Envelope,
 	MsgUpdatePose,
 	MsgUserInfo,
-	LocalUserInfo
+	LocalUserInfo,
+	MsgLostEndpoint
 } from '@aardvarkxr/aardvark-shared';
 import { computeUniverseFromLine, nodeTransformToMat4, translateMat, nodeTransformFromMat4, vec3MultiplyAndAdd, scaleAxisToFit, scaleMat, minIgnoringNulls } from './traverser_utils';
 const equal = require( 'fast-deep-equal' );
@@ -207,6 +208,7 @@ export class AvDefaultTraverser
 			} );
 		this.m_endpoint.registerHandler( MessageType.NodeHaptic, this.onNodeHaptic );
 		this.m_endpoint.registerHandler( MessageType.UserInfo, this.onUserInfo );
+		this.m_endpoint.registerHandler( MessageType.LostEndpoint, this.onLostEndpoint );
 	}
 
 	@bind onEndpointOpen()
@@ -250,33 +252,44 @@ export class AvDefaultTraverser
 	}
 
 
-	@bind onUpdateSceneGraph( payload: any, env: Envelope )
+	private forgetGadget( endpointId: number )
 	{
-		let m = payload as MsgUpdateSceneGraph;
+			// TODO: Clean up drags and such?
+			delete this.m_roots[ endpointId ];
+
+	}
+
+	@bind 
+	onLostEndpoint( m: MsgLostEndpoint )
+	{
+		this.forgetGadget( m.endpointId );
+	}
+
+	@bind 
+	onUpdateSceneGraph( m: MsgUpdateSceneGraph, env: Envelope )
+	{
 		if( !m.root )
 		{
-			// TODO: Clean up drags and such?
-			delete this.m_roots[ env.sender.endpointId ];
+			this.forgetGadget( env.sender.endpointId );
+			return;
 		}
-		else
-		{
-			this.updateGlobalIds( m.root, env.sender.endpointId );
-			let rootData = this.m_roots[ env.sender.endpointId ];
-			if( !rootData )
-			{
-				rootData = this.m_roots[ env.sender.endpointId ] = 
-				{ 
-					gadgetId: env.sender.endpointId, 
-					handIsRelevant: new Set<EHand>(),
-					wasGadgetDraggedLastFrame: false,
-					root: null 
-				};
-			}
 
-			rootData.root = m.root;
-			rootData.hook = m.hook;
-			rootData.hookFromGadget = m.hookFromGadget;
+		this.updateGlobalIds( m.root, env.sender.endpointId );
+		let rootData = this.m_roots[ env.sender.endpointId ];
+		if( !rootData )
+		{
+			rootData = this.m_roots[ env.sender.endpointId ] = 
+			{ 
+				gadgetId: env.sender.endpointId, 
+				handIsRelevant: new Set<EHand>(),
+				wasGadgetDraggedLastFrame: false,
+				root: null 
+			};
 		}
+
+		rootData.root = m.root;
+		rootData.hook = m.hook;
+		rootData.hookFromGadget = m.hookFromGadget;
 	}
 
 	private updateGlobalIds( node: AvNode, gadgetId: number )
