@@ -109,6 +109,8 @@ export class AvGadget
 		}
 
 		let params = parseURL( window.location.href );
+		this.m_persistenceUuid = params[ "persistenceUuid" ];
+		this.m_remoteUniversePath = params[ "remoteUniversePath" ];
 
 		if( params[ "epToNotify"] )
 		{
@@ -116,10 +118,13 @@ export class AvGadget
 			console.log( "This gadget wants to notify " + endpointAddrToString(this.m_epToNotify ) );
 		}
 
-		this.m_persistenceUuid = params[ "persistenceUuid" ];
-		this.m_remoteUniversePath = params[ "remoteUniversePath" ];
+		if( this.m_remoteUniversePath )
+		{
+			console.log( "This gadget is remote from " + this.m_remoteUniversePath );
+		}
+
 		this.m_endpoint = new CGadgetEndpoint( this.m_actualGadgetUri, 
-			params["initialHook"], params[ "persistenceUuid" ], params[ "remoteUniversePath" ],
+			params["initialHook"], this.m_persistenceUuid, this.m_remoteUniversePath,
 			this.onEndpointOpen );
 	}
 
@@ -584,7 +589,7 @@ export class AvGadget
 				endpointId: this.m_endpoint.getEndpointId(),
 				nodeId: notifyNodeId,
 			}
-			Av().startGadget( uri, initialHook, "", epToNotify );
+			Av().startGadget( uri, initialHook, "", epToNotify, remoteUniverse );
 		} );
 	} 
 
