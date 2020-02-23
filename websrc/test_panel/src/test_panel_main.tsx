@@ -64,7 +64,7 @@ class TestPanel extends React.Component< {}, TestPanelState >
 		let newSettings: TestSettings = { count: this.state.count + 1 };
 		AvGadget.instance().saveSettings( newSettings );
 
-		AvGadget.instance().joinChamber( "george" );
+		AvGadget.instance().joinChamber( "henry" );
 	}
 
 	@bind public onHighlightGrabbable( highlight: HighlightType )
