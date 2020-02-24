@@ -19,7 +19,7 @@ import { endpointAddrToString, endpointAddrIsEmpty, MessageType, MsgNodeHaptic,
 	LocalUserInfo,
 	MsgLostEndpoint
 } from '@aardvarkxr/aardvark-shared';
-import { computeUniverseFromLine, nodeTransformToMat4, translateMat, nodeTransformFromMat4, vec3MultiplyAndAdd, scaleAxisToFit, scaleMat, minIgnoringNulls } from './traverser_utils';
+import { computeUniverseFromLine, nodeTransformToMat4, translateMat, nodeTransformFromMat4, vec3MultiplyAndAdd, scaleAxisToFit, scaleMat, minIgnoringNulls, lerpAvTransforms } from './traverser_utils';
 const equal = require( 'fast-deep-equal' );
 
 interface NodeData
@@ -34,6 +34,10 @@ interface NodeData
 	lastFrameUsed: number;
 	nodeType: AvNodeType;
 	lastNode?: AvNode;
+	transform0?: AvNodeTransform;
+	transform0Time?: number;	
+	transform1?: AvNodeTransform;
+	transform1Time?: number;	
 }
 
 
@@ -175,7 +179,6 @@ interface AvNodeRoot
 interface RemoteUniverse
 {
 	uuid: string;
-	universeFromRemote: PendingTransform;
 	remoteFromOrigin: { [originPath: string] : PendingTransform };
 }
 
@@ -233,7 +236,7 @@ export class AvDefaultTraverser
 			this.sendPoseUpdate( "/user/head" );	
 			this.sendPoseUpdate( "/user/hand/right" );	
 			this.sendPoseUpdate( "/user/hand/left" );	
-		}, 250 );
+		}, 125 );
 	}
 
 	@bind
@@ -677,7 +680,6 @@ export class AvDefaultTraverser
 			remoteUniverse = 
 			{
 				uuid: universeUuid,
-				universeFromRemote: null,
 				remoteFromOrigin: {},
 			};
 			
@@ -1484,7 +1486,24 @@ export class AvDefaultTraverser
 			return;
 		}
 
-		let remoteFromOriginTransform = nodeTransformToMat4( node.propTransform );
+		let nodeData = this.getNodeData( node );
+		if( !equal( nodeData.transform1, node.propTransform ) )
+		{
+			nodeData.transform0 = nodeData.transform1;
+			nodeData.transform0Time = nodeData.transform1Time;
+			nodeData.transform1 = node.propTransform;
+			nodeData.transform1Time = performance.now();
+		}
+
+		let t:number = 1;
+		if( nodeData.transform0 )
+		{
+			t = ( performance.now() - nodeData.transform1Time ) / 
+				( nodeData.transform1Time - nodeData.transform0Time );
+		}
+		let	outputTransform = lerpAvTransforms( nodeData.transform0, nodeData.transform1, t );
+		let remoteFromOriginTransform = nodeTransformToMat4( outputTransform );
+
 		let remoteFromOrigin = this.m_currentRemoteUniverse.remoteFromOrigin[ node.propOrigin ];
 		if( !remoteFromOrigin )
 		{
