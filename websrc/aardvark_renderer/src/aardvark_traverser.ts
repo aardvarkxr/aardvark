@@ -45,6 +45,7 @@ interface TransformComputeFunction
 
 class PendingTransform
 {
+	private m_id: string;
 	private m_needsUpdate = true;
 	private m_parents: PendingTransform[] = null;
 	private m_parentFromNode: mat4 = null;
@@ -52,6 +53,11 @@ class PendingTransform
 	private m_applyFunction: (universeFromNode: mat4) => void = null;
 	private m_computeFunction: TransformComputeFunction = null;
 	private m_currentlyResolving = false;
+
+	constructor( id: string )
+	{
+		this.m_id = id;
+	}
 
 	public resolve()
 	{
@@ -120,6 +126,7 @@ class PendingTransform
 		updateCallback?: ( universeFromNode:mat4 ) => void,
 		computeCallback?: TransformComputeFunction)
 	{
+		this.m_universeFromNode = undefined; // unresolve the transform if it's resolved
 		this.m_needsUpdate = false;
 		this.m_parents = parents;
 		this.m_parentFromNode = parentFromNode ? parentFromNode : mat4.identity;
@@ -226,7 +233,7 @@ export class AvDefaultTraverser
 			this.sendPoseUpdate( "/user/head" );	
 			this.sendPoseUpdate( "/user/hand/right" );	
 			this.sendPoseUpdate( "/user/hand/left" );	
-		}, 1000 );
+		}, 250 );
 	}
 
 	@bind
@@ -819,7 +826,7 @@ export class AvDefaultTraverser
 				{
 					// we haven't traversed the remote universe yet. Set the origin pending transform
 					// here for when we do
-					universeFromRemoteOrigin = new PendingTransform();
+					universeFromRemoteOrigin = new PendingTransform( this.m_currentRoot + origin );
 					remoteUniverse.remoteFromOrigin[ origin ] = universeFromRemoteOrigin;
 				}
 
@@ -1651,7 +1658,7 @@ export class AvDefaultTraverser
 
 		if( !this.m_universeFromNodeTransforms.hasOwnProperty( idStr ) )
 		{
-			this.m_universeFromNodeTransforms[ idStr ] = new PendingTransform();
+			this.m_universeFromNodeTransforms[ idStr ] = new PendingTransform( idStr );
 		}
 		return this.m_universeFromNodeTransforms[ idStr ];
 	}
