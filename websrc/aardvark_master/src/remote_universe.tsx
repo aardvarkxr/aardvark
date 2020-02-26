@@ -3,6 +3,7 @@ import { AvBaseNode, AvBaseNodeProps } from '@aardvarkxr/aardvark-react';
 import { AvNodeType, MinimalPose, AvNodeTransform } from '@aardvarkxr/aardvark-shared';
 import { ChamberSubscription, ChamberMemberInfo, PoseUpdatedArgs } from 'common/net_chamber';
 import bind from 'bind-decorator';
+const Quaternion = require( 'quaternion' );
 
 
 function minimalToAvNodeTransform( minimal: MinimalPose ): AvNodeTransform
@@ -94,9 +95,14 @@ export function ChamberMemberPoses( props: ChamberPosesProps )
 		);
 	}
 
+	let rot = Quaternion.fromAxisAngle( [ 0, 1, 0 ], Math.PI );
+
+	// let transform: MinimalPose = [ 0, 0.5, 0, 1, 0, 0, 0 ];
+	let transform: MinimalPose = [ 0, 0.0, 1.5, rot.w, rot.x, rot.y, rot.z ];
+
 	let universePath = props.chamber.chamberPath + "/" + props.member.uuid;
 	return <AvRemoteUniverse key={ universePath } universe={ universePath }
-		chamberFromRemote={ [ 0, 0.5, 0, 1, 0, 0, 0 ] }>
+		chamberFromRemote={ transform }>
 		{ origins }
 	</AvRemoteUniverse>
 }
