@@ -1,6 +1,8 @@
 import { AvNodeTransform } from '@aardvarkxr/aardvark-shared';
 import { vec3, mat4, vec4, mat3, quat } from '@tlaukkan/tsm';
 
+const Quaternion = require( 'quaternion' );
+
 export function translateMat( t: vec3)
 {
 	let m = new mat4();
@@ -192,9 +194,9 @@ export function lerpAvTransforms( xf0: AvNodeTransform, xf1: AvNodeTransform, t:
 
 	if( xf0 && xf0.rotation && xf1.rotation )
 	{
-		let r0 = new quat( [ xf0.rotation.x, xf0.rotation.y, xf0.rotation.z, xf0.rotation.w ] );
-		let r1 = new quat( [ xf1.rotation.x, xf1.rotation.y, xf1.rotation.z, xf1.rotation.w ] );
-		let rot = quat.mix( r0, r1, t, new quat() );
+		let r0 = new Quaternion( xf0.rotation );
+		let r1 = new Quaternion( xf1.rotation );
+		let rot = r0.slerp( r1 )( t );
 		result.rotation =
 		{
 			w: rot.w,
