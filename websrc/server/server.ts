@@ -1275,6 +1275,7 @@ class CEndpoint
 		};
 		this.m_dispatcher.sendToMasterSigned( MessageType.UpdateChamberGadgetHook, msgUpdateHook );
 
+		console.log( `UPDATING ${this.getGadgetData().getPersistenceUuid()} hook to ${ hookPath }` );
 		if( !this.getGadgetData().getRemoteUniversePath() )
 		{
 			persistence.setGadgetHookPath( this.m_gadgetData.getPersistenceUuid(), hookPath );
