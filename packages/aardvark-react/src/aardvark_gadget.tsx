@@ -717,5 +717,11 @@ export class AvGadget
 	{
 		this.m_endpoint.registerHandler( type, handler );
 	}
+
+	/** Sends a message to the server. You probably don't need this either. */
+	public sendMessage( type: MessageType, message: object )
+	{
+		this.m_endpoint.sendMessage( type, message );
+	}
 }
 

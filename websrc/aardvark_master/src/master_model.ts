@@ -1,7 +1,7 @@
 import { AvGadget } from '@aardvarkxr/aardvark-react';
 import bind from 'bind-decorator';
 import { initLocalUser } from 'common/net_user';
-import { MessageType, MsgActuallyJoinChamber, MsgActuallyLeaveChamber, MsgUpdatePose, MsgAddGadgetToChambers, MsgRemoveGadgetFromChambers, MsgUpdateChamberGadgetHook, AvStartGadgetResult } from '@aardvarkxr/aardvark-shared';
+import { MessageType, MsgActuallyJoinChamber, MsgActuallyLeaveChamber, MsgUpdatePose, MsgAddGadgetToChambers, MsgRemoveGadgetFromChambers, MsgUpdateChamberGadgetHook, AvStartGadgetResult, MsgDestroyGadget } from '@aardvarkxr/aardvark-shared';
 import { findChamber, ChamberSubscription, ChamberMemberInfo, ChamberGadgetInfo } from 'common/net_chamber';
 import { parsePersistentHookPath, buildPersistentHookPath, buildPersistentHookPathFromParts } from 'common/hook_utils';
 
@@ -264,7 +264,12 @@ export class CMasterModel
 			return;
 		}
 
-		// TODO: destroy the gadget
+		let msg: MsgDestroyGadget =
+		{
+			gadgetId: gadgetTracker.endpointId,
+		}
+
+		AvGadget.instance().sendMessage( MessageType.DestroyGadget, msg );
 		delete memberTracker.gadgets[ gadgetInfo.persistenceUuid ];
 	}
 }
