@@ -1,12 +1,23 @@
 ========= DEAL WITH THIS NEXT ===========
-* Need to implement box/box  intersections.
 
-* after free-rotating, the translate controls are resetting to no rotation
-* Need scale control
-* Need rotation control
-* Need a white sphere so highlight colors work.
+Master needs to be able to destroy gadgets from remotes.
 
-Edit mode isn't starting in the right state for new gadgets.
+Members need to time out and leave chambers
+When they rejoin it needs to work.
+Probably even needs to work when they time out within a single run of Aardvark because of the debugger
+
+Creating new gadgets should set their hooks in a way that gets shared. I suspect that moving existing gadgets to a new hook isn't updating them either.
+
+Remote grabbers and pokers shouldn't be active.
+Remote grabbables should be inert too, for now at least. Maybe gadgets can opt-in to accepting that?
+grabbing should send a message to all chambers to tell them about the grab instead of running that logic again locally. 
+
+Need to test:
+1) creating gadget while in chamber
+2) destroying gadget while in chamber
+3) leaving chamber
+4) moving gadget to another hook
+5) Trying to interact with remote's gadget
 
 =========================================
 
