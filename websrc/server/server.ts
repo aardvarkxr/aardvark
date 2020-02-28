@@ -13,7 +13,7 @@ import { StoredGadget, AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, Av
 	MsgResourceLoadFailed, 	MsgInstallGadget, EVolumeType, parseEndpointFieldUri, MsgUserInfo, 
 	MsgRequestJoinChamber, MsgActuallyJoinChamber, MsgRequestLeaveChamber, MsgActuallyLeaveChamber, 
 	MsgChamberList, chamberIdToPath, gadgetDetailsToId, MsgUpdatePose, Permission, SharedGadget, 
-	MsgAddGadgetToChambers, MsgRemoveGadgetFromChambers, AuthedRequest, MsgUpdateChamberGadgetHook
+	MsgAddGadgetToChambers, MsgRemoveGadgetFromChambers, AuthedRequest, MsgUpdateChamberGadgetHook, ENodeFlags
 } from '@aardvarkxr/aardvark-shared';
 import * as express from 'express';
 import * as http from 'http';
@@ -692,6 +692,12 @@ class CGadgetData
 	{
 		if( !node )
 			return;
+
+		// mark all the remote nodes
+		if( this.getRemoteUniversePath() )
+		{
+			node.flags |= ENodeFlags.Remote;
+		}
 
 		switch( node.type )
 		{

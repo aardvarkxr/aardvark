@@ -646,6 +646,7 @@ export enum ENodeFlags
 	AllowMultipleDrops			= 1 << 5,
 	Tethered					= 1 << 6,
 	ShowGrabIndicator			= 1 << 7,
+	Remote						= 1 << 8,
 }
 
 export interface AvConstraint

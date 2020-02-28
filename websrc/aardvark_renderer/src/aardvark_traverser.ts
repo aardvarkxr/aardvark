@@ -1089,6 +1089,14 @@ export class AvDefaultTraverser
 		this.updateTransform( node.globalId, defaultParent, null,
 			( universeFromNode: mat4 ) =>
 		{
+			if( node.flags & ENodeFlags.Remote )
+			{
+				// Remote pokers will do any poking on the
+				// remote side. It's up to the gadget they're poking to
+				// figure out what to do about that.
+				return;
+			}
+			
 			let pokerInUniverse = universeFromNode.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) );
 			Av().renderer.addActivePoker( node.globalId, [ pokerInUniverse.x, pokerInUniverse.y, pokerInUniverse.z ], hand );
 		} );
@@ -1293,6 +1301,12 @@ export class AvDefaultTraverser
 		this.updateTransform( node.globalId, defaultParent, null,
 			( universeFromNode: mat4 ) =>
 		{
+			if( node.flags & ENodeFlags.Remote )
+			{
+				// remote handles aren't active
+				return;
+			}
+
 			switch( node.propVolume.type )
 			{
 				case EVolumeType.Sphere:
@@ -1343,6 +1357,12 @@ export class AvDefaultTraverser
 		this.updateTransform( node.globalId, defaultParent, null,
 			( universeFromNode: mat4 ) =>
 		{
+			if( node.flags & ENodeFlags.Remote )
+			{
+				// remote grabbers aren't active
+				return;
+			}
+
 			switch( node.propVolume.type )
 			{
 				case EVolumeType.Sphere:
@@ -1370,6 +1390,12 @@ export class AvDefaultTraverser
 			if( this.isHookInUse( hookGlobalId ) )
 				return;
 
+			if( node.flags & ENodeFlags.Remote )
+			{
+				// remote hooks can't be dropped on
+				return;
+			}
+			
 			let outerVolumeScale = node.propOuterVolumeScale ? node.propOuterVolumeScale : 1.5;
 			switch( node.propVolume.type )
 			{
