@@ -165,6 +165,20 @@ class CDispatcher
 		{
 			delete this.m_gadgetsByUuid[ ep.getGadgetData().getPersistenceUuid() ];
 		}
+
+		let endpointsToStayAliveFor = this.getListForType( EndpointType.Gadget ).length
+			+ this.getListForType( EndpointType.Renderer ).length;
+		if( endpointsToStayAliveFor == 0 )
+		{
+			// exit cleanly one second after the last endpoint we care about 
+			// disconnects. Under nodemon this means we'll need to restart by hand. 
+			// Under normal operation we'll start when avrenderer.exe starts.
+			global.setTimeout( () => 
+			{
+				console.log( "Exiting gracefully after the last disconnect" )
+				process.exit( 0 );
+			}, 1000 );
+		}
 	}
 
 	private sendStateToMonitor( targetEp: CEndpoint )
