@@ -13,7 +13,7 @@ import { StoredGadget, AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, Av
 	MsgResourceLoadFailed, 	MsgInstallGadget, EVolumeType, parseEndpointFieldUri, MsgUserInfo, 
 	MsgRequestJoinChamber, MsgActuallyJoinChamber, MsgRequestLeaveChamber, MsgActuallyLeaveChamber, 
 	MsgChamberList, chamberIdToPath, gadgetDetailsToId, MsgUpdatePose, Permission, SharedGadget, 
-	MsgAddGadgetToChambers, MsgRemoveGadgetFromChambers, AuthedRequest, MsgUpdateChamberGadgetHook, ENodeFlags
+	MsgAddGadgetToChambers, MsgRemoveGadgetFromChambers, AuthedRequest, MsgUpdateChamberGadgetHook, ENodeFlags, MsgChamberGadgetHookUpdated
 } from '@aardvarkxr/aardvark-shared';
 import * as express from 'express';
 import * as http from 'http';
@@ -364,6 +364,16 @@ class CDispatcher
 		}
 	}
 
+	public findGadgetById( gadgetId: number ): CGadgetData
+	{
+		for( let gadgetEp of this.m_gadgets )
+		{
+			if( gadgetEp.getId() == gadgetId )
+				return gadgetEp.getGadgetData();
+		}
+		return null;
+	}
+
 	public findGadget( gadgetPersistenceUuid: string ): Promise<CGadgetData>
 	{
 		return new Promise( ( resolve, reject ) =>
@@ -557,6 +567,14 @@ class CGadgetData
 			return "REMOTE";
 		else
 			return "Gadget with unspeakable name";
+	}
+
+	public verifyMaster()
+	{
+		if( !this.isMaster() )
+		{
+			throw "Gadget is not master";
+		}
 	}
 
 	public async attachToHook( hookPath: string )
@@ -965,6 +983,7 @@ class CEndpoint
 		this.registerEnvelopeHandler( MessageType.RequestLeaveChamber, this.onRequestLeaveChamber );
 
 		this.registerEnvelopeHandler( MessageType.UpdatePose, this.onUpdatePose );
+		this.registerEnvelopeHandler( MessageType.ChamberGadgetHookUpdated, this.onChamberGadgetHookUpdated );
 	}
 
 	public getId() { return this.m_id; }
@@ -1381,6 +1400,17 @@ class CEndpoint
 	private onUpdatePose( env: Envelope, m: MsgUpdatePose )
 	{
 		this.m_dispatcher.sendToMasterSigned( MessageType.UpdatePose, m );
+	}
+
+	@bind
+	private onChamberGadgetHookUpdated( env: Envelope, m: MsgChamberGadgetHookUpdated )
+	{
+		this.getGadgetData().verifyMaster();
+		let gadget = this.m_dispatcher.findGadgetById( m.gadgetId );
+		if( gadget )
+		{
+			gadget.attachToHook( m.newHook );
+		}
 	}
 
 	@bind private onDestroyGadget( env: Envelope, m: MsgDestroyGadget )

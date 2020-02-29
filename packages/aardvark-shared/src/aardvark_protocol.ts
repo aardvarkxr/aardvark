@@ -52,6 +52,7 @@ export enum MessageType
 	AddGadgetToChambers = 506,  // sent to master to update the chamber
 	RemoveGadgetFromChambers = 507,  // sent to master to update the chamber
 	UpdateChamberGadgetHook = 508, // Updates the hook field of a gadget on all chambers
+	ChamberGadgetHookUpdated = 509, // Sent by master when a remote gadget's hook updates
 }
 
 export enum WebSocketCloseCodes
@@ -467,6 +468,12 @@ export interface MsgUpdateChamberGadgetHook extends AuthedRequest
 	userUuid: string;
 	persistenceUuid: string;
 	hook?: string;
+}
+
+export interface MsgChamberGadgetHookUpdated
+{
+	gadgetId: number;
+	newHook?: string;
 }
 
 export interface PokerProximity

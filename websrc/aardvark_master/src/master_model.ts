@@ -1,7 +1,7 @@
 import { AvGadget } from '@aardvarkxr/aardvark-react';
 import bind from 'bind-decorator';
 import { initLocalUser } from 'common/net_user';
-import { MessageType, MsgActuallyJoinChamber, MsgActuallyLeaveChamber, MsgUpdatePose, MsgAddGadgetToChambers, MsgRemoveGadgetFromChambers, MsgUpdateChamberGadgetHook, AvStartGadgetResult, MsgDestroyGadget } from '@aardvarkxr/aardvark-shared';
+import { MessageType, MsgActuallyJoinChamber, MsgActuallyLeaveChamber, MsgUpdatePose, MsgAddGadgetToChambers, MsgRemoveGadgetFromChambers, MsgUpdateChamberGadgetHook, AvStartGadgetResult, MsgDestroyGadget, MsgChamberGadgetHookUpdated } from '@aardvarkxr/aardvark-shared';
 import { findChamber, ChamberSubscription, ChamberMemberInfo, ChamberGadgetInfo } from 'common/net_chamber';
 import { parsePersistentHookPath, buildPersistentHookPath, buildPersistentHookPathFromParts } from 'common/hook_utils';
 
@@ -136,6 +136,8 @@ export class CMasterModel
 			members: {},
 		};
 
+		chamberSub.addGadgetUpdateHandler( this.onGadgetUpdate );
+
 		for( let memberInfo of chamberSub.members )
 		{
 			this.addChamberMember( chamberSub, memberInfo );
@@ -221,6 +223,8 @@ export class CMasterModel
 		if( !chamberTracker )
 			return;
 
+		chamberSub.removeGadgetUpdateHandler( this.onGadgetUpdate );
+
 		for( let memberUuid in chamberTracker.members )
 		{
 			this.removeChamberMember( chamberSub, chamberTracker.members[ memberUuid ].member );
@@ -271,6 +275,39 @@ export class CMasterModel
 
 		AvGadget.instance().sendMessage( MessageType.DestroyGadget, msg );
 		delete memberTracker.gadgets[ gadgetInfo.persistenceUuid ];
+	}
+
+	@bind
+	onGadgetUpdate( chamber: ChamberSubscription, member: ChamberMemberInfo, gadget: ChamberGadgetInfo )
+	{
+		let memberTracker = this.chambers[ chamber.chamberPath ]?.members[ member.uuid ];
+		if( !memberTracker )
+		{
+			return;
+		}
+
+		let gadgetTracker = memberTracker.gadgets[ gadget.persistenceUuid ];
+		if( gadgetTracker && gadgetTracker.endpointId )
+		{
+			// parse the hook path lookig for gadget UUIDs to fix up
+			let hookToUse = gadget.hook;
+			let hookParts = parsePersistentHookPath( gadget.hook );
+			if( hookParts && hookParts.gadgetUuid )
+			{
+				hookParts.gadgetUuid = computeRemotePersistenceUuid( hookParts.gadgetUuid, 
+					memberTracker.remoteUniversePath );
+				hookToUse = buildPersistentHookPathFromParts( hookParts );
+			}
+			
+			let msg: MsgChamberGadgetHookUpdated =
+			{
+				gadgetId: gadgetTracker.endpointId,
+				newHook: hookToUse,
+			}
+
+			AvGadget.instance().sendMessage( MessageType.ChamberGadgetHookUpdated, msg );
+		}
+
 	}
 }
 
