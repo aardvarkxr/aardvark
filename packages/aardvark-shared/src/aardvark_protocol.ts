@@ -576,6 +576,7 @@ export interface AvGrabEvent
 	parentFromNode?: AvNodeTransform;
 	universeFromNode?: AvNodeTransform;
 	hookFromGrabbable?: AvNodeTransform;
+	grabberFromGrabbable?: AvNodeTransform;
 }
 
 export interface AvGrabEventProcessor

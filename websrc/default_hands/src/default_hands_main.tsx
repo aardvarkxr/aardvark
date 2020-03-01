@@ -74,17 +74,20 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 
 		let originPath:string;
 		let hookName:string;
+		let grabberName:string;
 		let dropIcon: string;
 		switch( this.props.hand )
 		{
 		case EHand.Left:
 			originPath = "/user/hand/left";
 			hookName = "left_hand";
+			grabberName = "left_hand_grabber";
 			dropIcon = g_builtinModelHandLeft;
 			break;
 		case EHand.Right:
 			originPath = "/user/hand/right";
 			hookName = "right_hand";
+			grabberName = "right_hand_grabber";
 			dropIcon = g_builtinModelHandRight;
 			break;
 		}
@@ -104,7 +107,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 					}
 				</AvPoker>
 				<AvGrabber updateHighlight = { this.updateGrabberHighlight }
-					radius={ 0.001 } />
+					radius={ 0.001 } persistentName={ grabberName }/>
 				<AvStandardBoxHook persistentName={ hookName } hand={ this.props.hand }
 					dropIconUri={ dropIcon }
 					outerVolumeScale={ 2 }

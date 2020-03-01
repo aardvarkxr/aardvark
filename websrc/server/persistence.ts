@@ -4,7 +4,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
 import { getJSONFromUri } from './serverutils';
-import { buildPersistentHookPath } from 'common/hook_utils';
+import { buildPersistentHookPath, HookType } from 'common/hook_utils';
 import bind from 'bind-decorator';
 
 
@@ -123,7 +123,7 @@ class CPersistenceManager
 
 	public setGadgetHook( uuid: string, hook: string, hookFromGadget: AvNodeTransform )
 	{
-		let hookPath = buildPersistentHookPath( uuid, hook, hookFromGadget );
+		let hookPath = buildPersistentHookPath( uuid, hook, hookFromGadget, HookType.Hook );
 		this.setGadgetHookPath( uuid, hookPath );
 	}
 

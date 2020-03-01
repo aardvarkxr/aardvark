@@ -206,6 +206,7 @@ export class AvDefaultTraverser
 	private m_dirtyGadgetActions = new Set<number>();
 	private m_localUserInfo: LocalUserInfo;
 	private m_remoteUniverse: { [ universeUuid: string ]: RemoteUniverse } = {};
+	private m_grabsInProgress: string[] = [];
 
 	constructor()
 	{
@@ -630,13 +631,27 @@ export class AvDefaultTraverser
 
 			if( root.hook )
 			{
+				let rootGrabbable;
 				if( root.root.type == AvNodeType.Grabbable 
 					&& root.root.id != 0 )
 				{
-					// grabbable nodes are what need their origin set
-					this.setHookOrigin( root.hook, root.root, root.hookFromGadget );
+					rootGrabbable = root.root;
 				}
-				this.setHookOrigin( root.hook, rootNode, root.hookFromGadget );
+
+				let rootGrabInProgress = -1 != this.m_grabsInProgress.indexOf( 
+					endpointAddrToString( rootNode.globalId ) );
+				let grabbableGrabInProgress = rootGrabbable && -1 != this.m_grabsInProgress.indexOf(
+					endpointAddrToString( rootGrabbable.globalId ) );
+
+				if( !rootGrabInProgress && !grabbableGrabInProgress )
+				{
+					this.setHookOrigin( root.hook, rootNode, root.hookFromGadget );
+					if( rootGrabbable )
+					{
+						// grabbable nodes are what need their origin set
+						this.setHookOrigin( root.hook, root.root, root.hookFromGadget );
+					}
+				}
 			}
 
 			this.traverseNode( rootNode, null );
@@ -1619,8 +1634,11 @@ export class AvDefaultTraverser
 					type: AvGrabEventType.GrabStarted,
 					grabberId: grabEvent.grabberId,
 					grabbableId: grabEvent.grabbableId,
+					grabberFromGrabbable: nodeTransformFromMat4( grabberFromGrabbable ),
 				};
 				this.sendGrabEvent( grabStartedEvent );
+
+				this.m_grabsInProgress.push( endpointAddrToString( grabEvent.grabbableId ) );
 				break;
 
 			case AvGrabEventType.EndGrab:
@@ -1668,6 +1686,13 @@ export class AvDefaultTraverser
 				{
 					// we're dropping into open space
 					delete this.m_nodeToNodeAnchors[ endpointAddrToString( grabEvent.grabbableId ) ];
+				}
+
+
+				let nEntry = this.m_grabsInProgress.indexOf( endpointAddrToString( grabEvent.grabbableId ) );
+				if( nEntry != -1 )
+				{
+					this.m_grabsInProgress.splice( nEntry, 1 );
 				}
 			}
 			break;

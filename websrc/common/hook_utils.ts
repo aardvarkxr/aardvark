@@ -1,5 +1,12 @@
 import { AvNodeTransform } from '@aardvarkxr/aardvark-shared';
 
+export enum HookType
+{
+	Auto = 0,
+	Hook = 1,
+	Grab = 2,
+}
+
 export function transformToUriString( transform: AvNodeTransform )
 {
 	let res = "";
@@ -103,16 +110,26 @@ export function uriStringToTransform( uriFragment: string ): AvNodeTransform
 
 export interface HookPathParts
 {
+	type: HookType;
 	gadgetUuid: string;
-	hookPersistentName: string;
+	holderPersistentName: string;
 	hookFromGadget?: AvNodeTransform;
 }
 
 
-export function buildPersistentHookPath( gadgetUuid: string, hookPersistentName: string, 
-	hookFromGadget: AvNodeTransform )
+export function buildPersistentHookPath( gadgetUuid: string, holderPersistentName: string, 
+	hookFromGadget: AvNodeTransform, type: HookType )
 {
-	let path = "/gadget/" + gadgetUuid + "/" + hookPersistentName;
+	let path:string = "/gadget/" + gadgetUuid + "/" + holderPersistentName;
+	if( type == HookType.Grab )
+	{
+		path = "/gadget/" + gadgetUuid + "/_grab/" + holderPersistentName;
+	}
+	else
+	{
+		path = "/gadget/" + gadgetUuid + "/" + holderPersistentName;
+	}
+	
 	if( hookFromGadget )
 	{
 		path += "/" + transformToUriString( hookFromGadget );
@@ -122,17 +139,31 @@ export function buildPersistentHookPath( gadgetUuid: string, hookPersistentName:
 
 export function buildPersistentHookPathFromParts( parts: HookPathParts )
 {
-	return buildPersistentHookPath( parts.gadgetUuid, parts.hookPersistentName, parts.hookFromGadget );
+	return buildPersistentHookPath( parts.gadgetUuid, parts.holderPersistentName, parts.hookFromGadget, 
+		parts.type  );
 }
 
 export function parsePersistentHookPath( path: string ): HookPathParts
 {
-	let reLong = /^\/gadget\/(.*)\/(.*)\/(.*)$/ ;
-	let match = reLong.exec( path );
+	let type = HookType.Grab;
+	let reGrabLong = /^\/gadget\/(.*)\/_grab\/(.*)\/(.*)$/ ;
+	let match = reGrabLong.exec( path );
+	if( !match )
+	{
+		let reGrabShort = /^\/gadget\/(.*)\/_grab\/(.*)$/ ;
+		match = reGrabShort.exec( path );
+	}
+	if( !match )
+	{
+		let reLong = /^\/gadget\/(.*)\/(.*)\/(.*)$/ ;
+		match = reLong.exec( path );
+		type = HookType.Hook;
+	}
 	if( !match )
 	{
 		let reShort = /^\/gadget\/(.*)\/(.*)$/ ;
 		match = reShort.exec( path );
+		type = HookType.Hook;
 	}
 
 	if( !match )
@@ -156,8 +187,9 @@ export function parsePersistentHookPath( path: string ): HookPathParts
 
 	return (
 		{ 
+			type,
 			gadgetUuid: match[1],
-			hookPersistentName: match[2],
+			holderPersistentName: match[2],
 			hookFromGadget,
 		} );
 }
