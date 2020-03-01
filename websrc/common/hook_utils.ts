@@ -193,3 +193,4 @@ export function parsePersistentHookPath( path: string ): HookPathParts
 			hookFromGadget,
 		} );
 }
+

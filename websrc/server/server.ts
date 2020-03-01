@@ -467,6 +467,23 @@ interface GadgetHookAddr extends HookPathParts
 }
 
 
+function printableHook( hook : string | GadgetHookAddr ): string
+{
+	if( !hook )
+	{
+		return "<none>";
+	}
+	
+	if( typeof hook == "string" )
+	{ 
+		return hook;
+	}
+	else
+	{
+		return `parts: ${ endpointAddrToString( hook.holderAddr ) } ${ hook.holderPersistentName }`;
+	}
+}
+
 class CGadgetData
 {
 	private m_gadgetUri: string;
@@ -639,6 +656,7 @@ class CGadgetData
 				break;
 
 			case HookType.Hook:
+				console.log( `Setting hook for ${ this.getEndpointId() } to ${ printableHook( hook ) }` );
 				this.m_hook = hook;
 				break;
 		}
@@ -1228,7 +1246,6 @@ class CEndpoint
 			// Tell any chambers this user is in about the new gadget
 			if( this.m_gadgetData.getShareInChamber() )
 			{
-				console.log( `SHARING ${ this.m_gadgetData.getUri() } == ${ this.m_gadgetData.getRemoteUniversePath() }`)
 				let msgAddGadget: MsgAddGadgetToChambers =
 				{
 					userUuid: persistence.localUserInfo.userUuid,
@@ -1240,6 +1257,8 @@ class CEndpoint
 					}
 				};
 
+				console.log( `SHARING ${ this.m_gadgetData.getUri() }`
+					+` ${ msgAddGadget.gadget.persistenceUuid } hookPath: ${ msgAddGadget.gadget.hook }` );
 				this.m_dispatcher.sendToMasterSigned( MessageType.AddGadgetToChambers, msgAddGadget );
 			}
 		}

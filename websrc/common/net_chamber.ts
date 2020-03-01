@@ -140,12 +140,12 @@ class ChamberMember extends ACModel implements ChamberMemberInfo
 		this.sendGadgetListUpdate();
 	}
 
-	public removeGadget( args: MsgRemoveGadgetFromChambers )
+	public removeGadget( persistenceUuid: string )
 	{
-		if( this.m_gadgets[ args.persistenceUuid ] )
+		if( this.m_gadgets[ persistenceUuid ] )
 		{
-			this.m_gadgets[ args.persistenceUuid ].destroy();
-			delete this.m_gadgets[ args.persistenceUuid ];
+			this.m_gadgets[ persistenceUuid ].destroy();
+			delete this.m_gadgets[ persistenceUuid ];
 			this.sendGadgetListUpdate();
 		}
 	}
@@ -281,8 +281,36 @@ class Chamber extends ACModel
 		verifySignature( args, args.userPublicKey );
 		this.verifyChamber( args.chamberPath );
 
-		if( this.findMember( args.userUuid ) )
+		let existingMember = this.findMember( args.userUuid );
+		if( existingMember )
 		{
+			// update the gadget list
+			let gadgetsToDelete  = new Set<string>();
+			for( let existingGadget of existingMember.gadgets )
+			{
+				gadgetsToDelete.add( existingGadget.persistenceUuid );
+			}
+
+			for( let newGadget of args.gadgets )
+			{
+				if( gadgetsToDelete.has( newGadget.persistenceUuid ) )
+				{
+					gadgetsToDelete.delete( newGadget.persistenceUuid );
+					let existingGadget = existingMember.findGadget( newGadget.persistenceUuid );
+					existingGadget.updateHook( newGadget.hook );
+				}
+				else
+				{
+					existingMember.addGadget( newGadget );
+				}
+			}
+
+			for( let exGadget of gadgetsToDelete.values() )
+			{
+
+				existingMember.removeGadget( exGadget );
+			}
+
 			return true; // true means we're in the chamber now
 		}
 
@@ -337,7 +365,7 @@ class Chamber extends ACModel
 	private removeGadget( args: MsgRemoveGadgetFromChambers )
 	{
 		let member = this.findAndAuthMember( args.userUuid, args );
-		member.removeGadget( args );
+		member.removeGadget( args.persistenceUuid );
 	}
 
 	private updateGadgetHook( args: MsgUpdateChamberGadgetHook )
