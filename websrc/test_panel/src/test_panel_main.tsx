@@ -68,9 +68,9 @@ class TestPanel extends React.Component< {}, TestPanelState >
 
 	}
 
-	@bind public onJoinEdward()
+	@bind public onJoinChamber()
 	{
-		AvGadget.instance().joinChamber( "edward2" );
+		AvGadget.instance().joinChamber( "charles" );
 	}
 
 	@bind public onHighlightGrabbable( highlight: HighlightType )
@@ -147,8 +147,8 @@ class TestPanel extends React.Component< {}, TestPanelState >
 				<div className="Button" onMouseDown={ this.incrementCount }>
 					Increment count...
 					</div> 
-				<div className="Button" onMouseDown={ this.onJoinEdward }>
-					Join the "Edward" chamber!
+				<div className="Button" onMouseDown={ this.onJoinChamber }>
+					Join the "Charles" chamber!
 				</div> 
 				{ this.renderActionStateLabel( EAction.A ) }
 				{ this.renderActionStateLabel( EAction.B ) }
