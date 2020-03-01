@@ -344,7 +344,7 @@ class CDispatcher
 
 		// tell the gadget to move to the newly available hook
 		let gadgetData = gadget.getGadgetData();
-		await gadgetData.attachToHook( initialHookPath );
+		await gadgetData.attachToHook( initialHookPath, HookType.Hook );
 		gadgetData.sendSceneGraphToRenderer( false, true );
 	}
 
@@ -483,6 +483,12 @@ interface GadgetHookAddr extends HookPathParts
 	hookAddr: EndpointAddr;
 }
 
+enum HookType
+{
+	Hook = 1,
+	Grab = 2,
+}
+
 class CGadgetData
 {
 	private m_gadgetUri: string;
@@ -490,6 +496,7 @@ class CGadgetData
 	private m_manifest: AvGadgetManifest = null;
 	private m_root: AvNode = null;
 	private m_hook: string | GadgetHookAddr = null;
+	private m_grabHook: string | GadgetHookAddr = null;
 	private m_mainGrabbable: EndpointAddr = null;
 	private m_mainHandle: EndpointAddr = null;
 	private m_persistenceUuid: string = null;
@@ -525,7 +532,7 @@ class CGadgetData
 		this.m_remoteUniversePath = remoteUniversePath;
 		this.m_dispatcher = dispatcher;
 
-		this.attachToHook( initialHook );
+		this.attachToHook( initialHook, HookType.Hook );
 	}
 
 	public async init()
@@ -577,9 +584,10 @@ class CGadgetData
 		}
 	}
 
-	public async attachToHook( hookPath: string )
+	public async attachToHook( hookPath: string, type: HookType )
 	{
-		console.log( `Attaching ${ this.debugName } (${ this.m_gadgetUri }) to ${ hookPath }`)
+		console.log( `Attaching ${ this.debugName } (${ this.m_gadgetUri }) to ${ hookPath }` );
+
 		let hookParts = parsePersistentHookPath( hookPath );
 		if( hookParts )
 		{
@@ -590,17 +598,31 @@ class CGadgetData
 				return;
 			}
 
-			this.m_hook = { ...hookParts, hookAddr };
+			this.setHook( { ...hookParts, hookAddr }, type );
 		}
 		else
 		{
-			this.m_hook = hookPath;
+			this.setHook( hookPath, type );
 		}
 
 		if( this.m_root )
 		{
 			// if we've already send a scene graph, send it again with the new hook
 			this.sendSceneGraphToRenderer( false, true );
+		}
+	}
+
+	private setHook( hook: string | GadgetHookAddr, type: HookType )
+	{
+		switch( type )
+		{
+			case HookType.Grab:
+				this.m_grabHook = hook;
+				break;
+
+			case HookType.Hook:
+				this.m_hook = hook;
+				break;
 		}
 	}
 
@@ -1304,7 +1326,7 @@ class CEndpoint
 			return;
 		}
 
-		await this.getGadgetData().attachToHook( hookPath );
+		await this.getGadgetData().attachToHook( hookPath, HookType.Hook );
 
 		let msgUpdateHook: MsgUpdateChamberGadgetHook =
 		{
@@ -1409,7 +1431,7 @@ class CEndpoint
 		let gadget = this.m_dispatcher.findGadgetById( m.gadgetId );
 		if( gadget )
 		{
-			gadget.attachToHook( m.newHook );
+			gadget.attachToHook( m.newHook, HookType.Hook );
 		}
 	}
 
