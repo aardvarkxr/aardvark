@@ -573,7 +573,7 @@ class CGadgetData
 
 	public async attachToHook( hookPath: string )
 	{
-		console.log( `Attaching ${ this.debugName } (${ this.m_gadgetUri }) to ${ hookPath }` );
+		// console.log( `Attaching ${ this.debugName } (${ this.m_gadgetUri }) to ${ hookPath }` );
 
 		let hookParts = parsePersistentHookPath( hookPath );
 		if( hookParts )
@@ -626,7 +626,7 @@ class CGadgetData
 				hook: this.getHookPathToShare(),
 			};
 			this.m_dispatcher.sendToMasterSigned(MessageType.UpdateChamberGadgetHook, msgUpdateHook);
-			console.log( 'Telling remote about hook change ' + msgUpdateHook.hook );
+			// console.log( 'Telling remote about hook change ' + msgUpdateHook.hook );
 		}
 	}
 
@@ -901,7 +901,7 @@ class CGadgetData
 				console.log( "Overriding hook with grabHook" );
 			}
 			hookToSend = this.m_grabHook ?? this.m_hook;
-			console.log( "REMOTE scene graph update for " + this.getEndpointId() );
+			// console.log( "REMOTE scene graph update for " + this.getEndpointId() );
 		}
 		else
 		{
@@ -909,7 +909,7 @@ class CGadgetData
 			hookToSend = this.m_hook;
 			if( !this.isMaster() )
 			{
-				console.log( "LOCAL scene graph update for " + this.getEndpointId() );
+				// console.log( "LOCAL scene graph update for " + this.getEndpointId() );
 			}
 		}
 
@@ -918,13 +918,13 @@ class CGadgetData
 			if( typeof hookToSend === "string" )
 			{
 				msg.hook = hookToSend;
-				console.log( `Sending ${ hookToSend } for gadget ${ this.getEndpointId() }` );
+				// console.log( `Sending ${ hookToSend } for gadget ${ this.getEndpointId() }` );
 			}
 			else
 			{
 				msg.hook = hookToSend.holderAddr;
 				msg.hookFromGadget = hookToSend.hookFromGadget;
-				console.log( `Sending ${ endpointAddrToString( hookToSend.holderAddr )	}+xform for gadget ${ this.getEndpointId() }` );
+				// console.log( `Sending ${ endpointAddrToString( hookToSend.holderAddr )	}+xform for gadget ${ this.getEndpointId() }` );
 			}	
 		}
 
@@ -1472,13 +1472,13 @@ class CEndpoint
 	@bind
 	private onChamberGadgetHookUpdated( env: Envelope, m: MsgChamberGadgetHookUpdated )
 	{
-		console.log( 'remote telling us about hook change' );
+		// console.log( 'remote telling us about hook change' );
 
 		this.getGadgetData().verifyMaster();
 		let gadget = this.m_dispatcher.findGadgetById( m.gadgetId );
 		if( gadget )
 		{
-			console.log( `REMOTE UPDATE gadget ${ gadget.getEndpointId() } hook path to ${ m.newHook }` );
+			// console.log( `REMOTE UPDATE gadget ${ gadget.getEndpointId() } hook path to ${ m.newHook }` );
 			gadget.clearGrabHook();
 			gadget.attachToHook( m.newHook );
 		}
