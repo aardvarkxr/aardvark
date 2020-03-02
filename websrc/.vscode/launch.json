@@ -45,6 +45,8 @@
 				// "AV_SHARED_SRC=C:/some/path/aardvark-shared" so the following rules can make the source maps work 
 				// through the sym linked packages. NOTE THE FORWARD SLASHES!
 				// (Other that that, these are all the default values.)
+				"webpack:///../packages/aardvark-react/src/*": "e:/homedev/aardvark/packages/aardvark-react/src/*",
+				"webpack:///../packages/aardvark-shared/src/*": "e:/homedev/aardvark/packages/aardvark-shared/src/*",
 				"webpack:///../aardvark-react/*": "${env:AV_REACT_SRC}/*",
 				"webpack:///../aardvark-shared/*": "${env:AV_SHARED_SRC}/*",
 				"webpack:///./~/*": "${webRoot}/node_modules/*",       // Example: "webpack:///./~/querystring/index.js" -> "/Users/me/project/node_modules/querystring/index.js"
@@ -74,6 +76,20 @@
 				"${workspaceFolder}/../data/**/*.js",
 				"${workspaceFolder}/../data/**/*.js.map" 
 			]
+		},
+		{
+			"name": "Debug Jest Tests",
+			"type": "node",
+			"request": "launch",
+			"runtimeArgs": [
+				"--inspect-brk",
+				"${workspaceRoot}/node_modules/jest/bin/jest.js",
+				"--runInBand",
+				"--detectOpenHandles"
+			],
+			"console": "integratedTerminal",
+			"internalConsoleOptions": "neverOpen",
+			"port": 9229
 		}
 	]
 }

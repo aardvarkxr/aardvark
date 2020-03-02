@@ -6,8 +6,9 @@ body, html
 
 .Button 
 {
+	margin: 4px;
 	background-color: lightcoral;
-	font-size: 4rem;
+	font-size: 8rem;
 }
 
 .Label

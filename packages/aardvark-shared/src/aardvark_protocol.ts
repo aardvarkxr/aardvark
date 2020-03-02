@@ -1,4 +1,5 @@
 import { AvActionState } from './aardvark';
+import { AuthedRequest } from './auth';
 
 export const AardvarkPort = 23842;
 
@@ -11,7 +12,8 @@ export enum MessageType
 	Error = 102,
 	GetGadgetManifest = 103,
 	GetGadgetManifestResponse = 104,
-	
+	UserInfo = 105,
+
 	// Monitor messages
 	// these are send to monitors to give them meta context
 	NewEndpoint = 200,
@@ -38,6 +40,19 @@ export enum MessageType
 	GetInstalledGadgets = 400,
 	GetInstalledGadgetsResponse = 401,
 	InstallGadget = 402,
+
+	// Chamber messages - Gadgets can send these on behalf of a user if that 
+	// gadget has "chamber" permissions
+	RequestJoinChamber = 500,	// sent by gadgets that want to join a chamber
+	RequestLeaveChamber = 501,	// sent by gadgets that want to leave a chamber
+	UpdatePose = 502,			// sent to master periodically so it can update all chambers
+	ChamberList = 503, 			// sent to monitors when the list changes
+	ActuallyJoinChamber = 504,	// sent to master to join a chamber
+	ActuallyLeaveChamber = 505,	// sent to master to leave a chamber
+	AddGadgetToChambers = 506,  // sent to master to update the chamber
+	RemoveGadgetFromChambers = 507,  // sent to master to update the chamber
+	UpdateChamberGadgetHook = 508, // Updates the hook field of a gadget on all chambers
+	ChamberGadgetHookUpdated = 509, // Sent by master when a remote gadget's hook updates
 }
 
 export enum WebSocketCloseCodes
@@ -173,6 +188,8 @@ export function parseEndpointFieldUri( uri: string ): null | [ EndpointAddr, str
 export interface Envelope
 {
 	type: MessageType;
+	sequenceNumber: number;
+	replyTo?: number;
 	sender?: EndpointAddr;
 	target?: EndpointAddr; 
 	payload?: string;
@@ -191,6 +208,7 @@ export interface MsgSetEndpointType
 	gadgetUri?: string;
 	initialHook?: string;
 	persistenceUuid?: string;
+	remoteUniversePath?: string;
 }
 
 export interface MsgSetEndpointTypeResponse
@@ -198,6 +216,18 @@ export interface MsgSetEndpointTypeResponse
 	endpointId: number;
 	settings?: any;
 	persistenceUuid?: string;
+}
+
+export interface LocalUserInfo extends AuthedRequest
+{
+	userUuid: string;
+	userDisplayName: string;
+	userPublicKey: string;
+}
+
+export interface MsgUserInfo
+{
+	info: LocalUserInfo;
 }
 
 export interface MsgNewEndpoint
@@ -230,6 +260,7 @@ export interface MsgUpdateSceneGraph
 	root?: AvNode;
 	hook?: string|EndpointAddr;
 	hookFromGadget?: AvNodeTransform;
+	remoteUniversePath?: string;
 }
 
 export enum EHookVolume
@@ -278,6 +309,7 @@ export function parseEnvelope( envString: string, parsePayload: boolean = true )
 export interface MsgGadgetStarted
 {
 	epToNotify: EndpointAddr;
+	startedGadgetEndpointId: number;
 	mainGrabbable?: number;
 	mainHandle?: number;
 	mainGrabbableGlobalId?: EndpointAddr;
@@ -372,6 +404,78 @@ export interface MsgResourceLoadFailed
 	error: string;
 }
 
+export interface MsgRequestJoinChamber
+{
+	chamberId: string; 
+}
+
+export interface MsgRequestLeaveChamber
+{
+	chamberId: string; 
+}
+
+// tx, ty, tz, rw, rx, ry, rz
+export type MinimalPose = [ number, number, number, number, number, number, number ];
+
+export interface MsgUpdatePose extends AuthedRequest
+{
+	userUuid: string;
+	originPath: string;
+	newPose: MinimalPose; 
+}
+
+export interface SharedGadget
+{
+	gadgetUri: string;
+	persistenceUuid: string;
+	hook?: string;
+}
+
+
+export interface MsgActuallyJoinChamber extends AuthedRequest
+{
+	chamberPath: string;
+	userUuid: string;
+	userPublicKey: string;
+	gadgets?: SharedGadget[];
+}
+
+export interface MsgActuallyLeaveChamber extends AuthedRequest
+{
+	chamberPath: string;
+	userUuid: string;
+}
+
+export interface MsgChamberList
+{
+	chamberPaths: string[];
+}
+
+export interface MsgAddGadgetToChambers extends AuthedRequest
+{
+	userUuid: string;
+	gadget: SharedGadget;
+}
+
+export interface MsgRemoveGadgetFromChambers extends AuthedRequest
+{
+	userUuid: string;
+	persistenceUuid: string;
+}
+
+export interface MsgUpdateChamberGadgetHook extends AuthedRequest
+{
+	userUuid: string;
+	persistenceUuid: string;
+	hook?: string;
+}
+
+export interface MsgChamberGadgetHookUpdated
+{
+	gadgetId: number;
+	newHook?: string;
+}
+
 export interface PokerProximity
 {
 	panelId: EndpointAddr;
@@ -398,6 +502,8 @@ export enum AvNodeType
 	PanelIntersection = 11,
 	ParentTransform = 12,
 	HeadFacingTransform = 13,
+	RemoteUniverse = 14,
+	RemoteOrigin = 15,
 }
 
 
@@ -470,6 +576,7 @@ export interface AvGrabEvent
 	parentFromNode?: AvNodeTransform;
 	universeFromNode?: AvNodeTransform;
 	hookFromGrabbable?: AvNodeTransform;
+	grabberFromGrabbable?: AvNodeTransform;
 }
 
 export interface AvGrabEventProcessor
@@ -547,6 +654,7 @@ export enum ENodeFlags
 	AllowMultipleDrops			= 1 << 5,
 	Tethered					= 1 << 6,
 	ShowGrabIndicator			= 1 << 7,
+	Remote						= 1 << 8,
 }
 
 export interface AvConstraint
@@ -577,6 +685,7 @@ export interface AvNode
 	children?: AvNode[];
 
 	propOrigin?: string;
+	propUniverseName?: string;
 	propTransform?: AvNodeTransform;
 	propModelUri?: string;
 	propVolume?: AvVolume;
@@ -623,14 +732,22 @@ export interface AvSharedTextureInfo
 	height: number;
 }
 
+export enum Permission
+{
+	Master = "master",
+	SceneGraph = "scenegraph",
+	Chamber = "chamber",
+}
+
 export interface AvGadgetManifest
 {
 	name: string;
-	permissions: string[];
+	permissions: Permission[];
 	width: number;
 	height: number;
 	model: string;
 	startAutomatically: boolean;
+	shareInChamber?: boolean; // defaults to true
 }
 
 
@@ -679,3 +796,28 @@ export function filterActionsForGadget( actionState: AvActionState ): AvActionSt
 	};
 }
 
+export function gadgetDetailsToId( gadgetName: string, gadgetUri: string, gadgetPersistenceUuid: string )
+{
+	let filteredName = gadgetName.replace( /\W/g, "_" ).toLowerCase();
+	if( filteredName.length > 24 )
+	{
+		filteredName = filteredName.substr( 0, 24 );
+	}
+
+	let keyToHash = gadgetUri + gadgetPersistenceUuid;
+	let hash = 0;
+	for ( let i = 0; i < keyToHash.length; i++) 
+	{
+		let char = keyToHash.charCodeAt(i);
+		hash = ((hash<<5)-hash)+char;
+		hash = hash & hash; // Convert to 32bit integer
+	}
+
+	return filteredName + hash.toString( 16 );
+}
+
+
+export function chamberIdToPath( gadgetId: string, chamberId: string )
+{
+	return `/aardvark/${ gadgetId }/chamber/${ chamberId }`;
+}

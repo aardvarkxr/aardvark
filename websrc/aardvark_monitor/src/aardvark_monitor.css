@@ -56,6 +56,11 @@ body, html
 	border-style: solid;
 }
 
+.GadgetRemote
+{
+	border: dashed red 2px;
+}
+
 .AvNode
 {
 	margin-left: 1rem;
@@ -186,3 +191,37 @@ body, html
     height: 0;
     z-index: -1;
 }
+
+.UserInfo
+{
+	display: flex;
+	flex-direction: column;
+}
+
+.InfoSection
+{
+	margin-bottom: 5px;
+}
+
+.ChamberInfo
+{
+	margin-top: 5px;
+	border: solid black 1px;
+}
+
+.ChamberInfoMembers
+{
+	margin-left: 5px;
+}
+
+.ChamberMemberName
+{
+	font-size: 1.2rem;
+}
+
+.ChamberGadget
+{
+	margin-left: 5px;
+	margin-top: 5px;
+}
+

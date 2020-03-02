@@ -175,6 +175,12 @@ export abstract class AvBaseNode<TProps, TState> extends React.Component<TProps,
 
 	public render()
 	{
+		let persistentName = this.baseProps?.persistentName;
+		if( persistentName && persistentName.startsWith( "_" ) )
+		{
+			throw new Error( "Persistent names that start with underscore are reserved" );
+		}
+
 		return this.baseNodeRender( this, this.props.children );
 	}
 	

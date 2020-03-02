@@ -25,7 +25,7 @@
 
 CAardvarkCefHandler::CAardvarkCefHandler( IApplication *application, const std::string & gadgetUri, 
 	const std::string & initialHook, const std::string & persistenceUuid, 
-	const aardvark::EndpointAddr_t & epToNotify )
+	const aardvark::EndpointAddr_t & epToNotify, const std::string& remoteUniversePath )
     : m_useViews( false ), m_isClosing(false) 
 {
 	m_epToNotify = epToNotify;
@@ -35,6 +35,7 @@ CAardvarkCefHandler::CAardvarkCefHandler( IApplication *application, const std::
 	m_gadgetUri = gadgetUri;
 	m_initialHook = initialHook;
 	m_persistenceUuid = persistenceUuid;
+	m_remoteUniversePath = remoteUniversePath;
 }
 
 
@@ -114,6 +115,11 @@ void CAardvarkCefHandler::onGadgetManifestReceived( bool success, const std::vec
 		mapArgs["persistenceUuid"] = m_persistenceUuid;
 	}
 
+	if ( !m_remoteUniversePath.empty() )
+	{
+		mapArgs[ "remoteUniversePath" ] = m_remoteUniversePath;
+	}
+
 	std::string sArgs;
 	for ( auto & i : mapArgs )
 	{
@@ -167,7 +173,8 @@ void CAardvarkCefHandler::OnAfterCreated(CefRefPtr<CefBrowser> browser)
 	CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "gadget_info" );
 	msg->GetArgumentList()->SetString( 0, m_gadgetUri );
 	msg->GetArgumentList()->SetString( 1, m_initialHook );
-	msg->GetArgumentList()->SetString( 2, m_gadgetManifestString );
+	msg->GetArgumentList()->SetString( 2, m_remoteUniversePath );
+	msg->GetArgumentList()->SetString( 3, m_gadgetManifestString );
 
 	m_browser->GetFocusedFrame()->SendProcessMessage( PID_RENDERER, msg );
 	
@@ -292,8 +299,9 @@ bool CAardvarkCefHandler::OnProcessMessageReceived( CefRefPtr<CefBrowser> browse
 		epToNotify.type = ( aardvark::EEndpointType )message->GetArgumentList()->GetInt( 3 );
 		epToNotify.endpointId = ( uint32_t )message->GetArgumentList()->GetInt( 4 );
 		epToNotify.nodeId = ( uint32_t )message->GetArgumentList()->GetInt( 5 );
+		std::string remoteUniversePath( message->GetArgumentList()->GetString( 6 ) );
 
-		CAardvarkCefApp::instance()->startGadget( uri, initialHook, persistenceUuid, epToNotify );
+		CAardvarkCefApp::instance()->startGadget( uri, initialHook, persistenceUuid, epToNotify, remoteUniversePath );
 	}
 	else if ( message->GetName() == "request_texture_info" )
 	{

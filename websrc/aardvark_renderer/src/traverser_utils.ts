@@ -1,6 +1,8 @@
 import { AvNodeTransform } from '@aardvarkxr/aardvark-shared';
 import { vec3, mat4, vec4, mat3, quat } from '@tlaukkan/tsm';
 
+const Quaternion = require( 'quaternion' );
+
 export function translateMat( t: vec3)
 {
 	let m = new mat4();
@@ -160,3 +162,50 @@ export function minIgnoringNulls( ...values: number[] )
 		return null;
 	}
 }
+
+export function lerpAvTransforms( xf0: AvNodeTransform, xf1: AvNodeTransform, t: number ): AvNodeTransform
+{
+	let result = { ...xf1 };
+	if( xf0 && xf0.position && xf1.position )
+	{
+		let t0 = new vec3( [ xf0.position.x, xf0.position.y, xf0.position.z ] );
+		let t1 = new vec3( [ xf1.position.x, xf1.position.y, xf1.position.z ] );
+		let trans = vec3.mix( t0, t1, t, new vec3() );
+		result.position =
+		{
+			x: trans.x,
+			y: trans.y,
+			z: trans.z,
+		}
+	}
+
+	if( xf0 && xf0.scale && xf1.scale )
+	{
+		let s0 = new vec3( [ xf0.scale.x, xf0.scale.y, xf0.scale.z ] );
+		let s1 = new vec3( [ xf1.scale.x, xf1.scale.y, xf1.scale.z ] );
+		let scale = vec3.mix( s0, s1, t, new vec3() );
+		result.scale =
+		{
+			x: scale.x,
+			y: scale.y,
+			z: scale.z,
+		}
+	}
+
+	if( xf0 && xf0.rotation && xf1.rotation )
+	{
+		let r0 = new Quaternion( xf0.rotation );
+		let r1 = new Quaternion( xf1.rotation );
+		let rot = r0.slerp( r1 )( t );
+		result.rotation =
+		{
+			w: rot.w,
+			x: rot.x,
+			y: rot.y,
+			z: rot.z,
+		}
+	}
+
+	return result;
+}
+

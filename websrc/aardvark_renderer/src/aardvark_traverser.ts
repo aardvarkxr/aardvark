@@ -12,9 +12,14 @@ import { endpointAddrToString, endpointAddrIsEmpty, MessageType, MsgNodeHaptic,
 	MsgResourceLoadFailed,
 	stringToEndpointAddr,
 	g_builtinModelError,
-	parseEndpointFieldUri
+	parseEndpointFieldUri,
+	Envelope,
+	MsgUpdatePose,
+	MsgUserInfo,
+	LocalUserInfo,
+	MsgLostEndpoint
 } from '@aardvarkxr/aardvark-shared';
-import { computeUniverseFromLine, nodeTransformToMat4, translateMat, nodeTransformFromMat4, vec3MultiplyAndAdd, scaleAxisToFit, scaleMat, minIgnoringNulls } from './traverser_utils';
+import { computeUniverseFromLine, nodeTransformToMat4, translateMat, nodeTransformFromMat4, vec3MultiplyAndAdd, scaleAxisToFit, scaleMat, minIgnoringNulls, lerpAvTransforms } from './traverser_utils';
 const equal = require( 'fast-deep-equal' );
 
 interface NodeData
@@ -29,6 +34,10 @@ interface NodeData
 	lastFrameUsed: number;
 	nodeType: AvNodeType;
 	lastNode?: AvNode;
+	transform0?: AvNodeTransform;
+	transform0Time?: number;	
+	transform1?: AvNodeTransform;
+	transform1Time?: number;	
 }
 
 
@@ -40,6 +49,7 @@ interface TransformComputeFunction
 
 class PendingTransform
 {
+	private m_id: string;
 	private m_needsUpdate = true;
 	private m_parents: PendingTransform[] = null;
 	private m_parentFromNode: mat4 = null;
@@ -47,6 +57,11 @@ class PendingTransform
 	private m_applyFunction: (universeFromNode: mat4) => void = null;
 	private m_computeFunction: TransformComputeFunction = null;
 	private m_currentlyResolving = false;
+
+	constructor( id: string )
+	{
+		this.m_id = id;
+	}
 
 	public resolve()
 	{
@@ -115,6 +130,7 @@ class PendingTransform
 		updateCallback?: ( universeFromNode:mat4 ) => void,
 		computeCallback?: TransformComputeFunction)
 	{
+		this.m_universeFromNode = undefined; // unresolve the transform if it's resolved
 		this.m_needsUpdate = false;
 		this.m_parents = parents;
 		this.m_parentFromNode = parentFromNode ? parentFromNode : mat4.identity;
@@ -157,6 +173,13 @@ interface AvNodeRoot
 	hookFromGadget?: AvNodeTransform;
 	handIsRelevant: Set<EHand>;
 	wasGadgetDraggedLastFrame: boolean;
+	remoteUniverse?: string;
+}
+
+interface RemoteUniverse
+{
+	uuid: string;
+	remoteFromOrigin: { [originPath: string] : PendingTransform };
 }
 
 export class AvDefaultTraverser
@@ -166,6 +189,7 @@ export class AvDefaultTraverser
 	private m_currentHand = EHand.Invalid;
 	private m_currentVisibility = true;
 	private m_currentGrabbableGlobalId:EndpointAddr = null;
+	private m_currentRemoteUniverse: RemoteUniverse = null; // This is valid while traversing the universe itself
 	private m_universeFromNodeTransforms: { [ nodeGlobalId:string ]: PendingTransform } = {};
 	private m_nodeData: { [ nodeGlobalId:string ]: NodeData } = {};
 	private m_lastFrameUniverseFromNodeTransforms: { [ nodeGlobalId:string ]: mat4 } = {};
@@ -180,17 +204,22 @@ export class AvDefaultTraverser
 	private m_frameNumber: number = 1;
 	private m_actionState: { [ hand: number ] : AvActionState } = {};
 	private m_dirtyGadgetActions = new Set<number>();
+	private m_localUserInfo: LocalUserInfo;
+	private m_remoteUniverse: { [ universeUuid: string ]: RemoteUniverse } = {};
+	private m_grabsInProgress: string[] = [];
 
 	constructor()
 	{
 		this.m_endpoint = new CRendererEndpoint( this.onEndpointOpen );
 		this.m_endpoint.registerHandler( MessageType.UpdateSceneGraph, this.onUpdateSceneGraph )
 		this.m_endpoint.registerHandler( MessageType.GrabEvent, 
-			( type: MessageType, m: MsgGrabEvent ) =>
+			( m: MsgGrabEvent ) =>
 			{
 				this.grabEvent( m.event );
 			} );
 		this.m_endpoint.registerHandler( MessageType.NodeHaptic, this.onNodeHaptic );
+		this.m_endpoint.registerHandler( MessageType.UserInfo, this.onUserInfo );
+		this.m_endpoint.registerHandler( MessageType.LostEndpoint, this.onLostEndpoint );
 	}
 
 	@bind onEndpointOpen()
@@ -198,33 +227,81 @@ export class AvDefaultTraverser
 
 	}
 
-	@bind onUpdateSceneGraph( type:MessageType, payload: any, sender: EndpointAddr )
+	@bind
+	private onUserInfo( m: MsgUserInfo )
 	{
-		let m = payload as MsgUpdateSceneGraph;
+		this.m_localUserInfo = m.info;
+
+		setInterval( () => 
+		{
+			this.sendPoseUpdate( "/user/head" );	
+			this.sendPoseUpdate( "/user/hand/right" );	
+			this.sendPoseUpdate( "/user/hand/left" );	
+		}, 125 );
+	}
+
+	@bind
+	private sendPoseUpdate( originPath: string )
+	{
+		let msgUpdatePose: MsgUpdatePose =
+		{
+			originPath,
+			userUuid: this.m_localUserInfo.userUuid,
+			newPose: null,
+		};
+
+		let stageFromOriginArray = Av().renderer.getUniverseFromOriginTransform( originPath );
+		if( stageFromOriginArray )
+		{
+			let stageFromOrigin = new mat4( stageFromOriginArray );
+			let rot = stageFromOrigin.toMat3().toQuat();
+			let pos = stageFromOrigin.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) );
+			msgUpdatePose.newPose = [ pos.x, pos.y, pos.z, rot.w, rot.x, rot.y, rot.z ];
+		}
+
+		this.m_endpoint.sendMessage( MessageType.UpdatePose, msgUpdatePose );
+	}
+
+
+	private forgetGadget( endpointId: number )
+	{
+			// TODO: Clean up drags and such?
+			delete this.m_roots[ endpointId ];
+
+	}
+
+	@bind 
+	onLostEndpoint( m: MsgLostEndpoint )
+	{
+		this.forgetGadget( m.endpointId );
+	}
+
+	@bind 
+	onUpdateSceneGraph( m: MsgUpdateSceneGraph, env: Envelope )
+	{
 		if( !m.root )
 		{
-			// TODO: Clean up drags and such?
-			delete this.m_roots[ sender.endpointId ];
+			this.forgetGadget( env.sender.endpointId );
+			return;
 		}
-		else
-		{
-			this.updateGlobalIds( m.root, sender.endpointId );
-			let rootData = this.m_roots[ sender.endpointId ];
-			if( !rootData )
-			{
-				rootData = this.m_roots[ sender.endpointId ] = 
-				{ 
-					gadgetId: sender.endpointId, 
-					handIsRelevant: new Set<EHand>(),
-					wasGadgetDraggedLastFrame: false,
-					root: null 
-				};
-			}
 
-			rootData.root = m.root;
-			rootData.hook = m.hook;
-			rootData.hookFromGadget = m.hookFromGadget;
+		this.updateGlobalIds( m.root, env.sender.endpointId );
+		let rootData = this.m_roots[ env.sender.endpointId ];
+		if( !rootData )
+		{
+			rootData = this.m_roots[ env.sender.endpointId ] = 
+			{ 
+				gadgetId: env.sender.endpointId, 
+				handIsRelevant: new Set<EHand>(),
+				wasGadgetDraggedLastFrame: false,
+				root: null 
+			};
 		}
+
+		rootData.root = m.root;
+		rootData.hook = m.hook;
+		rootData.hookFromGadget = m.hookFromGadget;
+		rootData.remoteUniverse = m.remoteUniversePath;
 	}
 
 	private updateGlobalIds( node: AvNode, gadgetId: number )
@@ -257,6 +334,7 @@ export class AvDefaultTraverser
 		this.m_currentHand = EHand.Invalid;
 		this.m_currentVisibility = true;
 		this.m_currentGrabbableGlobalId = null;
+		this.m_currentRemoteUniverse = null;
 		this.m_universeFromNodeTransforms = {};
 		this.m_renderList = [];
 		this.clearHooksInUse();
@@ -553,13 +631,27 @@ export class AvDefaultTraverser
 
 			if( root.hook )
 			{
+				let rootGrabbable;
 				if( root.root.type == AvNodeType.Grabbable 
 					&& root.root.id != 0 )
 				{
-					// grabbable nodes are what need their origin set
-					this.setHookOrigin( root.hook, root.root, root.hookFromGadget );
+					rootGrabbable = root.root;
 				}
-				this.setHookOrigin( root.hook, rootNode, root.hookFromGadget );
+
+				let rootGrabInProgress = -1 != this.m_grabsInProgress.indexOf( 
+					endpointAddrToString( rootNode.globalId ) );
+				let grabbableGrabInProgress = rootGrabbable && -1 != this.m_grabsInProgress.indexOf(
+					endpointAddrToString( rootGrabbable.globalId ) );
+
+				if( !rootGrabInProgress && !grabbableGrabInProgress )
+				{
+					this.setHookOrigin( root.hook, rootNode, root.hookFromGadget );
+					if( rootGrabbable )
+					{
+						// grabbable nodes are what need their origin set
+						this.setHookOrigin( root.hook, root.root, root.hookFromGadget );
+					}
+				}
 			}
 
 			this.traverseNode( rootNode, null );
@@ -591,6 +683,27 @@ export class AvDefaultTraverser
 			this.m_currentRoot = null;
 		}
 	}
+
+	private getRemoteUniverse( universeUuid?: string ): RemoteUniverse
+	{
+		if( !universeUuid )
+			return null;
+
+		let remoteUniverse = this.m_remoteUniverse[ universeUuid ];
+		if( !remoteUniverse )
+		{
+			remoteUniverse = 
+			{
+				uuid: universeUuid,
+				remoteFromOrigin: {},
+			};
+			
+			this.m_remoteUniverse[ universeUuid ] = remoteUniverse;
+		}
+		return remoteUniverse;
+	}
+
+	@bind 
 
 	traverseNode( node: AvNode, defaultParent: PendingTransform ): void
 	{
@@ -660,6 +773,14 @@ export class AvDefaultTraverser
 				this.traverseHeadFacingTransform( node, defaultParent );
 				break;
 			
+			case AvNodeType.RemoteUniverse:
+				this.traverseRemoteUniverse( node, defaultParent );
+				break;
+
+			case AvNodeType.RemoteOrigin:
+				this.traverseRemoteOrigin( node, defaultParent );
+				break;
+				
 			default:
 				throw "Invalid node type";
 			}
@@ -685,9 +806,15 @@ export class AvDefaultTraverser
 			}
 		}
 
-		if ( node.type == AvNodeType.Grabbable )
+		switch( node.type )
 		{
-			this.m_currentGrabbableGlobalId = null;
+			case AvNodeType.Grabbable:
+				this.m_currentGrabbableGlobalId = null;
+				break;
+
+			case AvNodeType.RemoteUniverse:
+				this.m_currentRemoteUniverse = null;
+				break;
 		}
 
 		// remember that we used this hand
@@ -708,23 +835,40 @@ export class AvDefaultTraverser
 	{
 		if( typeof origin === "string" )
 		{
-			let universeFromOrigin = Av().renderer.getUniverseFromOriginTransform( origin );
-			if ( universeFromOrigin )
+			if( this.m_currentRoot.remoteUniverse )
 			{
-				this.updateTransform( node.globalId, null, new mat4( universeFromOrigin ), null );
-	
-				if ( origin == "/user/hand/left" )
+				let remoteUniverse = this.getRemoteUniverse( this.m_currentRoot.remoteUniverse );
+				let universeFromRemoteOrigin = remoteUniverse.remoteFromOrigin[ origin ];
+				if( !universeFromRemoteOrigin )
 				{
-					this.m_currentHand = EHand.Left;
+					// we haven't traversed the remote universe yet. Set the origin pending transform
+					// here for when we do
+					universeFromRemoteOrigin = new PendingTransform( this.m_currentRoot + origin );
+					remoteUniverse.remoteFromOrigin[ origin ] = universeFromRemoteOrigin;
 				}
-				else if ( origin == "/user/hand/right" )
+
+				this.updateTransform( node.globalId, universeFromRemoteOrigin, null, null );
+			}
+			else
+			{
+				let parentFromOriginArray = Av().renderer.getUniverseFromOriginTransform( origin );
+				if( parentFromOriginArray )
 				{
-					this.m_currentHand = EHand.Right;
+					this.updateTransform( node.globalId, null, new mat4( parentFromOriginArray ), null );
 				}
-				else
-				{
-					this.m_currentHand = EHand.Invalid;
-				}
+			}
+
+			if ( origin == "/user/hand/left" )
+			{
+				this.m_currentHand = EHand.Left;
+			}
+			else if ( origin == "/user/hand/right" )
+			{
+				this.m_currentHand = EHand.Right;
+			}
+			else
+			{
+				this.m_currentHand = EHand.Invalid;
 			}
 		}
 		else if( origin != null )
@@ -960,6 +1104,14 @@ export class AvDefaultTraverser
 		this.updateTransform( node.globalId, defaultParent, null,
 			( universeFromNode: mat4 ) =>
 		{
+			if( node.flags & ENodeFlags.Remote )
+			{
+				// Remote pokers will do any poking on the
+				// remote side. It's up to the gadget they're poking to
+				// figure out what to do about that.
+				return;
+			}
+			
 			let pokerInUniverse = universeFromNode.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) );
 			Av().renderer.addActivePoker( node.globalId, [ pokerInUniverse.x, pokerInUniverse.y, pokerInUniverse.z ], hand );
 		} );
@@ -1164,6 +1316,12 @@ export class AvDefaultTraverser
 		this.updateTransform( node.globalId, defaultParent, null,
 			( universeFromNode: mat4 ) =>
 		{
+			if( node.flags & ENodeFlags.Remote )
+			{
+				// remote handles aren't active
+				return;
+			}
+
 			switch( node.propVolume.type )
 			{
 				case EVolumeType.Sphere:
@@ -1214,6 +1372,12 @@ export class AvDefaultTraverser
 		this.updateTransform( node.globalId, defaultParent, null,
 			( universeFromNode: mat4 ) =>
 		{
+			if( node.flags & ENodeFlags.Remote )
+			{
+				// remote grabbers aren't active
+				return;
+			}
+
 			switch( node.propVolume.type )
 			{
 				case EVolumeType.Sphere:
@@ -1241,6 +1405,12 @@ export class AvDefaultTraverser
 			if( this.isHookInUse( hookGlobalId ) )
 				return;
 
+			if( node.flags & ENodeFlags.Remote )
+			{
+				// remote hooks can't be dropped on
+				return;
+			}
+			
 			let outerVolumeScale = node.propOuterVolumeScale ? node.propOuterVolumeScale : 1.5;
 			switch( node.propVolume.type )
 			{
@@ -1342,6 +1512,52 @@ export class AvDefaultTraverser
 			} );
 	}
 
+	traverseRemoteUniverse( node: AvNode, defaultParent: PendingTransform )
+	{
+		this.m_currentRemoteUniverse = this.getRemoteUniverse( node.propUniverseName );
+
+		let universeFromRemote = nodeTransformToMat4( node.propTransform );
+		this.updateTransform( node.globalId, null, universeFromRemote, null );
+	}
+
+	traverseRemoteOrigin( node: AvNode, defaultParent: PendingTransform )
+	{
+		if( !this.m_currentRemoteUniverse )
+		{
+			return;
+		}
+
+		let nodeData = this.getNodeData( node );
+		if( !equal( nodeData.transform1, node.propTransform ) )
+		{
+			nodeData.transform0 = nodeData.transform1;
+			nodeData.transform0Time = nodeData.transform1Time;
+			nodeData.transform1 = node.propTransform;
+			nodeData.transform1Time = performance.now();
+		}
+
+		let t:number = 1;
+		if( nodeData.transform0 )
+		{
+			t = ( performance.now() - nodeData.transform1Time ) / 
+				( nodeData.transform1Time - nodeData.transform0Time );
+		}
+		let	outputTransform = lerpAvTransforms( nodeData.transform0, nodeData.transform1, t );
+		let remoteFromOriginTransform = nodeTransformToMat4( outputTransform );
+
+		let remoteFromOrigin = this.m_currentRemoteUniverse.remoteFromOrigin[ node.propOrigin ];
+		if( !remoteFromOrigin )
+		{
+			// we were traversed before anybody that uses us
+			this.m_currentRemoteUniverse.remoteFromOrigin[ node.propOrigin ] = 
+				this.updateTransform( node.globalId, defaultParent, remoteFromOriginTransform, null );
+		}
+		else
+		{
+			remoteFromOrigin.update( [ defaultParent ], remoteFromOriginTransform );
+			this.setTransform( node.globalId, remoteFromOrigin );
+		}
+	}
 
 	@bind
 	public grabEvent( grabEvent: AvGrabEvent )
@@ -1418,8 +1634,11 @@ export class AvDefaultTraverser
 					type: AvGrabEventType.GrabStarted,
 					grabberId: grabEvent.grabberId,
 					grabbableId: grabEvent.grabbableId,
+					grabberFromGrabbable: nodeTransformFromMat4( grabberFromGrabbable ),
 				};
 				this.sendGrabEvent( grabStartedEvent );
+
+				this.m_grabsInProgress.push( endpointAddrToString( grabEvent.grabbableId ) );
 				break;
 
 			case AvGrabEventType.EndGrab:
@@ -1468,6 +1687,13 @@ export class AvDefaultTraverser
 					// we're dropping into open space
 					delete this.m_nodeToNodeAnchors[ endpointAddrToString( grabEvent.grabbableId ) ];
 				}
+
+
+				let nEntry = this.m_grabsInProgress.indexOf( endpointAddrToString( grabEvent.grabbableId ) );
+				if( nEntry != -1 )
+				{
+					this.m_grabsInProgress.splice( nEntry, 1 );
+				}
 			}
 			break;
 
@@ -1494,7 +1720,7 @@ export class AvDefaultTraverser
 		}
 	}
 
-	getTransform( globalNodeId: EndpointAddr  ): PendingTransform
+	getTransform( globalNodeId: EndpointAddr ): PendingTransform
 	{
 		let idStr = endpointAddrToString( globalNodeId );
 		if( idStr == "0" )
@@ -1502,9 +1728,22 @@ export class AvDefaultTraverser
 
 		if( !this.m_universeFromNodeTransforms.hasOwnProperty( idStr ) )
 		{
-			this.m_universeFromNodeTransforms[ idStr ] = new PendingTransform();
+			this.m_universeFromNodeTransforms[ idStr ] = new PendingTransform( idStr );
 		}
 		return this.m_universeFromNodeTransforms[ idStr ];
+	}
+
+	// This is only useful in certain special circumstances where the fact that a 
+	// transform will be needed is known before the endpoint ID of the node that 
+	// will provide the transform is known. You probably want updateTransform(...)
+	setTransform( globalNodeId: EndpointAddr, newTransform: PendingTransform )
+	{
+		let idStr = endpointAddrToString( globalNodeId );
+		if( idStr != "0" )
+		if( !this.m_universeFromNodeTransforms.hasOwnProperty( idStr ) )
+		{
+			this.m_universeFromNodeTransforms[ idStr ] = newTransform;
+		}
 	}
 
 	updateTransform( globalNodeId: EndpointAddr,
@@ -1528,7 +1767,7 @@ export class AvDefaultTraverser
 
 	
 	@bind
-	public onNodeHaptic( messageType: MessageType, m: MsgNodeHaptic  )
+	public onNodeHaptic( m: MsgNodeHaptic  )
 	{
 		let hapticHand = this.m_handDeviceForNode[ endpointAddrToString( m.nodeId ) ];
 		if( hapticHand )

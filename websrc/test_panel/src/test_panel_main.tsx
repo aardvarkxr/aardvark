@@ -11,6 +11,7 @@ interface TestPanelState
 {
 	count: number;
 	grabbableHighlight: HighlightType;
+	inChamber: boolean;
 }
 
 interface TestSettings
@@ -30,6 +31,7 @@ class TestPanel extends React.Component< {}, TestPanelState >
 		{ 
 			count: 0,
 			grabbableHighlight: HighlightType.None,
+			inChamber: false,
 		};
 
 		AvGadget.instance().registerForSettings( this.onSettingsReceived );
@@ -63,6 +65,12 @@ class TestPanel extends React.Component< {}, TestPanelState >
 
 		let newSettings: TestSettings = { count: this.state.count + 1 };
 		AvGadget.instance().saveSettings( newSettings );
+
+	}
+
+	@bind public onJoinChamber()
+	{
+		AvGadget.instance().joinChamber( "charles" );
 	}
 
 	@bind public onHighlightGrabbable( highlight: HighlightType )
@@ -137,8 +145,11 @@ class TestPanel extends React.Component< {}, TestPanelState >
 				</div>
 				<div className="Label">Count: { this.state.count }</div>
 				<div className="Button" onMouseDown={ this.incrementCount }>
-					Click Me!
+					Increment count...
 					</div> 
+				<div className="Button" onMouseDown={ this.onJoinChamber }>
+					Join the "Charles" chamber!
+				</div> 
 				{ this.renderActionStateLabel( EAction.A ) }
 				{ this.renderActionStateLabel( EAction.B ) }
 				{ this.renderActionStateLabel( EAction.Squeeze ) }

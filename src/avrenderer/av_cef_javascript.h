@@ -40,7 +40,7 @@ public:
 	bool hasPermission( const std::string & permission );
 	const std::string getInitialHook() const { return m_initialHook; }
 	void requestStartGadget( const CefString & uri, const CefString & initialHook, const CefString & persistenceUuid, 
-		const aardvark::EndpointAddr_t & epToNotify );
+		const aardvark::EndpointAddr_t & epToNotify, const CefString& remoteUniversePath );
 	void requestUri( const std::string & uri, std::function<void( CUriRequestHandler::Result_t & result ) > callback );
 	void requestTextureInfo();
 	void requestClose();
@@ -59,6 +59,7 @@ private:
 
 	std::string m_gadgetUri;
 	std::string m_initialHook;
+	std::string m_remoteUniversePath;
 	std::unique_ptr<CAardvarkGadgetManifest> m_gadgetManifest;
 	CUriRequestHandler m_uriRequestHandler;
 	bool m_needRunFrame = true;
