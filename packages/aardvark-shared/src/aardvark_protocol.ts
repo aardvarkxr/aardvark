@@ -1,5 +1,5 @@
 import { AvActionState } from './aardvark';
-import { AuthedRequest } from './auth';
+import { AuthedRequest, GadgetAuthedRequest } from './auth';
 
 export const AardvarkPort = 23842;
 
@@ -35,6 +35,8 @@ export enum MessageType
 	UpdateActionState = 311,
 	DestroyGadget = 312,
 	ResourceLoadFailed = 313,
+	SignRequest = 314,
+	SignRequestResponse = 315,
 
 	// System messages
 	GetInstalledGadgets = 400,
@@ -404,14 +406,32 @@ export interface MsgResourceLoadFailed
 	error: string;
 }
 
+export interface MsgSignRequest
+{
+	request: AuthedRequest;
+}
+
+export interface MsgSignRequestResponse
+{
+	request: GadgetAuthedRequest;
+}
+
+export enum ChamberNamespace
+{
+	GadgetClass = 1,
+	GadgetInstance = 2,
+}
+
 export interface MsgRequestJoinChamber
 {
 	chamberId: string; 
+	namespace: ChamberNamespace;
 }
 
 export interface MsgRequestLeaveChamber
 {
 	chamberId: string; 
+	namespace: ChamberNamespace;
 }
 
 // tx, ty, tz, rw, rx, ry, rz
@@ -796,28 +816,28 @@ export function filterActionsForGadget( actionState: AvActionState ): AvActionSt
 	};
 }
 
-export function gadgetDetailsToId( gadgetName: string, gadgetUri: string, gadgetPersistenceUuid: string )
+export function gadgetDetailsToId( gadgetName: string, gadgetUri: string, gadgetPersistenceUuid?: string )
 {
-	let filteredName = gadgetName.replace( /\W/g, "_" ).toLowerCase();
+	let filteredName = ( gadgetName + gadgetUri ).replace( /\W/g, "_" ).toLowerCase();
 	if( filteredName.length > 24 )
 	{
 		filteredName = filteredName.substr( 0, 24 );
 	}
 
-	let keyToHash = gadgetUri + gadgetPersistenceUuid;
-	let hash = 0;
-	for ( let i = 0; i < keyToHash.length; i++) 
+	if( gadgetPersistenceUuid )
 	{
-		let char = keyToHash.charCodeAt(i);
-		hash = ((hash<<5)-hash)+char;
-		hash = hash & hash; // Convert to 32bit integer
+		let keyToHash = gadgetUri + gadgetPersistenceUuid;
+		let hash = 0;
+		for ( let i = 0; i < keyToHash.length; i++) 
+		{
+			let char = keyToHash.charCodeAt(i);
+			hash = ((hash<<5)-hash)+char;
+			hash = hash & hash; // Convert to 32bit integer
+		}
+	
+		filteredName += hash.toString( 16 );
 	}
 
-	return filteredName + hash.toString( 16 );
+	return filteredName;
 }
 
-
-export function chamberIdToPath( gadgetId: string, chamberId: string )
-{
-	return `/aardvark/${ gadgetId }/chamber/${ chamberId }`;
-}
