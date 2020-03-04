@@ -4,7 +4,7 @@ import  * as ReactDOM from 'react-dom';
 import bind from 'bind-decorator';
 
 import { AvGadget, AvTransform, AvPanel, AvGrabbable, HighlightType, GrabResponse, AvSphereHandle } from '@aardvarkxr/aardvark-react';
-import { EndpointAddr, AvGrabEvent, EAction, EHand } from '@aardvarkxr/aardvark-shared';
+import { EndpointAddr, AvGrabEvent, EAction, EHand, ChamberNamespace } from '@aardvarkxr/aardvark-shared';
 
 
 interface TestPanelState
@@ -70,7 +70,7 @@ class TestPanel extends React.Component< {}, TestPanelState >
 
 	@bind public onJoinChamber()
 	{
-		AvGadget.instance().joinChamber( "charles" );
+		AvGadget.instance().joinChamber( "charles", ChamberNamespace.GadgetClass );
 	}
 
 	@bind public onHighlightGrabbable( highlight: HighlightType )

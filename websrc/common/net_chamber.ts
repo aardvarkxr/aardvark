@@ -341,7 +341,8 @@ class Chamber extends ACModel
 	private removeMember( member: ChamberMember )
 	{
 		let index = this.members.indexOf( member );
-		delete this.members[ index ];
+		this.members.splice( index, 1 );
+
 		member.destroy();
 	}
 

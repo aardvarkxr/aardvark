@@ -8,6 +8,12 @@ export interface AuthedRequest
 	signature?: string;
 };
 
+export interface GadgetAuthedRequest extends AuthedRequest
+{
+	gadgetUuid: string;
+	ownerUuid: string;
+};
+
 export function signRequest<T extends AuthedRequest>( request: T , privateKey: string ): T
 {
 	let nonce = Math.random().toString();

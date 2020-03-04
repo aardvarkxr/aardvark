@@ -3,6 +3,10 @@ import * as React from 'react';
 import { Av, AvActionState, EAction, getActionFromState, 
 	MsgUserInfo, Envelope, LocalUserInfo, MsgRequestJoinChamber, MsgRequestLeaveChamber, 
 	AvStartGadgetResult,
+	AuthedRequest,
+	MsgSignRequest,
+	MsgSignRequestResponse,
+	ChamberNamespace,
 } from '@aardvarkxr/aardvark-shared';
 import { IAvBaseNode } from './aardvark_base_node';
 import bind from 'bind-decorator';
@@ -690,11 +694,12 @@ export class AvGadget
 	 * 
 	 * The provided chamber ID will be namespaced with the gadget's name.
 	 */
-	public joinChamber( chamberId: string )
+	public joinChamber( chamberId: string, namespace: ChamberNamespace )
 	{
 		let msg: MsgRequestJoinChamber =
 		{
 			chamberId,
+			namespace,
 		}
 		this.m_endpoint.sendMessage( MessageType.RequestJoinChamber, msg );
 	}
@@ -703,11 +708,12 @@ export class AvGadget
 	 * 
 	 * The provided chamber ID will be namespaced with the gadget's name.
 	 */
-	public leaveChamber( chamberId: string )
+	public leaveChamber( chamberId: string, namespace: ChamberNamespace )
 	{
 		let msg: MsgRequestLeaveChamber =
 		{
 			chamberId,
+			namespace,
 		}
 		this.m_endpoint.sendMessage( MessageType.RequestLeaveChamber, msg );
 	}
@@ -722,6 +728,15 @@ export class AvGadget
 	public sendMessage( type: MessageType, message: object )
 	{
 		this.m_endpoint.sendMessage( type, message );
+	}
+
+	/** Sends a request to the server to be authenticated. */
+	public async signRequest( request: AuthedRequest )
+	{
+		let msgReq: MsgSignRequest = { request };
+		let [ msgRes ] = await this.m_endpoint.sendMessageAndWaitForResponse<MsgSignRequestResponse>( 
+			MessageType.SignRequest, msgReq, MessageType.SignRequestResponse );
+		return msgRes.request;
 	}
 }
 
