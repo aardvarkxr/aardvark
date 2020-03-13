@@ -884,8 +884,10 @@ void VulkanExample::prepareVarggles()
 	descriptorSetLayoutCI.bindingCount = static_cast<uint32_t>( setLayoutBindings.size() );
 	VK_CHECK_RESULT( vkCreateDescriptorSetLayout( device, &descriptorSetLayoutCI, nullptr, &m_vargglesVulkanBindings.descriptorsetlayout) );
 
-	// we will need a pool of 2 image samplers
-	VkDescriptorPoolSize poolSize = { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2 };
+	VkDescriptorPoolSize poolSize = 
+		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
+		, static_cast<uint32_t>(setLayoutBindings.size() * m_vargglesVulkanBindings.descriptorsets.size()) };
+
 	VkDescriptorPoolCreateInfo descriptorPoolCI{};
 	descriptorPoolCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	descriptorPoolCI.poolSizeCount = 1;
@@ -900,8 +902,8 @@ void VulkanExample::prepareVarggles()
 	descriptorSetAllocInfo.pSetLayouts = &m_vargglesVulkanBindings.descriptorsetlayout;
 	descriptorSetAllocInfo.descriptorSetCount = 1;
 
-	// do it for both sets for each render pass
-	std::array<VkWriteDescriptorSet, 2> writeDescriptorSets{};
+	std::vector<VkWriteDescriptorSet> writeDescriptorSets;
+	writeDescriptorSets.resize(setLayoutBindings.size());
 	for(auto& descriptorSet : m_vargglesVulkanBindings.descriptorsets)
 	{ 
 		VK_CHECK_RESULT( vkAllocateDescriptorSets( device, &descriptorSetAllocInfo, &descriptorSet ) );
