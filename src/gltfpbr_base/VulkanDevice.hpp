@@ -205,11 +205,14 @@ namespace vks
 			char rchOpenVRExtensions[4096];
 			uint32_t unBytesNeeded = vr::VRCompositor()->GetVulkanDeviceExtensionsRequired( physicalDevice, rchOpenVRExtensions, sizeof( rchOpenVRExtensions ) );
 			assert( unBytesNeeded < sizeof( rchOpenVRExtensions ) );
-			char *pchTok = strtok( rchOpenVRExtensions, " " );
-			while ( pchTok )
-			{
-				deviceExtensions.push_back( pchTok );
-				pchTok = strtok( nullptr, " " );
+			// guard against tokenizing random char memory when no extensions are required by VrCompositor
+			if (unBytesNeeded > 0) {
+				char *pchTok = strtok(rchOpenVRExtensions, " ");
+				while (pchTok)
+				{
+					deviceExtensions.push_back(pchTok);
+					pchTok = strtok(nullptr, " ");
+				}
 			}
 
 			VkDeviceCreateInfo deviceCreateInfo = {};

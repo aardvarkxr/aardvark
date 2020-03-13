@@ -1,9 +1,10 @@
-import { AardvarkState, StoredGadget, readPersistentState, AvGadgetManifest, AvNodeTransform } from '@aardvarkxr/aardvark-shared';
+import { AardvarkState, StoredGadget, readPersistentState, AvGadgetManifest, AvNodeTransform, LocalUserInfo, signRequest, AuthedRequest } from '@aardvarkxr/aardvark-shared';
 import { v4 as uuid } from 'uuid';
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
-import { buildPersistentHookPath, getJSONFromUri } from './serverutils';
+import { getJSONFromUri } from './serverutils';
+import { buildPersistentHookPath, HookType } from 'common/hook_utils';
 import bind from 'bind-decorator';
 
 
@@ -13,6 +14,8 @@ class CPersistenceManager
 	private m_writeTimer: NodeJS.Timeout = null;
 	private m_pendingFileReload: NodeJS.Timeout = null;
 	private m_lastWriteTime: number = 0;
+	private m_localUserInfo: LocalUserInfo = null;
+	private m_privateKey: string = null;
 
 	constructor()
 	{
@@ -54,7 +57,7 @@ class CPersistenceManager
 		let timeSinceLastWrite = Date.now() - this.m_lastWriteTime;
 		if( !this.m_pendingFileReload && timeSinceLastWrite > 1000 )
 		{
-			this.m_pendingFileReload = setTimeout( ()=>
+			this.m_pendingFileReload = global.setTimeout( ()=>
 			{
 				this.m_pendingFileReload = null;
 				this.reload();
@@ -120,7 +123,7 @@ class CPersistenceManager
 
 	public setGadgetHook( uuid: string, hook: string, hookFromGadget: AvNodeTransform )
 	{
-		let hookPath = buildPersistentHookPath( uuid, hook, hookFromGadget );
+		let hookPath = buildPersistentHookPath( uuid, hook, hookFromGadget, HookType.Hook );
 		this.setGadgetHookPath( uuid, hookPath );
 	}
 
@@ -149,7 +152,7 @@ class CPersistenceManager
 
 	private markDirty()
 	{
-		this.m_writeTimer = setTimeout( () => {
+		this.m_writeTimer = global.setTimeout( () => {
 			this.m_writeTimer = null;
 			this.writeNow();
 		}, 500 );
@@ -196,6 +199,17 @@ class CPersistenceManager
 				}
 			}
 		}
+
+		// create our local user info
+		let key = "PUB" + this.m_state.localUserUuid;
+		let userInfo: LocalUserInfo =
+		{
+			userUuid: this.m_state.localUserUuid,
+			userDisplayName: this.m_state.localUserDisplayName,
+			userPublicKey: key,
+		}
+		this.m_localUserInfo = signRequest( userInfo, key );
+		this.m_privateKey = key;
 	}
 
 
@@ -245,9 +259,20 @@ class CPersistenceManager
 	{
 		return this.m_state.installedGadgets.includes( gadgetUri )
 			|| gadgetUri == "http://localhost:23842/gadgets/aardvark_master"
+			|| gadgetUri == "http://localhost:23842/gadgets/default_hands"
 			|| gadgetUri == "http://localhost:23842/gadgets/gadget_menu";
 	}
 
+	public get localUserInfo() : LocalUserInfo
+	{
+		return this.m_localUserInfo;
+	}
+
+	public signRequest( req: AuthedRequest ): AuthedRequest
+	{
+		return signRequest( req, this.m_privateKey );
+	}
 }
+
 
 export let persistence = new CPersistenceManager();

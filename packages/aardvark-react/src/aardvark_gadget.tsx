@@ -1,6 +1,13 @@
 import * as React from 'react';
 
-import { Av, AvStartGadgetCallback, AvActionState, EAction, getActionFromState } from '@aardvarkxr/aardvark-shared';
+import { Av, AvActionState, EAction, getActionFromState, 
+	MsgUserInfo, Envelope, LocalUserInfo, MsgRequestJoinChamber, MsgRequestLeaveChamber, 
+	AvStartGadgetResult,
+	AuthedRequest,
+	MsgSignRequest,
+	MsgSignRequestResponse,
+	ChamberNamespace,
+} from '@aardvarkxr/aardvark-shared';
 import { IAvBaseNode } from './aardvark_base_node';
 import bind from 'bind-decorator';
 import { CGadgetEndpoint } from './gadget_endpoint';
@@ -14,6 +21,7 @@ import { MessageType, MsgUpdateSceneGraph, EndpointAddr,
 	EHand, MsgResourceLoadFailed,
 	MsgGetInstalledGadgets,
 	MsgGetInstalledGadgetsResponse} from '@aardvarkxr/aardvark-shared';
+import { MessageHandler } from './aardvark_endpoint';
 const equal = require( 'fast-deep-equal' );
 
 
@@ -73,17 +81,21 @@ export class AvGadget
 	m_actualGadgetUri: string = null;
 	m_actionState: { [hand:number]: AvActionState } = {};
 	private m_persistenceUuid: string;
+	private m_remoteUniversePath: string;
 	private m_epToNotify: EndpointAddr = null;
 	private m_firstSceneGraph: boolean = true;
 	private m_mainGrabbable: AvNode = null;
 	private m_mainHandle: AvNode = null;
 	private m_mainGrabbableComponent: IAvBaseNode = null;
 	private m_mainHandleComponent: IAvBaseNode = null;
+	private m_userInfo: LocalUserInfo = null;
+	private m_userInfoListeners: (()=>void)[] = [];
 
 	m_grabEventProcessors: {[nodeId:number]: AvGrabEventProcessor } = {};
 	m_pokerProcessors: {[nodeId:number]: AvPokerHandler } = {};
 	m_panelProcessors: {[nodeId:number]: AvPanelHandler } = {};
-	m_startGadgetCallbacks: {[nodeId:number]: AvStartGadgetCallback } = {};
+	m_startGadgetPromises: {[nodeId:number]: 
+		[ ( res: AvStartGadgetResult ) => void, ( reason: any ) => void ] } = {};
 	m_actionStateListeners: { [listenerId: number] : ActionStateListener } = {}
 
 	constructor()
@@ -101,6 +113,8 @@ export class AvGadget
 		}
 
 		let params = parseURL( window.location.href );
+		this.m_persistenceUuid = params[ "persistenceUuid" ];
+		this.m_remoteUniversePath = params[ "remoteUniversePath" ];
 
 		if( params[ "epToNotify"] )
 		{
@@ -108,9 +122,13 @@ export class AvGadget
 			console.log( "This gadget wants to notify " + endpointAddrToString(this.m_epToNotify ) );
 		}
 
-		this.m_persistenceUuid = params[ "persistenceUuid" ];
+		if( this.m_remoteUniversePath )
+		{
+			console.log( "This gadget is remote from " + this.m_remoteUniversePath );
+		}
+
 		this.m_endpoint = new CGadgetEndpoint( this.m_actualGadgetUri, 
-			params["initialHook"], params[ "persistenceUuid" ], 
+			params["initialHook"], this.m_persistenceUuid, this.m_remoteUniversePath,
 			this.onEndpointOpen );
 	}
 
@@ -130,6 +148,7 @@ export class AvGadget
 		this.m_endpoint.registerHandler( MessageType.MasterStartGadget, this.onMasterStartGadget );
 		this.m_endpoint.registerHandler( MessageType.UpdateActionState, this.onUpdateActionState );
 		this.m_endpoint.registerHandler( MessageType.ResourceLoadFailed, this.onResourceLoadFailed );
+		this.m_endpoint.registerHandler( MessageType.UserInfo, this.onUserInfo );
 
 		if( this.m_onSettingsReceived )
 		{
@@ -190,17 +209,18 @@ export class AvGadget
 	*/
 	public getInstalledGadgets(): Promise< string[] >
 	{
-		let m: MsgGetInstalledGadgets = {};
-		this.m_endpoint.sendMessage( MessageType.GetInstalledGadgets, m );
 		console.log( "Requesting installed gadgets" );
 
 		return new Promise<string[]>( ( resolve, reject ) =>
 		{
-			this.m_endpoint.waitForResponse( MessageType.GetInstalledGadgetsResponse, 
-				( type: MessageType, resp: MsgGetInstalledGadgetsResponse ) =>
-				{
-					resolve( resp.installedGadgets );
-				});
+			let m: MsgGetInstalledGadgets = {};
+			this.m_endpoint.sendMessageAndWaitForResponse<MsgGetInstalledGadgetsResponse>( 
+				MessageType.GetInstalledGadgets, m, 
+				MessageType.GetInstalledGadgetsResponse )
+			.then( ( [ resp, env ]: [ MsgGetInstalledGadgetsResponse, Envelope ]) =>
+			{
+				resolve( resp.installedGadgets );
+			});
 		});
 	}
 
@@ -246,22 +266,29 @@ export class AvGadget
 		return this.m_endpoint.getEndpointId();
 	}
 
-	@bind onGrabEvent( type:MessageType, m: MsgGrabEvent, sender: EndpointAddr, target: EndpointAddr ):void
+	@bind onGrabEvent( m: MsgGrabEvent, env: Envelope ):void
 	{
-		let processor = this.m_grabEventProcessors[ target.nodeId ];
+		let processor = this.m_grabEventProcessors[ env.target.nodeId ];
 		if( processor )
 		{
 			processor( m.event );
 		}
 	}
 
-	@bind onGadgetStarted( type:MessageType, m: MsgGadgetStarted, sender: EndpointAddr, target: EndpointAddr ):void
+	@bind onGadgetStarted( m: MsgGadgetStarted, env: Envelope ):void
 	{
-		let processor = this.m_startGadgetCallbacks[ target.nodeId ];
+		let processor = this.m_startGadgetPromises[ env.target.nodeId ];
 		if( processor )
 		{
-			processor( true, m.mainGrabbableGlobalId, m.mainHandleGlobalId );
-			delete this.m_startGadgetCallbacks[ target.nodeId ];
+			processor[0](
+				{
+					success: true,
+					startedGadgetEndpointId: m.startedGadgetEndpointId,
+					mainGrabbableGlobalId: m.mainGrabbableGlobalId,
+					mainHandleId: m.mainHandleGlobalId,
+				}
+			);
+			delete this.m_startGadgetPromises[ env.target.nodeId ];
 		}
 	}
 
@@ -271,9 +298,9 @@ export class AvGadget
 	}
 
 
-	@bind private onPokerProximity( type:MessageType, m: MsgPokerProximity, sender: EndpointAddr, target: EndpointAddr )
+	@bind private onPokerProximity( m: MsgPokerProximity, env: Envelope )
 	{
-		let processor = this.m_pokerProcessors[ target.nodeId ];
+		let processor = this.m_pokerProcessors[ env.target.nodeId ];
 		if( processor )
 		{
 			processor( m.actionState.grab, m.panels );
@@ -300,21 +327,21 @@ export class AvGadget
 		this.m_endpoint.sendMessage( MessageType.MouseEvent, msg );
 	}
 
-	@bind private onMouseEvent( type:MessageType, m: MsgMouseEvent, sender: EndpointAddr, target: EndpointAddr )
+	@bind private onMouseEvent( m: MsgMouseEvent, env: Envelope  )
 	{
-		let processor = this.m_panelProcessors[ target.nodeId ];
+		let processor = this.m_panelProcessors[ env.target.nodeId ];
 		if( processor )
 		{
 			processor( m.event );
 		}
 	}
 
-	@bind private onMasterStartGadget( type: MessageType, m: MsgMasterStartGadget )
+	@bind private onMasterStartGadget( m: MsgMasterStartGadget )
 	{
 		Av().startGadget( m.uri, m.initialHook, m.persistenceUuid, null );
 	}
 
-	@bind private onResourceLoadFailed( type: MessageType, m: MsgResourceLoadFailed )
+	@bind private onResourceLoadFailed( m: MsgResourceLoadFailed )
 	{
 		console.error( `Resource load failed for ${ endpointAddrToString( m.nodeId ) }.`
 			+ ` uri=${ m.resourceUri } error=${ m.error }` );
@@ -348,7 +375,7 @@ export class AvGadget
 		delete this.m_actionStateListeners[ handle ];
 	}
 
-	@bind private onUpdateActionState( type: MessageType, m: MsgUpdateActionState )
+	@bind private onUpdateActionState( m: MsgUpdateActionState, env: Envelope )
 	{
 		let oldState = this.m_actionState[ m.hand ];
 		let newState = m.actionState;
@@ -507,6 +534,7 @@ export class AvGadget
 				let msgStarted: MsgGadgetStarted = 
 				{
 					epToNotify: this.m_epToNotify,
+					startedGadgetEndpointId: this.m_endpoint.getEndpointId(),
 				}
 
 				if( this.m_mainGrabbable && this.m_mainHandle )
@@ -551,22 +579,23 @@ export class AvGadget
 		this.m_endpoint.sendMessage( MessageType.NodeHaptic, msg );
 	}
 
-	public startGadget( uri: string, initialHook: string, callback: AvStartGadgetCallback )
+	public startGadget( uri: string, initialHook: string, remoteUniverse?: string,
+		persistenceUuid?: string ) : 
+		Promise<AvStartGadgetResult>
 	{
-		let epToNotify: EndpointAddr = null;
-		if( callback )
+		return new Promise( ( resolve, reject ) =>
 		{
 			let notifyNodeId = this.m_nextNodeId++;
-			this.m_startGadgetCallbacks[ notifyNodeId ] = callback;
+			this.m_startGadgetPromises[ notifyNodeId ] = [ resolve, reject ];
 
-			epToNotify = 
+			let epToNotify: EndpointAddr = 
 			{
 				type: EndpointType.Node,
 				endpointId: this.m_endpoint.getEndpointId(),
 				nodeId: notifyNodeId,
 			}
-		}
-		Av().startGadget( uri, initialHook, "", epToNotify );
+			Av().startGadget( uri, initialHook, persistenceUuid ?? "", epToNotify, remoteUniverse );
+		} );
 	} 
 
 	/** Persists the gadget's settings. These weill be passed to the gadget 
@@ -624,6 +653,90 @@ export class AvGadget
 			endpointId: this.getEndpointId(),
 			nodeId: nodeId,
 		}
+	}
+
+	@bind
+	private onUserInfo( msg: MsgUserInfo )
+	{
+		this.m_userInfo = msg.info;
+		if( this.m_userInfoListeners )
+		{
+			for( let listener of this.m_userInfoListeners )
+			{
+				listener();
+			}
+		}
+	}
+
+	/** Adds a listener for user info updates */
+	public addUserInfoListener( fn: ()=>void ) 
+	{
+		this.m_userInfoListeners.push( fn );
+	}
+
+	/** Removes a listener for user info updates */
+	public removeUserInfoListener( fn: ()=>void ) 
+	{
+		let i = this.m_userInfoListeners.findIndex( fn );
+		if( i != -1 )
+		{
+			this.m_userInfoListeners.splice( i, 1 );
+		}
+	}
+
+	/** Returns the local user's uuid. */
+	public get localUserInfo() : LocalUserInfo
+	{
+		return this.m_userInfo;
+	}
+
+	/** Asks to join a chamber on the user's behalf. This gadget must have the "chamber" permission.
+	 * 
+	 * The provided chamber ID will be namespaced with the gadget's name.
+	 */
+	public joinChamber( chamberId: string, namespace: ChamberNamespace )
+	{
+		let msg: MsgRequestJoinChamber =
+		{
+			chamberId,
+			namespace,
+		}
+		this.m_endpoint.sendMessage( MessageType.RequestJoinChamber, msg );
+	}
+
+	/** Asks to leave a chamber on the user's behalf. This gadget must have the "chamber" permission.
+	 * 
+	 * The provided chamber ID will be namespaced with the gadget's name.
+	 */
+	public leaveChamber( chamberId: string, namespace: ChamberNamespace )
+	{
+		let msg: MsgRequestLeaveChamber =
+		{
+			chamberId,
+			namespace,
+		}
+		this.m_endpoint.sendMessage( MessageType.RequestLeaveChamber, msg );
+	}
+
+	/** Adds a handler for a raw Aardvark message. You probably don't need this. */
+	public registerMessageHandler( type: MessageType, handler: MessageHandler )
+	{
+		this.m_endpoint.registerHandler( type, handler );
+	}
+
+	/** Sends a message to the server. You probably don't need this either. */
+	public sendMessage( type: MessageType, message: object )
+	{
+		this.m_endpoint.sendMessage( type, message );
+	}
+
+	/** Sends a request to the server to be authenticated. */
+	public async signRequest( request: AuthedRequest )
+	{
+		let msgReq: MsgSignRequest = { request };
+		let [ msgRes ] = await this.m_endpoint.sendMessageAndWaitForResponse<MsgSignRequestResponse>( 
+			MessageType.SignRequest, msgReq, MessageType.SignRequestResponse );
+		return msgRes.request;
 	}
 }
 

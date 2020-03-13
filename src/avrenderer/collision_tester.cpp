@@ -236,7 +236,6 @@ std::vector<GrabberCollisionState_t> CCollisionTester::updateGrabberIntersection
 			if( inner || outer )
 			{
 				grabberState.hooks.push_back( { hook.globalHookId, inner ? EHookVolume::Inner : EHookVolume::Outer } );
-				break;
 			}
 		}
 

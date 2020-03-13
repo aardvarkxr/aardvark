@@ -1,4 +1,5 @@
 import { AvNodeTransform } from './aardvark_protocol';
+import { v4 as uuid } from 'uuid';
 
 interface GadgetPersistence
 {
@@ -13,13 +14,15 @@ export interface StoredGadget
 	uuid: string;
 }
 
-const AardvarkStateFormat = 2;
+const AardvarkStateFormat = 3;
 
 export interface AardvarkState
 {
 	format: number;
 	activeGadgets: { [uuid:string]: GadgetPersistence };
 	installedGadgets: string[];
+	localUserUuid: string;
+	localUserDisplayName: string;
 }
 
 
@@ -36,13 +39,55 @@ export function getStandardPersistencePath(): string
 	return path.join( getStandardAardvarkPath(), "state.json" );
 }
 
+const firstNames = 
+[
+	"Green",
+	"Blue",
+	"Red", 
+	"Orange",
+	"Teal",
+	"Purple",
+	"Pink",
+	"Yellow",
+	"Black",
+	"White",
+	"Brown",
+	"Beige"
+];
+
+const lastNames =
+[
+	"Apple",
+	"Banana",
+	"Lemon",
+	"Pineapple",
+	"Coconut",
+	"Lime",
+	"Kiwi",
+	"Pear",
+	"Cherry",
+	"Strawberry",
+	"Grape",
+	"Mango"
+];
+
+
+function generateRandomName( ):string
+{
+	let firstIndex = Math.floor( Math.random() * firstNames.length );
+	let lastIndex = Math.floor( Math.random() * lastNames.length );
+	return `${ firstNames[ firstIndex ] } ${ lastNames[ lastIndex ] }`;
+}
+
 export function v1ToV2( from: AardvarkState ): AardvarkState
 {
 	let to: AardvarkState = 
 	{ 
 		format: 2,
 		activeGadgets: from.activeGadgets,
-		installedGadgets: [] 
+		installedGadgets: [],
+		localUserUuid: uuid(),
+		localUserDisplayName: generateRandomName(),
 	};
 
 	for( let installed of from.installedGadgets )
@@ -62,9 +107,9 @@ export function readPersistentState( path: string ): AardvarkState
 		let previousState = fs.readFileSync( path, 'utf8' );
 		let state:AardvarkState = JSON.parse( previousState );
 
-		if( state.format == 1 )
+		if( state.format == 1 || state.format == 2 )
 		{
-			state = v1ToV2( state );
+			throw `Stored state ${state.format} is no longer supported.`;
 		}
 
 		if( state.format != AardvarkStateFormat )
@@ -78,8 +123,13 @@ export function readPersistentState( path: string ): AardvarkState
 			state.activeGadgets[ "gadget_menu" ]=
 			{
 				uri: "http://localhost:23842/gadgets/gadget_menu",
-				hookPath: "/gadget/master/left_hand",
+				hookPath: "/gadget/hands/left_hand",
 			};
+		}
+
+		if( !state.localUserDisplayName )
+		{
+			state.localUserDisplayName = generateRandomName();
 		}
 
 		console.log( `Read state from ${ path } for `
@@ -88,18 +138,17 @@ export function readPersistentState( path: string ): AardvarkState
 	}
 	catch( e )
 	{
-		console.log( "Failed to read state file. Using default start" );
+		console.log( `Failed to read state file because ${ e } Using default start` );
 
 		let state =
 		{
 			format: AardvarkStateFormat,
 			activeGadgets: 
 			{
-				"master" : { uri: "http://localhost:23842/gadgets/aardvark_master" },
 				"gadget_menu" :
 				{
 					uri: "http://localhost:23842/gadgets/gadget_menu",
-					hookPath: "/gadget/master/left_hand",
+					hookPath: "/gadget/hands/left_hand",
 				},
 			},
 			installedGadgets: 
@@ -107,6 +156,8 @@ export function readPersistentState( path: string ): AardvarkState
 				"http://localhost:23842/gadgets/test_panel",
 				"http://localhost:23842/gadgets/control_test",
 			],
+			localUserUuid: uuid(),
+			localUserDisplayName: generateRandomName(),
 		}
 		return state;
 	}

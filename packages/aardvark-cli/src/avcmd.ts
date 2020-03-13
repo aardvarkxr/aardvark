@@ -70,6 +70,17 @@ program
 	})
 	
 program
+	.command( "setname [displayName]" )
+	.action( ( newName: string ) =>
+	{
+		let persistencePath = getStandardPersistencePath();
+		let state = readPersistentState(persistencePath);
+		state.localUserDisplayName = newName;
+		logger.info(`writing state to ${persistencePath}`);
+		writePersistentState(state, persistencePath);
+	})
+	
+program
 	.command( "list" )
 	.action( ( ) =>
 	{
@@ -109,6 +120,9 @@ program
 				}
 			}
 		}
+
+		logger.info( `UUID: ${ state.localUserUuid }` );
+		logger.info( `Display Name: ${ state.localUserDisplayName }` );
 		showHelp = false;
 	})
 	

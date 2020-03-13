@@ -291,7 +291,7 @@ export class AvTransformControl extends React.Component< TransformControlProps, 
 		return (	
 			<AvGrabbable onTransformUpdated={ this.onTransformUpdated } 
 				preserveDropTransform={ true } initialTransform={ this.props.initialTransform }
-				updateHighlight={ this.onUpdateHighlight } >
+				updateHighlight={ this.onUpdateHighlight } showGrabIndicator={ false }>
 				{ this.renderTranslate() }
 				{ this.renderGeneral() }
 				{ this.props.children }

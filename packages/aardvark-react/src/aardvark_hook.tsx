@@ -76,6 +76,10 @@ interface AvHookProps extends AvBaseNodeProps
 	 * @default 1.5
 	 */
 	outerVolumeScale?: number;
+
+	/** The model to show as an icon when this hook is the drop point for the grabbable.
+	 */
+	dropIconUri: string;
 }
 
 
@@ -104,7 +108,8 @@ export class AvHook extends AvBaseNode< AvHookProps, {} >
 		}
 		
 		node.propOuterVolumeScale = this.props.outerVolumeScale;
-
+		node.propModelUri = this.props.dropIconUri;
+		
 		if( this.props.xMin || this.props.xMax 
 			|| this.props.yMin || this.props.yMax 
 			|| this.props.zMin || this.props.zMax )

@@ -65,7 +65,8 @@ export class AvGrabButton extends React.Component< GrabButtonProps, GrabButtonSt
 	public render()
 	{
 		return <div>
-				<AvGrabbable updateHighlight={ this.updateHighlight } onGrabRequest={ this.onGrabRequest }>
+				<AvGrabbable updateHighlight={ this.updateHighlight } onGrabRequest={ this.onGrabRequest }
+					showGrabIndicator={ false }>
 					{ this.props.radius 
 						&& <AvSphereHandle radius={ this.props.radius ? this.props.radius : 0.1 } /> }
 					{ !this.props.radius && this.props.modelUri

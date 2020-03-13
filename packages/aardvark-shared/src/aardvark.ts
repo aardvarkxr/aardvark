@@ -1,7 +1,9 @@
 import { AvGadgetManifest, AvPanelMouseEventType, EndpointAddr, 
 	MsgGrabberState, MsgPokerProximity, AvSharedTextureInfo, 
 	EHand, 
-	AABB as Aabb} from './aardvark_protocol';
+	AABB as Aabb,
+	Permission
+} from './aardvark_protocol';
 
 export interface AvTraversalRenderer
 {
@@ -65,9 +67,12 @@ interface AvRenderer
 	getActionState( hand: EHand ): AvActionState;
 }
 
-export interface AvStartGadgetCallback
+export interface AvStartGadgetResult
 {
-	(success: boolean, mainGrabbableGlobalId: EndpointAddr, mainHandleId: EndpointAddr ) : void;
+	success: boolean;
+	startedGadgetEndpointId: number;
+	mainGrabbableGlobalId: EndpointAddr;
+	mainHandleId: EndpointAddr;
 }
 
 export interface AvGadgetManifestCallback
@@ -83,12 +88,15 @@ export interface AvBrowserTextureCallback
 
 export interface Aardvark
 {
+	hasPermission( permission: Permission ): boolean;
+
 	// requires scenegraph permissions
 	subscribeToBrowserTexture( callback: AvBrowserTextureCallback ): void;
 	spoofMouseEvent( type:AvPanelMouseEventType, x: number, y: number ): void;
 
 	// requires master permissions
-	startGadget( uri: string, initialHook: string, persistenceUuid: string, epToNotify: EndpointAddr ): void;
+	startGadget( uri: string, initialHook: string, persistenceUuid: string, epToNotify: EndpointAddr, 
+		remoteUniversePath?: string ): void;
 	getGadgetManifest( uri: string, callback: AvGadgetManifestCallback ): void;
 
 	/** Destroys the current browser. */
