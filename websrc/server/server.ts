@@ -978,6 +978,11 @@ class CGadgetData
 
 	public joinChamber( chamberId: string, namespace: ChamberNamespace )
 	{
+		if( namespace == undefined )
+		{
+			namespace = ChamberNamespace.GadgetInstance;
+		}
+		
 		let req: MsgActuallyJoinChamber =
 		{
 			chamberPath: this.computeChamberPath( chamberId, namespace ),
