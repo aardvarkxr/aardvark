@@ -377,14 +377,15 @@ class Chamber extends ACModel
 
 	private cleanupIdleMembers()
 	{
-		// let expirationTime = this.callNow() - 5 * 60 * 1000;
-		// for( let member of this.members )
-		// {
-		// 	if( member.lastPoseTime < expirationTime )
-		// 	{
-		// 		this.removeMember( member );
-		// 	}
-		// }
+		let expirationTime = this.callNow() - 5 * 60 * 1000;
+		for( let member of this.members )
+		{
+			if( member.lastPoseTime < expirationTime )
+			{
+				console.log( `Should have removed idle member ${ member.id } but didn't` );
+				// this.removeMember( member );
+			}
+		}
 	}
 }
 
@@ -502,6 +503,11 @@ export class ChamberView extends ACView implements ChamberSubscription
 	public onGadgetUpdated( args: GadgetUpdatedArgs )
 	{
 		let chamberMember = this.chamber.findMember( args.userUuid );
+		if( !chamberMember )
+		{
+			console.log( "Received GadgetUpdated for user that the view doesn't know about." );
+			return;
+		}
 		let chamberGadget = chamberMember.findGadget( args.gadgetPersistenceUuid );
 
 		for( let handler of this.gadgetHookUpdateHandlers )
