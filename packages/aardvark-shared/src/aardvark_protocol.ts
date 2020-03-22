@@ -55,6 +55,7 @@ export enum MessageType
 	RemoveGadgetFromChambers = 507,  // sent to master to update the chamber
 	UpdateChamberGadgetHook = 508, // Updates the hook field of a gadget on all chambers
 	ChamberGadgetHookUpdated = 509, // Sent by master when a remote gadget's hook updates
+	ChamberMemberListUpdated = 510, // Sent by master when a remote gadget's member list updates
 }
 
 export enum WebSocketCloseCodes
@@ -496,6 +497,13 @@ export interface MsgChamberGadgetHookUpdated
 	newHook?: string;
 }
 
+export interface MsgChamberMemberListUpdated
+{
+	chamberPath: string;
+	chamberId?: string; // This will be filled in by the server on the way to the gadget
+	members: string[];
+}
+
 export interface PokerProximity
 {
 	panelId: EndpointAddr;
@@ -524,6 +532,8 @@ export enum AvNodeType
 	HeadFacingTransform = 13,
 	RemoteUniverse = 14,
 	RemoteOrigin = 15,
+	Chamber = 16,
+	ChamberMember = 17,
 }
 
 
@@ -706,6 +716,10 @@ export interface AvNode
 
 	propOrigin?: string;
 	propUniverseName?: string;
+	propChamberId?: string;
+	propChamberNamespace?: ChamberNamespace;
+	propChamberPath?: string;
+	propChamberMemberUuid?: string;
 	propTransform?: AvNodeTransform;
 	propModelUri?: string;
 	propVolume?: AvVolume;

@@ -1,4 +1,4 @@
-import { CAardvarkEndpoint, MessageHandler, OpenHandler } from './aardvark_endpoint';
+import { CAardvarkEndpoint, MessageHandler, OpenHandler, AsyncMessageHandler } from './aardvark_endpoint';
 import { MsgSetEndpointType, MessageType, EndpointType } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 
@@ -11,7 +11,7 @@ export class CGadgetEndpoint extends CAardvarkEndpoint
 	private m_remoteUniversePath: string;
 
 	constructor( gadgetUri: string, initialHook: string, persistenceUuid: string, remoteUniversePath: string,
-		openHandler: OpenHandler, defaultHandler: MessageHandler = null )
+		openHandler: OpenHandler, defaultHandler: AsyncMessageHandler = null )
 	{
 		super( () => { this.onOpen() }, openHandler, defaultHandler );
 		this.allowReconnect();

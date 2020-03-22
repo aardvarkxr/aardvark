@@ -98,6 +98,7 @@ module.exports =
 	createConfig( 'test_panel', 'Test Panel', 'tsx' ),
 	createConfig( 'gadget_installer', 'Gadget Installer', 'tsx' ),
 	createConfig( 'gadget_menu', 'Gadget Menu', 'tsx' ),
+	createConfig( 'simple_social', 'Simple Social', 'tsx' ),
 	createConfig( 'control_test', 'Control Tester', 'tsx' ),
 	{
 		target: "node",

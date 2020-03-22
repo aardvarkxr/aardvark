@@ -137,6 +137,8 @@ class ChamberMember extends ACModel implements ChamberMemberInfo
 
 		this.m_gadgets[ gadgetOptions.persistenceUuid ] = ChamberGadget.createT( gadgetOptions );
 
+		console.log( `member.addGadget ${ sharedGadget.gadgetUri }`)
+
 		this.sendGadgetListUpdate();
 	}
 
@@ -323,6 +325,8 @@ class Chamber extends ACModel
 		};
 
 		this.members.push( ChamberMember.create( userOptions ) as ChamberMember );
+
+		console.log( "sending member_joined" );
 		this.publish( this.id, "member_joined", args.userUuid );
 	
 		this.cleanupIdleMembers();
@@ -341,7 +345,11 @@ class Chamber extends ACModel
 	private removeMember( member: ChamberMember )
 	{
 		let index = this.members.indexOf( member );
-		this.members.splice( index, 1 );
+		if( index != -1 )
+		{
+			this.members.splice( index, 1 );
+			this.publish( this.id, "member_left", member.uuid );			
+		}
 
 		member.destroy();
 	}
@@ -406,6 +414,11 @@ export interface GadgetListUpdateHandler
 	( chamber: ChamberSubscription, member: ChamberMemberInfo ): void;
 }
 
+export interface ChamberMemberListUpdateHandler
+{
+	( chamber: ChamberSubscription ): void;
+}
+
 export interface ChamberSubscription
 {
 	readonly chamberPath: string;
@@ -415,6 +428,8 @@ export interface ChamberSubscription
 	updatePose( args: MsgUpdatePose ): void;
 	addPoseHandler( fn: PoseUpdateHandler ): void;
 	removePoseHandler( fn: PoseUpdateHandler ): void;
+	addChamberMemberListUpdateHandler( fn: ChamberMemberListUpdateHandler ): void;
+	removeChamberMemberListUpdateHandler( fn: ChamberMemberListUpdateHandler ): void;
 	removeAllPoseHandlers(): void;
 	addGadget( m: MsgAddGadgetToChambers ): void;
 	removeGadget( m: MsgRemoveGadgetFromChambers): void;
@@ -430,6 +445,7 @@ export class ChamberView extends ACView implements ChamberSubscription
 {
 	private chamber: Chamber;
 	private poseHandlers: PoseUpdateHandler[] = [];
+	private memberListHandlers: ChamberMemberListUpdateHandler[] = [];
 	private gadgetHookUpdateHandlers: GadgetUpdateHandler[] = [];
 	private gadgetListUpdateHandlers: GadgetListUpdateHandler[] = [];
 
@@ -440,6 +456,8 @@ export class ChamberView extends ACView implements ChamberSubscription
 		this.subscribe( chamber.id, "poseUpdated", this.onPoseUpdated );
 		this.subscribe( chamber.id, "gadgetUpdated", this.onGadgetUpdated );
 		this.subscribe( chamber.id, "gadgetListUpdated", this.onGadgetListUpdated );
+		this.subscribe( chamber.id, "member_joined", this.onMemberListUpdated );
+		this.subscribe( chamber.id, "member_left", this.onMemberListUpdated );
 	}
 
 	public get chamberPath(): string
@@ -479,6 +497,7 @@ export class ChamberView extends ACView implements ChamberSubscription
 
 	public addGadget( args: MsgAddGadgetToChambers ): void
 	{
+		console.log( `View.addGadget ${ args.gadget.gadgetUri }`)
 		this.publish( this.chamber.id, "addGadget", args );
 	}
 
@@ -497,6 +516,15 @@ export class ChamberView extends ACView implements ChamberSubscription
 		for( let handler of this.poseHandlers )
 		{
 			handler( this, args );
+		}
+	}
+
+	public onMemberListUpdated( userUuid: string )
+	{
+		console.log( "onMemberListUpdated" )
+		for( let handler of this.memberListHandlers )
+		{
+			handler( this );
 		}
 	}
 
@@ -536,6 +564,20 @@ export class ChamberView extends ACView implements ChamberSubscription
 		if( handlerIndex != -1 )
 		{
 			this.poseHandlers.splice( handlerIndex, 1 );
+		}
+	}
+
+	public addChamberMemberListUpdateHandler( fn: ChamberMemberListUpdateHandler ): void
+	{
+		this.memberListHandlers.push( fn );
+	}
+
+	public removeChamberMemberListUpdateHandler( fn: ChamberMemberListUpdateHandler ): void
+	{
+		let handlerIndex = this.memberListHandlers.indexOf( fn );
+		if( handlerIndex != -1 )
+		{
+			this.memberListHandlers.splice( handlerIndex, 1 );
 		}
 	}
 

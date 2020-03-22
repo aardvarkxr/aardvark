@@ -7,6 +7,8 @@ import { Av, AvActionState, EAction, getActionFromState,
 	MsgSignRequest,
 	MsgSignRequestResponse,
 	ChamberNamespace,
+	MsgChamberMemberListUpdated,
+	AvNodeTransform,
 } from '@aardvarkxr/aardvark-shared';
 import { IAvBaseNode } from './aardvark_base_node';
 import bind from 'bind-decorator';
@@ -21,7 +23,7 @@ import { MessageType, MsgUpdateSceneGraph, EndpointAddr,
 	EHand, MsgResourceLoadFailed,
 	MsgGetInstalledGadgets,
 	MsgGetInstalledGadgetsResponse} from '@aardvarkxr/aardvark-shared';
-import { MessageHandler } from './aardvark_endpoint';
+import { MessageHandler, AsyncMessageHandler } from './aardvark_endpoint';
 const equal = require( 'fast-deep-equal' );
 
 
@@ -64,6 +66,16 @@ interface ActionStateListener
 	falling?: () => void;
 }
 
+export interface ChamberMemberListHandler
+{
+	( chamberId: string, members: string[] ): void;
+}
+
+interface GadgetChamberDetails
+{
+	memberHandler: ChamberMemberListHandler;
+	showSelf: boolean;
+}
 
 /** The singleton gadget object for the browser. */
 export class AvGadget
@@ -96,7 +108,8 @@ export class AvGadget
 	m_panelProcessors: {[nodeId:number]: AvPanelHandler } = {};
 	m_startGadgetPromises: {[nodeId:number]: 
 		[ ( res: AvStartGadgetResult ) => void, ( reason: any ) => void ] } = {};
-	m_actionStateListeners: { [listenerId: number] : ActionStateListener } = {}
+	m_actionStateListeners: { [listenerId: number] : ActionStateListener } = {};
+	m_chamberMemberListHandler: { [ chamberId: string ]: GadgetChamberDetails } = {};
 
 	constructor()
 	{
@@ -149,7 +162,8 @@ export class AvGadget
 		this.m_endpoint.registerHandler( MessageType.UpdateActionState, this.onUpdateActionState );
 		this.m_endpoint.registerHandler( MessageType.ResourceLoadFailed, this.onResourceLoadFailed );
 		this.m_endpoint.registerHandler( MessageType.UserInfo, this.onUserInfo );
-
+		this.m_endpoint.registerHandler( MessageType.ChamberMemberListUpdated, 
+			this.onChamberMemberListUpdated );
 		if( this.m_onSettingsReceived )
 		{
 			this.m_onSettingsReceived( settings );
@@ -694,7 +708,8 @@ export class AvGadget
 	 * 
 	 * The provided chamber ID will be namespaced with the gadget's name.
 	 */
-	public joinChamber( chamberId: string, namespace: ChamberNamespace )
+	public joinChamber( chamberId: string, namespace: ChamberNamespace, 
+		memberListHandler: ChamberMemberListHandler, showSelf?: boolean )
 	{
 		let msg: MsgRequestJoinChamber =
 		{
@@ -702,6 +717,12 @@ export class AvGadget
 			namespace,
 		}
 		this.m_endpoint.sendMessage( MessageType.RequestJoinChamber, msg );
+
+		this.m_chamberMemberListHandler[ chamberId ] =
+		{
+			memberHandler: memberListHandler,
+			showSelf: showSelf ?? false,
+		};
 	}
 
 	/** Asks to leave a chamber on the user's behalf. This gadget must have the "chamber" permission.
@@ -716,12 +737,26 @@ export class AvGadget
 			namespace,
 		}
 		this.m_endpoint.sendMessage( MessageType.RequestLeaveChamber, msg );
+
+		delete this.m_chamberMemberListHandler[ chamberId ];
+	}
+
+	@bind
+	private onChamberMemberListUpdated( m: MsgChamberMemberListUpdated )
+	{
+		this.m_chamberMemberListHandler[ m.chamberId ]?.memberHandler(m.chamberId, m.members );
 	}
 
 	/** Adds a handler for a raw Aardvark message. You probably don't need this. */
 	public registerMessageHandler( type: MessageType, handler: MessageHandler )
 	{
 		this.m_endpoint.registerHandler( type, handler );
+	}
+
+	/** Adds an asynchronous handler for a raw Aardvark message. You probably don't need this. */
+	public registerAsyncMessageHandler( type: MessageType, handler: AsyncMessageHandler )
+	{
+		this.m_endpoint.registerAsyncHandler( type, handler );
 	}
 
 	/** Sends a message to the server. You probably don't need this either. */

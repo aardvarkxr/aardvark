@@ -19,7 +19,6 @@ function minimalToAvNodeTransform( minimal: MinimalPose ): AvNodeTransform
 interface AvRemoteUniverseProps extends AvBaseNodeProps
 {
 	universe: string;
-	chamberFromRemote: MinimalPose;
 }
 
 class AvRemoteUniverse extends AvBaseNode< AvRemoteUniverseProps, {} >
@@ -28,7 +27,6 @@ class AvRemoteUniverse extends AvBaseNode< AvRemoteUniverseProps, {} >
 	{
 		let node = this.createNodeObject( AvNodeType.RemoteUniverse, this.m_nodeId );
 		node.propUniverseName = this.props.universe;
-		node.propTransform = minimalToAvNodeTransform( this.props.chamberFromRemote );
 		return node;
 	}
 }
@@ -95,14 +93,8 @@ export function ChamberMemberPoses( props: ChamberPosesProps )
 		);
 	}
 
-	let rot = Quaternion.fromAxisAngle( [ 0, 1, 0 ], Math.PI );
-
-	// let transform: MinimalPose = [ 0, 0.5, 0, 1, 0, 0, 0 ];
-	let transform: MinimalPose = [ 0, 0.0, 1.5, rot.w, rot.x, rot.y, rot.z ];
-
 	let universePath = props.chamber.chamberPath + "/" + props.member.uuid;
-	return <AvRemoteUniverse key={ universePath } universe={ universePath }
-		chamberFromRemote={ transform }>
+	return <AvRemoteUniverse key={ universePath } universe={ universePath } >
 		{ origins }
 	</AvRemoteUniverse>
 }

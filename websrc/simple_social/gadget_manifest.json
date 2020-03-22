@@ -1,0 +1,8 @@
+{
+	"name" : "Simple Social",
+	"permissions" : [ "scenegraph", "chamber" ],
+	"width": 1024,
+	"height": 1024,
+	"model" : "http://localhost:23842/models/head.glb",
+	"shareInChamber": false
+}

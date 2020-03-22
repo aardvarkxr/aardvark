@@ -7,7 +7,12 @@ import { ENFILE } from 'constants';
 
 export interface MessageHandler
 {
-	( payload: any, env: Envelope ):void;
+	( payload: any, env: Envelope ): void;
+}
+
+export interface AsyncMessageHandler
+{
+	( payload: any, env: Envelope ): Promise<void>;
 }
 
 export interface OpenHandler
@@ -27,7 +32,8 @@ export class CAardvarkEndpoint
 {
 	private m_ws:WebSocket = null;
 	private m_handlers: { [ msgType: number ]: MessageHandler } = {};
-	private m_defaultHandler: MessageHandler = null;
+	private m_asyncHandlers: { [ msgType: number ]: AsyncMessageHandler } = {};
+	private m_defaultHandler: AsyncMessageHandler = null;
 	private m_realOpenHandler: OpenHandler = null;
 	private m_handshakeComplete: OpenHandler = null;
 	private m_endpointId: number = null;
@@ -44,7 +50,7 @@ export class CAardvarkEndpoint
 		
 	} = {};
 
-	constructor( openHandler: OpenHandler, handshakeComplete: OpenHandler, defaultHandler: MessageHandler = null )
+	constructor( openHandler: OpenHandler, handshakeComplete: OpenHandler, defaultHandler: AsyncMessageHandler = null )
 	{
 		this.m_defaultHandler = defaultHandler;
 		this.m_realOpenHandler = openHandler;
@@ -86,7 +92,35 @@ export class CAardvarkEndpoint
 		this.m_handlers[ type ] = handler;
 	}
 
-	@bind onMessage( msgEvent: MessageEvent )
+	public registerAsyncHandler( type: MessageType, handler: AsyncMessageHandler )
+	{
+		this.m_asyncHandlers[ type ] = handler;
+	}
+
+	private m_messageInProgress = false;
+	private m_waitingIncomingMessages: MessageEvent[] = [];
+	@bind async onMessage( msgEvent: MessageEvent )
+	{
+		if( this.m_messageInProgress )
+		{
+			// process this event when whatever is currently being processed returns
+			this.m_waitingIncomingMessages.push( msgEvent );
+		}
+		else
+		{
+			this.m_messageInProgress = true;
+			await this.processMessageInternal( msgEvent );
+			
+			while( this.m_waitingIncomingMessages.length > 0 )
+			{
+				let nextEvent = this.m_waitingIncomingMessages.shift();
+				await this.processMessageInternal( nextEvent );
+			}
+			this.m_messageInProgress = false;
+		}
+	}
+
+	private async processMessageInternal( msgEvent: MessageEvent )
 	{
 		let env = parseEnvelope( msgEvent.data );
 		if( !env )
@@ -95,6 +129,10 @@ export class CAardvarkEndpoint
 		if( this.m_handlers[ env.type ] )
 		{
 			this.m_handlers[ env.type ]( env.payloadUnpacked, env );
+		} 
+		else if( this.m_asyncHandlers[ env.type ] )
+		{
+			await this.m_asyncHandlers[ env.type ]( env.payloadUnpacked, env );
 		} 
 		else if( this.m_pendingResponses[ env.type ] )
 		{
@@ -112,7 +150,7 @@ export class CAardvarkEndpoint
 		}
 		else if( this.m_defaultHandler )
 		{
-			this.m_defaultHandler( env.payloadUnpacked, env );
+			await this.m_defaultHandler( env.payloadUnpacked, env );
 		}
 		else
 		{
@@ -120,7 +158,7 @@ export class CAardvarkEndpoint
 		}
 	}
 
-	@bind public onSetEndpointTypeResponse( m: MsgSetEndpointTypeResponse )
+	@bind public async onSetEndpointTypeResponse( m: MsgSetEndpointTypeResponse )
 	{
 		this.m_endpointId = m.endpointId;
 		if( this.m_handshakeComplete )
@@ -214,7 +252,7 @@ export class CAardvarkEndpoint
 
 export class CMonitorEndpoint extends CAardvarkEndpoint
 {
-	constructor( defaultHandler: MessageHandler = null )
+	constructor( defaultHandler: AsyncMessageHandler = null )
 	{
 		super( () => { this.onOpen() }, null, defaultHandler );
 		this.allowReconnect();
@@ -237,7 +275,7 @@ export class CMonitorEndpoint extends CAardvarkEndpoint
 
 export class CUtilityEndpoint extends CAardvarkEndpoint
 {
-	constructor( defaultHandler: MessageHandler = null )
+	constructor( defaultHandler: AsyncMessageHandler = null )
 	{
 		super( () => { this.onOpen() }, null, defaultHandler );
 	}

@@ -13,7 +13,17 @@ import { StoredGadget, AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, Av
 	MsgResourceLoadFailed, 	MsgInstallGadget, EVolumeType, parseEndpointFieldUri, MsgUserInfo, 
 	MsgRequestJoinChamber, MsgActuallyJoinChamber, MsgRequestLeaveChamber, MsgActuallyLeaveChamber, 
 	MsgChamberList, gadgetDetailsToId, MsgUpdatePose, Permission, SharedGadget, 
-	MsgAddGadgetToChambers, MsgRemoveGadgetFromChambers, AuthedRequest, MsgUpdateChamberGadgetHook, ENodeFlags, MsgChamberGadgetHookUpdated, MsgSignRequest, GadgetAuthedRequest, MsgSignRequestResponse, ChamberNamespace
+	MsgAddGadgetToChambers, 
+	MsgRemoveGadgetFromChambers, 
+	AuthedRequest, 
+	MsgUpdateChamberGadgetHook, 
+	ENodeFlags, 
+	MsgChamberGadgetHookUpdated, 
+	MsgSignRequest, 
+	GadgetAuthedRequest, 
+	MsgSignRequestResponse, 
+	ChamberNamespace, 
+	MsgChamberMemberListUpdated
 } from '@aardvarkxr/aardvark-shared';
 import * as express from 'express';
 import * as http from 'http';
@@ -40,7 +50,7 @@ class CDispatcher
 	private m_gadgets: CEndpoint[] = [];
 	private m_gadgetsByUuid: { [ uuid: string ] : CEndpoint } = {};
 	private m_nextSequenceNumber = 1;
-	private m_chambers = new Set<string>();
+	private m_chambers: { [ chamberPath: string ]: string } = {};
 	private m_gadgetsWithWaiters: { [ persistenceUuid: string ]: (( gadg: CGadgetData) => void)[] } = {};
 
 	constructor()
@@ -384,6 +394,11 @@ class CDispatcher
 		} );
 	}
 
+	public getChamberOwner( chamberPath: string ): string
+	{
+		return this.m_chambers[ chamberPath ];
+	}
+
 	public notifyGadgetWaiters( persistenceUuid: string )
 	{
 		let gadgetData = this.m_gadgetsByUuid[ persistenceUuid ]?.getGadgetData();
@@ -413,21 +428,21 @@ class CDispatcher
 	{
 		let m: MsgChamberList =
 		{
-			chamberPaths: Array.from( this.m_chambers.values() )
+			chamberPaths: Array.from( Object.keys( this.m_chambers ) )
 		}
 
 		this.sendMessageToAllEndpointsOfType( EndpointType.Monitor, MessageType.ChamberList, m );
 	}
 	
-	public addChamber( chamberPath: string )
+	public addChamber( chamberPath: string, owningGadgetUuid: string )
 	{
-		this.m_chambers.add( chamberPath );
+		this.m_chambers[ chamberPath ] = owningGadgetUuid;
 		this.sendChamberUpdate();
 	}
 
 	public removeChamber( chamberPath: string )
 	{
-		this.m_chambers.delete( chamberPath );
+		delete this.m_chambers[ chamberPath ];
 		this.sendChamberUpdate();
 	}
 
@@ -502,7 +517,7 @@ class CGadgetData
 	private m_nodes: { [ nodeId: number ]: AvNode } = {}
 	private m_nodesByPersistentName: { [ persistentName: string ]: AvNode } = {}
 	private m_gadgetBeingDestroyed = false;
-	private m_chambers: string[] = [];
+	private m_chambers: { [ chamberPath: string ] : MsgRequestJoinChamber } = {};
 
 	constructor( ep: CEndpoint, uri: string, initialHook: string, persistenceUuid:string,
 		remoteUniversePath: string, dispatcher: CDispatcher )
@@ -582,6 +597,11 @@ class CGadgetData
 		{
 			throw "Gadget is not master";
 		}
+	}
+
+	public sendMessage( type: MessageType, msg: any, target: EndpointAddr = undefined, sender:EndpointAddr = undefined  )
+	{
+		this.m_ep.sendMessage( type, msg, target, sender );
 	}
 
 	public clearGrabHook()
@@ -857,6 +877,10 @@ class CGadgetData
 				}
 				break;
 
+			case AvNodeType.Chamber:
+				node.propChamberPath = this.computeChamberPath( node.propChamberId, node.propChamberNamespace );
+				break;
+
 			default:
 				// many node types need no processing
 		}
@@ -898,11 +922,11 @@ class CGadgetData
 			persistence.destroyGadgetPersistence( this.m_gadgetUri, this.m_persistenceUuid );
 		}
 
-		for( let chamberPath of this.m_chambers )
+		for( let chamberPath in this.m_chambers )
 		{
 			this.leaveChamberInternal( chamberPath );
 		}
-		this.m_chambers = [];
+		this.m_chambers = {};
 	}
 
 	public sendSceneGraphToRenderer()
@@ -991,9 +1015,13 @@ class CGadgetData
 			gadgets: this.m_dispatcher.gatherSharedGadgets(),
 		}
 		this.m_dispatcher.sendToMasterSigned( MessageType.ActuallyJoinChamber, req );
-		this.m_dispatcher.addChamber( req.chamberPath );
+		this.m_dispatcher.addChamber( req.chamberPath, this.m_persistenceUuid );
 
-		this.m_chambers.push( req.chamberPath );
+		this.m_chambers[ req.chamberPath ] =
+		{
+			chamberId,
+			namespace,
+		};
 	}
 
 	private leaveChamberInternal( chamberPath: string )
@@ -1011,12 +1039,12 @@ class CGadgetData
 	{
 		let chamberPath = this.computeChamberPath( chamberId, namespace );
 		this.leaveChamberInternal( chamberPath );
+		delete this.m_chambers[ chamberPath ];
+	}
 
-		let i = this.m_chambers.indexOf( chamberPath );
-		if( i != -1 )
-		{
-			this.m_chambers.splice( i, 1 );
-		}
+	public getChamberDetails( chamberPath: string ): MsgRequestJoinChamber
+	{
+		return this.m_chambers[ chamberPath ];
 	}
 }
 
@@ -1097,6 +1125,7 @@ class CEndpoint
 
 		this.registerEnvelopeHandler( MessageType.UpdatePose, this.onUpdatePose );
 		this.registerEnvelopeHandler( MessageType.ChamberGadgetHookUpdated, this.onChamberGadgetHookUpdated );
+		this.registerEnvelopeHandler( MessageType.ChamberMemberListUpdated, this.onChamberMemberListUpdated );
 	}
 
 	public getId() { return this.m_id; }
@@ -1530,6 +1559,7 @@ class CEndpoint
 		this.getGadgetData().leaveChamber( m.chamberId, m.namespace );
 	}
 
+
 	@bind private onSignRequest( env: Envelope, m: MsgSignRequest )
 	{
 		let actualReq: GadgetAuthedRequest =
@@ -1565,6 +1595,25 @@ class CEndpoint
 			// console.log( `REMOTE UPDATE gadget ${ gadget.getEndpointId() } hook path to ${ m.newHook }` );
 			gadget.clearGrabHook();
 			gadget.attachToHook( m.newHook );
+		}
+	}
+
+	@bind
+	private async onChamberMemberListUpdated( env: Envelope, m: MsgChamberMemberListUpdated )
+	{
+		// console.log( 'remote telling us about member list  change' );
+		this.getGadgetData().verifyMaster();
+
+		let chamberOwner = this.m_dispatcher.getChamberOwner( m.chamberPath );
+		if( chamberOwner )
+		{
+			let chamberOwningGadget = await this.m_dispatcher.findGadget( chamberOwner );
+			let chamberDetails = chamberOwningGadget?.getChamberDetails( m.chamberPath );
+			if( chamberOwningGadget && chamberDetails )
+			{
+				m.chamberId = chamberDetails.chamberId;
+				chamberOwningGadget.sendMessage( MessageType.ChamberMemberListUpdated, m );
+			}
 		}
 	}
 
