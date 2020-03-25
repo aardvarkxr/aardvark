@@ -1191,7 +1191,7 @@ export class AvDefaultTraverser
 					parentInfo.grabberFromGrabbable, 
 					( universeFromNode: mat4 ) =>
 					{
-						this.preserveTransform( node, parentInfo.parentGlobalId, defaultParent, 
+						this.preserveTransform( node, parentInfo.parentGlobalId, grabberTransform, 
 							universeFromNode );
 					} );
 			}
