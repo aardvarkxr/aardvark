@@ -94,6 +94,7 @@ export interface GadgetParams
 	epToNotify?: EndpointAddr;
 	remoteUniversePath?: string;
 	ownerUuid?: string;
+	remotePersistenceUuid?: string;
 }
 
 

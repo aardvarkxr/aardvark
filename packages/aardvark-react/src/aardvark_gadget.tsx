@@ -95,6 +95,7 @@ export class AvGadget
 	private m_persistenceUuid: string;
 	private m_remoteUniversePath: string;
 	private m_ownerUuid: string;
+	private m_remotePersistenceUuid: string;
 	private m_epToNotify: EndpointAddr = null;
 	private m_firstSceneGraph: boolean = true;
 	private m_mainGrabbable: AvNode = null;
@@ -130,6 +131,7 @@ export class AvGadget
 		this.m_persistenceUuid = params[ "persistenceUuid" ];
 		this.m_remoteUniversePath = params[ "remoteUniversePath" ];
 		this.m_ownerUuid = params[ "ownerUuid" ];
+		this.m_remotePersistenceUuid = params[ "remotePersistenceUuid" ];
 
 		if( params[ "epToNotify"] )
 		{
@@ -602,7 +604,7 @@ export class AvGadget
 	}
 
 	public startGadget( uri: string, initialHook: string, remoteUniversePath?: string,
-		persistenceUuid?: string, ownerUuid?: string ) : 
+		persistenceUuid?: string, ownerUuid?: string, remotePersistenceUuid?: string ) : 
 		Promise<AvStartGadgetResult>
 	{
 		return new Promise( ( resolve, reject ) =>
@@ -623,20 +625,28 @@ export class AvGadget
 					epToNotify, 
 					remoteUniversePath,
 					ownerUuid,
+					remotePersistenceUuid,
 				} );
 		} );
 	} 
 
 	public get globallyUniqueId(): string 
 	{
-		return this.m_persistenceUuid + ( this.m_ownerUuid ?? this.localUserInfo.userUuid );
+		if( this.m_ownerUuid && this.m_remotePersistenceUuid )
+		{
+			return this.m_remotePersistenceUuid + this.m_ownerUuid;
+		}
+		else
+		{
+			return this.m_persistenceUuid + this.localUserInfo.userUuid;
+		}
 	}
 
 	public get isRemote() : boolean
 	{
 		return !!this.m_ownerUuid;
 	}
-	
+
 	/** Persists the gadget's settings. These weill be passed to the gadget 
 	 * via the callback registered with registerForSettings whenever the 
 	 * gadget is reloaded.
@@ -711,7 +721,34 @@ export class AvGadget
 	public addUserInfoListener( fn: ()=>void ) 
 	{
 		this.m_userInfoListeners.push( fn );
+		if( this.m_userInfo )
+		{
+			fn();
+		}
 	}
+
+	/** Returns a promise that will be fulfilled when the 
+	 * local user info becomes available.
+	 */
+	public getLocalUserInfo(): Promise< LocalUserInfo >
+	{
+		if( this.m_userInfo )
+		{
+			return Promise.resolve( this.m_userInfo );
+		}
+	
+		return new Promise( (resolve, reject ) =>
+		{
+			let fn = () =>
+			{
+				resolve( this.localUserInfo );
+				global.setTimeout( () => { this.removeUserInfoListener( fn ); }, 1 );
+			};
+
+			this.addUserInfoListener( fn );
+		} );
+	}
+
 
 	/** Removes a listener for user info updates */
 	public removeUserInfoListener( fn: ()=>void ) 

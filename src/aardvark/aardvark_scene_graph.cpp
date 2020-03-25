@@ -65,6 +65,7 @@ namespace aardvark
 			{ "epToNotify", params.epToNotify },
 			{ "remoteUniversePath", params.remoteUniversePath },
 			{ "ownerUuid", params.ownerUuid },
+			{ "remotePersistenceUuid", params.remotePersistenceUuid },
 		};
 	}
 
@@ -102,11 +103,13 @@ namespace aardvark
 		try
 		{
 			j.at( "ownerUuid" ).get_to( params.ownerUuid );
+			j.at( "remotePersistenceUuid" ).get_to( params.remotePersistenceUuid );
 		}
 		catch ( nlohmann::json::exception & e )
 		{
 			(void)e;
 			params.ownerUuid.clear();
+			params.remotePersistenceUuid.clear();
 		}
 	}
 

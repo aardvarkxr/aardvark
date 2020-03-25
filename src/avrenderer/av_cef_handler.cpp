@@ -116,6 +116,10 @@ void CAardvarkCefHandler::onGadgetManifestReceived( bool success, const std::vec
 	{
 		mapArgs[ "ownerUuid" ] = m_params.ownerUuid;
 	}
+	if ( !m_params.remotePersistenceUuid.empty() )
+	{
+		mapArgs[ "remotePersistenceUuid" ] = m_params.remotePersistenceUuid;
+	}
 
 	std::string sArgs;
 	for ( auto & i : mapArgs )

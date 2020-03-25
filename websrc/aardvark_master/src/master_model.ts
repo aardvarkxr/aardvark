@@ -249,7 +249,7 @@ export class CMasterModel
 		console.log( `master starting gadget ${ newGadgetPersistenceUuid } on ${ hookToUse } `
 			+ `via ${ gadgetInfo.gadgetUri }` );
 		AvGadget.instance().startGadget( gadgetInfo.gadgetUri, hookToUse, 
-			memberTracker.remoteUniversePath, newGadgetPersistenceUuid, memberInfo.uuid )
+			memberTracker.remoteUniversePath, newGadgetPersistenceUuid, memberInfo.uuid, gadgetInfo.persistenceUuid )
 		.then( ( res: AvStartGadgetResult ) =>
 		{
 			if( res.success )

@@ -54,6 +54,7 @@ namespace aardvark
 		EndpointAddr_t epToNotify;
 		std::string remoteUniversePath;
 		std::string ownerUuid;
+		std::string remotePersistenceUuid;
 	};
 
 	void to_json( nlohmann::json& j, const GadgetParams_t& gm );

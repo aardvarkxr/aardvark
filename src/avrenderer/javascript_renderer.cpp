@@ -303,6 +303,14 @@ bool gadgetParamsFromJs( CefRefPtr< CefV8Value > obj, aardvark::GadgetParams_t *
 			params->ownerUuid = type->GetStringValue();
 		}
 	}
+	if ( obj->HasValue( "remotePersistenceUuid" ) )
+	{
+		CefRefPtr<CefV8Value> type = obj->GetValue( "remotePersistenceUuid" );
+		if ( type->IsString() )
+		{
+			params->remotePersistenceUuid = type->GetStringValue();
+		}
+	}
 
 	if ( obj->HasValue( "epToNotify" ) )
 	{
