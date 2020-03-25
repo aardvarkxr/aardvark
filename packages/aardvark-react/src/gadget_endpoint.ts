@@ -8,9 +8,11 @@ export class CGadgetEndpoint extends CAardvarkEndpoint
 	private m_gadgetUri: string;
 	private m_initialHook: string;
 	private m_persistenceUuid: string;
+	private m_ownerUuid: string;
 	private m_remoteUniversePath: string;
 
 	constructor( gadgetUri: string, initialHook: string, persistenceUuid: string, remoteUniversePath: string,
+		ownerUuid: string,
 		openHandler: OpenHandler, defaultHandler: AsyncMessageHandler = null )
 	{
 		super( () => { this.onOpen() }, openHandler, defaultHandler );
@@ -19,6 +21,7 @@ export class CGadgetEndpoint extends CAardvarkEndpoint
 		this.m_initialHook = initialHook;
 		this.m_persistenceUuid = persistenceUuid;
 		this.m_remoteUniversePath = remoteUniversePath;
+		this.m_ownerUuid = ownerUuid;
 	}
 
 	@bind onOpen()
@@ -30,6 +33,7 @@ export class CGadgetEndpoint extends CAardvarkEndpoint
 			gadgetUri: this.m_gadgetUri,
 			initialHook: this.m_initialHook,
 			remoteUniversePath: this.m_remoteUniversePath,
+			ownerUuid: this.m_ownerUuid,
 		}
 		if( this.m_persistenceUuid )
 		{

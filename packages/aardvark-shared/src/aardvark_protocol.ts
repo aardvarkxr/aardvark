@@ -212,6 +212,7 @@ export interface MsgSetEndpointType
 	initialHook?: string;
 	persistenceUuid?: string;
 	remoteUniversePath?: string;
+	ownerUuid?: string;
 }
 
 export interface MsgSetEndpointTypeResponse

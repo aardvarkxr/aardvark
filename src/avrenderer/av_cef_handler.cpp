@@ -23,19 +23,12 @@
 #include <json/json.hpp>
 
 
-CAardvarkCefHandler::CAardvarkCefHandler( IApplication *application, const std::string & gadgetUri, 
-	const std::string & initialHook, const std::string & persistenceUuid, 
-	const aardvark::EndpointAddr_t & epToNotify, const std::string& remoteUniversePath )
+CAardvarkCefHandler::CAardvarkCefHandler( IApplication *application, const aardvark::GadgetParams_t& params )
     : m_useViews( false ), m_isClosing(false) 
 {
-	m_epToNotify = epToNotify;
+	m_params = params;
 
 	m_application = application;
-
-	m_gadgetUri = gadgetUri;
-	m_initialHook = initialHook;
-	m_persistenceUuid = persistenceUuid;
-	m_remoteUniversePath = remoteUniversePath;
 }
 
 
@@ -46,7 +39,7 @@ CAardvarkCefHandler::~CAardvarkCefHandler()
 // Called after creation to kick off the gadget
 void CAardvarkCefHandler::start()
 {
-	m_uriRequestHandler.requestUri( m_gadgetUri + "/gadget_manifest.json",
+	m_uriRequestHandler.requestUri( m_params.uri + "/gadget_manifest.json",
 		[this]( CUriRequestHandler::Result_t & result )
 	{
 		this->onGadgetManifestReceived( result.success, result.data );
@@ -61,7 +54,7 @@ void CAardvarkCefHandler::onGadgetManifestReceived( bool success, const std::vec
 {
 	if ( !success )
 	{
-		LOG( ERROR ) << "Failed to load manifest for " << this->m_gadgetUri << ".";
+		LOG( ERROR ) << "Failed to load manifest for " << this->m_params.uri << ".";
 		return;
 	}
 
@@ -73,7 +66,7 @@ void CAardvarkCefHandler::onGadgetManifestReceived( bool success, const std::vec
 	catch ( nlohmann::json::exception &  )
 	{
 		// manifest parse failed
-		LOG( ERROR ) << "Failed to parse manifest for " << this->m_gadgetUri << ".";
+		LOG( ERROR ) << "Failed to parse manifest for " << this->m_params.uri << ".";
 		return;
 	}
 
@@ -97,27 +90,31 @@ void CAardvarkCefHandler::onGadgetManifestReceived( bool success, const std::vec
 
 	browser_settings.windowless_frame_rate = 90;
 
-	std::string fullUri = m_gadgetUri + "/index.html";
+	std::string fullUri = m_params.uri + "/index.html";
 
 	std::map<std::string, std::string> mapArgs;
 
-	if ( !m_initialHook.empty() )
+	if ( !m_params.initialHook.empty() )
 	{
-		mapArgs["initialHook"] = m_initialHook;
+		mapArgs["initialHook"] = m_params.initialHook;
 	}
-	if ( m_epToNotify.type != aardvark::EEndpointType::Unknown )
+	if ( m_params.epToNotify.type != aardvark::EEndpointType::Unknown )
 	{
-		mapArgs["epToNotify"] = aardvark::endpointAddrToString( this->m_epToNotify );
-	}
-
-	if ( !m_persistenceUuid.empty() )
-	{
-		mapArgs["persistenceUuid"] = m_persistenceUuid;
+		mapArgs["epToNotify"] = aardvark::endpointAddrToString( this->m_params.epToNotify );
 	}
 
-	if ( !m_remoteUniversePath.empty() )
+	if ( !m_params.persistenceUuid.empty() )
 	{
-		mapArgs[ "remoteUniversePath" ] = m_remoteUniversePath;
+		mapArgs["persistenceUuid"] = m_params.persistenceUuid;
+	}
+
+	if ( !m_params.remoteUniversePath.empty() )
+	{
+		mapArgs[ "remoteUniversePath" ] = m_params.remoteUniversePath;
+	}
+	if ( !m_params.ownerUuid.empty() )
+	{
+		mapArgs[ "ownerUuid" ] = m_params.ownerUuid;
 	}
 
 	std::string sArgs;
@@ -171,10 +168,8 @@ void CAardvarkCefHandler::OnAfterCreated(CefRefPtr<CefBrowser> browser)
 	m_resourceRequestHandler = new CAardvarkResourceRequestHandler;
 
 	CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "gadget_info" );
-	msg->GetArgumentList()->SetString( 0, m_gadgetUri );
-	msg->GetArgumentList()->SetString( 1, m_initialHook );
-	msg->GetArgumentList()->SetString( 2, m_remoteUniversePath );
-	msg->GetArgumentList()->SetString( 3, m_gadgetManifestString );
+	msg->GetArgumentList()->SetString( 0, nlohmann::json( m_params ).dump() );
+	msg->GetArgumentList()->SetString( 1, m_gadgetManifestString );
 
 	m_browser->GetFocusedFrame()->SendProcessMessage( PID_RENDERER, msg );
 	
@@ -292,16 +287,20 @@ bool CAardvarkCefHandler::OnProcessMessageReceived( CefRefPtr<CefBrowser> browse
 	}
 	else if ( message->GetName() == "start_gadget" )
 	{
-		std::string uri( message->GetArgumentList()->GetString( 0 ) );
-		std::string initialHook( message->GetArgumentList()->GetString( 1 ) );
-		std::string persistenceUuid( message->GetArgumentList()->GetString( 2 ) );
-		aardvark::EndpointAddr_t epToNotify;
-		epToNotify.type = ( aardvark::EEndpointType )message->GetArgumentList()->GetInt( 3 );
-		epToNotify.endpointId = ( uint32_t )message->GetArgumentList()->GetInt( 4 );
-		epToNotify.nodeId = ( uint32_t )message->GetArgumentList()->GetInt( 5 );
-		std::string remoteUniversePath( message->GetArgumentList()->GetString( 6 ) );
+		std::string jsonString( message->GetArgumentList()->GetString( 0 ) );
 
-		CAardvarkCefApp::instance()->startGadget( uri, initialHook, persistenceUuid, epToNotify, remoteUniversePath );
+		try
+		{
+			nlohmann::json j = nlohmann::json::parse( jsonString );
+			aardvark::GadgetParams_t params = j.get<aardvark::GadgetParams_t>();
+
+			CAardvarkCefApp::instance()->startGadget( params );
+		}
+		catch ( nlohmann::json::exception & e )
+		{
+			LOG( ERROR ) << "Failed to parse gadget params from " << jsonString << ".";
+			(void)e;
+		}
 	}
 	else if ( message->GetName() == "request_texture_info" )
 	{

@@ -38,9 +38,8 @@ public:
 	void sendBrowserMessage( CefRefPtr< CefProcessMessage > msg );
 
 	bool hasPermission( const std::string & permission );
-	const std::string getInitialHook() const { return m_initialHook; }
-	void requestStartGadget( const CefString & uri, const CefString & initialHook, const CefString & persistenceUuid, 
-		const aardvark::EndpointAddr_t & epToNotify, const CefString& remoteUniversePath );
+	const std::string getInitialHook() const { return m_params.initialHook; }
+	void requestStartGadget( const aardvark::GadgetParams_t & params );
 	void requestUri( const std::string & uri, std::function<void( CUriRequestHandler::Result_t & result ) > callback );
 	void requestTextureInfo();
 	void requestClose();
@@ -57,9 +56,7 @@ private:
 	std::vector< PerContextInfo_t > m_contexts;
 	void InitAardvarkForContext( PerContextInfo_t &contextInfo );
 
-	std::string m_gadgetUri;
-	std::string m_initialHook;
-	std::string m_remoteUniversePath;
+	aardvark::GadgetParams_t m_params;
 	std::unique_ptr<CAardvarkGadgetManifest> m_gadgetManifest;
 	CUriRequestHandler m_uriRequestHandler;
 	bool m_needRunFrame = true;

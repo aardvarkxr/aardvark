@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <string>
+#include <json/json.hpp>
 
 namespace aardvark
 {
@@ -44,6 +45,19 @@ namespace aardvark
 	}
 
 	std::string endpointAddrToString( const EndpointAddr_t & epa );
+
+	struct GadgetParams_t
+	{
+		std::string uri;
+		std::string initialHook;
+		std::string persistenceUuid;
+		EndpointAddr_t epToNotify;
+		std::string remoteUniversePath;
+		std::string ownerUuid;
+	};
+
+	void to_json( nlohmann::json& j, const GadgetParams_t& gm );
+	void from_json( const nlohmann::json& j, GadgetParams_t& gm );
 
 	// valid for poker nodes
 	struct PokerProximity_t

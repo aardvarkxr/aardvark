@@ -14,7 +14,7 @@
 #include "javascript_renderer.h"
 
 using aardvark::EAvSceneGraphResult;
-
+using aardvark::GadgetParams_t;
 
 
 
@@ -58,6 +58,7 @@ void CAardvarkObject::runFrame()
 
 
 extern bool endpointAddrFromJs( CefRefPtr< CefV8Value > obj, aardvark::EndpointAddr_t *addr );
+extern bool gadgetParamsFromJs( CefRefPtr< CefV8Value > obj, aardvark::GadgetParams_t *params );
 
 bool CAardvarkObject::init( CefRefPtr<CefV8Value> container )
 {
@@ -129,48 +130,19 @@ bool CAardvarkObject::init( CefRefPtr<CefV8Value> container )
 	{
 		RegisterFunction( container, "startGadget", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 		{
-			if ( arguments.size() != 4 && arguments.size() != 5 )
+			if ( arguments.size() != 1 )
 			{
 				exception = "Invalid arguments";
 				return;
 			}
-			if ( !arguments[0]->IsString() )
+			GadgetParams_t params;
+			if ( !gadgetParamsFromJs( arguments[0], &params ) )
 			{
-				exception = "Invalid url argument";
+				exception = "Invalid params";
 				return;
 			}
-			if ( !arguments[1]->IsString() && !arguments[1]->IsBool()
-				&& !arguments[1]->IsUndefined() )
-			{
-				exception = "Invalid hook argument";
-				return;
-			}
-			if ( !arguments[2]->IsString() )
-			{
-				exception = "Invalid persistence UUID argument";
-				return;
-			}
-			aardvark::EndpointAddr_t epToNotify;
-			if ( !endpointAddrFromJs( arguments[3], &epToNotify ) )
-			{
-				epToNotify.type = aardvark::EEndpointType::Unknown;
-			}
 
-			std::string sHook = arguments[1]->IsString() ? arguments[1]->GetStringValue() : "";
-
-			CefString remoteUniversePath;
-			if ( arguments.size() >= 5 && !arguments[ 4 ]->IsNull() && !arguments[4]->IsUndefined() )
-			{
-				if ( !arguments[ 4 ]->IsString() )
-				{
-					exception = "Invalid remote universe path";
-					return;
-				}
-				remoteUniversePath = arguments[ 4 ]->GetStringValue();
-			}
-
-			m_handler->requestStartGadget( arguments[0]->GetStringValue(), sHook, 
-				arguments[2]->GetStringValue(), epToNotify, remoteUniversePath );
+			m_handler->requestStartGadget( params );
 		} );
 
 		RegisterFunction( container, "getGadgetManifest", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
@@ -355,14 +327,14 @@ bool CAardvarkRenderProcessHandler::OnProcessMessageReceived( CefRefPtr<CefBrows
 
 	if ( messageName == "gadget_info" )
 	{
-		m_gadgetUri = message->GetArgumentList()->GetString( 0 );
-		m_initialHook = message->GetArgumentList()->GetString( 1 );
-		m_remoteUniversePath = message->GetArgumentList()->GetString( 2 );
-
 		try
 		{
-			std::string manifestData = message->GetArgumentList()->GetString( 3 );
-			nlohmann::json j = nlohmann::json::parse( manifestData.begin(), manifestData.end() );
+			std::string paramData = message->GetArgumentList()->GetString( 0 );
+			nlohmann::json j = nlohmann::json::parse( paramData.begin(), paramData.end() );
+			m_params = j.get<aardvark::GadgetParams_t>();
+
+			std::string manifestData = message->GetArgumentList()->GetString( 1 );
+			j = nlohmann::json::parse( manifestData.begin(), manifestData.end() );
 			m_gadgetManifest = std::make_unique<CAardvarkGadgetManifest>( j.get<CAardvarkGadgetManifest>() );
 			
 			for ( auto & contextInfo : m_contexts )
@@ -403,7 +375,7 @@ void CAardvarkRenderProcessHandler::InitAardvarkForContext( PerContextInfo_t &co
 
 bool CAardvarkRenderProcessHandler::hasPermission( const std::string & permission )
 {
-	if ( !this->m_remoteUniversePath.empty() && permission != "scenegraph" )
+	if ( !this->m_params.remoteUniversePath.empty() && permission != "scenegraph" )
 	{
 		// remote apps can only scenegraph
 		return false;
@@ -451,19 +423,12 @@ void CAardvarkRenderProcessHandler::sendBrowserMessage( CefRefPtr< CefProcessMes
 }
 
 
-void CAardvarkRenderProcessHandler::requestStartGadget( const CefString & uri, const CefString & initialHook, 
-	const CefString & persistenceUuid, const aardvark::EndpointAddr_t & epToNotify, const CefString & remoteUniversePath )
+void CAardvarkRenderProcessHandler::requestStartGadget( const aardvark::GadgetParams_t& params )
 {
 	CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "start_gadget" );
+	nlohmann::json j = params;
 
-	msg->GetArgumentList()->SetString( 0, uri );
-	msg->GetArgumentList()->SetString( 1, initialHook );
-	msg->GetArgumentList()->SetString( 2, persistenceUuid );
-	msg->GetArgumentList()->SetInt( 3, (int)epToNotify.type );
-	msg->GetArgumentList()->SetInt( 4, (int)epToNotify.endpointId);
-	msg->GetArgumentList()->SetInt( 5, (int)epToNotify.nodeId );
-	msg->GetArgumentList()->SetString( 6, remoteUniversePath );
-
+	msg->GetArgumentList()->SetString( 0, j.dump() );
 	sendBrowserMessage( msg );
 }
 

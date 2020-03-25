@@ -94,6 +94,7 @@ export class AvGadget
 	m_actionState: { [hand:number]: AvActionState } = {};
 	private m_persistenceUuid: string;
 	private m_remoteUniversePath: string;
+	private m_ownerUuid: string;
 	private m_epToNotify: EndpointAddr = null;
 	private m_firstSceneGraph: boolean = true;
 	private m_mainGrabbable: AvNode = null;
@@ -128,6 +129,7 @@ export class AvGadget
 		let params = parseURL( window.location.href );
 		this.m_persistenceUuid = params[ "persistenceUuid" ];
 		this.m_remoteUniversePath = params[ "remoteUniversePath" ];
+		this.m_ownerUuid = params[ "ownerUuid" ];
 
 		if( params[ "epToNotify"] )
 		{
@@ -142,6 +144,7 @@ export class AvGadget
 
 		this.m_endpoint = new CGadgetEndpoint( this.m_actualGadgetUri, 
 			params["initialHook"], this.m_persistenceUuid, this.m_remoteUniversePath,
+			this.m_ownerUuid,
 			this.onEndpointOpen );
 	}
 
@@ -352,7 +355,12 @@ export class AvGadget
 
 	@bind private onMasterStartGadget( m: MsgMasterStartGadget )
 	{
-		Av().startGadget( m.uri, m.initialHook, m.persistenceUuid, null );
+		Av().startGadget( 
+			{
+				uri: m.uri, 
+				initialHook: m.initialHook, 
+				persistenceUuid: m.persistenceUuid,
+			} );
 	}
 
 	@bind private onResourceLoadFailed( m: MsgResourceLoadFailed )
@@ -593,8 +601,8 @@ export class AvGadget
 		this.m_endpoint.sendMessage( MessageType.NodeHaptic, msg );
 	}
 
-	public startGadget( uri: string, initialHook: string, remoteUniverse?: string,
-		persistenceUuid?: string ) : 
+	public startGadget( uri: string, initialHook: string, remoteUniversePath?: string,
+		persistenceUuid?: string, ownerUuid?: string ) : 
 		Promise<AvStartGadgetResult>
 	{
 		return new Promise( ( resolve, reject ) =>
@@ -608,10 +616,27 @@ export class AvGadget
 				endpointId: this.m_endpoint.getEndpointId(),
 				nodeId: notifyNodeId,
 			}
-			Av().startGadget( uri, initialHook, persistenceUuid ?? "", epToNotify, remoteUniverse );
+			Av().startGadget( 
+				{
+					uri, initialHook, 
+					persistenceUuid: persistenceUuid ?? "", 
+					epToNotify, 
+					remoteUniversePath,
+					ownerUuid,
+				} );
 		} );
 	} 
 
+	public get globallyUniqueId(): string 
+	{
+		return this.m_persistenceUuid + ( this.m_ownerUuid ?? this.localUserInfo.userUuid );
+	}
+
+	public get isRemote() : boolean
+	{
+		return !!this.m_ownerUuid;
+	}
+	
 	/** Persists the gadget's settings. These weill be passed to the gadget 
 	 * via the callback registered with registerForSettings whenever the 
 	 * gadget is reloaded.

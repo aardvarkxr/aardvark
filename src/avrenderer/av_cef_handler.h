@@ -46,8 +46,7 @@ class CAardvarkCefHandler : public CefClient,
 					  public CefRenderHandler
 {
 public:
-	explicit CAardvarkCefHandler( IApplication *application, const std::string & gadgetUri, const std::string & initialHook, 
-		const std::string & persistentUuid, const aardvark::EndpointAddr_t & epToNotify, const std::string& remoteUniversePath );
+	explicit CAardvarkCefHandler( IApplication *application, const aardvark::GadgetParams_t& params );
 	~CAardvarkCefHandler();
 
 	// CefClient methods:
@@ -142,11 +141,8 @@ private:
 
 	void updateSceneGraphTextures();
 
-	std::string m_gadgetUri;
-	std::string m_initialHook;
-	std::string m_persistenceUuid;
-	aardvark::EndpointAddr_t m_epToNotify;
-	std::string m_remoteUniversePath;
+	aardvark::GadgetParams_t m_params;
+
 	bool m_wantsToQuit = false;
 	bool m_wantsTexture = false;
 	bool m_firstPaint = true;

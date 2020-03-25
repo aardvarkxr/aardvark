@@ -133,18 +133,17 @@ void CAardvarkCefApp::OnContextInitialized()
 		pAdapter = nullptr;
 	}
 
-	startGadget( "http://localhost:23842/gadgets/aardvark_master", "", "master", aardvark::EndpointAddr_t(), "" );
+	aardvark::GadgetParams_t params = { "http://localhost:23842/gadgets/aardvark_master", "", "master", aardvark::EndpointAddr_t(), "", "" };
+	startGadget( params );
 }
 
 
-void CAardvarkCefApp::startGadget( const std::string & uri, const std::string & initialHook, 
-	const std::string & persistenceUuid, const aardvark::EndpointAddr_t & epToNotify,
-	const std::string & remoteUniversePath )
+void CAardvarkCefApp::startGadget( const aardvark::GadgetParams_t& params )
 {
 	CEF_REQUIRE_UI_THREAD();
 
 	// CAardvarkCefHandler implements browser-level callbacks.
-	CefRefPtr<CAardvarkCefHandler> handler( new CAardvarkCefHandler( this, uri, initialHook, persistenceUuid, epToNotify, remoteUniversePath ) );
+	CefRefPtr<CAardvarkCefHandler> handler( new CAardvarkCefHandler( this, params ) );
 	m_browsers.push_back( handler );
 	handler->start();
 }
