@@ -140,7 +140,7 @@ export function readPersistentState( path: string ): AardvarkState
 	{
 		console.log( `Failed to read state file because ${ e } Using default start` );
 
-		let state =
+		let state: AardvarkState =
 		{
 			format: AardvarkStateFormat,
 			activeGadgets: 
@@ -151,11 +151,7 @@ export function readPersistentState( path: string ): AardvarkState
 					hookPath: "/gadget/hands/left_hand",
 				},
 			},
-			installedGadgets: 
-			[
-				"http://localhost:23842/gadgets/test_panel",
-				"http://localhost:23842/gadgets/control_test",
-			],
+			installedGadgets: [],
 			localUserUuid: uuid(),
 			localUserDisplayName: generateRandomName(),
 		}

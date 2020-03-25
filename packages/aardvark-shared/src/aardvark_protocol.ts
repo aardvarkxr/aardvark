@@ -427,6 +427,7 @@ export interface MsgRequestJoinChamber
 {
 	chamberId: string; 
 	namespace: ChamberNamespace;
+	showSelf: boolean;
 }
 
 export interface MsgRequestLeaveChamber
@@ -459,6 +460,7 @@ export interface MsgActuallyJoinChamber extends AuthedRequest
 	userUuid: string;
 	userPublicKey: string;
 	gadgets?: SharedGadget[];
+	showSelf: boolean;
 }
 
 export interface MsgActuallyLeaveChamber extends AuthedRequest

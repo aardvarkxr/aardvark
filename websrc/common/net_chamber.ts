@@ -54,6 +54,7 @@ interface ChamberMemberOptions
 	userUuid: string;
 	userPublicKey: string;
 	gadgets: SharedGadget[];
+	showSelf: boolean;
 }
 
 export interface ChamberMemberInfo
@@ -61,6 +62,7 @@ export interface ChamberMemberInfo
 	readonly uuid: string;
 	gadgets: ChamberGadgetInfo[];
 	readonly poses: { [path: string] : MinimalPose };
+	readonly showSelf: boolean;
 };
 
 export interface PoseUpdatedArgs
@@ -89,6 +91,7 @@ class ChamberMember extends ACModel implements ChamberMemberInfo
 	private m_poses: { [path: string ]: MinimalPose } = {};
 	private m_gadgets: { [ persistenceUuid: string ]: ChamberGadget } = {};
 	private m_lastPoseTime: number;
+	private m_showSelf: boolean;
 
 	public init( options: ChamberMemberOptions )
 	{
@@ -98,6 +101,7 @@ class ChamberMember extends ACModel implements ChamberMemberInfo
 		this.userPublicKey = options.userPublicKey;
 		this.subscribe( this.id, "updatePose", this.updatePose );
 		this.m_lastPoseTime = this.callNow();
+		this.m_showSelf = options.showSelf;
 
 		if( options.gadgets )
 		{
@@ -204,6 +208,11 @@ class ChamberMember extends ACModel implements ChamberMemberInfo
 	public get lastPoseTime(): number
 	{
 		return this.m_lastPoseTime;
+	}
+
+	public get showSelf(): boolean
+	{
+		return this.m_showSelf;
 	}
 }
 
@@ -322,6 +331,7 @@ class Chamber extends ACModel
 			userUuid: args.userUuid,
 			userPublicKey: args.userPublicKey,
 			gadgets: args.gadgets,
+			showSelf: args.showSelf,
 		};
 
 		this.members.push( ChamberMember.create( userOptions ) as ChamberMember );

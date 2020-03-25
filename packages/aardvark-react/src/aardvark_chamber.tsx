@@ -98,14 +98,6 @@ interface AvDefaultChamberProps
 	 * @default none
 	 */
 	chamberId: string;
-
-	/** If this is true, the chamber will show the local user as one of the 
-	 * members. It is up to the implementor of memberListHandler to render 
-	 * an AvChamberMember component for the local user.
-	 * 
-	 * @default false
-	 */
-	showSelf?: boolean;
 }
 
 
@@ -136,13 +128,6 @@ export class AvDefaultChamber extends React.Component< AvDefaultChamberProps, Av
 	@bind
 	private onMemberListUpdated( chamberId: string, members: string[] )
 	{
-		if( this.props.showSelf )
-		{
-			// if we're showing ourselves, just pretend that there's an extra one of us as the last
-			// member
-			members.push( AvGadget.instance().localUserInfo.userUuid );
-		}
-
 		if( !members.length )
 		{
 			// don't bother setting positions for no members
@@ -189,9 +174,49 @@ export class AvDefaultChamber extends React.Component< AvDefaultChamberProps, Av
 
 		return <AvChamber chamberId={ this.props.chamberId } 
 					namespace={ ChamberNamespace.GadgetClass}
-					showSelf={ this.props.showSelf }
 					memberListHandler={ this.onMemberListUpdated }>
 						{ members }
+				</AvChamber>;
+	}
+}
+
+
+interface AvMirrorProps
+{
+	/** The id to use for the mirror associated with the chamber. This only needs 
+	 * to be unique within the gadget.
+	 * 
+	 * @default "mirror"
+	 */
+	mirrorId?: string;
+}
+
+
+/** Causes the user to enter a chamber that reflects their own shared gadgets back to them.
+ * 
+ * This component does not apply any kind of transform to the mirror. Whatever includes the component
+ * should apply the transform it wants on top of the AvMirror.
+ */
+export class AvMirror extends React.Component< AvMirrorProps, {} >
+{
+	constructor( props: any )
+	{
+		super( props );
+	}
+
+	@bind
+	private onMemberListUpdated( chamberId: string, members: string[] )
+	{
+		// we know our own uuid, so there's nothing to do here
+	}
+
+	public render()
+	{
+		return <AvChamber chamberId={ this.props.mirrorId ?? "mirror" } 
+					namespace={ ChamberNamespace.GadgetInstance }
+					showSelf={ true }
+					memberListHandler={ this.onMemberListUpdated }>
+					<AvChamberMember memberUuid={ AvGadget.instance().localUserInfo.userUuid } />
 				</AvChamber>;
 	}
 }

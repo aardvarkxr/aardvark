@@ -225,6 +225,13 @@ export class CMasterModel
 		};
 		memberTracker.gadgets[ gadgetInfo.persistenceUuid ] = gadgetTracker;
 
+		// most chambers don't show the local user
+		if( memberTracker.member.uuid == AvGadget.instance().localUserInfo.userUuid 
+			&& !memberTracker.member.showSelf )
+		{
+			return;
+		}
+
 		// make a unique ID for the new gadget namespaced by the remote universe
 		let newGadgetPersistenceUuid = computeRemotePersistenceUuid( gadgetInfo.persistenceUuid, 
 			memberTracker.remoteUniversePath );
@@ -254,6 +261,7 @@ export class CMasterModel
 
 	private removeChamber( chamberSub: ChamberSubscription )
 	{
+		console.log( "removeChamber "+ chamberSub.chamberPath );
 		let chamberTracker = this.chambers[ chamberSub.chamberPath ];
 		if( !chamberTracker )
 			return;
@@ -272,6 +280,7 @@ export class CMasterModel
 
 	private removeChamberMember( chamberSub: ChamberSubscription, memberInfo: ChamberMemberInfo )
 	{
+		console.log( "removeChamberMember "+ chamberSub.chamberPath + " " + memberInfo.uuid);
 		let chamberTracker = this.chambers[ chamberSub.chamberPath ];
 		if( !chamberTracker )
 			return;
@@ -292,6 +301,8 @@ export class CMasterModel
 	private removeChamberMemberGadget( chamberSub: ChamberSubscription, memberInfo: ChamberMemberInfo,
 		gadgetPersistenceUuid: string )
 	{
+		console.log( "removeChamberMemberGadget " + chamberSub.chamberPath + " member: " + memberInfo.uuid
+			+ " gadget: " + gadgetPersistenceUuid );
 		let memberTracker = this.chambers[ chamberSub.chamberPath ]?.members[ memberInfo.uuid ];
 		if( !memberTracker )
 		{

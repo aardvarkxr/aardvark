@@ -19,6 +19,7 @@ export * from './aardvark_panel_intersection';
 export * from './aardvark_parent_transform';
 export * from './aardvark_poker';
 export * from './aardvark_slider';
+export * from './aardvark_standard_grabbable';
 export * from './aardvark_standard_hook';
 export * from './aardvark_transform';
 export * from './aardvark_translate_control';

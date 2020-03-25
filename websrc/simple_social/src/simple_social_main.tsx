@@ -1,75 +1,74 @@
-import * as React from 'react';
-import  * as ReactDOM from 'react-dom';
-
+import { AvDefaultChamber, AvOrigin, AvPanel, AvStandardGrabbable, AvTransform, ShowGrabbableChildren } from '@aardvarkxr/aardvark-react';
+import { g_builtinModelHead } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
-import { AvGadget, AvTransform, AvGrabButton, AvPanelAnchor, AvGadgetSeed, AvPanel, AvGrabbable, AvModelBoxHandle, HighlightType, AvModel, AvOrigin, AvDefaultChamber } from '@aardvarkxr/aardvark-react';
-import { g_builtinModelGear, EndpointAddr } from '@aardvarkxr/aardvark-shared';
+import * as React from 'react';
+import * as ReactDOM from 'react-dom';
 
 
-interface ControlPanelState
+enum SimpleChamber
 {
-	highlight: HighlightType;
-	installedGadgets?: string[];
+	A = "A",
+	B = "B",
+	C = "C",
+	D = "D",
 }
 
-class ControlPanel extends React.Component< {}, ControlPanelState >
+interface SimpleSocialState
+{
+	currentChamber?: SimpleChamber;
+}
+
+class SimpleSocial extends React.Component< {}, SimpleSocialState >
 {
 	constructor( props: any )
 	{
 		super( props );
 		this.state = 
 		{ 
-			highlight: HighlightType.None,
+			currentChamber: null,
 		};
-
-		AvGadget.instance().getInstalledGadgets()
-		.then( ( installedGadgets: string[] ) =>
-		{
-			this.setState( { installedGadgets } );
-		} );
 	}
 
-	@bind onUpdateHighlight( highlight: HighlightType, handleAddr: EndpointAddr, tethered: boolean )
+	public onJoinChamber( chamber: SimpleChamber )
 	{
-		console.log( `Highlight state is ${ HighlightType[ highlight ] }` );
-		this.setState( { highlight } );
+		this.setState( { currentChamber: chamber } );
 	}
 
-	private renderGadgetSeedList()
+	@bind
+	public onLeaveChamber()
 	{
-		if( !this.state.installedGadgets )
+		this.setState( { currentChamber: null } );
+	}
+
+	public renderPanelContents()
+	{
+		if( this.state.currentChamber )
 		{
-			return <div>No Gadgets installed.</div>;
-		}
+			return <div className="Button" onClick={ this.onLeaveChamber }>
+				Leave { this.state.currentChamber }</div>
+		}	
 		else
 		{
-			let seeds: JSX.Element[] = [];
-			for( let gadget of this.state.installedGadgets )
-			{
-				seeds.push( 
-					<div className="GadgetSeed">
-						<AvPanelAnchor>
-							<AvGadgetSeed key="gadget" uri={ gadget } 
-								radius={ 0.1 }/>
-						</AvPanelAnchor>
-					</div> );
-			}
-			return <div className="GadgetSeedContainer">{ seeds }</div>;
+			return <>
+				<div className="Button" onClick={ () => this.onJoinChamber( SimpleChamber.A )}>
+					Join A</div>
+				<div className="Button" onClick={ () => this.onJoinChamber( SimpleChamber.B )}>
+					Join B</div>
+				<div className="Button" onClick={ () => this.onJoinChamber( SimpleChamber.C )}>
+					Join C</div>
+				<div className="Button" onClick={ () => this.onJoinChamber( SimpleChamber.D )}>
+					Join D</div>
+			</>;
 		}
 	}
 
 	public renderPanel()
 	{
-		if( this.state.highlight != HighlightType.Grabbed )
-			return null;
-
-		return <AvTransform rotateX={ 45 } translateZ={ -0.1 }>
-				<AvTransform uniformScale={0.25}>
-					<AvTransform translateZ={ -0.55 }>
-						<AvPanel interactive={false}>
-							<div className="FullPage" >
-								<h1>This is the control panel</h1>
-							</div>;
+		return <AvTransform rotateX={ 45 } translateZ={ -0.01 }>
+				<AvTransform scaleX={ 0.125 } scaleZ={ 0.0625 }>
+					<AvTransform translateZ={ -0.5 }>
+						<AvPanel interactive={ true }>
+							{ this.renderPanelContents() }
 						</AvPanel>
 					</AvTransform>
 				</AvTransform>
@@ -78,27 +77,31 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 
 	public renderChamber()
 	{
-		return <AvOrigin path="/space/stage" >
-				<AvDefaultChamber chamberId="chuck" showSelf={ true } />
+		if( !this.state.currentChamber )
+		{
+			return null;
+		}
+		else
+		{
+			return <AvOrigin path="/space/stage" >
+				<AvDefaultChamber chamberId={ this.state.currentChamber }/>
 			</AvOrigin>;
+		}
 	}
 
 	public render()
 	{
 		return (
-			<AvGrabbable updateHighlight={ this.onUpdateHighlight } preserveDropTransform={ true }
-				grabWithIdentityTransform={ true }
-				dropOnHooks={ true }> 
-				<AvTransform uniformScale={ this.state.highlight == HighlightType.InRange ? 1.1 : 1.0 } >
-					<AvModel uri={ g_builtinModelGear } />
-					<AvModelBoxHandle uri={ g_builtinModelGear }/>
-				</AvTransform>
+			<>
+				<AvStandardGrabbable modelUri={ g_builtinModelHead } 
+					showChildren= { ShowGrabbableChildren.OnlyWhenGrabbed } >
+					{ this.renderPanel() }
+				</AvStandardGrabbable>
 
-				{ this.renderPanel() }
 				{ this.renderChamber() }
-			</AvGrabbable>	);
+			</>	);
 	}
 }
 
 
-ReactDOM.render( <ControlPanel/>, document.getElementById( "root" ) );
+ReactDOM.render( <SimpleSocial/>, document.getElementById( "root" ) );

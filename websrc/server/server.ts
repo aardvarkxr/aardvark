@@ -1000,7 +1000,7 @@ class CGadgetData
 		}
 	}
 
-	public joinChamber( chamberId: string, namespace: ChamberNamespace )
+	public joinChamber( chamberId: string, namespace: ChamberNamespace, showSelf: boolean )
 	{
 		if( namespace == undefined )
 		{
@@ -1013,6 +1013,7 @@ class CGadgetData
 			userUuid: persistence.localUserInfo.userUuid,
 			userPublicKey: persistence.localUserInfo.userPublicKey,
 			gadgets: this.m_dispatcher.gatherSharedGadgets(),
+			showSelf,
 		}
 		this.m_dispatcher.sendToMasterSigned( MessageType.ActuallyJoinChamber, req );
 		this.m_dispatcher.addChamber( req.chamberPath, this.m_persistenceUuid );
@@ -1021,6 +1022,7 @@ class CGadgetData
 		{
 			chamberId,
 			namespace,
+			showSelf,
 		};
 	}
 
@@ -1550,7 +1552,7 @@ class CEndpoint
 	@bind private onRequestJoinChamber( env: Envelope, m: MsgRequestJoinChamber )
 	{
 		this.verifyPermission( Permission.Chamber );
-		this.getGadgetData().joinChamber( m.chamberId, m.namespace );
+		this.getGadgetData().joinChamber( m.chamberId, m.namespace, m.showSelf );
 	}
 
 	@bind private onRequestLeaveChamber( env: Envelope, m: MsgRequestLeaveChamber )

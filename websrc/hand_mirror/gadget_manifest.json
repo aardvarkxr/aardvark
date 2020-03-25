@@ -1,0 +1,8 @@
+{
+	"name" : "Hand Mirror",
+	"permissions" : [ "scenegraph", "chamber" ],
+	"width": 16,
+	"height": 16,
+	"model" : "http://localhost:23842/models/hand_mirror.glb",
+	"shareInChamber": false
+}

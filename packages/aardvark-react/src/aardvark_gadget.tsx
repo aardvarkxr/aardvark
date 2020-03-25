@@ -715,6 +715,7 @@ export class AvGadget
 		{
 			chamberId,
 			namespace,
+			showSelf,
 		}
 		this.m_endpoint.sendMessage( MessageType.RequestJoinChamber, msg );
 

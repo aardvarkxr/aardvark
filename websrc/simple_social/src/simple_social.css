@@ -13,41 +13,19 @@ body, html
 	overflow: hidden;
 }
 
-.HookCircle
+.Button
 {
-	border-radius: 50%;
-	border-width: 0.1rem;
-	border-style: solid;
-	width: 90%;
-	height: 90%;
-	font-size: 2rem;
-	margin: 1px;
+	background-color: lightpink;
+	border: 1px solid darkorchid;
+	border-radius: 5%;
+	color: darkred;
+	font-size: 36pt;
+	margin: 5px;
+	padding: 2px;
 }
 
-.NoHighlight
+.Button:hover
 {
-	border-color: #88888888;
-	background-color: #88888855;
+	background-color: lightcoral;
 }
 
-.InRangeHighlight
-{
-	border-color: #888888FF;
-	background-color: #888888AA;
-}
-
-.GadgetSeedContainer
-{
-	background-color: transparent;
-	display: flex;
-	flex-direction: row;
-	flex-wrap: wrap;
-	height: 100%;
-	width: 100%;
-}
-
-.GadgetSeed
-{
-	height: 30%;
-	width: 30%;
-}
