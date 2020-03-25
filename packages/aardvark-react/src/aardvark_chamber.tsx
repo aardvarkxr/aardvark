@@ -145,7 +145,8 @@ export class AvDefaultChamber extends React.Component< AvDefaultChamberProps, Av
 			let rotationIndex = ( n - localUserIndex + members.length ) % members.length;
 			let yRotRadians = rotationIndex * 360 / members.length;
 
-			const circleRadius = 0.5;
+			const userSeparation = 1;  //meters
+			let circleRadius = members.length == 1 ? 0 : userSeparation / (2 * Math.sin(Math.PI / members.length));
 
 			stateMembers.push(
 				{
