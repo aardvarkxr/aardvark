@@ -7,6 +7,8 @@ import { Av, AvActionState, EAction, getActionFromState,
 	MsgSignRequest,
 	MsgSignRequestResponse,
 	ChamberNamespace,
+	MsgChamberMemberListUpdated,
+	AvNodeTransform,
 } from '@aardvarkxr/aardvark-shared';
 import { IAvBaseNode } from './aardvark_base_node';
 import bind from 'bind-decorator';
@@ -21,7 +23,7 @@ import { MessageType, MsgUpdateSceneGraph, EndpointAddr,
 	EHand, MsgResourceLoadFailed,
 	MsgGetInstalledGadgets,
 	MsgGetInstalledGadgetsResponse} from '@aardvarkxr/aardvark-shared';
-import { MessageHandler } from './aardvark_endpoint';
+import { MessageHandler, AsyncMessageHandler } from './aardvark_endpoint';
 const equal = require( 'fast-deep-equal' );
 
 
@@ -64,6 +66,16 @@ interface ActionStateListener
 	falling?: () => void;
 }
 
+export interface ChamberMemberListHandler
+{
+	( chamberId: string, members: string[] ): void;
+}
+
+interface GadgetChamberDetails
+{
+	memberHandler: ChamberMemberListHandler;
+	showSelf: boolean;
+}
 
 /** The singleton gadget object for the browser. */
 export class AvGadget
@@ -82,6 +94,8 @@ export class AvGadget
 	m_actionState: { [hand:number]: AvActionState } = {};
 	private m_persistenceUuid: string;
 	private m_remoteUniversePath: string;
+	private m_ownerUuid: string;
+	private m_remotePersistenceUuid: string;
 	private m_epToNotify: EndpointAddr = null;
 	private m_firstSceneGraph: boolean = true;
 	private m_mainGrabbable: AvNode = null;
@@ -96,7 +110,8 @@ export class AvGadget
 	m_panelProcessors: {[nodeId:number]: AvPanelHandler } = {};
 	m_startGadgetPromises: {[nodeId:number]: 
 		[ ( res: AvStartGadgetResult ) => void, ( reason: any ) => void ] } = {};
-	m_actionStateListeners: { [listenerId: number] : ActionStateListener } = {}
+	m_actionStateListeners: { [listenerId: number] : ActionStateListener } = {};
+	m_chamberMemberListHandler: { [ chamberId: string ]: GadgetChamberDetails } = {};
 
 	constructor()
 	{
@@ -115,6 +130,8 @@ export class AvGadget
 		let params = parseURL( window.location.href );
 		this.m_persistenceUuid = params[ "persistenceUuid" ];
 		this.m_remoteUniversePath = params[ "remoteUniversePath" ];
+		this.m_ownerUuid = params[ "ownerUuid" ];
+		this.m_remotePersistenceUuid = params[ "remotePersistenceUuid" ];
 
 		if( params[ "epToNotify"] )
 		{
@@ -129,6 +146,7 @@ export class AvGadget
 
 		this.m_endpoint = new CGadgetEndpoint( this.m_actualGadgetUri, 
 			params["initialHook"], this.m_persistenceUuid, this.m_remoteUniversePath,
+			this.m_ownerUuid,
 			this.onEndpointOpen );
 	}
 
@@ -149,7 +167,8 @@ export class AvGadget
 		this.m_endpoint.registerHandler( MessageType.UpdateActionState, this.onUpdateActionState );
 		this.m_endpoint.registerHandler( MessageType.ResourceLoadFailed, this.onResourceLoadFailed );
 		this.m_endpoint.registerHandler( MessageType.UserInfo, this.onUserInfo );
-
+		this.m_endpoint.registerHandler( MessageType.ChamberMemberListUpdated, 
+			this.onChamberMemberListUpdated );
 		if( this.m_onSettingsReceived )
 		{
 			this.m_onSettingsReceived( settings );
@@ -338,7 +357,12 @@ export class AvGadget
 
 	@bind private onMasterStartGadget( m: MsgMasterStartGadget )
 	{
-		Av().startGadget( m.uri, m.initialHook, m.persistenceUuid, null );
+		Av().startGadget( 
+			{
+				uri: m.uri, 
+				initialHook: m.initialHook, 
+				persistenceUuid: m.persistenceUuid,
+			} );
 	}
 
 	@bind private onResourceLoadFailed( m: MsgResourceLoadFailed )
@@ -579,8 +603,8 @@ export class AvGadget
 		this.m_endpoint.sendMessage( MessageType.NodeHaptic, msg );
 	}
 
-	public startGadget( uri: string, initialHook: string, remoteUniverse?: string,
-		persistenceUuid?: string ) : 
+	public startGadget( uri: string, initialHook: string, remoteUniversePath?: string,
+		persistenceUuid?: string, ownerUuid?: string, remotePersistenceUuid?: string ) : 
 		Promise<AvStartGadgetResult>
 	{
 		return new Promise( ( resolve, reject ) =>
@@ -594,9 +618,34 @@ export class AvGadget
 				endpointId: this.m_endpoint.getEndpointId(),
 				nodeId: notifyNodeId,
 			}
-			Av().startGadget( uri, initialHook, persistenceUuid ?? "", epToNotify, remoteUniverse );
+			Av().startGadget( 
+				{
+					uri, initialHook, 
+					persistenceUuid: persistenceUuid ?? "", 
+					epToNotify, 
+					remoteUniversePath,
+					ownerUuid,
+					remotePersistenceUuid,
+				} );
 		} );
 	} 
+
+	public get globallyUniqueId(): string 
+	{
+		if( this.m_ownerUuid && this.m_remotePersistenceUuid )
+		{
+			return this.m_remotePersistenceUuid + this.m_ownerUuid;
+		}
+		else
+		{
+			return this.m_persistenceUuid + this.localUserInfo.userUuid;
+		}
+	}
+
+	public get isRemote() : boolean
+	{
+		return !!this.m_ownerUuid;
+	}
 
 	/** Persists the gadget's settings. These weill be passed to the gadget 
 	 * via the callback registered with registerForSettings whenever the 
@@ -672,7 +721,34 @@ export class AvGadget
 	public addUserInfoListener( fn: ()=>void ) 
 	{
 		this.m_userInfoListeners.push( fn );
+		if( this.m_userInfo )
+		{
+			fn();
+		}
 	}
+
+	/** Returns a promise that will be fulfilled when the 
+	 * local user info becomes available.
+	 */
+	public getLocalUserInfo(): Promise< LocalUserInfo >
+	{
+		if( this.m_userInfo )
+		{
+			return Promise.resolve( this.m_userInfo );
+		}
+	
+		return new Promise( (resolve, reject ) =>
+		{
+			let fn = () =>
+			{
+				resolve( this.localUserInfo );
+				global.setTimeout( () => { this.removeUserInfoListener( fn ); }, 1 );
+			};
+
+			this.addUserInfoListener( fn );
+		} );
+	}
+
 
 	/** Removes a listener for user info updates */
 	public removeUserInfoListener( fn: ()=>void ) 
@@ -694,14 +770,22 @@ export class AvGadget
 	 * 
 	 * The provided chamber ID will be namespaced with the gadget's name.
 	 */
-	public joinChamber( chamberId: string, namespace: ChamberNamespace )
+	public joinChamber( chamberId: string, namespace: ChamberNamespace, 
+		memberListHandler: ChamberMemberListHandler, showSelf?: boolean )
 	{
 		let msg: MsgRequestJoinChamber =
 		{
 			chamberId,
 			namespace,
+			showSelf,
 		}
 		this.m_endpoint.sendMessage( MessageType.RequestJoinChamber, msg );
+
+		this.m_chamberMemberListHandler[ chamberId ] =
+		{
+			memberHandler: memberListHandler,
+			showSelf: showSelf ?? false,
+		};
 	}
 
 	/** Asks to leave a chamber on the user's behalf. This gadget must have the "chamber" permission.
@@ -716,12 +800,26 @@ export class AvGadget
 			namespace,
 		}
 		this.m_endpoint.sendMessage( MessageType.RequestLeaveChamber, msg );
+
+		delete this.m_chamberMemberListHandler[ chamberId ];
+	}
+
+	@bind
+	private onChamberMemberListUpdated( m: MsgChamberMemberListUpdated )
+	{
+		this.m_chamberMemberListHandler[ m.chamberId ]?.memberHandler(m.chamberId, m.members );
 	}
 
 	/** Adds a handler for a raw Aardvark message. You probably don't need this. */
 	public registerMessageHandler( type: MessageType, handler: MessageHandler )
 	{
 		this.m_endpoint.registerHandler( type, handler );
+	}
+
+	/** Adds an asynchronous handler for a raw Aardvark message. You probably don't need this. */
+	public registerAsyncMessageHandler( type: MessageType, handler: AsyncMessageHandler )
+	{
+		this.m_endpoint.registerAsyncHandler( type, handler );
 	}
 
 	/** Sends a message to the server. You probably don't need this either. */

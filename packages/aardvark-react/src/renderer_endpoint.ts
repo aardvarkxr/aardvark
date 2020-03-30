@@ -1,11 +1,11 @@
-import { CAardvarkEndpoint, MessageHandler, OpenHandler } from './aardvark_endpoint';
+import { CAardvarkEndpoint, MessageHandler, OpenHandler, AsyncMessageHandler } from './aardvark_endpoint';
 import { MsgSetEndpointType, MessageType, EndpointType } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 
 
 export class CRendererEndpoint extends CAardvarkEndpoint
 {
-	constructor( openHandler: OpenHandler, defaultHandler: MessageHandler = null )
+	constructor( openHandler: OpenHandler, defaultHandler: AsyncMessageHandler = null )
 	{
 		super( () => { this.onOpen() }, openHandler, defaultHandler );
 	}

@@ -1,9 +1,7 @@
-import { AvGadget } from './aardvark_gadget';
-import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
+import { AvConstraint, AvGrabEvent, AvGrabEventType, AvNodeTransform, AvNodeType, EndpointAddr, ENodeFlags } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
-import { EndpointAddr, AvNodeType, AvGrabEvent, AvGrabEventType, 
-	AvConstraint, AvNodeTransform, ENodeFlags } from '@aardvarkxr/aardvark-shared';
-import { AvTransform } from './aardvark_transform';
+import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
+import { AvGadget } from './aardvark_gadget';
 
 export interface GrabResponse
 {

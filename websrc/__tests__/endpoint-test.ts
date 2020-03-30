@@ -77,6 +77,13 @@ beforeEach( async() =>
 						sendMessage( MessageType.GetGadgetManifestResponse, r, env );
 					}
 					break;
+
+				case MessageType.RequestJoinChamber:
+					{
+						sendMessage( MessageType.ActuallyJoinChamber, {} );
+						sendMessage( MessageType.AddGadgetToChambers, {} );
+					}
+					break;
 			}
 
 		}
@@ -149,6 +156,36 @@ describe( "CAardvarkEndpoint ", () =>
 		return expect( ep.getGadgetManifest( "http://fail.com" ) ).rejects.toBe(
 			'Intentional Failure',
 		  );
+	} );
+
+	it( "serializing async message handlers", async () =>
+	{
+		let ep = createEndpoint( EndpointType.Utility );
+
+		let phase = 1;
+		let done1 = new Promise( ( resolve, reject )=>
+		{
+			ep.registerAsyncHandler( MessageType.ActuallyJoinChamber, async ( msg: object ) =>
+				{
+					phase++;
+					await new Promise( resolve => setTimeout( resolve, 500));
+					phase++;
+					resolve();
+				} );
+		} );
+		let done2 = new Promise( ( resolve, reject )=>
+		{
+			ep.registerHandler( MessageType.AddGadgetToChambers, ( msg: object ) =>
+			{
+				expect( phase ).toBe( 3 );
+				phase++;
+				resolve();
+			} );
+		});
+
+		ep.sendMessage( MessageType.RequestJoinChamber, {} );
+		await Promise.all( [ done1, done2 ] );
+		expect( phase ).toBe( 4 );
 	} );
 
 } );

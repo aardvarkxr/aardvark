@@ -1,23 +1,15 @@
 ========= DEAL WITH THIS NEXT ===========
 
-Master needs to be able to destroy gadgets from remotes.
-
 Members need to time out and leave chambers
 When they rejoin it needs to work.
 Probably even needs to work when they time out within a single run of Aardvark because of the debugger
 
-Creating new gadgets should set their hooks in a way that gets shared. I suspect that moving existing gadgets to a new hook isn't updating them either.
+Creating gadgets after joining chambers seems to fail a lot.
 
-Remote grabbers and pokers shouldn't be active.
-Remote grabbables should be inert too, for now at least. Maybe gadgets can opt-in to accepting that?
-grabbing should send a message to all chambers to tell them about the grab instead of running that logic again locally. 
+Still need:
+1) simple social gadget to have join/leave button and use its own state to govern chamber join/leave state.
+2) simple sodial gadget to prove show self checkbox and plumb that.
 
-Need to test:
-1) creating gadget while in chamber
-2) destroying gadget while in chamber
-3) leaving chamber
-4) moving gadget to another hook
-5) Trying to interact with remote's gadget
 
 =========================================
 

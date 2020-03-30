@@ -1,0 +1,31 @@
+body, html
+{
+	background-color: transparent;
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+}
+
+.FullPage
+{
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+}
+
+.Button
+{
+	background-color: lightpink;
+	border: 1px solid darkorchid;
+	border-radius: 5%;
+	color: darkred;
+	font-size: 36pt;
+	margin: 5px;
+	padding: 2px;
+}
+
+.Button:hover
+{
+	background-color: lightcoral;
+}
+

@@ -86,6 +86,18 @@ export interface AvBrowserTextureCallback
 	( textureInfo: AvSharedTextureInfo ): void;
 }
 
+export interface GadgetParams
+{
+	uri: string;
+	initialHook: string;
+	persistenceUuid: string;
+	epToNotify?: EndpointAddr;
+	remoteUniversePath?: string;
+	ownerUuid?: string;
+	remotePersistenceUuid?: string;
+}
+
+
 export interface Aardvark
 {
 	hasPermission( permission: Permission ): boolean;
@@ -95,8 +107,7 @@ export interface Aardvark
 	spoofMouseEvent( type:AvPanelMouseEventType, x: number, y: number ): void;
 
 	// requires master permissions
-	startGadget( uri: string, initialHook: string, persistenceUuid: string, epToNotify: EndpointAddr, 
-		remoteUniversePath?: string ): void;
+	startGadget( params: GadgetParams ): void;
 	getGadgetManifest( uri: string, callback: AvGadgetManifestCallback ): void;
 
 	/** Destroys the current browser. */

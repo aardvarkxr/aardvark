@@ -47,9 +47,19 @@ class MasterControls extends React.Component< {}, {} >
 ReactDOM.render( <MasterControls/>, document.getElementById( "root" ) );
 
 // always start the renderer
-Av().startGadget( "http://localhost:23842/gadgets/aardvark_renderer", "", "", null );
+Av().startGadget( 
+	{ 
+		uri: "http://localhost:23842/gadgets/aardvark_renderer", 
+		initialHook: "", 
+		persistenceUuid: "",
+	} );
 
 // Always draw some hands
-Av().startGadget( "http://localhost:23842/gadgets/default_hands", "", "hands", null );
+Av().startGadget( 
+	{
+		uri: "http://localhost:23842/gadgets/default_hands", 
+		initialHook: "", 
+		persistenceUuid: "hands",
+	} );
 
 

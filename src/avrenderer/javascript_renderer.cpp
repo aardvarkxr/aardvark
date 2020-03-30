@@ -257,6 +257,73 @@ CefRefPtr<CefV8Value> endpointAddrVectorToJs( const std::vector<EndpointAddr_t> 
 	return out;
 }
 
+bool gadgetParamsFromJs( CefRefPtr< CefV8Value > obj, aardvark::GadgetParams_t *params)
+{
+	if ( !obj || !obj->IsObject() || !params )
+		return false;
+
+	if ( obj->HasValue( "uri" ) )
+	{
+		CefRefPtr<CefV8Value> type = obj->GetValue( "uri" );
+		if ( type->IsString() )
+		{
+			params->uri = type->GetStringValue();
+		}
+	}
+
+	if ( obj->HasValue( "initialHook" ) )
+	{
+		CefRefPtr<CefV8Value> type = obj->GetValue( "initialHook" );
+		if ( type->IsString() )
+		{
+			params->initialHook = type->GetStringValue();
+		}
+	}
+	if ( obj->HasValue( "persistenceUuid" ) )
+	{
+		CefRefPtr<CefV8Value> type = obj->GetValue( "persistenceUuid" );
+		if ( type->IsString() )
+		{
+			params->persistenceUuid = type->GetStringValue();
+		}
+	}
+	if ( obj->HasValue( "remoteUniversePath" ) )
+	{
+		CefRefPtr<CefV8Value> type = obj->GetValue( "remoteUniversePath" );
+		if ( type->IsString() )
+		{
+			params->remoteUniversePath = type->GetStringValue();
+		}
+	}
+	if ( obj->HasValue( "ownerUuid" ) )
+	{
+		CefRefPtr<CefV8Value> type = obj->GetValue( "ownerUuid" );
+		if ( type->IsString() )
+		{
+			params->ownerUuid = type->GetStringValue();
+		}
+	}
+	if ( obj->HasValue( "remotePersistenceUuid" ) )
+	{
+		CefRefPtr<CefV8Value> type = obj->GetValue( "remotePersistenceUuid" );
+		if ( type->IsString() )
+		{
+			params->remotePersistenceUuid = type->GetStringValue();
+		}
+	}
+
+	if ( obj->HasValue( "epToNotify" ) )
+	{
+		if ( !endpointAddrFromJs( obj->GetValue( "epToNotify" ), &params->epToNotify ) )
+		{
+			return false;
+		}
+
+	}
+
+	return !params->uri.empty();
+}
+
 
 bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 {

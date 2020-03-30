@@ -8,6 +8,21 @@ import { buildPersistentHookPath, HookType } from 'common/hook_utils';
 import bind from 'bind-decorator';
 
 
+const g_alwaysInstalledGadgets =
+[
+	"http://localhost:23842/gadgets/test_panel",
+	"http://localhost:23842/gadgets/hand_mirror",
+	"http://localhost:23842/gadgets/simple_social",
+	"http://localhost:23842/gadgets/control_test",
+];
+
+const g_builtinGadgets =
+[
+	"http://localhost:23842/gadgets/aardvark_master",
+	"http://localhost:23842/gadgets/default_hands",
+	"http://localhost:23842/gadgets/gadget_menu",
+];
+
 class CPersistenceManager
 {
 	private m_state: AardvarkState;
@@ -230,7 +245,7 @@ class CPersistenceManager
 
 	public getInstalledGadgets() : string[]
 	{
-		return this.m_state.installedGadgets;
+		return this.m_state.installedGadgets.concat( g_alwaysInstalledGadgets );
 	}
 
 	public addInstalledGadget( gadgetUri: string )
@@ -258,9 +273,8 @@ class CPersistenceManager
 	public isGadgetUriInstalled( gadgetUri: string ): boolean
 	{
 		return this.m_state.installedGadgets.includes( gadgetUri )
-			|| gadgetUri == "http://localhost:23842/gadgets/aardvark_master"
-			|| gadgetUri == "http://localhost:23842/gadgets/default_hands"
-			|| gadgetUri == "http://localhost:23842/gadgets/gadget_menu";
+			|| g_alwaysInstalledGadgets.includes( gadgetUri )
+			|| g_builtinGadgets.includes( gadgetUri )
 	}
 
 	public get localUserInfo() : LocalUserInfo

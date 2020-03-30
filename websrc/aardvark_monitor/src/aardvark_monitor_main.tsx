@@ -109,7 +109,7 @@ class CMonitorStore
 		return gadgetData.nodes[ nodeId.nodeId ];
 	}
 
-	@bind onUnhandledMessage( message: any, env: Envelope )
+	@bind async onUnhandledMessage( message: any, env: Envelope )
 	{
 		console.log( "received unhandled message", env.type, message, env.sender );
 	}
@@ -247,7 +247,7 @@ class CMonitorStore
 					hook: gadget.hook,
 				}
 				memberView.gadgets.set( gadget.persistenceUuid, gadgetInfo );
-		}
+			}
 		}
 	}
 
@@ -762,6 +762,7 @@ interface GadgetMonitorProps
 interface GadgetMonitorState
 {
 	manifest: AvGadgetManifest;
+	expanded: boolean;
 }
 
 @observer
@@ -770,7 +771,7 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 	constructor( props: any )
 	{
 		super( props );
-		this.state = { manifest: null};
+		this.state = { manifest: null, expanded: false };
 
 		let gadgetData = MonitorStore.getGadgetData( this.props.gadgetId );
 		MonitorStore.getConnection().getGadgetManifest( gadgetData.gadgetUri )
@@ -778,6 +779,12 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 		{
 			this.setState( { manifest });
 		});
+	}
+
+	@bind
+	private onToggleExpand(	)
+	{
+		this.setState( ( prevState: GadgetMonitorState ) => { return { expanded: !prevState.expanded } } );
 	}
 
 	private renderFlags( flags: number )
@@ -809,6 +816,8 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 				{ this.renderFlags( node.flags ) } 
 			</div>
 			{ node.propUniverseName && <div className="AvNodeProperty">remote: {node.propUniverseName }</div> }
+			{ node.propChamberPath && <div className="AvNodeProperty">remote: {node.propChamberPath }</div> }
+			{ node.propChamberMemberUuid && <div className="AvNodeProperty">remote: {node.propChamberMemberUuid }</div> }
 			{ node.propOrigin && <div className="AvNodeProperty">origin: {node.propOrigin }</div> }
 			{ node.propModelUri && <div className="AvNodeProperty">model: {node.propModelUri }</div> }
 			{ node.propColor && <div className="AvNodeProperty">Color: 
@@ -833,10 +842,13 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 
 	private renderGrabberState()
 	{
+		if( !this.state.expanded )
+			return null;
+
 		let gadgetData = MonitorStore.getGadgetData( this.props.gadgetId );
 		if( !gadgetData || 
 			!gadgetData.grabberIsPressed && !gadgetData.hooks && !gadgetData.grabbables )
-			return;
+			return null;
 
 		let grabbables: string = "";
 		if( gadgetData.grabbables )
@@ -885,15 +897,21 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 			}
 		}
 
-		return <div className="Gadget">
-			Gadget { this.props.gadgetId } 
+		let sGadgetClasses="Gadget";
+		if( gadgetData.remoteUniversePath )
+		{
+			sGadgetClasses += " Remote";
+		}
+
+		return <div className={ sGadgetClasses } onClick={ this.onToggleExpand }>
+			{ this.props.gadgetId }: 
 			<div className="GadgetName">{ this.state.manifest ? this.state.manifest.name : "???" } 
 				<span className="GadgetUri">({ gadgetData.gadgetUri })</span>
-				{ hookInfo && <span className="GadgetUri">({ hookInfo })</span> }
+				{ hookInfo && <span className="GadgetUri">(&#x21AA; { hookInfo })</span> }
 			</div>
 			{ gadgetData.remoteUniversePath && 
 				<div className="GadgetRemote">{ gadgetData.remoteUniversePath } </div> }
-			{ gadgetData.gadgetRoot && this.renderNode( gadgetData.gadgetRoot ) }
+			{ this.state.expanded && this.renderNode( gadgetData.gadgetRoot ) }
 			{ this.renderGrabberState() }
 
 		</div>

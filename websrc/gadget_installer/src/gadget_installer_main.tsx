@@ -17,7 +17,7 @@ class GadgetInstaller extends React.Component< {}, {} >
 		this.m_connection = new CUtilityEndpoint( this.onUnhandledMessage );
 	}
 	
-	@bind onUnhandledMessage( message: any, env: Envelope )
+	@bind async onUnhandledMessage( message: any, env: Envelope )
 	{
 		console.log( "received unhandled message", env.type, message, env.sender );
 	}

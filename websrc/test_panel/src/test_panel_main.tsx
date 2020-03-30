@@ -5,6 +5,69 @@ import bind from 'bind-decorator';
 
 import { AvGadget, AvTransform, AvPanel, AvGrabbable, HighlightType, GrabResponse, AvSphereHandle } from '@aardvarkxr/aardvark-react';
 import { EndpointAddr, AvGrabEvent, EAction, EHand, ChamberNamespace } from '@aardvarkxr/aardvark-shared';
+import { ACModel, ACView } from 'common/croquet_utils';
+import { CroquetSession, startSession } from '@croquet/croquet';
+
+
+
+
+class Counter extends ACModel 
+{
+	private m_value: number;
+
+	public init( options: any )
+	{
+		super.init( options );
+		this.m_value = 0;
+
+		this.subscribe( this.id, "increment", this.onIncrement );
+	}
+
+	public onIncrement()
+	{
+		this.m_value++;
+		this.publish( this.id, "update_value", null );
+	}
+
+	public get value(): number
+	{
+		return this.m_value;
+	}
+}
+
+Counter.register();
+
+class CounterView extends ACView
+{
+	private counter: Counter;
+	private listener: ( newValue: number ) => void;
+
+	constructor( counter: Counter )
+	{
+		super( counter );
+		this.counter = counter;
+		this.subscribe( counter.id, "update_value", this.onValueUpdated );
+	}
+
+	public onValueUpdated()
+	{
+		if( this.listener )
+		{
+			this.listener( this.counter.value );
+		}
+	}
+
+	public setListener( listener: ( newValue: number ) => void )
+	{
+		this.listener = listener;
+		listener( this.counter.value );
+	}
+
+	public increment()
+	{
+		this.publish( this.counter.id, "increment", null );
+	}
+}
 
 
 interface TestPanelState
@@ -21,8 +84,8 @@ interface TestSettings
 
 class TestPanel extends React.Component< {}, TestPanelState >
 {
-	private m_panelId: EndpointAddr;
 	private m_actionListeners: number[];
+	private m_session: CroquetSession<CounterView>;
 
 	constructor( props: any )
 	{
@@ -35,42 +98,64 @@ class TestPanel extends React.Component< {}, TestPanelState >
 		};
 
 		AvGadget.instance().registerForSettings( this.onSettingsReceived );
+
+		AvGadget.instance().getLocalUserInfo()
+		.then( ( ) =>
+		{
+			// once user info is available, start the session
+			return startSession( AvGadget.instance().globallyUniqueId, Counter, CounterView );
+		})
+		.then( ( session: CroquetSession< CounterView > ) =>
+		{
+			// once the session is available, start listening for changes
+			this.m_session = session;
+			this.m_session.view.setListener( this.onValueUpdated );
+		} );
 	}
 
 	public componentDidMount()
 	{
-		this.m_actionListeners = 
-		[
-			AvGadget.instance().listenForActionStateWithComponent( EHand.Invalid, EAction.A, this ),
-			AvGadget.instance().listenForActionStateWithComponent( EHand.Invalid, EAction.B, this ),
-			AvGadget.instance().listenForActionStateWithComponent( EHand.Invalid, EAction.Squeeze, this ),
-			AvGadget.instance().listenForActionStateWithComponent( EHand.Invalid, EAction.Grab, this ),
-			AvGadget.instance().listenForActionStateWithComponent( EHand.Invalid, EAction.Detach, this ),
-		];
+		if( !AvGadget.instance().isRemote )
+		{
+			this.m_actionListeners = 
+			[
+				AvGadget.instance().listenForActionStateWithComponent( EHand.Invalid, EAction.A, this ),
+				AvGadget.instance().listenForActionStateWithComponent( EHand.Invalid, EAction.B, this ),
+				AvGadget.instance().listenForActionStateWithComponent( EHand.Invalid, EAction.Squeeze, this ),
+				AvGadget.instance().listenForActionStateWithComponent( EHand.Invalid, EAction.Grab, this ),
+				AvGadget.instance().listenForActionStateWithComponent( EHand.Invalid, EAction.Detach, this ),
+			];
+		}
 	}
 
 	public componentWillUnmount()
 	{
-		for( let listener of this.m_actionListeners )
+		if( !AvGadget.instance().isRemote )
 		{
-			AvGadget.instance().unlistenForActionState( listener );
-		}
+			for( let listener of this.m_actionListeners )
+			{
+				AvGadget.instance().unlistenForActionState( listener );
+			}
 
-		this.m_actionListeners = [];
+			this.m_actionListeners = [];
+		}
+	}
+
+	@bind 
+	private onValueUpdated( newValue: number )
+	{
+		this.setState( { count: newValue } );
+
+		if( !AvGadget.instance().isRemote )
+		{
+			let newSettings: TestSettings = { count: newValue };
+			AvGadget.instance().saveSettings( newSettings );	
+		}
 	}
 
 	@bind public incrementCount()
 	{
-		this.setState( { count: this.state.count + 1 } );
-
-		let newSettings: TestSettings = { count: this.state.count + 1 };
-		AvGadget.instance().saveSettings( newSettings );
-
-	}
-
-	@bind public onJoinChamber()
-	{
-		AvGadget.instance().joinChamber( "charles", ChamberNamespace.GadgetClass );
+		this.m_session.view.increment();
 	}
 
 	@bind public onHighlightGrabbable( highlight: HighlightType )
@@ -104,7 +189,24 @@ class TestPanel extends React.Component< {}, TestPanelState >
 			return <div className="Label">{ EAction[ action ] }: false</div>;
 	}
 
-	public render()
+	public renderRemote()
+	{
+		return (
+			<div className="FullPage Remote">
+				<div>
+					<AvGrabbable >
+						<AvTransform uniformScale={ 0.1 }>
+							<AvPanel interactive={false} />
+						</AvTransform>
+					</AvGrabbable>
+				</div>
+				<div className="Label">Count: { this.state.count }</div>
+				<div className="Label">This gadget is owned by somebody else</div>
+			</div>
+		);
+	}
+
+	public renderLocal()
 	{
 		let sDivClasses:string;
 		let scale = 0.1;
@@ -138,17 +240,14 @@ class TestPanel extends React.Component< {}, TestPanelState >
 						<AvSphereHandle radius={0.1} />
 						
 						<AvTransform uniformScale={ scale }>
-							<AvPanel interactive={true}
-								onIdAssigned={ (id: EndpointAddr) => { this.m_panelId = id } }/>
+							<AvPanel interactive={true}/>
 						</AvTransform>
 					</AvGrabbable>
 				</div>
 				<div className="Label">Count: { this.state.count }</div>
+				<div className="Label">This gadget is owned by me</div>
 				<div className="Button" onMouseDown={ this.incrementCount }>
 					Increment count...
-					</div> 
-				<div className="Button" onMouseDown={ this.onJoinChamber }>
-					Join the "Charles" chamber!
 				</div> 
 				{ this.renderActionStateLabel( EAction.A ) }
 				{ this.renderActionStateLabel( EAction.B ) }
@@ -158,6 +257,15 @@ class TestPanel extends React.Component< {}, TestPanelState >
 			</div>
 		)
 	}
+
+	public render()
+	{
+		if( AvGadget.instance().isRemote )
+			return this.renderRemote();
+		else
+			return this.renderLocal();
+	}
+
 }
 
 ReactDOM.render( <TestPanel/>, document.getElementById( "root" ) );

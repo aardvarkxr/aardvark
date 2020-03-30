@@ -1,7 +1,7 @@
 import { AvGadget } from '@aardvarkxr/aardvark-react';
 import bind from 'bind-decorator';
 import { initLocalUser } from 'common/net_user';
-import { MessageType, MsgActuallyJoinChamber, MsgActuallyLeaveChamber, MsgUpdatePose, MsgAddGadgetToChambers, MsgRemoveGadgetFromChambers, MsgUpdateChamberGadgetHook, AvStartGadgetResult, MsgDestroyGadget, MsgChamberGadgetHookUpdated } from '@aardvarkxr/aardvark-shared';
+import { MessageType, MsgActuallyJoinChamber, MsgActuallyLeaveChamber, MsgUpdatePose, MsgAddGadgetToChambers, MsgRemoveGadgetFromChambers, MsgUpdateChamberGadgetHook, AvStartGadgetResult, MsgDestroyGadget, MsgChamberGadgetHookUpdated, MsgChamberMemberListUpdated } from '@aardvarkxr/aardvark-shared';
 import { findChamber, ChamberSubscription, ChamberMemberInfo, ChamberGadgetInfo } from 'common/net_chamber';
 import { parsePersistentHookPath, buildPersistentHookPath, buildPersistentHookPathFromParts } from 'common/hook_utils';
 
@@ -42,15 +42,14 @@ export class CMasterModel
 		this.chamberListener = listener;
 
 		AvGadget.instance().addUserInfoListener( this.onUserInfo );
-		AvGadget.instance().registerMessageHandler( MessageType.ActuallyJoinChamber, this.onActuallyJoinChamber );
-		AvGadget.instance().registerMessageHandler( MessageType.ActuallyLeaveChamber, this.onActuallyLeaveChamber );
-		AvGadget.instance().registerMessageHandler( MessageType.UpdatePose, this.onUpdatePose );
+		AvGadget.instance().registerAsyncMessageHandler( MessageType.ActuallyJoinChamber, this.onActuallyJoinChamber );
+		AvGadget.instance().registerAsyncMessageHandler( MessageType.ActuallyLeaveChamber, this.onActuallyLeaveChamber );
+		AvGadget.instance().registerAsyncMessageHandler( MessageType.UpdatePose, this.onUpdatePose );
 		AvGadget.instance().registerMessageHandler( MessageType.AddGadgetToChambers, this.onAddGadgetToChambers );
 		AvGadget.instance().registerMessageHandler( MessageType.RemoveGadgetFromChambers, 
 			this.onRemoveGadgetFromChambers );
 		AvGadget.instance().registerMessageHandler( MessageType.UpdateChamberGadgetHook, 
 			this.onUpdateChamberGadgetHook );
-
 	}
 
 	public get activeChambers()
@@ -75,6 +74,7 @@ export class CMasterModel
 	@bind
 	private async onActuallyJoinChamber( m: MsgActuallyJoinChamber )
 	{
+		console.log( `onActuallyJoinChamber with ${ m.gadgets?.length } gadgets`)
 		let chamber = await findChamber( m.chamberPath );
 		if( await chamber.joinChamber( m ) )
 		{
@@ -104,6 +104,7 @@ export class CMasterModel
 	@bind
 	private onAddGadgetToChambers( m: MsgAddGadgetToChambers )
 	{
+		console.log( `onAddGadgetToChambers for ${ m.gadget.persistenceUuid } in ${ Object.keys( this.chambers ).length }` );
 		for( let chamberPath in this.chambers )
 		{
 			this.chambers[ chamberPath ].chamber.addGadget( m );
@@ -128,6 +129,36 @@ export class CMasterModel
 		}
 	}
 
+	@bind 
+	private onGadgetListUpdated( chamberSub: ChamberSubscription, memberInfo: ChamberMemberInfo )
+	{
+		console.log( "onGadgetListUpdated" );
+		let chamberTracker = this.chambers[ chamberSub.chamberPath ];
+		let memberTracker = chamberTracker?.members[ memberInfo.uuid ];
+		if( !chamberTracker || !memberTracker )
+			return;
+
+		let gadgetsToRemove = Object.keys( memberTracker.gadgets );
+		for( let gadgetInfo of memberInfo.gadgets )
+		{
+			let gadgetIndex = gadgetsToRemove.indexOf( gadgetInfo.persistenceUuid );
+			if( -1 != gadgetIndex )
+			{
+				// we found one in our existing list.
+				gadgetsToRemove.splice( gadgetIndex, 1 );
+			}
+			else
+			{
+				this.addChamberMemberGadget( chamberSub, memberInfo, gadgetInfo );
+			}
+		}
+
+		for( let gadgetPersistenceUuid of gadgetsToRemove )
+		{
+			this.removeChamberMemberGadget( chamberSub, memberInfo, gadgetPersistenceUuid );
+		}
+	}
+
 	private addChamber( chamberSub: ChamberSubscription )
 	{
 		this.chambers[ chamberSub.chamberPath ] =
@@ -136,12 +167,16 @@ export class CMasterModel
 			members: {},
 		};
 
+		chamberSub.addGadgetListUpdateHandler( this.onGadgetListUpdated );
 		chamberSub.addGadgetUpdateHandler( this.onGadgetUpdate );
+		chamberSub.addChamberMemberListUpdateHandler( this.onChamberMemberListUpdate );
 
 		for( let memberInfo of chamberSub.members )
 		{
 			this.addChamberMember( chamberSub, memberInfo );
 		}
+
+		this.onChamberMemberListUpdate( chamberSub );
 	}
 
 	private addChamberMember( chamberSub: ChamberSubscription, memberInfo: ChamberMemberInfo )
@@ -190,6 +225,13 @@ export class CMasterModel
 		};
 		memberTracker.gadgets[ gadgetInfo.persistenceUuid ] = gadgetTracker;
 
+		// most chambers don't show the local user
+		if( memberTracker.member.uuid == AvGadget.instance().localUserInfo.userUuid 
+			&& !memberTracker.member.showSelf )
+		{
+			return;
+		}
+
 		// make a unique ID for the new gadget namespaced by the remote universe
 		let newGadgetPersistenceUuid = computeRemotePersistenceUuid( gadgetInfo.persistenceUuid, 
 			memberTracker.remoteUniversePath );
@@ -207,7 +249,7 @@ export class CMasterModel
 		console.log( `master starting gadget ${ newGadgetPersistenceUuid } on ${ hookToUse } `
 			+ `via ${ gadgetInfo.gadgetUri }` );
 		AvGadget.instance().startGadget( gadgetInfo.gadgetUri, hookToUse, 
-			memberTracker.remoteUniversePath, newGadgetPersistenceUuid )
+			memberTracker.remoteUniversePath, newGadgetPersistenceUuid, memberInfo.uuid, gadgetInfo.persistenceUuid )
 		.then( ( res: AvStartGadgetResult ) =>
 		{
 			if( res.success )
@@ -219,11 +261,14 @@ export class CMasterModel
 
 	private removeChamber( chamberSub: ChamberSubscription )
 	{
+		console.log( "removeChamber "+ chamberSub.chamberPath );
 		let chamberTracker = this.chambers[ chamberSub.chamberPath ];
 		if( !chamberTracker )
 			return;
 
 		chamberSub.removeGadgetUpdateHandler( this.onGadgetUpdate );
+		chamberSub.removeChamberMemberListUpdateHandler( this.onChamberMemberListUpdate );
+		chamberSub.removeGadgetListUpdateHandler( this.onGadgetListUpdated );
 
 		for( let memberUuid in chamberTracker.members )
 		{
@@ -235,6 +280,7 @@ export class CMasterModel
 
 	private removeChamberMember( chamberSub: ChamberSubscription, memberInfo: ChamberMemberInfo )
 	{
+		console.log( "removeChamberMember "+ chamberSub.chamberPath + " " + memberInfo.uuid);
 		let chamberTracker = this.chambers[ chamberSub.chamberPath ];
 		if( !chamberTracker )
 			return;
@@ -246,25 +292,27 @@ export class CMasterModel
 		for( let gadgetPersistenceUuid in memberTracker.gadgets )
 		{
 			this.removeChamberMemberGadget( chamberSub, memberInfo, 
-				memberTracker.gadgets[ gadgetPersistenceUuid ].gadget );
+				memberTracker.gadgets[ gadgetPersistenceUuid ].gadget.persistenceUuid );
 		}
 	
 		delete chamberTracker.members[ memberInfo.uuid ];
 	}
 
 	private removeChamberMemberGadget( chamberSub: ChamberSubscription, memberInfo: ChamberMemberInfo,
-		gadgetInfo: ChamberGadgetInfo )
+		gadgetPersistenceUuid: string )
 	{
+		console.log( "removeChamberMemberGadget " + chamberSub.chamberPath + " member: " + memberInfo.uuid
+			+ " gadget: " + gadgetPersistenceUuid );
 		let memberTracker = this.chambers[ chamberSub.chamberPath ]?.members[ memberInfo.uuid ];
 		if( !memberTracker )
 		{
 			return;
 		}
 
-		let gadgetTracker = memberTracker.gadgets[ gadgetInfo.persistenceUuid ];
+		let gadgetTracker = memberTracker.gadgets[ gadgetPersistenceUuid ];
 		if( !gadgetTracker )
 		{
-			// don't add a gadget twice
+			// don't remove a gadget twice
 			return;
 		}
 
@@ -274,7 +322,7 @@ export class CMasterModel
 		}
 
 		AvGadget.instance().sendMessage( MessageType.DestroyGadget, msg );
-		delete memberTracker.gadgets[ gadgetInfo.persistenceUuid ];
+		delete memberTracker.gadgets[ gadgetPersistenceUuid ];
 	}
 
 	@bind
@@ -308,6 +356,19 @@ export class CMasterModel
 			AvGadget.instance().sendMessage( MessageType.ChamberGadgetHookUpdated, msg );
 		}
 
+	}
+
+	@bind
+	onChamberMemberListUpdate( chamber: ChamberSubscription )
+	{
+		console.log( "onChamberMemberListUpdate" );
+		let msg: MsgChamberMemberListUpdated =
+		{
+			chamberPath: chamber.chamberPath,
+			members: chamber.members.map( mem => mem.uuid ),
+		};
+
+		AvGadget.instance().sendMessage( MessageType.ChamberMemberListUpdated, msg );
 	}
 }
 

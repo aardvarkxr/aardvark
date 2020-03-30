@@ -19,3 +19,4 @@ export const g_builtinModelRoom = g_builtinModelPrefix + "room.glb";
 export const g_builtinModelTrashcan = g_builtinModelPrefix + "trashcan.glb";
 export const g_builtinModelMagnetOpen = g_builtinModelPrefix + "magnet_open.glb";
 export const g_builtinModelMagnetClosed = g_builtinModelPrefix + "magnet_closed.glb";
+export const g_builtinModelHandMirror = g_builtinModelPrefix + "hand_mirror.glb";
