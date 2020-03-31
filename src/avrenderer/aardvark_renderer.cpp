@@ -259,7 +259,7 @@ void VulkanExample::renderVarggles( uint32_t cbIndex, vks::RenderTarget target, 
 	m_vrManager->getVargglesLookRotation(m_vargglesLookRotation);
 
 	PushConstBlockVarggles pushConstVarggles{};
-	pushConstVarggles.halfFOVInRadians = (m_eyeFOV / 2.0f) * (M_PI / 180.0f);
+	pushConstVarggles.halfFOVInRadians = glm::radians(m_eyeFOV / 2.0f);
 	pushConstVarggles.lookRotation = m_vargglesLookRotation;
 	vkCmdPushConstants( commandBuffers[cbIndex], m_vargglesVulkanBindings.pipelinelayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( PushConstBlockVarggles ), &pushConstVarggles);
 
@@ -792,7 +792,7 @@ void VulkanExample::preparePipelines()
 
 void VulkanExample::prepareVarggles()
 {
-	m_vargglesEyePerspectiveProjection = glm::perspective(m_eyeFOV, 1.0f, 0.1f, 256.0f);
+	m_vargglesEyePerspectiveProjection = glm::perspective(glm::radians(m_eyeFOV), 1.0f, 0.1f, 256.0f);
 
 	// create left / right eye render target color image samplers
 	VkSamplerCreateInfo samplerCI{};
@@ -1865,7 +1865,6 @@ void VulkanExample::updateUniformBuffers()
 	shaderValuesLeftEye.matProjectionFromView = m_vargglesEyePerspectiveProjection;
 	shaderValuesLeftEye.matViewFromHmd = GetHMDMatrixPoseEye( vr::Eye_Left );
 	shaderValuesLeftEye.matHmdFromStage = m_vrManager->getHmdFromUniverse();
-
 	glm::mat4 stageFromView = glm::inverse( shaderValuesLeftEye.matViewFromHmd * shaderValuesLeftEye.matHmdFromStage );
 	shaderValuesLeftEye.camPos = glm::vec3( stageFromView * glm::vec4( 0, 0, 0, 1.f ) );
 

@@ -275,7 +275,7 @@ protected:
 
 	int32_t debugViewInputs = 0;
 	int32_t debugViewEquation = 0;
-	float m_eyeFOV = 115.0f;
+	float m_eyeFOV = 112.0f;
 
 	CUriRequestHandler m_uriRequests;
 
