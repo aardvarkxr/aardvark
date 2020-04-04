@@ -202,3 +202,22 @@ The tsconfig.json and webpackconfig.js files in your gadget's source tree contro
 For more details on how all of that works, [How to Setup TypeScript with Webpack 4](https://appdividend.com/2018/03/18/how-to-setup-typescript-with-webpack-4/) is a good introduction.
 
 
+# Step 3 - Running your gadget for the first time
+
+First you need to install your gadget.
+
+```console
+E:\gettingstarted>avcmd install dist
+Read state from C:\Users\username\aardvark\state.json for 5 active gadgets
+info: Installing My Awesome Gadget: file:///E:/gettingstarted/dist
+info: writing state to C:\Users\username\aardvark\state.json
+```
+
+Then run Aardvark and you will see your gadget show up in the gadget menu.
+
+![Gadget in menu](gadget_in_menu.png "Gadget in Menu")
+
+If you grab the placeholder gear icon, you'll see your gadget's panel.
+
+![Gadget panel](gadget_panel.png "Gadget Panel")
+
