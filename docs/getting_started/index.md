@@ -12,6 +12,8 @@ There are some pre-requisites to following the rest of this guide.
 Specifically you need to have the following applications installed:
 * (Visual Studio Code)[https://code.visualstudio.com/download)
 * (npm)[https://www.npmjs.com/get-npm]
+* typescript - Once npm is installed, you can install typescript with `npm install -g typescript`
+* avcmd - This is a command line tool for Aardvark developers. Once npm is installed, you can install it with `npm install -g @aardvarkxr/aardvark-cli`.
 
 There's nothing in the instructions below that cares what platform you're running on, but these instructions have only been tested on Windows 10.
 Aardvark itself also currently only runs on Windows.
@@ -87,7 +89,7 @@ E:\GETTINGSTARTED
 Now that you have a gadget project, open it in Visual Studio code.
 
 ```console
-code .
+E:\gettingstarted> code .
 ```
 
 # Step 2 - Build your gadget for the first time
@@ -128,5 +130,75 @@ added 999 packages from 1189 contributors and audited 54181 packages in 31.898s
 
 found 0 vulnerabilities
 ```
+
+Now that the dependencies are installed we can start the actual build.
+
+```console
+PS E:\gettingstarted> npm start
+
+> mygadget@0.1.0 start E:\gettingstarted
+> webpack --env=dev --watch --progress
+
+10% [0] building 0/0 modules 0 active
+webpack is watching the files…
+
+Hash: 7761bd5deb168075e44e
+Version: webpack 4.42.1
+Child
+    Hash: 7761bd5deb168075e44e
+    Time: 3014ms
+    Built at: 04/04/2020 9:47:13 AM
+                     Asset       Size  Chunks             Chunk Names
+              ./index.html  297 bytes          [emitted]
+      gadget_manifest.json  168 bytes          [emitted]
+                  index.js   10.9 MiB    main  [emitted]  main
+                 main.d.ts   12 bytes          [emitted]
+    models/placeholder.glb   9.38 KiB          [emitted]
+                styles.css  391 bytes          [emitted]
+    Entrypoint main = index.js
+    [0] util (ignored) 15 bytes {main} [built]
+    [1] util (ignored) 15 bytes {main} [built]
+    [2] buffer (ignored) 15 bytes {main} [optional] [built]
+    [3] crypto (ignored) 15 bytes {main} [optional] [built]
+    [./node_modules/webpack/buildin/global.js] (webpack)/buildin/global.js 472 bytes {main} [built]
+    [./node_modules/webpack/buildin/module.js] (webpack)/buildin/module.js 497 bytes {main} [built]
+    [./src/main.tsx] 3.67 KiB {main} [built]
+        + 167 hidden modules
+    Child html-webpack-plugin for "index.html":
+         1 asset
+        Entrypoint undefined = ./index.html
+        [./node_modules/html-webpack-plugin/lib/loader.js!./src/index.html] 428 bytes {0} [built]
+        [./node_modules/webpack/buildin/global.js] (webpack)/buildin/global.js 472 bytes {0} [built]
+        [./node_modules/webpack/buildin/module.js] (webpack)/buildin/module.js 497 bytes {0} [built]
+            + 1 hidden module
+```
+
+Exactly what `npm start` does is controlled by the scripts section of the gadget's package.json file.
+
+```json
+	"scripts": {
+		"build": "webpack --env=production",
+		"start": "webpack --env=dev --watch --progress"
+	},
+```
+
+By default the init script sets package.json up to run a tool called webpack to bundle all the code and other assets for the gadget up into the `dist` directory, and then watch the source files for any changes.
+Changing any of the source files will cause webpack to build again and update the output files automatically.
+
+At this point the output directory should look like this:
+```
+E:\GETTINGSTARTED\DIST
+¦   gadget_manifest.json
+¦   index.html
+¦   index.js
+¦   main.d.ts
+¦   styles.css
+¦
++---models
+        placeholder.glb
+```
+
+The tsconfig.json and webpackconfig.js files in your gadget's source tree control this transpile and bundling process.
+For more details on how all of that works, [How to Setup TypeScript with Webpack 4](https://appdividend.com/2018/03/18/how-to-setup-typescript-with-webpack-4/) is a good introduction.
 
 
