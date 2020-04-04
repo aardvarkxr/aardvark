@@ -119,10 +119,10 @@ void CVRManager::updateOpenVrPoses()
 	glm::mat4 universeFromHmd = glmMatFromVrMat(
 		rRenderPoses[vr::k_unTrackedDeviceIndex_Hmd].mDeviceToAbsoluteTracking);
 
-	m_hmdFromUniverse = glm::inverse(universeFromHmd);
 	m_universeFromOriginTransforms["/user/head"] = universeFromHmd;
-
 	m_universeFromOriginTransforms["/space/stage"] = glm::mat4(1.f);
+
+	m_hmdFromUniverse = glm::inverse(universeFromHmd);
 	m_vargglesLookRotation = glm::scale(m_hmdFromUniverse, glm::vec3(1, 1, -1));
 }
 void CVRManager::getVargglesLookRotation(glm::mat4& horizontalLooktransform)
