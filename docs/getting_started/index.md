@@ -220,10 +220,10 @@ info: writing state to C:\Users\username\aardvark\state.json
 Then run Aardvark and you will see your gadget show up in the gadget menu.
 The white sphere is the placeholder model.
 
-![Gadget in menu](gadget_in_menu.png "Gadget in Menu")
+![Gadget in menu](gadget_in_menu.jpg "Gadget in Menu")
 
 If you grab the placeholder sphere icon, you'll see your gadget's panel.
 
-![Gadget panel](gadget_panel.png "Gadget Panel")
+![Gadget panel](gadget_panel.jpg "Gadget Panel")
 
 
