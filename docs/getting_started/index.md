@@ -226,3 +226,4 @@ If you grab the placeholder sphere icon, you'll see your gadget's panel.
 
 ![Gadget panel](gadget_panel.png "Gadget Panel")
 
+
