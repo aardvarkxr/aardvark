@@ -34,6 +34,10 @@ interface AvBaseHandleState
 
 }
 
+/** This component is the base class for the specific handle types. 
+ * You should use AvSphereHandle or AvModelBoxHandle instead of using
+ * AvBaseHandle directly.
+ */
 export abstract class AvBaseHandle<TProps, TState> extends AvBaseNode<TProps, TState> 
 {
 	m_lastHighlight = HighlightType.None;

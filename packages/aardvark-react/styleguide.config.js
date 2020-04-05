@@ -10,14 +10,14 @@ module.exports =
 	],
 	ignore: 
 	[ 
-		'src/aardvark_base_node.tsx',
-		'src/aardvark_handles.tsx'
+		'src/aardvark_base_node.tsx'
 	],
 	propsParser: require('react-docgen-typescript').withDefaultConfig({}).parse,
 	getComponentPathLine(componentPath) 
 	{
 		return undefined; // These can't work because this function doesn't get the component name
 	},
+	usageMode: "expand",
 	webpackConfig: {
 		module: 
 		{
