@@ -14,8 +14,8 @@ Using Javascript to build your gadget should be straightforward... just use .js 
 
 There are some pre-requisites to following the rest of this guide.
 Specifically you need to have the following applications installed:
-* (Visual Studio Code)[https://code.visualstudio.com/download)
-* (npm)[https://www.npmjs.com/get-npm]
+* [Visual Studio Code](https://code.visualstudio.com/download)
+* [npm](https://www.npmjs.com/get-npm)
 * typescript - Once npm is installed, you can install typescript with `npm install -g typescript`
 * avcmd - This is a command line tool for Aardvark developers. Once npm is installed, you can install it with `npm install -g @aardvarkxr/aardvark-cli`.
 
@@ -227,3 +227,160 @@ If you grab the placeholder sphere icon, you'll see your gadget's panel.
 ![Gadget panel](gadget_panel.jpg "Gadget Panel")
 
 
+# Step 4 - Understanding gadget_manifest.json
+
+Your gadget's src directory contains a file called gadget_manifest.json that has the following in it.
+```json
+{
+	"name": "My Awesome Gadget",
+	"permissions": [
+		"scenegraph"
+	],
+	"width": 1024,
+	"height": 1024,
+	"model": "models/placeholder.glb",
+	"startAutomatically": false
+}
+```
+
+Every gadget needs to define a manifest file to tell Aardvark how to deal with that gadget. The fields in the manifest file are:
+* name - The user facing name of the gadget. This isn't currently shown to a user anywhere, but please set one anyway.
+* permissions - Aardvark has a rudimentary permission system that allows gadgets to have access to certain blocks of functionality. Possible values are:
+  * scenegraph - The gadget is allowed to submit a scene graph. Pretty much every gadget has this permission.
+  * chamber - The gadget is allowed to join and leave chambers on behalf of the user.
+  * master - The gadget is the master gadget and is allowed to start other gadgets. You shouldn't set this in your own gadget. 
+* width, height - The width and height of the browser that is created for this gadget. Gadgets that don't use panels should set this to small numbers like 16x16 to save on video memory. 
+* model - The URL of a glTF model to use to represent this gadget in the gadget menu. If this does not start with HTTP or HTTPS it must be a relative file path (using forward slashes) to the model file that is relative to the gadget manifest file itself.
+* startAutomatically - If this is true and the gadget is installed, the gadget will start automatically when Aardvark starts. This is useful for gadgets that don't have a grabbable at their root. Defaults to false.
+* shareInChamber - If this is true, the gadget will be shared with other members of any chamber that the local user is a member of. Defaults to true.
+
+
+# Step 5 - Understanding the gadget scene graph
+
+`main.tsx` is a typescript file that defines the main React component in the simple starter gadget.
+Understanding what React components are and how they work would go a long way toward understanding how Aardvark works, so it may be worth reading about that in [their own getting started guide](https://www.pluralsight.com/guides/typescript-react-getting-started).
+This guide won't get into the Reactisms of the gadget itself and will instead focus on the Aardvarkisms.
+
+The core of an Aardvark gadget is its scene graph.
+This tells Aardvark what do draw for the gadget, as well as how the user should be able to interact with that gadget. 
+It is constructed of React components that follow the Av<whatever> naming convention, and returned by the render function of any components defined in each gadget.
+
+This is the render function of the TestPanel component in `main.tsx`:
+```typescript
+	public render()
+	{
+		let sDivClasses:string;
+		let scale = 0.2;
+		switch( this.state.grabbableHighlight )
+		{
+			default:
+			case HighlightType.None:
+				sDivClasses = "FullPage NoGrabHighlight";
+				break;
+
+			case HighlightType.InRange:
+				sDivClasses = "FullPage InRangeHighlight";
+				break;
+
+			case HighlightType.Grabbed:
+				sDivClasses = "FullPage GrabbedHighlight";
+				break;
+
+			case HighlightType.InHookRange:
+				sDivClasses = "FullPage GrabbedHighlight";
+				break;
+		
+		}
+
+		return (
+			<div className={ sDivClasses } >
+				<div>
+					<AvGrabbable updateHighlight={ this.onHighlightGrabbable }
+						onGrabRequest={ this.onGrabRequest }
+						dropOnHooks={ true }>
+						<AvSphereHandle radius={0.1} />
+						
+						<AvTransform uniformScale={ scale }>
+							<AvPanel interactive={true}
+								onIdAssigned={ (id: EndpointAddr) => { this.m_panelId = id } }/>
+						</AvTransform>
+					</AvGrabbable>
+				</div>
+				<div className="Label">Count: { this.state.count }</div>
+				<div className="Button" onMouseDown={ this.incrementCount }>
+					Click Me!
+					</div> 
+
+				{ this.m_panelId && 
+					<div>
+						My ID is { endpointAddrToString( this.m_panelId as EndpointAddr ) }
+					</div>
+				}
+			</div>
+		)
+	}
+```
+
+This is the scene graph portion of that function:
+```typescript
+<AvGrabbable updateHighlight={ this.onHighlightGrabbable }
+	onGrabRequest={ this.onGrabRequest }
+	dropOnHooks={ true }>
+	<AvSphereHandle radius={0.1} />
+	
+	<AvTransform uniformScale={ scale }>
+		<AvPanel interactive={true}
+			onIdAssigned={ (id: EndpointAddr) => { this.m_panelId = id } }/>
+	</AvTransform>
+</AvGrabbable>
+```
+
+The [Aardvark React documentation](https://aardvarkxr.github.io/aardvark/aardvark-react/) describes all the available node types in Aardvark, as well as what their properties are. 
+A few of those are detailed below to explain how they work in the test panel gadget.
+
+## AvGrabbable
+
+There is often a node of this type at the root of gadgets.
+It allows the user to grab the gadget and move it around.
+
+This grabbable defines an optional updateHighlight callback function and uses that function to change the color of the panel when a grabber is near the gadget, or when the grabbable is actually being moved around. 
+The specific highlighting being used here is more of a test/demonstration than something you would want to use in your own gadget, but it shows you how to hook up this sort of highlighting.
+You could use the same callback to change the scale of an object, show or hide things, change the color of a model, etc.
+
+## AvSphereHandle
+
+Grabbables themselves don't define the region that they can be grabbed in.
+They rely on handles for that. 
+
+In this case the grabbable is using a sphere handle with a radius of 0.1 meters (because all distance values in Aardvark are in Meters).
+This sphere is centered around its parent transform in the scene graph.
+In this case, because there are no transform nodes above it in the scene graph, the handle is centered around the gadget itself.
+
+## AvTransform
+
+Almost every gadget will use an `AvTransform` node somewhere.
+This node sets the translation, scale, and rotation of its children.
+
+`AvTransform` sometimes works in concert with the `AvOrigin` node, which sets the scene graph transform to some absolute point like:
+* /user/head - the user's head with the negative Z axis coming out between their eyes and the positive Y axis going up out the top of their head.
+* /user/hand/left, /user/hand/right - the user's hand, with the negative Z axis going forward away from their hand.
+* /space/stage - The center of the user's room-scale playspace.
+
+
+## AvPanel
+
+This is another very common node type.
+It tells Aardvark to present the contents of the gadget's browser as a 2D panel in the world. 
+The size of this panel defaults to 1m by 1m, which is pretty big for a display surface, so it is often paired with an `AvTransform` node that scales down the panel. 
+That's what's happening here with the `AvTransform` parent of the `AvPanel` node.
+
+For panels that want user interaction through simulated "mouse" clicks, they can set the `interactive` property.
+At that point onClick and all the other expected DOM and React events will come through for that panel.
+
+# Step 6 - Come ask for help!
+
+That should be enough to get you going.
+As you run into issues building your gadget, please don't hesitate to reach out in the Aardvark Slack. 
+That's how we're going to make the API, this guide, the documentation, and all of Aardvark better.
+
+Thanks for reading!
