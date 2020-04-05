@@ -142,7 +142,7 @@ PS E:\gettingstarted> npm start
 > mygadget@0.1.0 start E:\gettingstarted
 > webpack --env=dev --watch --progress
 
-10% [0] building 0/0 modules 0 active
+10\% [0] building 0/0 modules 0 active
 webpack is watching the files…
 
 Hash: 7761bd5deb168075e44e
