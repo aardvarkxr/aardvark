@@ -5,6 +5,8 @@ Gadgets are constructed using a bunch of custom React components (from the [@aar
 Gadgets use these components to show interactive models, 2D UI, or other stuff that will draw on top of any VR applications you run.
 You can attach these gadgets to your hands and bring them with you in your favorite VR apps.
 
+[![A short introduction to Aardvark](https://aardvarkxr.github.io/aardvark/images/Aardvark_intro_preview.png)](http://www.youtube.com/watch?v=pux6RbySUMU "A short introduction to Aardvark")
+
 # Project Status and Road Map
 
 ## Current Status
