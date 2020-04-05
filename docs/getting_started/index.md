@@ -95,3 +95,41 @@ Now that you have a gadget project, open it in Visual Studio code.
 E:\gettingstarted> code .
 ```
 
+# Step 2 - Build your gadget for the first time
+
+In the terminal window in Visual Studio code, you need to tell npm to install all the dependencies of your gadget. 
+This will download a bunch of typescript and javascript files into `E:\gettingstarted\node_modules`.
+
+First, open the terminal window from the Terminal menu:
+![New Terminal menu option](new_terminal.png "New Terminal menu option")
+
+In the pane that appears, run npm install.
+You will need to do this whenever you change package.json to add dependencies.
+This guide will walk through enough npm commands to get a gadget up and running, but if want to learn more about npm [An Absolute Beginner's Guide to npm](https://nodesource.com/blog/an-absolute-beginners-guide-to-using-npm/) would be a good place to start.
+(This output was truncated because npm loves to spam the console, and the specific spam varies from week to week depending on other people's modules, the specific npm version, security alerts, and the phase of the moon.)
+
+```console
+PS E:\gettingstarted> npm install
+npm WARN deprecated request@2.88.2: request has been deprecated, see https://github.com/request/request/issues/3142
+
+> node@12.16.1 preinstall E:\gettingstarted\node_modules\node
+> node installArchSpecificPackage
+
++ node-win-x64@12.16.1
+added 1 package in 1.019s
+found 0 vulnerabilities
+
+npm notice created a lockfile as package-lock.json. You should commit this file.
+npm WARN optional SKIPPING OPTIONAL DEPENDENCY: fsevents@^1.2.7 (node_modules\chokidar\node_modules\fsevents):
+npm WARN notsup SKIPPING OPTIONAL DEPENDENCY: Unsupported platform for fsevents@1.2.12: wanted {"os":"darwin","arch":"any"} (current: {"os":"win32","arch":"x64"})
+npm WARN mygadget@0.1.0 No repository field.
+npm WARN mygadget@0.1.0 No license field.
+...
+
+added 999 packages from 1189 contributors and audited 54181 packages in 31.898s
+
+21 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+```
