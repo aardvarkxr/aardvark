@@ -266,63 +266,63 @@ This tells Aardvark what do draw for the gadget, as well as how the user should 
 It is constructed of React components that follow the Av<whatever> naming convention, and returned by the render function of any components defined in each gadget.
 
 This is the render function of the TestPanel component in `main.tsx`:
-```typescript
-	public render()
+```tsx
+public render()
+{
+	let sDivClasses:string;
+	let scale = 0.2;
+	switch( this.state.grabbableHighlight )
 	{
-		let sDivClasses:string;
-		let scale = 0.2;
-		switch( this.state.grabbableHighlight )
-		{
-			default:
-			case HighlightType.None:
-				sDivClasses = "FullPage NoGrabHighlight";
-				break;
+		default:
+		case HighlightType.None:
+			sDivClasses = "FullPage NoGrabHighlight";
+			break;
 
-			case HighlightType.InRange:
-				sDivClasses = "FullPage InRangeHighlight";
-				break;
+		case HighlightType.InRange:
+			sDivClasses = "FullPage InRangeHighlight";
+			break;
 
-			case HighlightType.Grabbed:
-				sDivClasses = "FullPage GrabbedHighlight";
-				break;
+		case HighlightType.Grabbed:
+			sDivClasses = "FullPage GrabbedHighlight";
+			break;
 
-			case HighlightType.InHookRange:
-				sDivClasses = "FullPage GrabbedHighlight";
-				break;
-		
-		}
-
-		return (
-			<div className={ sDivClasses } >
-				<div>
-					<AvGrabbable updateHighlight={ this.onHighlightGrabbable }
-						onGrabRequest={ this.onGrabRequest }
-						dropOnHooks={ true }>
-						<AvSphereHandle radius={0.1} />
-						
-						<AvTransform uniformScale={ scale }>
-							<AvPanel interactive={true}
-								onIdAssigned={ (id: EndpointAddr) => { this.m_panelId = id } }/>
-						</AvTransform>
-					</AvGrabbable>
-				</div>
-				<div className="Label">Count: { this.state.count }</div>
-				<div className="Button" onMouseDown={ this.incrementCount }>
-					Click Me!
-					</div> 
-
-				{ this.m_panelId && 
-					<div>
-						My ID is { endpointAddrToString( this.m_panelId as EndpointAddr ) }
-					</div>
-				}
-			</div>
-		)
+		case HighlightType.InHookRange:
+			sDivClasses = "FullPage GrabbedHighlight";
+			break;
+	
 	}
+
+	return (
+		<div className={ sDivClasses } >
+			<div>
+				<AvGrabbable updateHighlight={ this.onHighlightGrabbable }
+					onGrabRequest={ this.onGrabRequest }
+					dropOnHooks={ true }>
+					<AvSphereHandle radius={0.1} />
+					
+					<AvTransform uniformScale={ scale }>
+						<AvPanel interactive={true}
+							onIdAssigned={ (id: EndpointAddr) => { this.m_panelId = id } }/>
+					</AvTransform>
+				</AvGrabbable>
+			</div>
+			<div className="Label">Count: { this.state.count }</div>
+			<div className="Button" onMouseDown={ this.incrementCount }>
+				Click Me!
+				</div> 
+
+			{ this.m_panelId && 
+				<div>
+					My ID is { endpointAddrToString( this.m_panelId as EndpointAddr ) }
+				</div>
+			}
+		</div>
+	)
+}
 ```
 
 This is the scene graph portion of that function:
-```typescript
+```tsx
 <AvGrabbable updateHighlight={ this.onHighlightGrabbable }
 	onGrabRequest={ this.onGrabRequest }
 	dropOnHooks={ true }>
@@ -352,7 +352,7 @@ You could use the same callback to change the scale of an object, show or hide t
 Grabbables themselves don't define the region that they can be grabbed in.
 They rely on handles for that. 
 
-In this case the grabbable is using a sphere handle with a radius of 0.1 meters (because all distance values in Aardvark are in Meters).
+In this case the grabbable is using a sphere handle with a radius of 0.1 meters (because all distance values in Aardvark are in meters).
 This sphere is centered around its parent transform in the scene graph.
 In this case, because there are no transform nodes above it in the scene graph, the handle is centered around the gadget itself.
 
@@ -383,4 +383,4 @@ That should be enough to get you going.
 As you run into issues building your gadget, please don't hesitate to reach out in the Aardvark Slack. 
 That's how we're going to make the API, this guide, the documentation, and all of Aardvark better.
 
-Thanks for reading!
+Thanks for reading
