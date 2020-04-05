@@ -1,4 +1,5 @@
 ---
+layout: post
 title: Getting started with Aardvark
 ---
 # Building your first Aardvark gadget
@@ -175,3 +176,53 @@ Child
         [./node_modules/webpack/buildin/module.js] (webpack)/buildin/module.js 497 bytes {0} [built]
             + 1 hidden module
 ```
+
+Exactly what `npm start` does is controlled by the scripts section of the gadget's package.json file.
+
+```json
+	"scripts": {
+		"build": "webpack --env=production",
+		"start": "webpack --env=dev --watch --progress"
+	},
+```
+
+By default the init script sets package.json up to run a tool called webpack to bundle all the code and other assets for the gadget up into the `dist` directory, and then watch the source files for any changes.
+Changing any of the source files will cause webpack to build again and update the output files automatically.
+
+At this point the output directory should look like this:
+```
+E:\GETTINGSTARTED\DIST
+¦   gadget_manifest.json
+¦   index.html
+¦   index.js
+¦   main.d.ts
+¦   styles.css
+¦
++---models
+        placeholder.glb
+```
+
+The tsconfig.json and webpackconfig.js files in your gadget's source tree control this transpile and bundling process.
+For more details on how all of that works, [How to Setup TypeScript with Webpack 4](https://appdividend.com/2018/03/18/how-to-setup-typescript-with-webpack-4/) is a good introduction.
+
+
+# Step 3 - Running your gadget for the first time
+
+First you need to install your gadget.
+
+```console
+E:\gettingstarted>avcmd install dist
+Read state from C:\Users\username\aardvark\state.json for 5 active gadgets
+info: Installing My Awesome Gadget: file:///E:/gettingstarted/dist
+info: writing state to C:\Users\username\aardvark\state.json
+```
+
+Then run Aardvark and you will see your gadget show up in the gadget menu.
+The white sphere is the placeholder model.
+
+![Gadget in menu](gadget_in_menu.png "Gadget in Menu")
+
+If you grab the placeholder sphere icon, you'll see your gadget's panel.
+
+![Gadget panel](gadget_panel.png "Gadget Panel")
+
