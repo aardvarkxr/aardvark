@@ -137,12 +137,13 @@ found 0 vulnerabilities
 Now that the dependencies are installed we can start the actual build.
 
 ```console
+{%raw%}
 PS E:\gettingstarted> npm start
 
 > mygadget@0.1.0 start E:\gettingstarted
 > webpack --env=dev --watch --progress
 
-10\% [0] building 0/0 modules 0 active
+10% [0] building 0/0 modules 0 active
 webpack is watching the files…
 
 Hash: 7761bd5deb168075e44e
@@ -174,4 +175,5 @@ Child
         [./node_modules/webpack/buildin/global.js] (webpack)/buildin/global.js 472 bytes {0} [built]
         [./node_modules/webpack/buildin/module.js] (webpack)/buildin/module.js 497 bytes {0} [built]
             + 1 hidden module
+{%endraw%}
 ```
