@@ -137,6 +137,17 @@ found 0 vulnerabilities
 Now that the dependencies are installed we can start the actual build.
 
 ```console
+PS E:\gettingstarted> npm start
+
+> mygadget@0.1.0 start E:\gettingstarted
+> webpack --env=dev --watch --progress
+
+10% [0] building 0/0 modules 0 active
+webpack is watching the files...
+
+Hash: 7761bd5deb168075e44e
+Version: webpack 4.42.1
+Child
     Hash: 7761bd5deb168075e44e
     Time: 3014ms
     Built at: 04/04/2020 9:47:13 AM
@@ -149,4 +160,18 @@ Now that the dependencies are installed we can start the actual build.
                 styles.css  391 bytes          [emitted]
     Entrypoint main = index.js
     [0] util (ignored) 15 bytes {main} [built]
+    [1] util (ignored) 15 bytes {main} [built]
+    [2] buffer (ignored) 15 bytes {main} [optional] [built]
+    [3] crypto (ignored) 15 bytes {main} [optional] [built]
+    [./node_modules/webpack/buildin/global.js] (webpack)/buildin/global.js 472 bytes {main} [built]
+    [./node_modules/webpack/buildin/module.js] (webpack)/buildin/module.js 497 bytes {main} [built]
+    [./src/main.tsx] 3.67 KiB {main} [built]
+        + 167 hidden modules
+    Child html-webpack-plugin for "index.html":
+         1 asset
+        Entrypoint undefined = ./index.html
+        [./node_modules/html-webpack-plugin/lib/loader.js!./src/index.html] 428 bytes {0} [built]
+        [./node_modules/webpack/buildin/global.js] (webpack)/buildin/global.js 472 bytes {0} [built]
+        [./node_modules/webpack/buildin/module.js] (webpack)/buildin/module.js 497 bytes {0} [built]
+            + 1 hidden module
 ```
