@@ -43,7 +43,7 @@ export enum MessageType
 	GetInstalledGadgetsResponse = 401,
 	InstallGadget = 402,
 
-	// Chamber messages - Gadgets can send these on behalf of a user if that 
+	// Room messages - Gadgets can send these on behalf of a user if that 
 	// gadget has "chamber" permissions
 	RequestJoinChamber = 500,	// sent by gadgets that want to join a chamber
 	RequestLeaveChamber = 501,	// sent by gadgets that want to leave a chamber
@@ -56,6 +56,7 @@ export enum MessageType
 	UpdateChamberGadgetHook = 508, // Updates the hook field of a gadget on all chambers
 	ChamberGadgetHookUpdated = 509, // Sent by master when a remote gadget's hook updates
 	ChamberMemberListUpdated = 510, // Sent by master when a remote gadget's member list updates
+
 }
 
 export enum WebSocketCloseCodes
@@ -857,4 +858,141 @@ export function gadgetDetailsToId( gadgetName: string, gadgetUri: string, gadget
 
 	return filteredName;
 }
+
+
+/** This enum defines reserved destination values that may be set on any
+ * message being sent on a data WebRTC connection to an Aardvark room.
+ * 
+ * All member IDs that start with underscore are reserved and may not
+ * be used as actual member IDs by the gadget's implementation.
+ */
+export enum RoomMemberIdReserved
+{
+	Broadcast = "_broadcast",
+	Room = "_room,"
+}
+
+/** This enum defines the public message types that the gadget's
+ * implementation of the room callback interface is expected to interact 
+ * with. All other message types are reserved and should be passed along
+ * without modification or processing by the gadget.
+ */
+export enum RoomMessageType
+{
+	MemberJoined = "MemberJoined",
+	MemberLeft = "MemberLeft",
+}
+
+/** Every message sent to a data WebRTC connection for an Aardvark
+ * is a JSON object string with this format.
+ * 
+ * destination - The destination that this message should be routed to.
+ * 				If this value is "_broadcast", the 
+ * 				gadget must send a copy ofthe message to every member of the 
+ * 				room.
+ * source - The room member address of the original sender of this message.
+ * 			The gadget must fill in the source field with the address of the 
+ * 			message's sender to prevent Aardvark instances from forging this 
+ * 			field. If a message is being sent by the gadget's room 
+ * 			implementation, it must set this field to "_room";
+ * 
+ * All other fields on the message must be ignored when a message from an
+ * Aardvark instance is being routed.
+ */
+export interface GadgetRoomEnvelope
+{
+	type: RoomMessageType|string;
+	destination?: string | RoomMemberIdReserved;
+	source?: string | RoomMemberIdReserved;
+}
+
+
+/** This message must be broadcast by the gadget to every member when
+ * a new member joins.
+ * 
+ * When a new member first joins the room, the gadget must send this
+ * message for each member already in the room to allow
+ * the newly joining member to build its own member list.
+ * 
+ * destination - must be "_broadcast" for the messages that identify a 
+ * 				new member to the room or the member ID of the new
+ * 				member for the messages that identify existing members
+ * 				to the new member.
+ * source - must be "_room"
+ * memberId - An ID that is unique within the room that can be used to 
+ * 		identify a member. This ID must remain valid for as long as the 
+ * 		member is in the room. Member IDs are not guaranteed to be the
+ * 		same from session to session, and are not expected to have any 
+ * 		particular format. Aardvark will treat these IDs as opaque.
+ */
+export interface GadgetRoomMemberJoined extends GadgetRoomEnvelope
+{
+	memberId: string;
+}
+
+/** This message must be broadcast by the gadget to every member when
+ * a new member joins.
+ * 
+ * destination - must be "_broadcast"
+ * source - must be "_room"
+ * memberId - must be a valid member id for the new member
+ */
+export interface GadgetRoomMemberLeft extends GadgetRoomEnvelope
+{
+	memberId: string;
+}
+
+/** This interface must be implemented by any gadget which wants to 
+ * provide a room to Aardvark. It allows Aardvark to send messages
+ * to its other instances.
+ */
+export interface GadgetRoomCallbacks
+{
+	/** Called when a message arrives for Aardvark. */
+	sendMessage( message: GadgetRoomEnvelope ): void;
+}
+
+
+/** Gadgets call this function to create a room. 
+ * 
+ * roomId - the ID to use for this room. This ID must be unique
+ * 				within the gadget.
+ */
+//function createRoom( roomId: string, callbacks: GadgetRoomCallbacks ): Promise<GadgetRoom>;
+
+/** This interface is provided to the gadget on receipt of a room
+ * creation request. The gadget can use this to deliver messages to
+ * Aardvark from its other instances
+ */
+export interface GadgetRoom
+{
+	/** Called when a message arrives for Aardvark. */
+	onMessage( message: GadgetRoomEnvelope ): void;
+
+	/** Called when  */
+	/** Tells Aardvark to destroy the room and any remote gadgets 
+	 * associated with it.
+	 */
+	destroy():void;
+}
+
+/** Gadgets are also responsible for providing transforms for all the members of
+ * the room so that Aardvark knows where to render them relative to the local
+ * user. That is accomplished through scene graph nodes:
+ * 	<AvRoom roomId="myroom1234">
+ * 		<AvTransform ...>
+ * 			<AvRoomMember memberId="member0"/>
+ * 		</AvTransform>
+ * 		<AvTransform ...>
+ * 			<AvRoomMember memberId="member1"/>
+ * 		</AvTransform>
+ * 		...
+ * 	</AvRoom>
+ * 
+ * Any AvRoomMember for the local user's member ID is ignored. The local user 
+ * does not have remote gadgets, and all their local gadgets will be drawn in 
+ * the user's local coordinate system regardless of whether or not they are in
+ * a room.
+ */
+
 
