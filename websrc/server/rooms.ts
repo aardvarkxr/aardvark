@@ -231,6 +231,17 @@ export function destroyLocalGadget( room: Room, persistenceUuid: string )
 	room.callbacks.sendMessage( m );
 }
 
+export function addLocalGadget( room: Room, localGadget: SharedGadget )
+{
+	let m: RMAddGadget =
+	{
+		...localGadget,
+		type: RoomMessageTypePrivate.AddGadget,
+		destination: RoomMemberIdReserved.Broadcast,
+	};
+	room.callbacks.sendMessage( m );
+}
+
 export function updateLocalGadgetHook( room: Room, persistenceUuid: string, newHook: string )
 {
 	let m: RMUpdateGadgetHook =

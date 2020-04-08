@@ -1,4 +1,4 @@
-import { ServerRoomCallbacks, RoomMemberGadget, RoomMessageTypePrivate, RMAddGadget, RMRemoveGadget, RMUpdateGadgetHook, updateLocalGadgetHook, RMUpdatePose } from './../rooms';
+import { ServerRoomCallbacks, RoomMemberGadget, RoomMessageTypePrivate, RMAddGadget, RMRemoveGadget, RMUpdateGadgetHook, updateLocalGadgetHook, RMUpdatePose, addLocalGadget } from './../rooms';
 import { GadgetRoomCallbacks, GadgetRoomEnvelope, RMMemberJoined, RoomMessageType, RoomMemberIdReserved, RMMemberLeft, MinimalPose } from '@aardvarkxr/aardvark-shared';
 import { destroyLocalGadget, createRoom, addRoomMember, removeRoomMember, onRoomMessage } from '../rooms';
 
@@ -294,6 +294,27 @@ describe( "server ", () =>
 
 		expect( callbacks.outgoingMessages.length ).toBe( 1 );
 		expect( callbacks.countAddGadget( "julie", "http://mygadget.com", "mustang" ) ).toBe( 1 );
+	} );
+
+	it( "lateAddGadgetToPeer", async () =>
+	{
+		let callbacks = new GadgetRoomTestCallbacks(
+			[
+			]
+		);
+
+		let room = createRoom( "fred", callbacks );
+		await onRoomMessage( room, joinMessage( "julie" ) );
+
+		addLocalGadget( room, 				
+			{
+				gadgetUri: "http://mygadget.com",
+				persistenceUuid: "mustang"				
+			} );
+
+		expect( callbacks.outgoingMessages.length ).toBe( 1 );
+		expect( callbacks.countAddGadget( RoomMemberIdReserved.Broadcast, "http://mygadget.com", 
+			"mustang" ) ).toBe( 1 );
 	} );
 
 	it( "removeGadgetToPeer", async () =>
