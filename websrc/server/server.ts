@@ -1,3 +1,4 @@
+import { Room, ServerRoomCallbacks, createRoom, RoomMemberGadget, onRoomMessage, updateRoomPose } from './rooms';
 import { g_localInstallPathUri, g_localInstallPath,	getJSONFromUri } from './serverutils';
 import { parsePersistentHookPath, buildPersistentHookPathFromParts,
 	HookPathParts,  buildPersistentHookPath, HookType } from 'common/hook_utils';
@@ -23,7 +24,16 @@ import { StoredGadget, AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, Av
 	GadgetAuthedRequest, 
 	MsgSignRequestResponse, 
 	ChamberNamespace, 
-	MsgChamberMemberListUpdated
+	MsgChamberMemberListUpdated,
+	MsgCreateRoom,
+	MsgDestroyRoom,
+	MsgRoomMessageReceived,
+	MsgCreateRoomResponse,
+	MsgSendRoomMessage,
+	GadgetRoomEnvelope,
+	MsgDestroyRoomResponse,
+	MsgRoomMessageReceivedResponse,
+	AvStartGadgetResult
 } from '@aardvarkxr/aardvark-shared';
 import * as express from 'express';
 import * as http from 'http';
@@ -36,11 +46,22 @@ import isUrl from 'is-url';
 console.log( "Data directory is", g_localInstallPathUri );
 
 
-interface GadgetToStart
+function computeRemoteGadgetId( remoteUserId: string, persistenceUuid: string )
 {
-	storedData: StoredGadget;
-	hookPath: string;
+	return `${ remoteUserId }_${ persistenceUuid }`.toLowerCase();
 }
+
+function computeRemoteIds( roomGadgetPersistenceUuid: string, roomId: string,
+	memberId: string, persistenceUuid: string ): [ string, string ]
+{
+	let remoteUserId = `remote_${ roomGadgetPersistenceUuid }_${ roomId }_${ memberId }`.toLowerCase();
+	return (
+		[
+			remoteUserId,
+			computeRemoteGadgetId( remoteUserId, persistenceUuid ),
+		] );
+}
+
 
 class CDispatcher
 {
@@ -52,6 +73,9 @@ class CDispatcher
 	private m_nextSequenceNumber = 1;
 	private m_chambers: { [ chamberPath: string ]: string } = {};
 	private m_gadgetsWithWaiters: { [ persistenceUuid: string ]: (( gadg: CGadgetData) => void)[] } = {};
+	private m_startGadgetPromises: {[nodeId:number]: 
+		[ ( gadgetEndpointId: number ) => void, ( reason: any ) => void ] } = {};
+	private m_notifyNodeId = 1;
 
 	constructor()
 	{
@@ -82,7 +106,7 @@ class CDispatcher
 		return this.m_nextSequenceNumber++;
 	}
 
-	private getListForType( ept: EndpointType )
+	public getListForType( ept: EndpointType )
 	{
 		switch( ept )
 		{
@@ -283,8 +307,30 @@ class CDispatcher
 		} );
 	}
 
+	private onMessage( nodeId: number, env: Envelope )
+	{
+		switch( env.type )
+		{
+			case MessageType.GadgetStarted:
+				let mGadgetStarted = env.payloadUnpacked as MsgGadgetStarted;
+				let promise = this.m_startGadgetPromises[ nodeId ];
+				if( promise )
+				{
+					promise[0]( mGadgetStarted.startedGadgetEndpointId );
+					delete this.m_startGadgetPromises[ nodeId ];
+				}
+				break;
+		}
+	}
+
 	public forwardToEndpoint( epa: EndpointAddr, env: Envelope )
 	{
+		if( epa.type == EndpointType.Hub )
+		{
+			this.onMessage( epa.nodeId, env );
+			return;
+		}
+
 		if( endpointAddrsMatch( epa, env.sender ) )
 		{
 			// don't forward messages back to whomever just sent them
@@ -348,20 +394,39 @@ class CDispatcher
 		gadgetData.sendSceneGraphToRenderer();
 	}
 
-	public tellMasterToStartGadget( uri: string, initialHook: string, persistenceUuid: string )
+	public tellMasterToStartGadget( uri: string, initialHook: string, persistenceUuid: string,
+		remoteUserId?: string, remotePersistenceUuid?: string ): Promise<number>
 	{
-		if( !this.m_gadgetsByUuid[ persistenceUuid ] )
+		let existingGadget = this.m_gadgetsByUuid[ persistenceUuid ] ;
+		if( existingGadget )
 		{
+			return Promise.resolve( existingGadget.getId() );
+		}
+
+		return new Promise( ( resolve, reject ) =>
+		{
+			let notifyNodeId = this.m_notifyNodeId++;
+			this.m_startGadgetPromises[ notifyNodeId ] = [ resolve, reject ];
+
+			let epToNotify: EndpointAddr = 
+			{
+				type: EndpointType.Hub,
+				nodeId: notifyNodeId,
+			}
+
 			// we don't have one of these gadgets yet, so tell master to start one
 			let msg: MsgMasterStartGadget =
 			{
-				uri: uri,
-				initialHook: initialHook,
-				persistenceUuid: persistenceUuid,
+				uri,
+				initialHook,
+				persistenceUuid,
+				remoteUserId,
+				epToNotify,
+				remotePersistenceUuid,
 			} 
 
 			this.sendToMaster( MessageType.MasterStartGadget, msg );
-		}
+		} );
 	}
 
 	public findGadgetById( gadgetId: number ): CGadgetData
@@ -413,6 +478,37 @@ class CDispatcher
 		}
 	}
 	
+	public addRemoteGadget( roomGadgetPersistenceUuid: string, roomId: string,
+		memberId: string, gadgetInfo: SharedGadget ): Promise< number >
+	{
+		let [ remoteUserId, newGadgetPersistenceUuid ] = computeRemoteIds( roomGadgetPersistenceUuid,
+			roomId, memberId, gadgetInfo.persistenceUuid );
+
+		// parse the hook path lookig for gadget UUIDs to fix up
+		let hookToUse = gadgetInfo.hook;
+		let hookParts = parsePersistentHookPath( gadgetInfo.hook );
+		if( hookParts && hookParts.gadgetUuid )
+		{
+			hookParts.gadgetUuid = computeRemoteGadgetId( remoteUserId, hookParts.gadgetUuid );
+			hookToUse = buildPersistentHookPathFromParts( hookParts );
+		}
+
+		console.log( `server starting ${ newGadgetPersistenceUuid } on ${ hookToUse } `
+			+ `via ${ gadgetInfo.gadgetUri }` );
+		return this.tellMasterToStartGadget( gadgetInfo.gadgetUri, hookToUse, newGadgetPersistenceUuid, 
+			remoteUserId );
+	}
+
+	public destroyRemoteGadget( gadgetId: number )
+	{
+		// XXX
+	}
+
+	public updateRemoteGadgetHook( gadgetId: number, newHook: string )
+	{
+		// XXX
+	}
+
 	public sendMessageToAllEndpointsOfType( ept: EndpointType, type: MessageType, m: object )
 	{
 		this.sendToAllEndpointsOfType( ept,
@@ -499,6 +595,12 @@ function printableHook( hook : string | GadgetHookAddr ): string
 	}
 }
 
+interface RoomDetails
+{
+	room: Room;
+	callbacks: ServerRoomCallbacks;
+}
+
 class CGadgetData
 {
 	private m_gadgetUri: string;
@@ -518,6 +620,7 @@ class CGadgetData
 	private m_nodesByPersistentName: { [ persistentName: string ]: AvNode } = {}
 	private m_gadgetBeingDestroyed = false;
 	private m_chambers: { [ chamberPath: string ] : MsgRequestJoinChamber } = {};
+	private m_roomDetails: { [ roomId: string ] : RoomDetails } = {};
 
 	constructor( ep: CEndpoint, uri: string, initialHook: string, persistenceUuid:string,
 		remoteUniversePath: string, dispatcher: CDispatcher )
@@ -666,6 +769,132 @@ class CGadgetData
 			};
 			this.m_dispatcher.sendToMasterSigned(MessageType.UpdateChamberGadgetHook, msgUpdateHook);
 			// console.log( 'Telling remote about hook change ' + msgUpdateHook.hook );
+		}
+	}
+
+	public onCreateRoom( env: Envelope, m: MsgCreateRoom )
+	{
+		let response: MsgCreateRoomResponse =
+		{
+		};
+
+		if( this.m_roomDetails[ m.roomId ] )
+		{
+			response.error = `Room ${ m.roomId } already exists on this gadget`;
+		}
+		else
+		{
+			try
+			{
+				let callbacks: ServerRoomCallbacks =
+				{
+					sendMessage: ( message: GadgetRoomEnvelope ) => 
+					{
+						let msg: MsgSendRoomMessage = 
+						{
+							roomId: m.roomId,
+							message,
+						}
+						this.m_ep.sendMessage( MessageType.SendRoomMessage, msg );
+					},
+					getSharedGadgets: () => 
+					{ 
+						return this.m_dispatcher.gatherSharedGadgets();
+					},
+					addRemoteGadget: ( memberId: string, gadget: RoomMemberGadget ) => 
+					{
+						return this.m_dispatcher.addRemoteGadget( this.m_persistenceUuid, m.roomId,
+							memberId, gadget );
+					},
+					removeRemoteGadget: ( gadgetId: number ) => 
+					{
+						this.m_dispatcher.destroyRemoteGadget( gadgetId );
+					},
+					updateRemoteGadgetHook: ( gadgetId: number, 
+						newHook: string ) => 
+					{
+						this.m_dispatcher.updateRemoteGadgetHook( gadgetId, newHook );
+					},
+		
+				}
+				
+				let room = createRoom( m.roomId, callbacks );
+				this.m_roomDetails[ m.roomId ] = { room, callbacks };
+			}
+			catch( e )
+			{
+				response.error = `${ e }`;
+			}
+		}
+		this.m_ep.sendReply( MessageType.CreateRoomResponse, response, env );
+	}
+
+	public onDestroyRoom( env: Envelope, m: MsgDestroyRoom )
+	{
+		let response: MsgDestroyRoomResponse =
+		{
+		};
+
+		let room = this.m_roomDetails[ m.roomId ]?.room;
+		if( !room )
+		{
+			response.error = `Room ${ m.roomId } does not exist on this gadget`;
+		}
+		else
+		{
+			try
+			{
+				// destroy all the remote gadgets
+				for( let member of room.members )
+				{
+					for( let gadget of member.gadgets )
+					{
+						this.m_dispatcher.destroyRemoteGadget( gadget.gadgetId );
+					}
+				}
+
+				// discard the room
+				delete this.m_roomDetails[ m.roomId ];
+			}
+			catch( e )
+			{
+				response.error = `${ e }`;
+			}
+		}
+		this.m_ep.sendReply( MessageType.DestroyRoomResponse, response, env );
+	}
+
+	public onRoomMessageReceived( env: Envelope, m: MsgRoomMessageReceived )
+	{
+		let response: MsgRoomMessageReceivedResponse =
+		{
+		};
+
+		let room = this.m_roomDetails[ m.roomId ]?.room;
+		if( !room )
+		{
+			response.error = `Room ${ m.roomId } does not exist on this gadget`;
+		}
+		else
+		{
+			try
+			{
+				onRoomMessage( room, m.message );
+			}
+			catch( e )
+			{
+				response.error = `${ e }`;
+			}
+		}
+		this.m_ep.sendReply( MessageType.RoomMessageReceivedResponse, response, env );
+	}
+
+	public sendUpdatedPose( m: MsgUpdatePose )
+	{
+		for( let roomId in this.m_roomDetails )
+		{
+			let room = this.m_roomDetails[roomId].room;
+			updateRoomPose( room, m.originPath, m.newPose );
 		}
 	}
 
@@ -1128,6 +1357,11 @@ class CEndpoint
 		this.registerEnvelopeHandler( MessageType.UpdatePose, this.onUpdatePose );
 		this.registerEnvelopeHandler( MessageType.ChamberGadgetHookUpdated, this.onChamberGadgetHookUpdated );
 		this.registerEnvelopeHandler( MessageType.ChamberMemberListUpdated, this.onChamberMemberListUpdated );
+
+		this.registerEnvelopeHandler( MessageType.CreateRoom, this.m_gadgetData.onCreateRoom );
+		this.registerEnvelopeHandler( MessageType.DestroyRoom, this.m_gadgetData.onDestroyRoom );
+		this.registerEnvelopeHandler( MessageType.RoomMessageReceived, 
+			this.m_gadgetData.onRoomMessageReceived );
 	}
 
 	public getId() { return this.m_id; }
@@ -1582,6 +1816,12 @@ class CEndpoint
 	@bind
 	private onUpdatePose( env: Envelope, m: MsgUpdatePose )
 	{
+		let gadgetEps = this.m_dispatcher.getListForType( EndpointType.Gadget );
+		for( let gadgetEp of gadgetEps )
+		{
+			gadgetEp?.m_gadgetData.sendUpdatedPose( m );
+		}
+
 		this.m_dispatcher.sendToMasterSigned( MessageType.UpdatePose, m );
 	}
 

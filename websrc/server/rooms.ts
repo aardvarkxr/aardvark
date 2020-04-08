@@ -1,31 +1,32 @@
-import { RoomMessageType, RoomMemberIdReserved, GadgetRoomCallbacks, GadgetRoomEnvelope, RMMemberJoined, RMMemberLeft } from '@aardvarkxr/aardvark-shared';
+import { RoomMessageType, RoomMemberIdReserved, GadgetRoomCallbacks, GadgetRoomEnvelope, RMMemberJoined, RMMemberLeft, SharedGadget, MinimalPose } from '@aardvarkxr/aardvark-shared';
 
 export interface RoomMemberGadget
 {
 	gadgetUri: string;
 	persistenceUuid: string;
 	hook?: string;
+	gadgetId?: number;
 }
 
 export interface RoomMember
 {
 	memberId: string;
 	gadgets: RoomMemberGadget[];
+	poses: { [ originPath: string ] : MinimalPose };
 }
 
 export interface ServerRoomCallbacks extends GadgetRoomCallbacks
 {
 	getSharedGadgets: () => RoomMemberGadget[];
-	addRemoteGadget: ( memberId: string, gadget: RoomMemberGadget ) => void;
-	removeRemoteGadget: ( memberId: string, persistenceUuid: string ) => void;
-	updateRemoteGadgetHook: ( ownerId: string, persistenceUuid: string, newHook: string ) => void;
+	addRemoteGadget: ( memberId: string, gadget: SharedGadget ) => Promise< number >;
+	removeRemoteGadget: ( gadgetId: number ) => void;
+	updateRemoteGadgetHook: ( gadgetId: number, newHook: string ) => void;
 }
 
 
 export interface Room
 {
 	roomId: string;
-	gadgetPersistenceId: string;
 	callbacks: ServerRoomCallbacks;
 	members: RoomMember[];
 }
@@ -56,14 +57,18 @@ export interface RMUpdateGadgetHook extends GadgetRoomEnvelope
 	newHook?: string;
 }
 
+export interface RMUpdatePose extends GadgetRoomEnvelope
+{
+	originPath: string;
+	newPose: MinimalPose;
+}
 
-export function createRoom( roomId: string, gadgetPersistenceId: string, 
-	callbacks: ServerRoomCallbacks ): Room
+
+export function createRoom( roomId: string, callbacks: ServerRoomCallbacks ): Room
 {
 	return (
 		{
 			roomId,
-			gadgetPersistenceId,
 			callbacks,
 			members: [],
 		} );
@@ -94,6 +99,7 @@ export function addRoomMember( room: Room, memberId: string )
 		{
 			memberId,
 			gadgets: [],
+			poses: {},
 		} );
 
 	// tell this new member about our gadgets
@@ -144,7 +150,7 @@ function assertFindSourceMember( room: Room, message: GadgetRoomEnvelope )
 	return room.members[ memberIndex ];
 }
 
-export function onRoomMessage( room: Room, message: GadgetRoomEnvelope )
+export async function onRoomMessage( room: Room, message: GadgetRoomEnvelope )
 {
 	let member: RoomMember;
 	let gadgetIndex: number;
@@ -166,14 +172,17 @@ export function onRoomMessage( room: Room, message: GadgetRoomEnvelope )
 		case RoomMessageTypePrivate.AddGadget:
 			member = assertFindSourceMember( room, message );
 			let mAddGadget = message as RMAddGadget;
-			let newGadget = 
+			let newGadget: RoomMemberGadget = 
 				{
 					gadgetUri: mAddGadget.gadgetUri,
 					persistenceUuid: mAddGadget.persistenceUuid,
 					hook: mAddGadget.hook,
 				};
+
+			let gadgetId = await room.callbacks.addRemoteGadget( message.source, newGadget );
+			newGadget.gadgetId = gadgetId;
+			console.log( "addgadget ", gadgetId );
 			member.gadgets.push( newGadget );
-			room.callbacks.addRemoteGadget( message.source, newGadget );
 			break;
 
 		case RoomMessageTypePrivate.RemoveGadget:
@@ -185,8 +194,8 @@ export function onRoomMessage( room: Room, message: GadgetRoomEnvelope )
 				throw new Error( `Gadget ${ mRemoveGadget.persistenceUuid } does not exist on member ${ message.source }` );
 			}
 
+			room.callbacks.removeRemoteGadget( member.gadgets[ gadgetIndex ].gadgetId );
 			member.gadgets.splice( gadgetIndex, 1 );
-			room.callbacks.removeRemoteGadget( message.source, mRemoveGadget.persistenceUuid );
 			break;
 
 		case RoomMessageTypePrivate.UpdateGadgetHook:
@@ -199,8 +208,14 @@ export function onRoomMessage( room: Room, message: GadgetRoomEnvelope )
 			}
 
 			member.gadgets[ gadgetIndex ].hook = mUpdateHook.newHook;
-			room.callbacks.updateRemoteGadgetHook( message.source, mUpdateHook.persistenceUuid, 
+			room.callbacks.updateRemoteGadgetHook( member.gadgets[ gadgetIndex ].gadgetId, 
 				mUpdateHook.newHook );
+			break;
+
+		case RoomMessageTypePrivate.UpdatePose:
+			member = assertFindSourceMember( room, message );
+			let mUpdatePose = message as RMUpdatePose;
+			member.poses[ mUpdatePose.originPath ] = mUpdatePose.newPose;
 			break;
 	}
 }
@@ -227,3 +242,16 @@ export function updateLocalGadgetHook( room: Room, persistenceUuid: string, newH
 	};
 	room.callbacks.sendMessage( m );
 }
+
+export function updateRoomPose( room: Room, originPath: string, newPose: MinimalPose )
+{
+	let m: RMUpdatePose =
+	{
+		type: RoomMessageTypePrivate.UpdatePose,
+		destination: RoomMemberIdReserved.Broadcast,
+		originPath,
+		newPose,
+	};
+	room.callbacks.sendMessage( m );
+}
+

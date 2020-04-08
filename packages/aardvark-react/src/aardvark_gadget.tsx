@@ -9,6 +9,15 @@ import { Av, AvActionState, EAction, getActionFromState,
 	ChamberNamespace,
 	MsgChamberMemberListUpdated,
 	AvNodeTransform,
+	GadgetRoomCallbacks,
+	GadgetRoom,
+	MsgCreateRoom,
+	MsgCreateRoomResponse,
+	GadgetRoomEnvelope,
+	MsgRoomMessageReceived,
+	MsgDestroyRoomResponse,
+	MsgSendRoomMessage,
+	MsgRoomMessageReceivedResponse,
 } from '@aardvarkxr/aardvark-shared';
 import { IAvBaseNode } from './aardvark_base_node';
 import bind from 'bind-decorator';
@@ -77,6 +86,12 @@ interface GadgetChamberDetails
 	showSelf: boolean;
 }
 
+interface GadgetRoomDetails
+{
+	room: GadgetRoom;
+	callbacks: GadgetRoomCallbacks;
+}
+
 /** The singleton gadget object for the browser. */
 export class AvGadget
 {
@@ -112,6 +127,7 @@ export class AvGadget
 		[ ( res: AvStartGadgetResult ) => void, ( reason: any ) => void ] } = {};
 	m_actionStateListeners: { [listenerId: number] : ActionStateListener } = {};
 	m_chamberMemberListHandler: { [ chamberId: string ]: GadgetChamberDetails } = {};
+	m_roomDetails: { [roomId: string] : GadgetRoomDetails } = {};
 
 	constructor()
 	{
@@ -169,6 +185,7 @@ export class AvGadget
 		this.m_endpoint.registerHandler( MessageType.UserInfo, this.onUserInfo );
 		this.m_endpoint.registerHandler( MessageType.ChamberMemberListUpdated, 
 			this.onChamberMemberListUpdated );
+		this.m_endpoint.registerHandler( MessageType.SendRoomMessage, this.onSendRoomMessage );
 		if( this.m_onSettingsReceived )
 		{
 			this.m_onSettingsReceived( settings );
@@ -362,6 +379,9 @@ export class AvGadget
 				uri: m.uri, 
 				initialHook: m.initialHook, 
 				persistenceUuid: m.persistenceUuid,
+				remoteUniversePath: m.remoteUserId,
+				epToNotify: m.epToNotify,
+				remotePersistenceUuid: m.remotePersistenceUuid,
 			} );
 	}
 
@@ -764,6 +784,71 @@ export class AvGadget
 	public get localUserInfo() : LocalUserInfo
 	{
 		return this.m_userInfo;
+	}
+
+	/** Gadgets call this function to create a room. 
+	 * 
+	 * roomId - the ID to use for this room. This ID must be unique
+	 * 				within the gadget.
+	 */
+	public createRoom( roomId: string, callbacks: GadgetRoomCallbacks ): Promise<GadgetRoom>
+	{
+		return new Promise<GadgetRoom>( async ( resolve, reject ) =>
+		{
+			let msgCreate: MsgCreateRoom =
+			{
+				roomId,
+			};
+			let [ resp ] = await this.m_endpoint.sendMessageAndWaitForResponse<MsgCreateRoomResponse>( 
+				MessageType.CreateRoom, msgCreate, MessageType.CreateRoomResponse );
+			if( resp.error )
+			{
+				throw new Error( resp.error );
+			}
+
+			let room: GadgetRoom =
+			{
+				onMessage: async ( message: GadgetRoomEnvelope ) =>
+				{
+					let msgReceived: MsgRoomMessageReceived =
+					{
+						roomId,
+						message,
+					}
+					let [ resp ] = await this.m_endpoint
+						.sendMessageAndWaitForResponse<MsgRoomMessageReceivedResponse>(
+							MessageType.RoomMessageReceived, { roomId }, 
+							MessageType.RoomMessageReceivedResponse );
+					if( resp.error )
+					{
+						throw new Error( resp.error );
+					}
+					this.m_endpoint.sendMessage( MessageType.RoomMessageReceived, msgReceived );
+				},
+
+				destroy: async (): Promise<void> =>
+				{
+					let [ resp ] =await this.m_endpoint
+						.sendMessageAndWaitForResponse<MsgDestroyRoomResponse>(
+						MessageType.DestroyRoom, { roomId }, MessageType.DestroyRoomResponse );
+					if( resp.error )
+					{
+						throw new Error( resp.error );
+					}
+					delete this.m_roomDetails[ roomId ];
+				}
+			};
+
+			let details = {	room, callbacks, };
+			this.m_roomDetails[ roomId ] = details;
+			resolve( room );
+		} );
+	}
+
+	public onSendRoomMessage( msg: MsgSendRoomMessage )
+	{
+		let details = this.m_roomDetails[ msg.roomId ];
+		details?.callbacks.sendMessage( msg.message );
 	}
 
 	/** Asks to join a chamber on the user's behalf. This gadget must have the "chamber" permission.
