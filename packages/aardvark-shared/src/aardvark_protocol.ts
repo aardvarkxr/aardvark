@@ -925,7 +925,7 @@ export interface GadgetRoomEnvelope
  * 		same from session to session, and are not expected to have any 
  * 		particular format. Aardvark will treat these IDs as opaque.
  */
-export interface GadgetRoomMemberJoined extends GadgetRoomEnvelope
+export interface RMMemberJoined extends GadgetRoomEnvelope
 {
 	memberId: string;
 }
@@ -937,7 +937,7 @@ export interface GadgetRoomMemberJoined extends GadgetRoomEnvelope
  * source - must be "_room"
  * memberId - must be a valid member id for the new member
  */
-export interface GadgetRoomMemberLeft extends GadgetRoomEnvelope
+export interface RMMemberLeft extends GadgetRoomEnvelope
 {
 	memberId: string;
 }
