@@ -1,6 +1,6 @@
-import { ServerRoomCallbacks, RoomMemberGadget, RoomMessageTypePrivate, RMAddGadget, RMRemoveGadget, RMUpdateGadgetHook } from './../rooms';
+import { ServerRoomCallbacks, RoomMemberGadget, RoomMessageTypePrivate, RMAddGadget, RMRemoveGadget, RMUpdateGadgetHook, updateLocalGadgetHook } from './../rooms';
 import { GadgetRoomCallbacks, GadgetRoomEnvelope, RMMemberJoined, RoomMessageType, RoomMemberIdReserved, RMMemberLeft } from '@aardvarkxr/aardvark-shared';
-import { createRoom, addRoomMember, removeRoomMember, onRoomMessage } from '../rooms';
+import { destroyLocalGadget, createRoom, addRoomMember, removeRoomMember, onRoomMessage } from '../rooms';
 
 beforeEach( async() =>
 {
@@ -149,18 +149,40 @@ class GadgetRoomTestCallbacks implements ServerRoomCallbacks
 	// --------------------------------------------------------------------
 	// Helpers for analysing test results
 	// --------------------------------------------------------------------
+	public getMessagesOfTypeAndDestination( destination: string, type: string )
+	{
+		return this.outgoingMessages.filter( ( value: GadgetRoomEnvelope ) =>
+		{
+			return value.destination == destination && value.type == type;
+		} );
+	}
+
 	public countAddGadget( destination: string, gadgetUri: string, persistenceUuid: string )
 	{
 		let count = 0;
-		for( let message of this.outgoingMessages )
+		for( let message of 
+			this.getMessagesOfTypeAndDestination( destination, RoomMessageTypePrivate.AddGadget ) )
 		{
-			if( message.type == RoomMessageTypePrivate.AddGadget && message.destination == destination )
+			let m = message as RMAddGadget;
+			if( m.gadgetUri == gadgetUri && m.persistenceUuid == persistenceUuid )
 			{
-				let m = message as RMAddGadget;
-				if( m.gadgetUri == gadgetUri && m.persistenceUuid == persistenceUuid )
-				{
-					count++;
-				}
+				count++;
+			}
+		}
+
+		return count;
+	}
+
+	public countRemoveGadget( destination: string, persistenceUuid: string )
+	{
+		let count = 0;
+		for( let message of 
+			this.getMessagesOfTypeAndDestination( destination, RoomMessageTypePrivate.RemoveGadget ) )
+		{
+			let m = message as RMRemoveGadget;
+			if( m.persistenceUuid == persistenceUuid )
+			{
+				count++;
 			}
 		}
 
@@ -249,6 +271,50 @@ describe( "server ", () =>
 
 		expect( callbacks.outgoingMessages.length ).toBe( 1 );
 		expect( callbacks.countAddGadget( "julie", "http://mygadget.com", "mustang" ) ).toBe( 1 );
+	} );
+
+	it( "removeGadgetToPeer", async () =>
+	{
+		let callbacks = new GadgetRoomTestCallbacks(
+			[
+				{
+					gadgetUri: "http://mygadget.com",
+					persistenceUuid: "mustang"				
+				}	
+			]
+		);
+
+		let room = createRoom( "fred", "sam", callbacks );
+		onRoomMessage( room, joinMessage( "julie" ) );
+
+		expect( callbacks.outgoingMessages.length ).toBe( 1 );
+		destroyLocalGadget( room, "mustang" );
+
+		expect( callbacks.countRemoveGadget( RoomMemberIdReserved.Broadcast, "mustang" ) ).toBe( 1 );
+	} );
+
+	it( "updateGadgetToPeer", async () =>
+	{
+		let callbacks = new GadgetRoomTestCallbacks(
+			[
+				{
+					gadgetUri: "http://mygadget.com",
+					persistenceUuid: "mustang",
+					hook: "/hooky/hook",				
+				}	
+			]
+		);
+
+		let room = createRoom( "fred", "sam", callbacks );
+		onRoomMessage( room, joinMessage( "julie" ) );
+
+		updateLocalGadgetHook( room, "mustang", "/grabby/hook" );
+
+		let updateMessages = callbacks.getMessagesOfTypeAndDestination( RoomMemberIdReserved.Broadcast,
+			RoomMessageTypePrivate.UpdateGadgetHook );
+		expect( updateMessages.length ).toBe( 1 );
+		let m = updateMessages[0] as RMUpdateGadgetHook;
+		expect( m.newHook ).toBe( "/grabby/hook" );
 	} );
 
 

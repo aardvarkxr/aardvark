@@ -205,3 +205,25 @@ export function onRoomMessage( room: Room, message: GadgetRoomEnvelope )
 	}
 }
 
+export function destroyLocalGadget( room: Room, persistenceUuid: string )
+{
+	let m: RMRemoveGadget =
+	{
+		type: RoomMessageTypePrivate.RemoveGadget,
+		destination: RoomMemberIdReserved.Broadcast,
+		persistenceUuid,
+	};
+	room.callbacks.sendMessage( m );
+}
+
+export function updateLocalGadgetHook( room: Room, persistenceUuid: string, newHook: string )
+{
+	let m: RMUpdateGadgetHook =
+	{
+		type: RoomMessageTypePrivate.UpdateGadgetHook,
+		destination: RoomMemberIdReserved.Broadcast,
+		persistenceUuid,
+		newHook,
+	};
+	room.callbacks.sendMessage( m );
+}
