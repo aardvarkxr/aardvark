@@ -276,6 +276,7 @@ protected:
 	int32_t debugViewInputs = 0;
 	int32_t debugViewEquation = 0;
 	float m_eyeFOV = 112.0f;
+	float m_mixedRealityFOV = 50.3f;
 
 	CUriRequestHandler m_uriRequests;
 

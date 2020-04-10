@@ -44,4 +44,5 @@ public:
 	virtual void getVargglesLookRotation(glm::mat4& horizontalLooktransform) = 0;
 	virtual void setVargglesTexture(const vr::Texture_t* pTexture) = 0;
 	virtual glm::mat4 getHmdFromUniverse() = 0;
+	virtual glm::mat4 getMixedRealityFromUniverse() = 0;
 };
