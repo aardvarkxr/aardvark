@@ -1,58 +1,53 @@
 import { AvGadget, AvRoomMember, AvStandardGrabbable, AvTransform, ShowGrabbableChildren } from '@aardvarkxr/aardvark-react';
-import { GadgetRoom, GadgetRoomEnvelope, g_builtinModelHandMirror, RMMemberJoined, RoomMemberIdReserved, RoomMessageType } from '@aardvarkxr/aardvark-shared';
+import { GadgetRoom, GadgetRoomCallbacks, GadgetRoomEnvelope, g_builtinModelHandMirror, RMMemberJoined, RoomMemberIdReserved, RoomMessageType } from '@aardvarkxr/aardvark-shared';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 
 
-function HandMirror()
+class MirrorImpl implements GadgetRoomCallbacks
 {
-	const [ room, setRoom ] = React.useState<GadgetRoom>( null );
-	const [ cancelRoom, setCancelRoom ] = React.useState( false );
-
-	let sendMessage = ( message: GadgetRoomEnvelope ) =>
+	public room: GadgetRoom = null;
+	public cancelThisRoom = false;
+	
+	public sendMessage( message: GadgetRoomEnvelope )
 	{
-		if( !room )
+		if( !this.room )
 			return;
+
+		// pretend all messages are from an illusionary user called "reflection"
+		// since there's really only one user.
+		message.source = "reflection";
 
 		// For mirrors, just jam these message back down the pipe with the right
 		// routing information
 		switch( message.destination )
 		{
-			case "user":
-				// just forward messages to the local user on unmolested
-				room.onMessage( message );
-				break;
-
 			case "reflection":
-				message.source = "user";
-				room.onMessage( message );
-				break;
-
-			case RoomMemberIdReserved.Broadcast:
-				message.source = "user";
-				room.onMessage( message );
-				break;
-
-			default:
-				console.log( `Mirror received message with unexpected routing ${ message }` );
+				message.destination = "user";
 				break;
 		}
+
+		this.room.onMessage( message );
 	}
+}
+
+function HandMirror()
+{
+	const [ mirror, setMirror ] = React.useState<MirrorImpl>( null );
 
 	let onGrabStart = () =>
 	{
-		setCancelRoom( false );
-		AvGadget.instance().createRoom( "mirror", { sendMessage } )
+		let newMirror = new MirrorImpl;
+		setMirror( newMirror );
+		AvGadget.instance().createRoom( "mirror", newMirror )
 		.then( ( room: GadgetRoom ) =>
 		{
-			if( cancelRoom )
+			if( newMirror.cancelThisRoom )
 			{
 				room.destroy();
-				setCancelRoom( false );
-				return;
 			}
 
-			setRoom( room );
+			newMirror.room = room;
 
 			let msg: RMMemberJoined =
 			{
@@ -67,21 +62,24 @@ function HandMirror()
 
 	let onGrabEnd = () =>
 	{
-		if( room )
+		if( mirror )
 		{
-			room.destroy();
-			setRoom( null );
-		}
-		else
-		{
-			setCancelRoom( true );
+			if( mirror.room )
+			{
+				mirror.room.destroy();
+			}
+			else
+			{
+				mirror.cancelThisRoom = true;
+			}
+			setMirror( null );
 		}
 	}
 
 	return <AvStandardGrabbable modelUri={ g_builtinModelHandMirror } 
 				showChildren= { ShowGrabbableChildren.OnlyWhenGrabbed }
 				onGrab={ onGrabStart } onEndGrab={ onGrabEnd }>
-					{ room && 
+					{ mirror && mirror.room && 
 						<AvTransform rotateY={ 180 } uniformScale={ 0.1 }>
 							<AvRoomMember roomId="mirror" memberId="reflection"/>
 						</AvTransform>
