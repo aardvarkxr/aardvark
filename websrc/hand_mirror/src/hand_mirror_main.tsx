@@ -34,6 +34,7 @@ class MirrorImpl implements GadgetRoomCallbacks
 function HandMirror()
 {
 	const [ mirror, setMirror ] = React.useState<MirrorImpl>( null );
+	const [ updateCount, setUpdateCount ] = React.useState( 0 );
 
 	let onGrabStart = () =>
 	{
@@ -48,6 +49,7 @@ function HandMirror()
 			}
 
 			newMirror.room = room;
+			setUpdateCount( updateCount + 1 );
 
 			let msg: RMMemberJoined =
 			{
