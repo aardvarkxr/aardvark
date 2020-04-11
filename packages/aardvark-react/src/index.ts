@@ -11,7 +11,6 @@ export * from './aardvark_handles';
 export * from './aardvark_head_facing_transform';
 export * from './aardvark_hook';
 export * from './aardvark_line';
-export * from './aardvark_mirror';
 export * from './aardvark_model';
 export * from './aardvark_origin';
 export * from './aardvark_panel';
