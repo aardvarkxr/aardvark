@@ -266,3 +266,16 @@ export function updateRoomPose( room: Room, originPath: string, newPose: Minimal
 	room.callbacks.sendMessage( m );
 }
 
+
+export function findMemberOrigins( room: Room, memberId: string ): { [ originPath: string ] : MinimalPose }
+{
+	let memberIndex = findMemberIndex( room, memberId );
+	if( -1 == memberIndex )
+	{
+		return room.members[ memberIndex ].poses;
+	}
+	else
+	{
+		return null;
+	}
+}

@@ -1,4 +1,4 @@
-import { Room, ServerRoomCallbacks, createRoom, RoomMemberGadget, onRoomMessage, updateRoomPose, addLocalGadget, destroyLocalGadget, updateLocalGadgetHook } from './rooms';
+import { Room, ServerRoomCallbacks, createRoom, RoomMemberGadget, onRoomMessage, updateRoomPose, addLocalGadget, destroyLocalGadget, updateLocalGadgetHook, findMemberOrigins } from './rooms';
 import { g_localInstallPathUri, g_localInstallPath,	getJSONFromUri } from './serverutils';
 import { parsePersistentHookPath, buildPersistentHookPathFromParts,
 	HookPathParts,  buildPersistentHookPath, HookType } from 'common/hook_utils';
@@ -737,6 +737,15 @@ class CGadgetData
 		return res;
 	}
 
+	private getOriginsForRoomMember( roomId: string, memberId: string )
+	{
+		let room = this.m_roomDetails[roomId].room;
+		if( !room )
+			return null;
+
+		return findMemberOrigins( room, memberId );
+	}
+
 	public get debugName()
 	{
 		if( this.m_persistenceUuid )
@@ -1167,6 +1176,10 @@ class CGadgetData
 
 			case AvNodeType.Chamber:
 				node.propChamberPath = this.computeChamberPath( node.propChamberId, node.propChamberNamespace );
+				break;
+
+			case AvNodeType.RoomMember:
+				node.propOrigin = this.getOriginsForRoomMember( node.propRoomId, node.propMemberId );
 				break;
 
 			default:

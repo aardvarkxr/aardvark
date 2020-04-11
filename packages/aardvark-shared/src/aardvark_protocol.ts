@@ -693,8 +693,9 @@ export enum AvNodeType
 	HeadFacingTransform = 13,
 	RemoteUniverse = 14,
 	RemoteOrigin = 15,
-	Chamber = 16,
-	ChamberMember = 17,
+	RoomMember = 16,
+	Chamber = 17,
+	ChamberMember = 18,
 }
 
 
@@ -881,6 +882,9 @@ export interface AvNode
 	propChamberNamespace?: ChamberNamespace;
 	propChamberPath?: string;
 	propChamberMemberUuid?: string;
+	propRoomId?: string;
+	propMemberId?: string;
+	propMemberOrigins?: { [ originPath: string ]: MinimalPose };
 	propTransform?: AvNodeTransform;
 	propModelUri?: string;
 	propVolume?: AvVolume;
