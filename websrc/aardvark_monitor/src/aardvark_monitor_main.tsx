@@ -828,6 +828,8 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 			{ node.propUniverseName && <div className="AvNodeProperty">remote: {node.propUniverseName }</div> }
 			{ node.propChamberPath && <div className="AvNodeProperty">remote: {node.propChamberPath }</div> }
 			{ node.propChamberMemberUuid && <div className="AvNodeProperty">remote: {node.propChamberMemberUuid }</div> }
+			{ node.propRoomId && <div className="AvNodeProperty">roomId: {node.propRoomId }</div> }
+			{ node.propMemberId && <div className="AvNodeProperty">remote: {node.propMemberId }</div> }
 			{ node.propOrigin && <div className="AvNodeProperty">origin: {node.propOrigin }</div> }
 			{ node.propModelUri && <div className="AvNodeProperty">model: {node.propModelUri }</div> }
 			{ node.propColor && <div className="AvNodeProperty">Color: 
