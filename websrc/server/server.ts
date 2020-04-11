@@ -719,16 +719,13 @@ class CGadgetData
 		for( let roomId in this.m_roomDetails )
 		{
 			// destroy all the remote gadgets
-			for( let member of room.members )
+			for( let member of this.m_roomDetails[ roomId ].room.members )
 			{
 				for( let gadget of member.gadgets )
 				{
 					this.m_dispatcher.destroyRemoteGadget( gadget.gadgetId );
 				}
 			}
-
-			// discard the room
-			delete this.m_roomDetails[ roomId ];
 		}
 		this.m_roomDetails = {};
 
@@ -876,7 +873,7 @@ class CGadgetData
 
 		if( this.m_roomDetails[ m.roomId ] )
 		{
-			response.error = `Room ${ m.roomId } already exists on this gadget`;
+			response.error = `Room "${ m.roomId }" already exists on this gadget`;
 		}
 		else
 		{
