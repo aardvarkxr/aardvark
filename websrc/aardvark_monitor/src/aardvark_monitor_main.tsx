@@ -11,7 +11,8 @@ import { EndpointType, MessageType, EndpointAddr, MsgNewEndpoint, MsgLostEndpoin
 	MsgActuallyJoinChamber,
 	signRequest,
 	MinimalPose,
-	SharedGadget
+	SharedGadget,
+	ENodeFlags
 } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import { observable, ObservableMap, action, observe, computed } from 'mobx';
@@ -792,7 +793,16 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 		if( !flags )
 			return null;
 	
-		return <div>Flags: { flags } </div>;
+		let flagNames = [];
+		for( let bit = 0; bit < 32; bit++ )
+		{
+			if( 0 != ( flags & ( 1 << bit ) ) )
+			{
+				flagNames.push( ENodeFlags[ 1 << bit ] );
+			}
+		}
+
+		return <div>Flags: { flagNames.join( ' ' ) } </div>;
 	}
 
 	public renderNode( node: AvNode ): JSX.Element
