@@ -51,10 +51,15 @@ function computeRemoteGadgetId( remoteUserId: string, persistenceUuid: string )
 	return `${ remoteUserId }_${ persistenceUuid }`.toLowerCase();
 }
 
+function computeRemoteUserId( roomGadgetPersistenceUuid: string, roomId: string, memberId: string )
+{
+	return `remote_${ roomGadgetPersistenceUuid }_${ roomId }_${ memberId }`.toLowerCase();
+}
+
 function computeRemoteIds( roomGadgetPersistenceUuid: string, roomId: string,
 	memberId: string, persistenceUuid: string ): [ string, string ]
 {
-	let remoteUserId = `remote_${ roomGadgetPersistenceUuid }_${ roomId }_${ memberId }`.toLowerCase();
+	let remoteUserId = computeRemoteUserId( roomGadgetPersistenceUuid, roomId, memberId );
 	return (
 		[
 			remoteUserId,
@@ -709,6 +714,27 @@ class CGadgetData
 		}
 	}
 
+	public onConnectionClosed()
+	{
+		for( let roomId in this.m_roomDetails )
+		{
+			// destroy all the remote gadgets
+			for( let member of room.members )
+			{
+				for( let gadget of member.gadgets )
+				{
+					this.m_dispatcher.destroyRemoteGadget( gadget.gadgetId );
+				}
+			}
+
+			// discard the room
+			delete this.m_roomDetails[ roomId ];
+		}
+		this.m_roomDetails = {};
+
+		this.m_ep = null;
+	}
+
 	public getEndpointId() { return this.m_ep.getId(); }
 	public getUri() { return this.m_gadgetUri; }
 	public getId() { return gadgetDetailsToId( this.getName(), this.getUri(), this.getPersistenceUuid() ); }
@@ -840,8 +866,10 @@ class CGadgetData
 		}
 	}
 
+	@bind
 	public onCreateRoom( env: Envelope, m: MsgCreateRoom )
 	{
+		console.log( `onCreateRoom ${ JSON.stringify( m ) }` );
 		let response: MsgCreateRoomResponse =
 		{
 		};
@@ -897,8 +925,10 @@ class CGadgetData
 		this.m_ep.sendReply( MessageType.CreateRoomResponse, response, env );
 	}
 
+	@bind
 	public onDestroyRoom( env: Envelope, m: MsgDestroyRoom )
 	{
+		console.log( `onCreateRoom ${ JSON.stringify( m ) }` );
 		let response: MsgDestroyRoomResponse =
 		{
 		};
@@ -932,8 +962,10 @@ class CGadgetData
 		this.m_ep.sendReply( MessageType.DestroyRoomResponse, response, env );
 	}
 
+	@bind
 	public onRoomMessageReceived( env: Envelope, m: MsgRoomMessageReceived )
 	{
+		console.log( `onRoomMessageReceived on ${ this.getName() }: ${ JSON.stringify( m ) }` );
 		let response: MsgRoomMessageReceivedResponse =
 		{
 		};
@@ -1179,7 +1211,9 @@ class CGadgetData
 				break;
 
 			case AvNodeType.RoomMember:
-				node.propOrigin = this.getOriginsForRoomMember( node.propRoomId, node.propMemberId );
+				node.propMemberOrigins = this.getOriginsForRoomMember( node.propRoomId, node.propMemberId );
+				node.propUniverseName = computeRemoteUserId( this.getPersistenceUuid(),
+					node.propRoomId, node.propMemberId );
 				break;
 
 			default:
@@ -1429,11 +1463,6 @@ class CEndpoint
 		this.registerEnvelopeHandler( MessageType.UpdatePose, this.onUpdatePose );
 		this.registerEnvelopeHandler( MessageType.ChamberGadgetHookUpdated, this.onChamberGadgetHookUpdated );
 		this.registerEnvelopeHandler( MessageType.ChamberMemberListUpdated, this.onChamberMemberListUpdated );
-
-		this.registerEnvelopeHandler( MessageType.CreateRoom, this.m_gadgetData.onCreateRoom );
-		this.registerEnvelopeHandler( MessageType.DestroyRoom, this.m_gadgetData.onDestroyRoom );
-		this.registerEnvelopeHandler( MessageType.RoomMessageReceived, 
-			this.m_gadgetData.onRoomMessageReceived );
 	}
 
 	public getId() { return this.m_id; }
@@ -1621,6 +1650,11 @@ class CEndpoint
 			this.m_gadgetData = new CGadgetData( this, m.gadgetUri, m.initialHook, m.persistenceUuid,
 				m.remoteUniversePath, this.m_dispatcher );
 
+			this.registerEnvelopeHandler( MessageType.CreateRoom, this.m_gadgetData.onCreateRoom );
+			this.registerEnvelopeHandler( MessageType.DestroyRoom, this.m_gadgetData.onDestroyRoom );
+			this.registerEnvelopeHandler( MessageType.RoomMessageReceived, 
+				this.m_gadgetData.onRoomMessageReceived );
+		
 			// Don't reply to the SetEndpointType until we've inited the gadget.
 			// This loads the manifest for the gadget and has the chance to verify
 			// some stuff.
@@ -2045,6 +2079,7 @@ class CEndpoint
 		this.m_dispatcher.sendToAllEndpointsOfType( EndpointType.Renderer, lostEndpointEnv );
 		this.m_dispatcher.sendToAllEndpointsOfType( EndpointType.Monitor, lostEndpointEnv );
 		
+		this.m_gadgetData?.onConnectionClosed()
 		this.m_gadgetData = null;
 	}
 }

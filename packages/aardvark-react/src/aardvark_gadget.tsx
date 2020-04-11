@@ -793,6 +793,7 @@ export class AvGadget
 	 */
 	public createRoom( roomId: string, callbacks: GadgetRoomCallbacks ): Promise<GadgetRoom>
 	{
+		console.log( `createRoom ${ roomId }` );
 		return new Promise<GadgetRoom>( async ( resolve, reject ) =>
 		{
 			let msgCreate: MsgCreateRoom =
@@ -810,6 +811,11 @@ export class AvGadget
 			{
 				onMessage: async ( message: GadgetRoomEnvelope ) =>
 				{
+					console.log( `room.onMessage ${ roomId }: ${ JSON.stringify( message ) }` );
+					if( !message )
+					{
+						throw new Error( "onMessage called with no message" );
+					}
 					let msgReceived: MsgRoomMessageReceived =
 					{
 						roomId,
@@ -817,17 +823,17 @@ export class AvGadget
 					}
 					let [ resp ] = await this.m_endpoint
 						.sendMessageAndWaitForResponse<MsgRoomMessageReceivedResponse>(
-							MessageType.RoomMessageReceived, { roomId }, 
+							MessageType.RoomMessageReceived, msgReceived, 
 							MessageType.RoomMessageReceivedResponse );
 					if( resp.error )
 					{
 						throw new Error( resp.error );
 					}
-					this.m_endpoint.sendMessage( MessageType.RoomMessageReceived, msgReceived );
 				},
 
 				destroy: async (): Promise<void> =>
 				{
+					console.log( `room.destroy ${ roomId }` );
 					let [ resp ] =await this.m_endpoint
 						.sendMessageAndWaitForResponse<MsgDestroyRoomResponse>(
 						MessageType.DestroyRoom, { roomId }, MessageType.DestroyRoomResponse );
@@ -845,6 +851,7 @@ export class AvGadget
 		} );
 	}
 
+	@bind
 	public onSendRoomMessage( msg: MsgSendRoomMessage )
 	{
 		let details = this.m_roomDetails[ msg.roomId ];
