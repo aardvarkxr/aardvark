@@ -35,7 +35,7 @@ export class AvRoomMember extends AvBaseNode< AvRoomMemberProps, {} >
 	public buildNode()
 	{
 		let node = this.createNodeObject( AvNodeType.ChamberMember, this.m_nodeId );
-		node.propRoomId = this.props.memberId;
+		node.propRoomId = this.props.roomId;
 		node.propMemberId = this.props.memberId;
 		return node;
 	}
