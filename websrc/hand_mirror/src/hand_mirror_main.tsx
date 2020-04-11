@@ -7,6 +7,7 @@ import * as ReactDOM from 'react-dom';
 function HandMirror()
 {
 	const [ room, setRoom ] = React.useState<GadgetRoom>( null );
+	const [ cancelRoom, setCancelRoom ] = React.useState( false );
 
 	let sendMessage = ( message: GadgetRoomEnvelope ) =>
 	{
@@ -40,9 +41,17 @@ function HandMirror()
 
 	let onGrabStart = () =>
 	{
+		setCancelRoom( false );
 		AvGadget.instance().createRoom( "mirror", { sendMessage } )
 		.then( ( room: GadgetRoom ) =>
 		{
+			if( cancelRoom )
+			{
+				room.destroy();
+				setCancelRoom( false );
+				return;
+			}
+
 			setRoom( room );
 
 			let msg: RMMemberJoined =
@@ -62,6 +71,10 @@ function HandMirror()
 		{
 			room.destroy();
 			setRoom( null );
+		}
+		else
+		{
+			setCancelRoom( true );
 		}
 	}
 
