@@ -1,4 +1,4 @@
-import { AvDefaultChamber, AvOrigin, AvPanel, AvStandardGrabbable, AvTransform, ShowGrabbableChildren } from '@aardvarkxr/aardvark-react';
+import { AvOrigin, AvPanel, AvStandardGrabbable, AvTransform, ShowGrabbableChildren } from '@aardvarkxr/aardvark-react';
 import { g_builtinModelHead } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
@@ -75,7 +75,7 @@ class SimpleSocial extends React.Component< {}, SimpleSocialState >
 			</AvTransform>;
 	}
 
-	public renderChamber()
+	public renderChamber(): JSX.Element
 	{
 		if( !this.state.currentChamber )
 		{
@@ -83,9 +83,11 @@ class SimpleSocial extends React.Component< {}, SimpleSocialState >
 		}
 		else
 		{
-			return <AvOrigin path="/space/stage" >
-				<AvDefaultChamber chamberId={ this.state.currentChamber }/>
-			</AvOrigin>;
+			// TODO: Need a social example app that uses the new room API
+			return null;
+			// return <AvOrigin path="/space/stage" >
+			// 	<AvDefaultChamber chamberId={ this.state.currentChamber }/>
+			// </AvOrigin>;
 		}
 	}
 

@@ -1,5 +1,4 @@
 export * from './aardvark_base_node';
-export * from './aardvark_chamber';
 export * from './aardvark_drop_indicator';
 export * from './aardvark_endpoint';
 export * from './aardvark_gadget_seed';

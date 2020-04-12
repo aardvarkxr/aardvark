@@ -4,7 +4,7 @@ import  * as ReactDOM from 'react-dom';
 import bind from 'bind-decorator';
 
 import { AvGadget, AvTransform, AvPanel, AvGrabbable, HighlightType, GrabResponse, AvSphereHandle } from '@aardvarkxr/aardvark-react';
-import { EndpointAddr, AvGrabEvent, EAction, EHand, ChamberNamespace } from '@aardvarkxr/aardvark-shared';
+import { EndpointAddr, AvGrabEvent, EAction, EHand } from '@aardvarkxr/aardvark-shared';
 import { ACModel, ACView } from 'common/croquet_utils';
 import { CroquetSession, startSession } from '@croquet/croquet';
 
@@ -74,7 +74,6 @@ interface TestPanelState
 {
 	count: number;
 	grabbableHighlight: HighlightType;
-	inChamber: boolean;
 }
 
 interface TestSettings
@@ -94,7 +93,6 @@ class TestPanel extends React.Component< {}, TestPanelState >
 		{ 
 			count: 0,
 			grabbableHighlight: HighlightType.None,
-			inChamber: false,
 		};
 
 		AvGadget.instance().registerForSettings( this.onSettingsReceived );

@@ -43,20 +43,6 @@ export enum MessageType
 	GetInstalledGadgetsResponse = 401,
 	InstallGadget = 402,
 
-	// Room messages - Gadgets can send these on behalf of a user if that 
-	// gadget has "chamber" permissions
-	RequestJoinChamber = 500,	// sent by gadgets that want to join a chamber
-	RequestLeaveChamber = 501,	// sent by gadgets that want to leave a chamber
-	UpdatePose = 502,			// sent to master periodically so it can update all chambers
-	ChamberList = 503, 			// sent to monitors when the list changes
-	ActuallyJoinChamber = 504,	// sent to master to join a chamber
-	ActuallyLeaveChamber = 505,	// sent to master to leave a chamber
-	AddGadgetToChambers = 506,  // sent to master to update the chamber
-	RemoveGadgetFromChambers = 507,  // sent to master to update the chamber
-	UpdateChamberGadgetHook = 508, // Updates the hook field of a gadget on all chambers
-	ChamberGadgetHookUpdated = 509, // Sent by master when a remote gadget's hook updates
-	ChamberMemberListUpdated = 510, // Sent by master when a remote gadget's member list updates
-
 	// gadget has "room" permissions
 	CreateRoom = 600,
 	CreateRoomResponse = 601,
@@ -65,6 +51,7 @@ export enum MessageType
 	RoomMessageReceived = 604,
 	RoomMessageReceivedResponse = 605,
 	SendRoomMessage = 606,
+	UpdatePose = 607,
 }
 
 export enum WebSocketCloseCodes
@@ -430,25 +417,6 @@ export interface MsgSignRequestResponse
 	request: GadgetAuthedRequest;
 }
 
-export enum ChamberNamespace
-{
-	GadgetClass = 1,
-	GadgetInstance = 2,
-}
-
-export interface MsgRequestJoinChamber
-{
-	chamberId: string; 
-	namespace: ChamberNamespace;
-	showSelf: boolean;
-}
-
-export interface MsgRequestLeaveChamber
-{
-	chamberId: string; 
-	namespace: ChamberNamespace;
-}
-
 // tx, ty, tz, rw, rx, ry, rz
 export type MinimalPose = [ number, number, number, number, number, number, number ];
 
@@ -467,57 +435,6 @@ export interface SharedGadget
 }
 
 
-export interface MsgActuallyJoinChamber extends AuthedRequest
-{
-	chamberPath: string;
-	userUuid: string;
-	userPublicKey: string;
-	gadgets?: SharedGadget[];
-	showSelf: boolean;
-}
-
-export interface MsgActuallyLeaveChamber extends AuthedRequest
-{
-	chamberPath: string;
-	userUuid: string;
-}
-
-export interface MsgChamberList
-{
-	chamberPaths: string[];
-}
-
-export interface MsgAddGadgetToChambers extends AuthedRequest
-{
-	userUuid: string;
-	gadget: SharedGadget;
-}
-
-export interface MsgRemoveGadgetFromChambers extends AuthedRequest
-{
-	userUuid: string;
-	persistenceUuid: string;
-}
-
-export interface MsgUpdateChamberGadgetHook extends AuthedRequest
-{
-	userUuid: string;
-	persistenceUuid: string;
-	hook?: string;
-}
-
-export interface MsgChamberGadgetHookUpdated
-{
-	gadgetId: number;
-	newHook?: string;
-}
-
-export interface MsgChamberMemberListUpdated
-{
-	chamberPath: string;
-	chamberId?: string; // This will be filled in by the server on the way to the gadget
-	members: string[];
-}
 
 /** This enum defines reserved destination values that may be set on any
  * message being sent on a data WebRTC connection to an Aardvark room.
@@ -694,8 +611,6 @@ export enum AvNodeType
 	RemoteUniverse = 14,
 	RemoteOrigin = 15,
 	RoomMember = 16,
-	Chamber = 17,
-	ChamberMember = 18,
 }
 
 
@@ -878,10 +793,6 @@ export interface AvNode
 
 	propOrigin?: string;
 	propUniverseName?: string;
-	propChamberId?: string;
-	propChamberNamespace?: ChamberNamespace;
-	propChamberPath?: string;
-	propChamberMemberUuid?: string;
 	propRoomId?: string;
 	propMemberId?: string;
 	propMemberOrigins?: { [ originPath: string ]: MinimalPose };
@@ -935,7 +846,7 @@ export enum Permission
 {
 	Master = "master",
 	SceneGraph = "scenegraph",
-	Chamber = "chamber",
+	Room = "room",
 }
 
 export interface AvGadgetManifest
@@ -946,7 +857,7 @@ export interface AvGadgetManifest
 	height: number;
 	model: string;
 	startAutomatically: boolean;
-	shareInChamber?: boolean; // defaults to true
+	shareInRooms?: boolean; // defaults to true
 }
 
 

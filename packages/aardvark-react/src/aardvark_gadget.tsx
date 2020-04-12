@@ -1,13 +1,11 @@
 import * as React from 'react';
 
 import { Av, AvActionState, EAction, getActionFromState, 
-	MsgUserInfo, Envelope, LocalUserInfo, MsgRequestJoinChamber, MsgRequestLeaveChamber, 
+	MsgUserInfo, Envelope, LocalUserInfo, 
 	AvStartGadgetResult,
 	AuthedRequest,
 	MsgSignRequest,
 	MsgSignRequestResponse,
-	ChamberNamespace,
-	MsgChamberMemberListUpdated,
 	AvNodeTransform,
 	GadgetRoomCallbacks,
 	GadgetRoom,
@@ -75,17 +73,6 @@ interface ActionStateListener
 	falling?: () => void;
 }
 
-export interface ChamberMemberListHandler
-{
-	( chamberId: string, members: string[] ): void;
-}
-
-interface GadgetChamberDetails
-{
-	memberHandler: ChamberMemberListHandler;
-	showSelf: boolean;
-}
-
 interface GadgetRoomDetails
 {
 	room: GadgetRoom;
@@ -126,7 +113,6 @@ export class AvGadget
 	m_startGadgetPromises: {[nodeId:number]: 
 		[ ( res: AvStartGadgetResult ) => void, ( reason: any ) => void ] } = {};
 	m_actionStateListeners: { [listenerId: number] : ActionStateListener } = {};
-	m_chamberMemberListHandler: { [ chamberId: string ]: GadgetChamberDetails } = {};
 	m_roomDetails: { [roomId: string] : GadgetRoomDetails } = {};
 
 	constructor()
@@ -183,8 +169,6 @@ export class AvGadget
 		this.m_endpoint.registerHandler( MessageType.UpdateActionState, this.onUpdateActionState );
 		this.m_endpoint.registerHandler( MessageType.ResourceLoadFailed, this.onResourceLoadFailed );
 		this.m_endpoint.registerHandler( MessageType.UserInfo, this.onUserInfo );
-		this.m_endpoint.registerHandler( MessageType.ChamberMemberListUpdated, 
-			this.onChamberMemberListUpdated );
 		this.m_endpoint.registerHandler( MessageType.SendRoomMessage, this.onSendRoomMessage );
 		if( this.m_onSettingsReceived )
 		{
@@ -856,50 +840,6 @@ export class AvGadget
 	{
 		let details = this.m_roomDetails[ msg.roomId ];
 		details?.callbacks.sendMessage( msg.message );
-	}
-
-	/** Asks to join a chamber on the user's behalf. This gadget must have the "chamber" permission.
-	 * 
-	 * The provided chamber ID will be namespaced with the gadget's name.
-	 */
-	public joinChamber( chamberId: string, namespace: ChamberNamespace, 
-		memberListHandler: ChamberMemberListHandler, showSelf?: boolean )
-	{
-		let msg: MsgRequestJoinChamber =
-		{
-			chamberId,
-			namespace,
-			showSelf,
-		}
-		this.m_endpoint.sendMessage( MessageType.RequestJoinChamber, msg );
-
-		this.m_chamberMemberListHandler[ chamberId ] =
-		{
-			memberHandler: memberListHandler,
-			showSelf: showSelf ?? false,
-		};
-	}
-
-	/** Asks to leave a chamber on the user's behalf. This gadget must have the "chamber" permission.
-	 * 
-	 * The provided chamber ID will be namespaced with the gadget's name.
-	 */
-	public leaveChamber( chamberId: string, namespace: ChamberNamespace )
-	{
-		let msg: MsgRequestLeaveChamber =
-		{
-			chamberId,
-			namespace,
-		}
-		this.m_endpoint.sendMessage( MessageType.RequestLeaveChamber, msg );
-
-		delete this.m_chamberMemberListHandler[ chamberId ];
-	}
-
-	@bind
-	private onChamberMemberListUpdated( m: MsgChamberMemberListUpdated )
-	{
-		this.m_chamberMemberListHandler[ m.chamberId ]?.memberHandler(m.chamberId, m.members );
 	}
 
 	/** Adds a handler for a raw Aardvark message. You probably don't need this. */

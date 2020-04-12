@@ -1,47 +1,14 @@
-import { Room, ServerRoomCallbacks, createRoom, RoomMemberGadget, onRoomMessage, updateRoomPose, addLocalGadget, destroyLocalGadget, updateLocalGadgetHook, findMemberOrigins } from './rooms';
-import { g_localInstallPathUri, g_localInstallPath,	getJSONFromUri } from './serverutils';
-import { parsePersistentHookPath, buildPersistentHookPathFromParts,
-	HookPathParts,  buildPersistentHookPath, HookType } from 'common/hook_utils';
-import { StoredGadget, AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, AvGrabEvent, 
-	AvGrabEventType, MsgAttachGadgetToHook, MsgMasterStartGadget, MsgSaveSettings, 
-	MsgOverrideTransform, MsgGetGadgetManifest, MsgGetGadgetManifestResponse, 
-	MsgUpdateSceneGraph, EndpointAddr, endpointAddrToString, MsgGrabEvent, 
-	endpointAddrsMatch, MsgGrabberState, MsgGadgetStarted, MsgSetEndpointTypeResponse, 
-	MsgPokerProximity, MsgMouseEvent, MsgNodeHaptic, MsgUpdateActionState, 
-	MsgDetachGadgetFromHook, MessageType, EndpointType, MsgSetEndpointType, Envelope, 
-	MsgNewEndpoint, MsgLostEndpoint, parseEnvelope, MsgError, AardvarkPort,
-	MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgDestroyGadget, WebSocketCloseCodes, 
-	MsgResourceLoadFailed, 	MsgInstallGadget, EVolumeType, parseEndpointFieldUri, MsgUserInfo, 
-	MsgRequestJoinChamber, MsgActuallyJoinChamber, MsgRequestLeaveChamber, MsgActuallyLeaveChamber, 
-	MsgChamberList, gadgetDetailsToId, MsgUpdatePose, Permission, SharedGadget, 
-	MsgAddGadgetToChambers, 
-	MsgRemoveGadgetFromChambers, 
-	AuthedRequest, 
-	MsgUpdateChamberGadgetHook, 
-	ENodeFlags, 
-	MsgChamberGadgetHookUpdated, 
-	MsgSignRequest, 
-	GadgetAuthedRequest, 
-	MsgSignRequestResponse, 
-	ChamberNamespace, 
-	MsgChamberMemberListUpdated,
-	MsgCreateRoom,
-	MsgDestroyRoom,
-	MsgRoomMessageReceived,
-	MsgCreateRoomResponse,
-	MsgSendRoomMessage,
-	GadgetRoomEnvelope,
-	MsgDestroyRoomResponse,
-	MsgRoomMessageReceivedResponse,
-	AvStartGadgetResult
-} from '@aardvarkxr/aardvark-shared';
+import { AardvarkPort, AuthedRequest, AvGadgetManifest, AvGrabEvent, AvGrabEventType, AvNode, AvNodeTransform, AvNodeType, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, EVolumeType, GadgetAuthedRequest, gadgetDetailsToId, GadgetRoomEnvelope, MessageType, MsgAttachGadgetToHook, MsgCreateRoom, MsgCreateRoomResponse, MsgDestroyGadget, MsgDestroyRoom, MsgDestroyRoomResponse, MsgDetachGadgetFromHook, MsgError, MsgGadgetStarted, MsgGetGadgetManifest, MsgGetGadgetManifestResponse, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgGrabberState, MsgGrabEvent, MsgInstallGadget, MsgLostEndpoint, MsgMasterStartGadget, MsgMouseEvent, MsgNewEndpoint, MsgNodeHaptic, MsgOverrideTransform, MsgPokerProximity, MsgResourceLoadFailed, MsgRoomMessageReceived, MsgRoomMessageReceivedResponse, MsgSaveSettings, MsgSendRoomMessage, MsgSetEndpointType, MsgSetEndpointTypeResponse, MsgSignRequest, MsgSignRequestResponse, MsgUpdateActionState, MsgUpdatePose, MsgUpdateSceneGraph, MsgUserInfo, parseEndpointFieldUri, parseEnvelope, Permission, SharedGadget, WebSocketCloseCodes } from '@aardvarkxr/aardvark-shared';
+import bind from 'bind-decorator';
+import { buildPersistentHookPath, buildPersistentHookPathFromParts, HookPathParts, HookType, parsePersistentHookPath } from 'common/hook_utils';
 import * as express from 'express';
 import * as http from 'http';
-import * as WebSocket from 'ws';
-import bind from 'bind-decorator';
-import * as path from 'path';
-import { persistence } from './persistence';
 import isUrl from 'is-url';
+import * as path from 'path';
+import * as WebSocket from 'ws';
+import { persistence } from './persistence';
+import { addLocalGadget, createRoom, destroyLocalGadget, findMemberOrigins, onRoomMessage, Room, RoomMemberGadget, ServerRoomCallbacks, updateLocalGadgetHook, updateRoomPose } from './rooms';
+import { getJSONFromUri, g_localInstallPath, g_localInstallPathUri } from './serverutils';
 
 console.log( "Data directory is", g_localInstallPathUri );
 
@@ -76,7 +43,6 @@ class CDispatcher
 	private m_gadgets: CEndpoint[] = [];
 	private m_gadgetsByUuid: { [ uuid: string ] : CEndpoint } = {};
 	private m_nextSequenceNumber = 1;
-	private m_chambers: { [ chamberPath: string ]: string } = {};
 	private m_gadgetsWithWaiters: { [ persistenceUuid: string ]: (( gadg: CGadgetData) => void)[] } = {};
 	private m_startGadgetPromises: {[nodeId:number]: 
 		[ ( gadgetEndpointId: number ) => void, ( reason: any ) => void ] } = {};
@@ -247,8 +213,6 @@ class CDispatcher
 					break;
 			}
 		}
-
-		this.sendChamberUpdate();
 	}
 
 	public buildPackedEnvelope( env: Envelope )
@@ -464,11 +428,6 @@ class CDispatcher
 		} );
 	}
 
-	public getChamberOwner( chamberPath: string ): string
-	{
-		return this.m_chambers[ chamberPath ];
-	}
-
 	public notifyGadgetWaiters( persistenceUuid: string )
 	{
 		let gadgetData = this.m_gadgetsByUuid[ persistenceUuid ]?.getGadgetData();
@@ -568,35 +527,13 @@ class CDispatcher
 		} );
 	}
 
-	private sendChamberUpdate()
-	{
-		let m: MsgChamberList =
-		{
-			chamberPaths: Array.from( Object.keys( this.m_chambers ) )
-		}
-
-		this.sendMessageToAllEndpointsOfType( EndpointType.Monitor, MessageType.ChamberList, m );
-	}
-	
-	public addChamber( chamberPath: string, owningGadgetUuid: string )
-	{
-		this.m_chambers[ chamberPath ] = owningGadgetUuid;
-		this.sendChamberUpdate();
-	}
-
-	public removeChamber( chamberPath: string )
-	{
-		delete this.m_chambers[ chamberPath ];
-		this.sendChamberUpdate();
-	}
-
 	public gatherSharedGadgets(): SharedGadget[]
 	{
 		let gadgets: SharedGadget[] = [];
 
 		for( let ep of this.getListForType( EndpointType.Gadget ) )
 		{
-			if( !ep.getGadgetData() || !ep.getGadgetData().getShareInChamber() )
+			if( !ep.getGadgetData() || !ep.getGadgetData().getShareInRooms() )
 			{
 				continue;
 			}
@@ -667,7 +604,6 @@ class CGadgetData
 	private m_nodes: { [ nodeId: number ]: AvNode } = {}
 	private m_nodesByPersistentName: { [ persistentName: string ]: AvNode } = {}
 	private m_gadgetBeingDestroyed = false;
-	private m_chambers: { [ chamberPath: string ] : MsgRequestJoinChamber } = {};
 	private m_roomDetails: { [ roomId: string ] : RoomDetails } = {};
 	private m_updateTimer: NodeJS.Timeout = null;
 
@@ -744,9 +680,9 @@ class CGadgetData
 	public getHookNodes() { return this.m_hookNodes; }
 	public getPersistenceUuid() { return this.m_persistenceUuid; }
 	public getRemoteUniversePath() { return this.m_remoteUniversePath; }
-	public getShareInChamber() 
+	public getShareInRooms() 
 	{ 
-		return ( typeof this.m_manifest.shareInChamber == "boolean" ? this.m_manifest.shareInChamber : true )
+		return ( typeof this.m_manifest.shareInRooms == "boolean" ? this.m_manifest.shareInRooms : true )
 			&& !this.m_remoteUniversePath; 
 	}
 	public isMaster() { return this.m_persistenceUuid == "master"; }
@@ -797,7 +733,7 @@ class CGadgetData
 	public clearGrabHook()
 	{
 		this.m_grabHook = null;
-		this.sendChamberHookUpdate();
+		this.sendRoomHookUpdate();
 	}
 
 	public async attachToHook( hookPath: string )
@@ -841,21 +777,13 @@ class CGadgetData
 			this.sendSceneGraphToRenderer();
 		}
 
-		this.sendChamberHookUpdate();
+		this.sendRoomHookUpdate();
 	}
 
-	private sendChamberHookUpdate() 
+	private sendRoomHookUpdate() 
 	{
 		if ( !this.getRemoteUniversePath() ) 
 		{
-			let msgUpdateHook: MsgUpdateChamberGadgetHook = 
-			{
-				userUuid: persistence.localUserInfo.userUuid,
-				persistenceUuid: this.getPersistenceUuid(),
-				hook: this.getHookPathToShare(),
-			};
-			this.m_dispatcher.sendToMasterSigned(MessageType.UpdateChamberGadgetHook, msgUpdateHook);
-
 			this.m_dispatcher.forEachRoom( ( room ) =>
 			{
 				updateLocalGadgetHook( room, this.getPersistenceUuid(), this.getHookPathToShare() );
@@ -1210,10 +1138,6 @@ class CGadgetData
 				}
 				break;
 
-			case AvNodeType.Chamber:
-				node.propChamberPath = this.computeChamberPath( node.propChamberId, node.propChamberNamespace );
-				break;
-
 			case AvNodeType.RoomMember:
 				console.log( "Updating poses on RoomMember" );
 				node.propMemberOrigins = this.getOriginsForRoomMember( node.propRoomId, node.propMemberId );
@@ -1261,12 +1185,6 @@ class CGadgetData
 		{
 			persistence.destroyGadgetPersistence( this.m_gadgetUri, this.m_persistenceUuid );
 		}
-
-		for( let chamberPath in this.m_chambers )
-		{
-			this.leaveChamberInternal( chamberPath );
-		}
-		this.m_chambers = {};
 	}
 
 	public scheduleSceneGraphRefresh()
@@ -1343,66 +1261,6 @@ class CGadgetData
 		} );
 	}
 
-	private computeChamberPath( chamberId: string, namespace: ChamberNamespace )
-	{
-		switch( namespace )
-		{
-			case ChamberNamespace.GadgetInstance:
-				return `/gadget_instance/${ this.getId() }/chamber/${ chamberId }`;
-
-			case ChamberNamespace.GadgetClass:
-				return `/gadget_class/${ this.getClassId() }/chamber/${ chamberId }`;
-		}
-	}
-
-	public joinChamber( chamberId: string, namespace: ChamberNamespace, showSelf: boolean )
-	{
-		if( namespace == undefined )
-		{
-			namespace = ChamberNamespace.GadgetInstance;
-		}
-		
-		let req: MsgActuallyJoinChamber =
-		{
-			chamberPath: this.computeChamberPath( chamberId, namespace ),
-			userUuid: persistence.localUserInfo.userUuid,
-			userPublicKey: persistence.localUserInfo.userPublicKey,
-			gadgets: this.m_dispatcher.gatherSharedGadgets(),
-			showSelf,
-		}
-		this.m_dispatcher.sendToMasterSigned( MessageType.ActuallyJoinChamber, req );
-		this.m_dispatcher.addChamber( req.chamberPath, this.m_persistenceUuid );
-
-		this.m_chambers[ req.chamberPath ] =
-		{
-			chamberId,
-			namespace,
-			showSelf,
-		};
-	}
-
-	private leaveChamberInternal( chamberPath: string )
-	{
-		let req: MsgActuallyLeaveChamber =
-		{
-			chamberPath,
-			userUuid: persistence.localUserInfo.userUuid,
-		}
-		this.m_dispatcher.sendToMasterSigned( MessageType.ActuallyLeaveChamber, req );
-		this.m_dispatcher.removeChamber( chamberPath );
-	}
-
-	public leaveChamber( chamberId: string, namespace: ChamberNamespace )
-	{
-		let chamberPath = this.computeChamberPath( chamberId, namespace );
-		this.leaveChamberInternal( chamberPath );
-		delete this.m_chambers[ chamberPath ];
-	}
-
-	public getChamberDetails( chamberPath: string ): MsgRequestJoinChamber
-	{
-		return this.m_chambers[ chamberPath ];
-	}
 }
 
 
@@ -1476,13 +1334,9 @@ class CEndpoint
 		this.registerEnvelopeHandler( MessageType.GetInstalledGadgets, this.onGetInstalledGadgets );
 		this.registerEnvelopeHandler( MessageType.DestroyGadget, this.onDestroyGadget );
 		this.registerEnvelopeHandler( MessageType.InstallGadget, this.onInstallGadget );
-		this.registerEnvelopeHandler( MessageType.RequestJoinChamber, this.onRequestJoinChamber );
-		this.registerEnvelopeHandler( MessageType.RequestLeaveChamber, this.onRequestLeaveChamber );
 		this.registerEnvelopeHandler( MessageType.SignRequest, this.onSignRequest );
 
 		this.registerEnvelopeHandler( MessageType.UpdatePose, this.onUpdatePose );
-		this.registerEnvelopeHandler( MessageType.ChamberGadgetHookUpdated, this.onChamberGadgetHookUpdated );
-		this.registerEnvelopeHandler( MessageType.ChamberMemberListUpdated, this.onChamberMemberListUpdated );
 	}
 
 	public getId() { return this.m_id; }
@@ -1696,8 +1550,8 @@ class CEndpoint
 				this.m_dispatcher.startAllGadgets();
 			}
 
-			// Tell any chambers this user is in about the new gadget
-			if( this.m_gadgetData.getShareInChamber() )
+			// Tell any rooms this user is in about the new gadget
+			if( this.m_gadgetData.getShareInRooms() )
 			{
 				let localGadget: SharedGadget =
 				{
@@ -1705,16 +1559,6 @@ class CEndpoint
 					persistenceUuid: this.getGadgetData().getPersistenceUuid(),
 					hook: this.getGadgetData().getHookPathToShare(),
 				};
-
-				let msgAddGadget: MsgAddGadgetToChambers =
-				{
-					userUuid: persistence.localUserInfo.userUuid,
-					gadget: localGadget,
-				};
-
-				console.log( `SHARING ${ this.m_gadgetData.getUri() }`
-					+` ${ msgAddGadget.gadget.persistenceUuid } hookPath: ${ msgAddGadget.gadget.hook }` );
-				this.m_dispatcher.sendToMasterSigned( MessageType.AddGadgetToChambers, msgAddGadget );
 
 				this.m_dispatcher.forEachRoom( ( room ) =>
 				{
@@ -1916,18 +1760,6 @@ class CEndpoint
 		this.getGadgetData().verifyPermission( permissionName );
 	}
 
-	@bind private onRequestJoinChamber( env: Envelope, m: MsgRequestJoinChamber )
-	{
-		this.verifyPermission( Permission.Chamber );
-		this.getGadgetData().joinChamber( m.chamberId, m.namespace, m.showSelf );
-	}
-
-	@bind private onRequestLeaveChamber( env: Envelope, m: MsgRequestLeaveChamber )
-	{
-		this.verifyPermission( Permission.Chamber );
-		this.getGadgetData().leaveChamber( m.chamberId, m.namespace );
-	}
-
 
 	@bind private onSignRequest( env: Envelope, m: MsgSignRequest )
 	{
@@ -1954,42 +1786,6 @@ class CEndpoint
 		{
 			gadgetEp?.m_gadgetData.sendUpdatedPose( m );
 		}
-
-		this.m_dispatcher.sendToMasterSigned( MessageType.UpdatePose, m );
-	}
-
-	@bind
-	private onChamberGadgetHookUpdated( env: Envelope, m: MsgChamberGadgetHookUpdated )
-	{
-		// console.log( 'remote telling us about hook change' );
-
-		this.getGadgetData().verifyMaster();
-		let gadget = this.m_dispatcher.findGadgetById( m.gadgetId );
-		if( gadget )
-		{
-			// console.log( `REMOTE UPDATE gadget ${ gadget.getEndpointId() } hook path to ${ m.newHook }` );
-			gadget.clearGrabHook();
-			gadget.attachToHook( m.newHook );
-		}
-	}
-
-	@bind
-	private async onChamberMemberListUpdated( env: Envelope, m: MsgChamberMemberListUpdated )
-	{
-		// console.log( 'remote telling us about member list  change' );
-		this.getGadgetData().verifyMaster();
-
-		let chamberOwner = this.m_dispatcher.getChamberOwner( m.chamberPath );
-		if( chamberOwner )
-		{
-			let chamberOwningGadget = await this.m_dispatcher.findGadget( chamberOwner );
-			let chamberDetails = chamberOwningGadget?.getChamberDetails( m.chamberPath );
-			if( chamberOwningGadget && chamberDetails )
-			{
-				m.chamberId = chamberDetails.chamberId;
-				chamberOwningGadget.sendMessage( MessageType.ChamberMemberListUpdated, m );
-			}
-		}
 	}
 
 	@bind private onDestroyGadget( env: Envelope, m: MsgDestroyGadget )
@@ -2008,13 +1804,6 @@ class CEndpoint
 	{
 		if( this.m_gadgetData )
 		{
-			let msgRemoveGadget: MsgRemoveGadgetFromChambers =
-			{
-				userUuid: persistence.localUserInfo.userUuid,
-				persistenceUuid: this.getGadgetData().getPersistenceUuid(),
-			};
-			this.m_dispatcher.sendToMasterSigned( MessageType.RemoveGadgetFromChambers, msgRemoveGadget );
-
 			this.m_dispatcher.forEachRoom( ( room ) =>
 			{
 				destroyLocalGadget( room, this.getGadgetData().getPersistenceUuid() );
