@@ -1,24 +1,10 @@
-import * as React from 'react';
-import  * as ReactDOM from 'react-dom';
-import { CMonitorEndpoint } from '@aardvarkxr/aardvark-react';
-import { EndpointType, MessageType, EndpointAddr, MsgNewEndpoint, MsgLostEndpoint, 
-	MsgUpdateSceneGraph, AvGadgetManifest, AvNode, AvNodeType, AvNodeTransform, 
-	AvVector, AvQuaternion, AvGrabEvent, AvGrabEventType, endpointAddrToString, 
-	MsgGrabEvent, MsgPokerProximity, MsgOverrideTransform, MsgResourceLoadFailed, Envelope, 
-	LocalUserInfo, 
-	MsgUserInfo,
-	MsgChamberList,
-	MsgActuallyJoinChamber,
-	signRequest,
-	MinimalPose,
-	SharedGadget
-} from '@aardvarkxr/aardvark-shared';
+import { CMonitorEndpoint, DegreesToRadians, EulerAnglesToQuaternion, QuaternionToEulerAngles, RadiansToDegrees } from '@aardvarkxr/aardvark-react';
+import { AvGadgetManifest, AvGrabEvent, AvGrabEventType, AvNode, AvNodeTransform, AvNodeType, AvQuaternion, AvVector, EndpointAddr, endpointAddrToString, EndpointType, ENodeFlags, Envelope, MessageType, MinimalPose, MsgGrabEvent, MsgLostEndpoint, MsgNewEndpoint, MsgOverrideTransform, MsgPokerProximity, MsgResourceLoadFailed, MsgUpdateSceneGraph } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
-import { observable, ObservableMap, action, observe, computed } from 'mobx';
+import { action, computed, observable, ObservableMap } from 'mobx';
 import { observer } from 'mobx-react';
-import { QuaternionToEulerAngles, RadiansToDegrees, DegreesToRadians, EulerAnglesToQuaternion } from '@aardvarkxr/aardvark-react';
-import { findUser, UserSubscription, initLocalUser } from 'common/net_user';
-import { findChamber, ChamberSubscription, ChamberMemberInfo, PoseUpdatedArgs, ChamberGadgetInfo } from 'common/net_chamber';
+import * as React from 'react';
+import * as ReactDOM from 'react-dom';
 
 interface EndpointData
 {
@@ -38,26 +24,11 @@ interface GadgetData extends EndpointData
 	remoteUniversePath?: string;
 }
 
-interface ChamberMemberObservable
-{
-	info: ChamberMemberInfo;
-	poses: ObservableMap< string, MinimalPose>;
-	gadgets: ObservableMap< string, SharedGadget>;
-}
-
-interface ChamberInfo
-{
-	chamber: ChamberSubscription;
-	members: ObservableMap< string, ChamberMemberObservable >;
-}
-
 class CMonitorStore
 {
 	private m_connection: CMonitorEndpoint;
 	@observable m_endpoints: ObservableMap<number, EndpointData>;
 	m_events = observable.array< AvGrabEvent | MsgResourceLoadFailed >();
-	@observable m_userInfo: UserSubscription = null;
-	@observable m_chambers = new ObservableMap<string, ChamberInfo>();
 
 	constructor()
 	{
@@ -70,8 +41,6 @@ class CMonitorStore
 		this.m_connection.registerHandler( MessageType.GrabEvent, this.onGrabEvent );
 		this.m_connection.registerHandler( MessageType.PokerProximity, this.onPokerProximity );
 		this.m_connection.registerHandler( MessageType.ResourceLoadFailed, this.onResourceLoadFailed );
-		this.m_connection.registerHandler( MessageType.UserInfo, this.onUserInfo );
-		this.m_connection.registerHandler( MessageType.ChamberList, this.onChamberList );
 	}
 
 	public getConnection() { return this.m_connection; }
@@ -142,124 +111,6 @@ class CMonitorStore
 		if( data )
 		{
 			this.m_endpoints.set( message.endpointId, data );
-		}
-	}
-
-	@bind
-	async onUserInfo( message: MsgUserInfo )
-	{
-		this.m_userInfo = await findUser( message.info.userUuid );
-	}
-
-	@bind 
-	async onChamberList( message: MsgChamberList )
-	{
-		let setToDelete = new Set<string>();
-		let setToAdd = new Set< string > ();
-		for( let chamberPath in this.m_chambers.keys() )
-		{
-			setToDelete.add( chamberPath );
-		}
-		for( let chamberPath of message.chamberPaths )
-		{
-			if( setToDelete.has( chamberPath ) )
-			{
-				setToDelete.delete( chamberPath );
-			}
-			else
-			{
-				setToAdd.add( chamberPath );
-			}
-		}
-
-		for( let chamberToDelete of setToDelete )
-		{
-			this.m_chambers.get( chamberToDelete ).chamber.removePoseHandler( this.onPoseUpdated );
-			this.m_chambers.delete( chamberToDelete );
-		}
-
-		let promises = [];
-		for( let chamberPath of setToAdd )
-		{
-			promises.push( findChamber( chamberPath ) );
-		}
-		let newChambers = await Promise.all( promises );
-
-		for( let newChamber of newChambers )
-		{
-			newChamber.addPoseHandler( this.onPoseUpdated );
-			newChamber.addGadgetListUpdateHandler( this.onGadgetListUpdated );
-			newChamber.addGadgetUpdateHandler( this.onGadgetUpdated );
-
-			let chamberInfo = 
-			{
-				chamber: newChamber,
-				members: new ObservableMap<string, ChamberMemberObservable > ()
-			};
-
-			this.m_chambers.set( newChamber.chamberPath, chamberInfo );
-			
-			for( let member of chamberInfo.chamber.members )
-			{
-				let chamberMember =
-				{
-					info: member,
-					poses: new ObservableMap< string, MinimalPose>(),
-					gadgets: new ObservableMap< string, SharedGadget>(),
-				}
-
-				for( let gadget of member.gadgets )
-				{
-					let gadgetInfo: SharedGadget =
-					{
-						gadgetUri: gadget.gadgetUri,
-						persistenceUuid: gadget.persistenceUuid,
-						hook: gadget.hook,
-					}
-					chamberMember.gadgets.set( gadget.persistenceUuid, gadgetInfo );
-				}
-
-				chamberInfo.members.set( member.uuid, chamberMember );
-			}
-		}
-	}
-
-	@bind
-	private onPoseUpdated( chamber: ChamberSubscription, args: PoseUpdatedArgs )
-	{
-		this.m_chambers.get( chamber.chamberPath )?.members.get( args.userUuid )
-			?.poses.set( args.originPath, args.pose );
-	}
-
-	@bind
-	private onGadgetListUpdated( chamber: ChamberSubscription, member: ChamberMemberInfo )
-	{
-		let memberView = this.m_chambers.get( chamber.chamberPath )?.members.get( member.uuid );
-		if( memberView )
-		{
-			memberView.gadgets.clear();
-			for( let gadget of member.gadgets )
-			{
-				let gadgetInfo: SharedGadget =
-				{
-					gadgetUri: gadget.gadgetUri,
-					persistenceUuid: gadget.persistenceUuid,
-					hook: gadget.hook,
-				}
-				memberView.gadgets.set( gadget.persistenceUuid, gadgetInfo );
-			}
-		}
-	}
-
-	@bind
-	private onGadgetUpdated( chamber: ChamberSubscription, member: ChamberMemberInfo, 
-		gadget: ChamberGadgetInfo )
-	{
-		let gadgetView = this.m_chambers.get( chamber.chamberPath )?.members.get( member.uuid )
-			?.gadgets.get( gadget.persistenceUuid );
-		if( gadgetView )
-		{
-			gadgetView.hook = gadget.hook;
 		}
 	}
 
@@ -792,7 +643,42 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 		if( !flags )
 			return null;
 	
-		return <div>Flags: { flags } </div>;
+		let flagNames = [];
+		for( let bit = 0; bit < 32; bit++ )
+		{
+			if( 0 != ( flags & ( 1 << bit ) ) )
+			{
+				flagNames.push( ENodeFlags[ 1 << bit ] );
+			}
+		}
+
+		return <div>Flags: { flagNames.join( ' ' ) } </div>;
+	}
+
+	public renderMemberOrigins( memberOrigins: { [originPath: string ]: MinimalPose } )
+	{
+		let origins: JSX.Element[] = [];
+		for( let originPath in memberOrigins )
+		{
+			let pose = memberOrigins[ originPath ];
+			origins.push( 
+				<div className="RoomMemberPose" key={ originPath }>
+					<div>{ originPath }</div>
+					{
+						pose ? <>
+							<div>{ pose[0].toFixed(2) }, { pose[1].toFixed(2) }, { pose[2].toFixed(2) }</div>
+							<div>{ pose[3].toFixed(2) }, { pose[4].toFixed(2) }, { pose[5].toFixed(2) }, { pose[6].toFixed(2) }</div>
+						</>
+						: <div>None</div>
+					}
+				
+			</div> );
+		}
+
+		return <div className="AvNodeProperty">
+			origins: { origins }
+		</div>;
+	
 	}
 
 	public renderNode( node: AvNode ): JSX.Element
@@ -816,9 +702,10 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 				{ this.renderFlags( node.flags ) } 
 			</div>
 			{ node.propUniverseName && <div className="AvNodeProperty">remote: {node.propUniverseName }</div> }
-			{ node.propChamberPath && <div className="AvNodeProperty">remote: {node.propChamberPath }</div> }
-			{ node.propChamberMemberUuid && <div className="AvNodeProperty">remote: {node.propChamberMemberUuid }</div> }
+			{ node.propRoomId && <div className="AvNodeProperty">roomId: {node.propRoomId }</div> }
+			{ node.propMemberId && <div className="AvNodeProperty">remote: {node.propMemberId }</div> }
 			{ node.propOrigin && <div className="AvNodeProperty">origin: {node.propOrigin }</div> }
+			{ node.propMemberOrigins && this.renderMemberOrigins( node.propMemberOrigins ) }
 			{ node.propModelUri && <div className="AvNodeProperty">model: {node.propModelUri }</div> }
 			{ node.propColor && <div className="AvNodeProperty">Color: 
 				{ node.propColor.r.toFixed( 2 ) },
@@ -994,120 +881,6 @@ class GrabEventMonitor extends React.Component< GrabEventProps, {} >
 
 
 
-@observer
-class UserInfoMonitor extends React.Component< {}, {} >
-{
-	constructor( props: any )
-	{
-		super( props );
-	}
-
-	public renderUser()
-	{
-		let user = MonitorStore.m_userInfo;
-		if( !user )
-		{
-			return <div className="InfoSection">No user yet.</div>
-		}
-		else
-		{
-			return <div className="InfoSection">
-				<div>UUID: { user.uuid }</div>
-				<div>Name: { user.displayName }</div>
-			</div>;
-		}
-	}
-
-	public renderPose( originPath: string, pose: MinimalPose )
-	{
-		return <div className="ChamberMemberPose" key={ originPath }>
-			<div>{ originPath }</div>
-			{
-				pose 
-					? <>
-						<div>{ pose[0].toFixed(2) }, { pose[1].toFixed(2) }, { pose[2].toFixed(2) }</div>
-						<div>{ pose[3].toFixed(2) }, { pose[4].toFixed(2) }, { pose[5].toFixed(2) }, { pose[6].toFixed(2) }</div>
-					</>
-					: <div>None</div>
-			}
-			
-		</div>;
-	}
-
-	public renderGadget( persistenceUuid: string, gadget: SharedGadget )
-	{
-		return <div className="ChamberGadget" key={ persistenceUuid }>
-			<div>PU: { persistenceUuid }</div>
-			<div>{ gadget.gadgetUri }</div>
-			<div>{ gadget.hook }</div>
-		</div>;
-	}
-
-	public renderMember( member: ChamberMemberObservable )
-	{
-		let poses: JSX.Element[] = [];
-		member.poses.forEach( ( pose: MinimalPose, originPath: string ) =>
-		{
-			poses.push( this.renderPose( originPath, pose ) );
-		} );
-
-		let gadgets: JSX.Element[] = [];
-		member.gadgets.forEach( ( gadget: SharedGadget, persistenceUuid: string ) =>
-		{
-			poses.push( this.renderGadget( persistenceUuid, gadget ) );
-		} );
-
-		return ( <div className="ChamberMemberInfo" key={ member.info.uuid }>
-			<div className="ChamberMemberName">{ member.info.uuid }</div>
-			<div className="ChamberInfoPoses">
-				{ poses }
-			</div> 
-			<div className="ChamberInfoGadgets">
-				{ gadgets }
-			</div> 
-		</div> );					
-
-	}
-	
-	public renderChamber( chamber: ChamberInfo )
-	{
-		let members: JSX.Element[] = [];
-		chamber.members.forEach( ( member: ChamberMemberObservable ) =>
-		{
-			members.push( this.renderMember( member ) );
-		} );
-
-		return ( <div className="ChamberInfo" key={ chamber.chamber.chamberPath }>
-			<div>{ chamber.chamber.chamberPath }</div>
-			<div className="ChamberInfoMembers">Members:
-				{ members }
-			</div> 
-		</div> );					
-
-	}
-
-	public renderChambers()
-	{
-		let chambers: JSX.Element[] = [];
-		MonitorStore.m_chambers.forEach( ( value: ChamberInfo ) =>
-			{
-				chambers.push( this.renderChamber( value ) );
-			}
-		)
-
-		return ( <div className="InfoSection">
-			{ chambers }
-		</div> )
-	}
-
-	public render()
-	{
-		return <div className="UserInfo">
-			{ this.renderUser() }
-			{ this.renderChambers()	}
-		</div>;
-	}
-}
 
 interface AardvarkMonitorState
 {
@@ -1157,7 +930,6 @@ class AardvarkMonitor extends React.Component< {}, AardvarkMonitorState >
 			return <div className="MonitorContainer">
 				<div className="EndpointList">{ endpoints }</div>
 				<div className="EventList">{ events }</div>
-				<UserInfoMonitor />
 			</div>;
 		}
 	}
@@ -1166,40 +938,3 @@ class AardvarkMonitor extends React.Component< {}, AardvarkMonitorState >
 let MonitorStore = new CMonitorStore();
 ReactDOM.render( <AardvarkMonitor/>, document.getElementById( "root" ) );
 
-// let userRes: LocalUserInfo =
-// {
-// 	userUuid: "1234",
-// 	userDisplayName: "TEst GUy",
-// 	userPublicKey: "key",
-// }
-
-// initLocalUser( signRequest( userRes , "key" ) )
-// .then( ( user ) =>
-// {
-// 	console.log( user.uuid, user.displayName );
-// });
-
-// findChamber( "/blargh")
-// .then( async (chamber: ChamberSubscription ) =>
-// {
-// 	console.log( chamber.chamberPath );
-
-// 	let jm: MsgActuallyJoinChamber = 
-// 	{
-// 		userUuid: "1234",
-// 		userPublicKey: "key",
-// 		chamberPath: chamber.chamberPath,
-// 		gadgets: [
-// 			{ 
-// 				gadgetUri: "http://mygadget.com",
-// 				persistenceUuid: "gadgAABB",
-// 				hook: "/somehook",
-// 			}
-// 		]
-// 	};
-// 	let jms = signRequest( jm, "key" );
-// 	let res = await chamber.joinChamber( jms );
-
-// 	console.log( "res", res );
-// 	console.log( chamber.members.length );
-// })

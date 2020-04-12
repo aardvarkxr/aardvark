@@ -41,6 +41,18 @@ interface StandardGrabbableProps
 	 * @default ShowGrabbableChildren.Always
 	*/
 	showChildren?: ShowGrabbableChildren;
+
+	/** Called when the grabbable is grabbed. 
+	 * 
+	 * @default none
+	*/
+	onGrab?: () => void;
+
+	/** Called when the grabbable is dropped. 
+	 * 
+	 * @default none
+	*/
+	onEndGrab?: () => void;
 }
 
 
@@ -64,10 +76,26 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 
 	@bind onUpdateHighlight( highlight: HighlightType, handleAddr: EndpointAddr, tethered: boolean )
 	{
-		this.setState( 
-			{ 
-				highlight,
-			} );
+		this.setState( ( oldState: StandardGrabbableState ) =>
+		{
+			if( oldState.highlight == HighlightType.InRange || oldState.highlight == HighlightType.None )
+			{
+				if( highlight == HighlightType.Grabbed )
+				{
+					console.log( "standard grabbable was grabbed" );
+					this.props.onGrab?.();
+				}
+			}
+			else if( oldState.highlight == HighlightType.Grabbed )
+			{
+				if( highlight == HighlightType.InRange || highlight == HighlightType.None )
+				{
+					console.log( "standard grabbable was ungrabbed" );
+					this.props.onEndGrab?.();
+				}
+			}
+			return { ...oldState, highlight };
+		} );
 	}
 
 	public render()

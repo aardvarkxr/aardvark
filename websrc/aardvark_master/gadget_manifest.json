@@ -2,7 +2,7 @@
 	"name" : "Master Gadget",
 	"width": 16,
 	"height": 16,
-	"permissions" : [ "master", "scenegraph", "chamber" ],
+	"permissions" : [ "master", "scenegraph" ],
 	"model" : "",
-	"shareInChamber": false
+	"shareInRooms": false
 }
