@@ -1,25 +1,9 @@
 import { CRendererEndpoint } from '@aardvarkxr/aardvark-react';
-import { CGrabStateProcessor } from './grab_state_processor';
-import { mat4, vec3, quat, vec4, mat3 } from '@tlaukkan/tsm';
+import { Av, AvActionState, AvConstraint, AvGrabEvent, AvGrabEventType, AvModelInstance, AvNode, AvNodeTransform, AvNodeType, EAction, EHand, emptyActionState, EndpointAddr, endpointAddrIsEmpty, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, EVolumeType, filterActionsForGadget, getActionFromState, g_builtinModelCylinder, g_builtinModelError, g_builtinModelPanel, g_builtinModelPanelInverted, LocalUserInfo, MessageType, MinimalPose, MsgAttachGadgetToHook, MsgDestroyGadget, MsgDetachGadgetFromHook, MsgGrabEvent, MsgLostEndpoint, MsgNodeHaptic, MsgResourceLoadFailed, MsgUpdateActionState, MsgUpdatePose, MsgUpdateSceneGraph, MsgUserInfo, parseEndpointFieldUri } from '@aardvarkxr/aardvark-shared';
+import { mat4, vec3, vec4 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
-import { endpointAddrToString, endpointAddrIsEmpty, MessageType, MsgNodeHaptic, 
-	MsgAttachGadgetToHook, MsgDetachGadgetFromHook, AvGrabEventType, AvNode, 
-	ENodeFlags, AvNodeTransform, AvConstraint, AvNodeType, EHand, EVolumeType, 
-	AvGrabEvent, MsgUpdateSceneGraph, EndpointType, MsgGrabEvent, endpointAddrsMatch, 
-	MsgUpdateActionState, EndpointAddr, Av, AvModelInstance, MsgDestroyGadget, 
-	g_builtinModelPanel, g_builtinModelPanelInverted, g_builtinModelCylinder, 
-	AvActionState, EAction, getActionFromState, emptyActionState, filterActionsForGadget,
-	MsgResourceLoadFailed,
-	stringToEndpointAddr,
-	g_builtinModelError,
-	parseEndpointFieldUri,
-	Envelope,
-	MsgUpdatePose,
-	MsgUserInfo,
-	LocalUserInfo,
-	MsgLostEndpoint
-} from '@aardvarkxr/aardvark-shared';
-import { computeUniverseFromLine, nodeTransformToMat4, translateMat, nodeTransformFromMat4, vec3MultiplyAndAdd, scaleAxisToFit, scaleMat, minIgnoringNulls, lerpAvTransforms } from './traverser_utils';
+import { CGrabStateProcessor } from './grab_state_processor';
+import { computeUniverseFromLine, minIgnoringNulls, nodeTransformFromMat4, nodeTransformToMat4, scaleAxisToFit, scaleMat, translateMat, vec3MultiplyAndAdd } from './traverser_utils';
 const equal = require( 'fast-deep-equal' );
 
 interface NodeData
@@ -156,6 +140,16 @@ class PendingTransform
 }
 
 
+function minimalToMat4Transform( minimal: MinimalPose ): mat4
+{
+	let transform: AvNodeTransform = 
+	{
+		position: { x: minimal[0], y: minimal[1], z: minimal[2] },
+		rotation: { w: minimal[3], x: minimal[4], y: minimal[5], z: minimal[6] }, 
+	};
+	return nodeTransformToMat4( transform );
+}
+
 interface NodeToNodeAnchor_t
 {
 	parentGlobalId: EndpointAddr;
@@ -179,8 +173,6 @@ interface AvNodeRoot
 interface RemoteUniverse
 {
 	uuid: string;
-	remoteUniverseGlobalId?: EndpointAddr;
-	chamberMemberGlobalId?: EndpointAddr;
 	remoteFromOrigin: { [originPath: string] : PendingTransform };
 }
 
@@ -339,13 +331,6 @@ export class AvDefaultTraverser
 		this.m_renderList = [];
 		this.clearHooksInUse();
 		this.m_frameNumber++;
-
-		for( let remoteUniversePath in this.m_remoteUniverse )
-		{
-			let remoteUniverse = this.m_remoteUniverse[ remoteUniversePath ];
-			remoteUniverse.chamberMemberGlobalId = null;
-			remoteUniverse.remoteUniverseGlobalId = null;
-		}
 
 		for ( let gadgetId in this.m_roots )
 		{
@@ -710,8 +695,20 @@ export class AvDefaultTraverser
 		return remoteUniverse;
 	}
 
-	@bind 
+	private getRemoteOriginTransform( universeId: string, originPath: string ): PendingTransform
+	{
+		let universe = this.getRemoteUniverse( universeId );
+		let originTransform = universe.remoteFromOrigin[ originPath ];
+		if( !originTransform )
+		{
+			originTransform = new PendingTransform( universeId + "/" + originPath );
+			universe.remoteFromOrigin[ originPath ] = originTransform;
+		}
+		return originTransform;
+	}
+	
 
+	@bind 
 	traverseNode( node: AvNode, defaultParent: PendingTransform ): void
 	{
 		let handBefore = this.m_currentHand;
@@ -780,20 +777,8 @@ export class AvDefaultTraverser
 				this.traverseHeadFacingTransform( node, defaultParent );
 				break;
 			
-			case AvNodeType.RemoteUniverse:
-				this.traverseRemoteUniverse( node, defaultParent );
-				break;
-
-			case AvNodeType.RemoteOrigin:
-				this.traverseRemoteOrigin( node, defaultParent );
-				break;
-				
-			case AvNodeType.Chamber:
-				this.traverseChamber( node, defaultParent );
-				break;
-
-			case AvNodeType.ChamberMember:
-				this.traverseChamberMember( node, defaultParent );
+			case AvNodeType.RoomMember:
+				this.traverseRoomMember( node, defaultParent );
 				break;
 				
 			default:
@@ -849,17 +834,9 @@ export class AvDefaultTraverser
 		{
 			if( this.m_currentRoot.remoteUniverse )
 			{
-				let remoteUniverse = this.getRemoteUniverse( this.m_currentRoot.remoteUniverse );
-				let universeFromRemoteOrigin = remoteUniverse.remoteFromOrigin[ origin ];
-				if( !universeFromRemoteOrigin )
-				{
-					// we haven't traversed the remote universe yet. Set the origin pending transform
-					// here for when we do
-					universeFromRemoteOrigin = new PendingTransform( this.m_currentRoot + origin );
-					remoteUniverse.remoteFromOrigin[ origin ] = universeFromRemoteOrigin;
-				}
-
-				this.updateTransform( node.globalId, universeFromRemoteOrigin, null, null );
+				let originTransform = this.getRemoteOriginTransform( this.m_currentRoot.remoteUniverse, 
+					origin );
+				this.updateTransform( node.globalId, originTransform, null, null );
 			}
 			else
 			{
@@ -1527,90 +1504,18 @@ export class AvDefaultTraverser
 			} );
 	}
 
-	updateRemoteUniverse( remoteUniversePath: string, 
-		remoteUniverseGlobalId: EndpointAddr, chamberMemberGlobalId: EndpointAddr )
+	traverseRoomMember( node: AvNode, defaultParent: PendingTransform )
 	{
-		let universe = this.getRemoteUniverse( remoteUniversePath );
-		if( remoteUniverseGlobalId )
+		// update all the origin transforms for this remote universe that represents this room member
+		for( let remoteOriginPath in node.propMemberOrigins )
 		{
-			universe.remoteUniverseGlobalId = remoteUniverseGlobalId;
+			let remoteOriginTransform = this.getRemoteOriginTransform( node.propUniverseName, remoteOriginPath );
+			let originTransform = minimalToMat4Transform( node.propMemberOrigins[ remoteOriginPath ] );
+			remoteOriginTransform.update( [ defaultParent ], originTransform, null, null );
 		}
-		if( chamberMemberGlobalId )
-		{
-			universe.chamberMemberGlobalId = chamberMemberGlobalId;
-		}
-
-		if( universe.chamberMemberGlobalId && universe.remoteUniverseGlobalId )
-		{
-			let chamberMemberTransform = this.getTransform( universe.chamberMemberGlobalId );
-			this.updateTransform( universe.remoteUniverseGlobalId, chamberMemberTransform, null, null );
-		}
-	}
-
-	traverseRemoteUniverse( node: AvNode, defaultParent: PendingTransform )
-	{
-		this.updateRemoteUniverse( node.propUniverseName, node.globalId, null );
-	}
-
-	traverseRemoteOrigin( node: AvNode, defaultParent: PendingTransform )
-	{
-		let currentRemoteUnivesePath = this.getCurrentNodeOfType( AvNodeType.RemoteUniverse )?.propUniverseName;
-		if( !currentRemoteUnivesePath )
-		{
-			return;
-		}
-		let currentRemoteUniverse = this.getRemoteUniverse( currentRemoteUnivesePath );
-
-		let nodeData = this.getNodeData( node );
-		if( !equal( nodeData.transform1, node.propTransform ) )
-		{
-			nodeData.transform0 = nodeData.transform1;
-			nodeData.transform0Time = nodeData.transform1Time;
-			nodeData.transform1 = node.propTransform;
-			nodeData.transform1Time = performance.now();
-		}
-
-		let t:number = 1;
-		if( nodeData.transform0 )
-		{
-			t = ( performance.now() - nodeData.transform1Time ) / 
-				( nodeData.transform1Time - nodeData.transform0Time );
-		}
-		let	outputTransform = lerpAvTransforms( nodeData.transform0, nodeData.transform1, t );
-		let remoteFromOriginTransform = nodeTransformToMat4( outputTransform );
-
-		let remoteFromOrigin = currentRemoteUniverse.remoteFromOrigin[ node.propOrigin ];
-		if( !remoteFromOrigin )
-		{
-			// we were traversed before anybody that uses us
-			currentRemoteUniverse.remoteFromOrigin[ node.propOrigin ] = 
-				this.updateTransform( node.globalId, defaultParent, remoteFromOriginTransform, null );
-		}
-		else
-		{
-			remoteFromOrigin.update( [ defaultParent ], remoteFromOriginTransform );
-			this.setTransform( node.globalId, remoteFromOrigin );
-		}
-	}
-
-	traverseChamber( node: AvNode, defaultParent: PendingTransform )
-	{
-		// This node is just a container for chamber members. Nothing to do here
-	}
-
-	traverseChamberMember( node: AvNode, defaultParent: PendingTransform )
-	{
-		let currentChamber = this.getCurrentNodeOfType( AvNodeType.Chamber );
-		if( !currentChamber )
-		{
-			// Chamber members must be descendents of chambers to have any effect
-			return;
-		}
-
-		let remoteUniversePath = currentChamber.propChamberPath + "/" + node.propChamberMemberUuid;
-		this.updateRemoteUniverse( remoteUniversePath, null, node.globalId );
 	}
 	
+
 	@bind
 	public grabEvent( grabEvent: AvGrabEvent )
 	{

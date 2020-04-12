@@ -1,14 +1,21 @@
 import * as React from 'react';
 
 import { Av, AvActionState, EAction, getActionFromState, 
-	MsgUserInfo, Envelope, LocalUserInfo, MsgRequestJoinChamber, MsgRequestLeaveChamber, 
+	MsgUserInfo, Envelope, LocalUserInfo, 
 	AvStartGadgetResult,
 	AuthedRequest,
 	MsgSignRequest,
 	MsgSignRequestResponse,
-	ChamberNamespace,
-	MsgChamberMemberListUpdated,
 	AvNodeTransform,
+	GadgetRoomCallbacks,
+	GadgetRoom,
+	MsgCreateRoom,
+	MsgCreateRoomResponse,
+	GadgetRoomEnvelope,
+	MsgRoomMessageReceived,
+	MsgDestroyRoomResponse,
+	MsgSendRoomMessage,
+	MsgRoomMessageReceivedResponse,
 } from '@aardvarkxr/aardvark-shared';
 import { IAvBaseNode } from './aardvark_base_node';
 import bind from 'bind-decorator';
@@ -66,15 +73,10 @@ interface ActionStateListener
 	falling?: () => void;
 }
 
-export interface ChamberMemberListHandler
+interface GadgetRoomDetails
 {
-	( chamberId: string, members: string[] ): void;
-}
-
-interface GadgetChamberDetails
-{
-	memberHandler: ChamberMemberListHandler;
-	showSelf: boolean;
+	room: GadgetRoom;
+	callbacks: GadgetRoomCallbacks;
 }
 
 /** The singleton gadget object for the browser. */
@@ -111,7 +113,7 @@ export class AvGadget
 	m_startGadgetPromises: {[nodeId:number]: 
 		[ ( res: AvStartGadgetResult ) => void, ( reason: any ) => void ] } = {};
 	m_actionStateListeners: { [listenerId: number] : ActionStateListener } = {};
-	m_chamberMemberListHandler: { [ chamberId: string ]: GadgetChamberDetails } = {};
+	m_roomDetails: { [roomId: string] : GadgetRoomDetails } = {};
 
 	constructor()
 	{
@@ -167,8 +169,7 @@ export class AvGadget
 		this.m_endpoint.registerHandler( MessageType.UpdateActionState, this.onUpdateActionState );
 		this.m_endpoint.registerHandler( MessageType.ResourceLoadFailed, this.onResourceLoadFailed );
 		this.m_endpoint.registerHandler( MessageType.UserInfo, this.onUserInfo );
-		this.m_endpoint.registerHandler( MessageType.ChamberMemberListUpdated, 
-			this.onChamberMemberListUpdated );
+		this.m_endpoint.registerHandler( MessageType.SendRoomMessage, this.onSendRoomMessage );
 		if( this.m_onSettingsReceived )
 		{
 			this.m_onSettingsReceived( settings );
@@ -362,6 +363,9 @@ export class AvGadget
 				uri: m.uri, 
 				initialHook: m.initialHook, 
 				persistenceUuid: m.persistenceUuid,
+				remoteUniversePath: m.remoteUserId,
+				epToNotify: m.epToNotify,
+				remotePersistenceUuid: m.remotePersistenceUuid,
 			} );
 	}
 
@@ -561,14 +565,14 @@ export class AvGadget
 					startedGadgetEndpointId: this.m_endpoint.getEndpointId(),
 				}
 
-				if( this.m_mainGrabbable && this.m_mainHandle )
-				{
-					msgStarted.mainGrabbable = this.m_mainGrabbable.id;
-					msgStarted.mainHandle = this.m_mainHandle.id;
+				// if( this.m_mainGrabbable && this.m_mainHandle )
+				// {
+				// 	msgStarted.mainGrabbable = this.m_mainGrabbable.id;
+				// 	msgStarted.mainHandle = this.m_mainHandle.id;
 
-					this.m_mainHandleComponent.grabInProgress( this.m_epToNotify );
-					this.m_mainGrabbableComponent.grabInProgress( this.m_epToNotify );
-				}
+				// 	this.m_mainHandleComponent.grabInProgress( this.m_epToNotify );
+				// 	this.m_mainGrabbableComponent.grabInProgress( this.m_epToNotify );
+				// }
 
 				this.m_endpoint.sendMessage( MessageType.GadgetStarted, msgStarted );
 			}
@@ -766,48 +770,76 @@ export class AvGadget
 		return this.m_userInfo;
 	}
 
-	/** Asks to join a chamber on the user's behalf. This gadget must have the "chamber" permission.
+	/** Gadgets call this function to create a room. 
 	 * 
-	 * The provided chamber ID will be namespaced with the gadget's name.
+	 * roomId - the ID to use for this room. This ID must be unique
+	 * 				within the gadget.
 	 */
-	public joinChamber( chamberId: string, namespace: ChamberNamespace, 
-		memberListHandler: ChamberMemberListHandler, showSelf?: boolean )
+	public createRoom( roomId: string, callbacks: GadgetRoomCallbacks ): Promise<GadgetRoom>
 	{
-		let msg: MsgRequestJoinChamber =
+		console.log( `createRoom ${ roomId }` );
+		return new Promise<GadgetRoom>( async ( resolve, reject ) =>
 		{
-			chamberId,
-			namespace,
-			showSelf,
-		}
-		this.m_endpoint.sendMessage( MessageType.RequestJoinChamber, msg );
+			let msgCreate: MsgCreateRoom =
+			{
+				roomId,
+			};
+			let [ resp ] = await this.m_endpoint.sendMessageAndWaitForResponse<MsgCreateRoomResponse>( 
+				MessageType.CreateRoom, msgCreate, MessageType.CreateRoomResponse );
+			if( resp.error )
+			{
+				throw new Error( resp.error );
+			}
 
-		this.m_chamberMemberListHandler[ chamberId ] =
-		{
-			memberHandler: memberListHandler,
-			showSelf: showSelf ?? false,
-		};
-	}
+			let room: GadgetRoom =
+			{
+				onMessage: async ( message: GadgetRoomEnvelope ) =>
+				{
+					console.log( `room.onMessage ${ roomId }: ${ JSON.stringify( message ) }` );
+					if( !message )
+					{
+						throw new Error( "onMessage called with no message" );
+					}
+					let msgReceived: MsgRoomMessageReceived =
+					{
+						roomId,
+						message,
+					}
+					let [ resp ] = await this.m_endpoint
+						.sendMessageAndWaitForResponse<MsgRoomMessageReceivedResponse>(
+							MessageType.RoomMessageReceived, msgReceived, 
+							MessageType.RoomMessageReceivedResponse );
+					if( resp.error )
+					{
+						throw new Error( resp.error );
+					}
+				},
 
-	/** Asks to leave a chamber on the user's behalf. This gadget must have the "chamber" permission.
-	 * 
-	 * The provided chamber ID will be namespaced with the gadget's name.
-	 */
-	public leaveChamber( chamberId: string, namespace: ChamberNamespace )
-	{
-		let msg: MsgRequestLeaveChamber =
-		{
-			chamberId,
-			namespace,
-		}
-		this.m_endpoint.sendMessage( MessageType.RequestLeaveChamber, msg );
+				destroy: async (): Promise<void> =>
+				{
+					console.log( `room.destroy ${ roomId }` );
+					let [ resp ] =await this.m_endpoint
+						.sendMessageAndWaitForResponse<MsgDestroyRoomResponse>(
+						MessageType.DestroyRoom, { roomId }, MessageType.DestroyRoomResponse );
+					if( resp.error )
+					{
+						throw new Error( resp.error );
+					}
+					delete this.m_roomDetails[ roomId ];
+				}
+			};
 
-		delete this.m_chamberMemberListHandler[ chamberId ];
+			let details = {	room, callbacks, };
+			this.m_roomDetails[ roomId ] = details;
+			resolve( room );
+		} );
 	}
 
 	@bind
-	private onChamberMemberListUpdated( m: MsgChamberMemberListUpdated )
+	public onSendRoomMessage( msg: MsgSendRoomMessage )
 	{
-		this.m_chamberMemberListHandler[ m.chamberId ]?.memberHandler(m.chamberId, m.members );
+		let details = this.m_roomDetails[ msg.roomId ];
+		details?.callbacks.sendMessage( msg.message );
 	}
 
 	/** Adds a handler for a raw Aardvark message. You probably don't need this. */

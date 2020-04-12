@@ -1,6 +1,6 @@
 {
 	"name" : "Test Panel",
-	"permissions" : [ "scenegraph", "chamber" ],
+	"permissions" : [ "scenegraph" ],
 	"width": 1024,
 	"height": 1024,
 	"model" : "http://localhost:23842/models/Panel/panel.glb"

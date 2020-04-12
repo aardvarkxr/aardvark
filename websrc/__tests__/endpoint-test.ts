@@ -78,10 +78,10 @@ beforeEach( async() =>
 					}
 					break;
 
-				case MessageType.RequestJoinChamber:
+				case MessageType.CreateRoom:
 					{
-						sendMessage( MessageType.ActuallyJoinChamber, {} );
-						sendMessage( MessageType.AddGadgetToChambers, {} );
+						sendMessage( MessageType.CreateRoom, {} );
+						sendMessage( MessageType.SendRoomMessage, {} );
 					}
 					break;
 			}
@@ -165,7 +165,7 @@ describe( "CAardvarkEndpoint ", () =>
 		let phase = 1;
 		let done1 = new Promise( ( resolve, reject )=>
 		{
-			ep.registerAsyncHandler( MessageType.ActuallyJoinChamber, async ( msg: object ) =>
+			ep.registerAsyncHandler( MessageType.CreateRoomResponse, async ( msg: object ) =>
 				{
 					phase++;
 					await new Promise( resolve => setTimeout( resolve, 500));
@@ -175,7 +175,7 @@ describe( "CAardvarkEndpoint ", () =>
 		} );
 		let done2 = new Promise( ( resolve, reject )=>
 		{
-			ep.registerHandler( MessageType.AddGadgetToChambers, ( msg: object ) =>
+			ep.registerHandler( MessageType.SendRoomMessage, ( msg: object ) =>
 			{
 				expect( phase ).toBe( 3 );
 				phase++;
@@ -183,7 +183,7 @@ describe( "CAardvarkEndpoint ", () =>
 			} );
 		});
 
-		ep.sendMessage( MessageType.RequestJoinChamber, {} );
+		ep.sendMessage( MessageType.CreateRoom, {} );
 		await Promise.all( [ done1, done2 ] );
 		expect( phase ).toBe( 4 );
 	} );
