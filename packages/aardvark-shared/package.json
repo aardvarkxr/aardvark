@@ -1,6 +1,6 @@
 {
   "name": "@aardvarkxr/aardvark-shared",
-  "version": "0.5.0",
+  "version": "0.5.2",
   "description": "Shared source code for Aardvark",
   "main": "lib/index",
   "types": "lib/index",
