@@ -669,6 +669,8 @@ class CGadgetData
 	private m_gadgetBeingDestroyed = false;
 	private m_chambers: { [ chamberPath: string ] : MsgRequestJoinChamber } = {};
 	private m_roomDetails: { [ roomId: string ] : RoomDetails } = {};
+	private m_updateTimer: NodeJS.Timeout = null;
+
 
 	constructor( ep: CEndpoint, uri: string, initialHook: string, persistenceUuid:string,
 		remoteUniversePath: string, dispatcher: CDispatcher )
@@ -907,6 +909,11 @@ class CGadgetData
 						newHook: string ) => 
 					{
 						this.m_dispatcher.updateRemoteGadgetHook( gadgetId, newHook );
+					},
+
+					updatePoses: () => 
+					{
+						this.scheduleSceneGraphRefresh();
 					},
 		
 				}
@@ -1208,6 +1215,7 @@ class CGadgetData
 				break;
 
 			case AvNodeType.RoomMember:
+				console.log( "Updating poses on RoomMember" );
 				node.propMemberOrigins = this.getOriginsForRoomMember( node.propRoomId, node.propMemberId );
 				node.propUniverseName = computeRemoteUserId( this.getPersistenceUuid(),
 					node.propRoomId, node.propMemberId );
@@ -1259,6 +1267,21 @@ class CGadgetData
 			this.leaveChamberInternal( chamberPath );
 		}
 		this.m_chambers = {};
+	}
+
+	public scheduleSceneGraphRefresh()
+	{
+		if( this.m_updateTimer )
+		{
+			return;
+		}
+
+		this.m_updateTimer = global.setTimeout( () =>
+		{
+			this.updateNode( this.m_root );
+			this.sendSceneGraphToRenderer();
+			this.m_updateTimer = null;
+		}, 1 );
 	}
 
 	public sendSceneGraphToRenderer()

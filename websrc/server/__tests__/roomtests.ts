@@ -25,6 +25,7 @@ function emptyCallbacks(): ServerRoomCallbacks
 			},
 			removeRemoteGadget: ( gadgetId: number ) => {},
 			updateRemoteGadgetHook: ( gadgetId: number, newHook: string ) => {},
+			updatePoses: () => {},
 		} );
 }
 
@@ -170,6 +171,11 @@ class GadgetRoomTestCallbacks implements ServerRoomCallbacks
 		}
 	}
 
+	public updatePoses() 
+	{
+
+	}
+	
 	// --------------------------------------------------------------------
 	// Helpers for analysing test results
 	// --------------------------------------------------------------------

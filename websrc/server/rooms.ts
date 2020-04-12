@@ -21,6 +21,7 @@ export interface ServerRoomCallbacks extends GadgetRoomCallbacks
 	addRemoteGadget: ( memberId: string, gadget: SharedGadget ) => Promise< number >;
 	removeRemoteGadget: ( gadgetId: number ) => void;
 	updateRemoteGadgetHook: ( gadgetId: number, newHook: string ) => void;
+	updatePoses: () => void;
 }
 
 
@@ -216,6 +217,7 @@ export async function onRoomMessage( room: Room, message: GadgetRoomEnvelope )
 			member = assertFindSourceMember( room, message );
 			let mUpdatePose = message as RMUpdatePose;
 			member.poses[ mUpdatePose.originPath ] = mUpdatePose.newPose;
+			room.callbacks.updatePoses();
 			break;
 	}
 }
@@ -270,7 +272,7 @@ export function updateRoomPose( room: Room, originPath: string, newPose: Minimal
 export function findMemberOrigins( room: Room, memberId: string ): { [ originPath: string ] : MinimalPose }
 {
 	let memberIndex = findMemberIndex( room, memberId );
-	if( -1 == memberIndex )
+	if( -1 != memberIndex )
 	{
 		return room.members[ memberIndex ].poses;
 	}
