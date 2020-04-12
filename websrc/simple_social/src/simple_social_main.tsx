@@ -88,6 +88,40 @@ class SimpleSocial extends React.Component< {}, SimpleSocialState >
 			// return <AvOrigin path="/space/stage" >
 			// 	<AvDefaultChamber chamberId={ this.state.currentChamber }/>
 			// </AvOrigin>;
+
+			// here's the member placement code that used to live in AvDefaultCHamber:
+			// if( !members.length )
+			// {
+			// 	// don't bother setting positions for no members
+			// 	return;
+			// }
+	
+			// let stateMembers: AvDefaultChamberMember[] = [];
+			// let localUserIndex = members.indexOf( AvGadget.instance().localUserInfo.userUuid );
+			// for( let n = 0; n < members.length; n++ )
+			// {
+			// 	// don't send a position for the actual local user
+			// 	if( n == localUserIndex )
+			// 		continue;
+	
+			// 	let rotationIndex = ( n - localUserIndex + members.length ) % members.length;
+			// 	let yRotRadians = rotationIndex * 360 / members.length;
+	
+			// 	const userSeparation = 1;  //meters
+			// 	let circleRadius = members.length == 1 ? 0 : userSeparation / (2 * Math.sin(Math.PI / members.length));
+	
+			// 	stateMembers.push(
+			// 		{
+			// 			uuid: members[ n ],
+			// 			x: circleRadius * Math.sin( yRotRadians ),
+			// 			z: circleRadius * ( 1 - Math.cos( yRotRadians ) ),
+			// 			rotY: yRotRadians,
+			// 		}
+			// 	);
+			// }
+	
+			// this.setState( { members: stateMembers } );
+	
 		}
 	}
 
