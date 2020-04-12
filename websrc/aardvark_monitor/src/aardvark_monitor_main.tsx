@@ -805,6 +805,32 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 		return <div>Flags: { flagNames.join( ' ' ) } </div>;
 	}
 
+	public renderMemberOrigins( memberOrigins: { [originPath: string ]: MinimalPose } )
+	{
+		let origins: JSX.Element[] = [];
+		for( let originPath in memberOrigins )
+		{
+			let pose = memberOrigins[ originPath ];
+			origins.push( 
+				<div className="ChamberMemberPose" key={ originPath }>
+					<div>{ originPath }</div>
+					{
+						pose ? <>
+							<div>{ pose[0].toFixed(2) }, { pose[1].toFixed(2) }, { pose[2].toFixed(2) }</div>
+							<div>{ pose[3].toFixed(2) }, { pose[4].toFixed(2) }, { pose[5].toFixed(2) }, { pose[6].toFixed(2) }</div>
+						</>
+						: <div>None</div>
+					}
+				
+			</div> );
+		}
+
+		return <div className="AvNodeProperty">
+			origins: { origins }
+		</div>;
+	
+	}
+
 	public renderNode( node: AvNode ): JSX.Element
 	{
 		if( !node )
@@ -831,6 +857,7 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 			{ node.propRoomId && <div className="AvNodeProperty">roomId: {node.propRoomId }</div> }
 			{ node.propMemberId && <div className="AvNodeProperty">remote: {node.propMemberId }</div> }
 			{ node.propOrigin && <div className="AvNodeProperty">origin: {node.propOrigin }</div> }
+			{ node.propMemberOrigins && this.renderMemberOrigins( node.propMemberOrigins ) }
 			{ node.propModelUri && <div className="AvNodeProperty">model: {node.propModelUri }</div> }
 			{ node.propColor && <div className="AvNodeProperty">Color: 
 				{ node.propColor.r.toFixed( 2 ) },
