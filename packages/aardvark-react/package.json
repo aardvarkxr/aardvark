@@ -1,6 +1,6 @@
 {
   "name": "@aardvarkxr/aardvark-react",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "description": "React-based utilities for Aardvark",
   "repository": "https://github.com/aardvarkxr/aardvark-react.git",
   "main": "lib/index",
