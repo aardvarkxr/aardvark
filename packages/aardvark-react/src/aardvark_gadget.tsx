@@ -565,14 +565,14 @@ export class AvGadget
 					startedGadgetEndpointId: this.m_endpoint.getEndpointId(),
 				}
 
-				// if( this.m_mainGrabbable && this.m_mainHandle )
-				// {
-				// 	msgStarted.mainGrabbable = this.m_mainGrabbable.id;
-				// 	msgStarted.mainHandle = this.m_mainHandle.id;
+				if( this.m_mainGrabbable && this.m_mainHandle )
+				{
+					msgStarted.mainGrabbable = this.m_mainGrabbable.id;
+					msgStarted.mainHandle = this.m_mainHandle.id;
 
-				// 	this.m_mainHandleComponent.grabInProgress( this.m_epToNotify );
-				// 	this.m_mainGrabbableComponent.grabInProgress( this.m_epToNotify );
-				// }
+					// this.m_mainHandleComponent.grabInProgress( this.m_epToNotify );
+					// this.m_mainGrabbableComponent.grabInProgress( this.m_epToNotify );
+				}
 
 				this.m_endpoint.sendMessage( MessageType.GadgetStarted, msgStarted );
 			}
