@@ -1840,7 +1840,7 @@ void VulkanExample::updateUniformBuffers()
 	// Scene
 	shaderValuesScene.matProjectionFromView = camera.matrices.perspective;
 	//shaderValuesScene.matViewFromHmd = camera.matrices.view;
-	shaderValuesScene.matViewFromHmd = m_vrManager->getHmdFromUniverse();//m_vrManager->getMixedRealityFromUniverse(); // MOOSE clean up with config after testing
+	shaderValuesScene.matViewFromHmd = m_vrManager->getMixedRealityFromUniverse(); // MOOSE clean up with config after testing
 
 	// Center and scale model
 	glm::mat4 aabb( 1.f );
