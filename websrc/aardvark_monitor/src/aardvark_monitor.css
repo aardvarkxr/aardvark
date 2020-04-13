@@ -214,25 +214,3 @@ body, html
 	margin-bottom: 5px;
 }
 
-.ChamberInfo
-{
-	margin-top: 5px;
-	border: solid black 1px;
-}
-
-.ChamberInfoMembers
-{
-	margin-left: 5px;
-}
-
-.ChamberMemberName
-{
-	font-size: 1.2rem;
-}
-
-.ChamberGadget
-{
-	margin-left: 5px;
-	margin-top: 5px;
-}
-

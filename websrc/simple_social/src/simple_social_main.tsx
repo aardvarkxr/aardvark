@@ -1,4 +1,4 @@
-import { AvDefaultChamber, AvOrigin, AvPanel, AvStandardGrabbable, AvTransform, ShowGrabbableChildren } from '@aardvarkxr/aardvark-react';
+import { AvOrigin, AvPanel, AvStandardGrabbable, AvTransform, ShowGrabbableChildren } from '@aardvarkxr/aardvark-react';
 import { g_builtinModelHead } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
@@ -75,7 +75,7 @@ class SimpleSocial extends React.Component< {}, SimpleSocialState >
 			</AvTransform>;
 	}
 
-	public renderChamber()
+	public renderChamber(): JSX.Element
 	{
 		if( !this.state.currentChamber )
 		{
@@ -83,9 +83,45 @@ class SimpleSocial extends React.Component< {}, SimpleSocialState >
 		}
 		else
 		{
-			return <AvOrigin path="/space/stage" >
-				<AvDefaultChamber chamberId={ this.state.currentChamber }/>
-			</AvOrigin>;
+			// TODO: Need a social example app that uses the new room API
+			return null;
+			// return <AvOrigin path="/space/stage" >
+			// 	<AvDefaultChamber chamberId={ this.state.currentChamber }/>
+			// </AvOrigin>;
+
+			// here's the member placement code that used to live in AvDefaultCHamber:
+			// if( !members.length )
+			// {
+			// 	// don't bother setting positions for no members
+			// 	return;
+			// }
+	
+			// let stateMembers: AvDefaultChamberMember[] = [];
+			// let localUserIndex = members.indexOf( AvGadget.instance().localUserInfo.userUuid );
+			// for( let n = 0; n < members.length; n++ )
+			// {
+			// 	// don't send a position for the actual local user
+			// 	if( n == localUserIndex )
+			// 		continue;
+	
+			// 	let rotationIndex = ( n - localUserIndex + members.length ) % members.length;
+			// 	let yRotRadians = rotationIndex * 360 / members.length;
+	
+			// 	const userSeparation = 1;  //meters
+			// 	let circleRadius = members.length == 1 ? 0 : userSeparation / (2 * Math.sin(Math.PI / members.length));
+	
+			// 	stateMembers.push(
+			// 		{
+			// 			uuid: members[ n ],
+			// 			x: circleRadius * Math.sin( yRotRadians ),
+			// 			z: circleRadius * ( 1 - Math.cos( yRotRadians ) ),
+			// 			rotY: yRotRadians,
+			// 		}
+			// 	);
+			// }
+	
+			// this.setState( { members: stateMembers } );
+	
 		}
 	}
 

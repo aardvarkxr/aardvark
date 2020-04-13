@@ -12,7 +12,6 @@ const g_alwaysInstalledGadgets =
 [
 	"http://localhost:23842/gadgets/test_panel",
 	"http://localhost:23842/gadgets/hand_mirror",
-	"http://localhost:23842/gadgets/simple_social",
 	"http://localhost:23842/gadgets/control_test",
 ];
 
