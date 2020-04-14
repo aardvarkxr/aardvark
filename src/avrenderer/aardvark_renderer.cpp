@@ -1839,28 +1839,10 @@ void VulkanExample::updateUniformBuffers()
 {
 	// Scene
 	shaderValuesScene.matProjectionFromView = camera.matrices.perspective;
-	//shaderValuesScene.matViewFromHmd = camera.matrices.view;
-	shaderValuesScene.matViewFromHmd = m_vrManager->getMixedRealityFromUniverse(); // MOOSE clean up with config after testing
-
-	// Center and scale model
-	glm::mat4 aabb( 1.f );
-	float scale = ( 1.0f / std::max( aabb[0][0], std::max( aabb[1][1], aabb[2][2] ) ) ) * 0.5f;
-	glm::vec3 translate = -glm::vec3( aabb[3][0], aabb[3][1], aabb[3][2] );
-	translate += -0.5f * glm::vec3( aabb[0][0], aabb[1][1], aabb[2][2] );
-
-	shaderValuesScene.matHmdFromStage = glm::mat4( 1.0f );
-	shaderValuesScene.matHmdFromStage[0][0] = scale;
-	shaderValuesScene.matHmdFromStage[1][1] = scale;
-	shaderValuesScene.matHmdFromStage[2][2] = scale;
-	shaderValuesScene.matHmdFromStage = glm::translate( shaderValuesScene.matHmdFromStage, translate );
-
-	//shaderValuesScene.camPos = glm::vec3(
-	//	-camera.position.z * sin( glm::radians( camera.rotation.y ) ) * cos( glm::radians( camera.rotation.x ) ),
-	//	-camera.position.z * sin( glm::radians( camera.rotation.x ) ),
-	//	camera.position.z * cos( glm::radians( camera.rotation.y ) ) * cos( glm::radians( camera.rotation.x ) )
-	//);
+	shaderValuesScene.matViewFromHmd = glm::mat4( 1.f );
+	shaderValuesScene.matHmdFromStage = m_vrManager->getMixedRealityFromUniverse();
 	shaderValuesScene.camPos = glm::vec3(
-		glm::inverse(shaderValuesScene.matViewFromHmd * shaderValuesScene.matHmdFromStage)
+		glm::inverse(shaderValuesScene.matViewFromHmd)
 		* glm::vec4(0, 0, 0, 1));
 
 	// Skybox
