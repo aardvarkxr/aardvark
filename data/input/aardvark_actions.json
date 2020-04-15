@@ -33,6 +33,10 @@
       {
          "name" : "/actions/aardvark/in/hand",
          "type" : "pose"
+      },
+      {
+         "name" : "/actions/aardvark/in/camera",
+         "type" : "pose"
       }
    ],
    "default_bindings" : [
@@ -62,6 +66,7 @@
          "/actions/aardvark/in/a" : "Gadget A",
          "/actions/aardvark/in/b" : "Gadget B",
          "/actions/aardvark/in/hand" : "Hand",
+         "/actions/aardvark/in/camera" : "Camera",
          "/actions/aardvark/out/haptic" : "Haptic Feedback",
          "language_tag" : "en_US"
       }

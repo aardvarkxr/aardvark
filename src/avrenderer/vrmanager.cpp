@@ -15,9 +15,11 @@ void CVRManager::init()
 	vr::VRInput()->GetActionHandle( "/actions/aardvark/in/b", &m_actionB );
 	vr::VRInput()->GetActionHandle( "/actions/aardvark/in/squeeze", &m_actionSqueeze);
 	vr::VRInput()->GetActionHandle( "/actions/aardvark/in/detach", &m_actionDetach );
-	vr::VRInput()->GetActionHandle( "/actions/aardvark/in/hand", &m_actionHand);
+	vr::VRInput()->GetActionHandle( "/actions/aardvark/in/hand", &m_actionHand );
+	vr::VRInput()->GetActionHandle( "/actions/aardvark/in/camera", &m_actionCamera );
 	vr::VRInput()->GetInputSourceHandle( "/user/hand/left", &m_leftHand );
 	vr::VRInput()->GetInputSourceHandle( "/user/hand/right", &m_rightHand );
+	vr::VRInput()->GetInputSourceHandle("/user/head", &m_head);
 
 	createAndPositionVargglesOverlay();
 }
@@ -69,6 +71,7 @@ void CVRManager::runFrame()
 {
 	updateOpenVrPoses();
 	doInputWork();
+	updateCameraActionPose();
 }
 
 void CVRManager::updateOpenVrPoses()
@@ -119,18 +122,13 @@ void CVRManager::updateOpenVrPoses()
 	glm::mat4 universeFromHmd = glmMatFromVrMat(
 		rRenderPoses[vr::k_unTrackedDeviceIndex_Hmd].mDeviceToAbsoluteTracking);
 
-	glm::mat4 universeFromMixedReality = glmMatFromVrMat(
-		rRenderPoses[m_unMixedRealityDeviceIndex].mDeviceToAbsoluteTracking
-	);
-
 	m_universeFromOriginTransforms["/user/head"] = universeFromHmd;
 	m_universeFromOriginTransforms["/space/stage"] = glm::mat4(1.f);
-	m_universeFromOriginTransforms["/mixed_reality/camera/main"] = universeFromMixedReality;
 
 	m_hmdFromUniverse = glm::inverse(universeFromHmd);
-	m_mixedRealityFromUniverse = glm::inverse(universeFromMixedReality);
 	m_vargglesLookRotation = glm::scale(m_hmdFromUniverse, glm::vec3(1, 1, -1));
 }
+
 void CVRManager::getVargglesLookRotation(glm::mat4& horizontalLooktransform)
 {
 	horizontalLooktransform = m_vargglesLookRotation;
@@ -165,6 +163,29 @@ void CVRManager::doInputWork()
 	m_universeFromOriginTransforms["/user/hand/right"] = m_handActionState[(int)EHand::Right].universeFromHand;
 }
 
+void CVRManager::updateCameraActionPose()
+{
+	vr::VRActiveActionSet_t activeActionSet;
+	activeActionSet.ulActionSet = m_actionSet;
+	activeActionSet.ulRestrictedToDevice = vr::k_ulInvalidInputValueHandle;
+
+	vr::EVRInputError err = vr::VRInput()->UpdateActionState(&activeActionSet, sizeof(vr::VRActiveActionSet_t), 1);
+
+	vr::InputPoseActionData_t poseData;
+	if (vr::VRInputError_None == vr::VRInput()->GetPoseActionData(m_actionCamera, vr::TrackingUniverseStanding, 0, 
+		&poseData, sizeof(poseData), activeActionSet.ulRestrictedToDevice) && poseData.bActive && poseData.pose.bPoseIsValid )
+	{
+		m_cameraActionState.universeFromCamera = glmMatFromVrMat(poseData.pose.mDeviceToAbsoluteTracking);
+	}
+	else
+	{
+		m_cameraActionState.universeFromCamera = glm::mat4(1.f);
+	}
+
+	this->m_cameraActionState = getActionStateForHand(EHand::Left);
+	m_universeFromOriginTransforms["/user/camera"] = m_cameraActionState.universeFromCamera;
+	m_mixedRealityFromUniverse = glm::inverse(m_cameraActionState.universeFromCamera);
+}
 
 CVRManager::ActionState_t CVRManager::getActionStateForHand( EHand eHand )
 {

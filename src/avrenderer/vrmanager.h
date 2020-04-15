@@ -28,6 +28,7 @@ public:
 
 protected:
 	void updateOpenVrPoses();
+	void updateCameraActionPose();
 	void doInputWork();
 
 	vr::VRActionSetHandle_t m_actionSet = vr::k_ulInvalidActionSetHandle;
@@ -38,16 +39,18 @@ protected:
 	vr::VRActionHandle_t m_actionDetach = vr::k_ulInvalidActionHandle;
 	vr::VRActionHandle_t m_actionHaptic = vr::k_ulInvalidActionHandle;
 	vr::VRActionHandle_t m_actionHand = vr::k_ulInvalidActionHandle;
+	vr::VRActionHandle_t m_actionCamera = vr::k_ulInvalidActionHandle;
 	vr::VRInputValueHandle_t m_leftHand = vr::k_ulInvalidInputValueHandle;
 	vr::VRInputValueHandle_t m_rightHand = vr::k_ulInvalidInputValueHandle;
+	vr::VRInputValueHandle_t m_head= vr::k_ulInvalidActionHandle;
 
 	ActionState_t m_handActionState[(size_t)EHand::Max];
+	ActionState_t m_cameraActionState;
 	ActionState_t getActionStateForHand( EHand eHand );
 
 	std::unordered_map<std::string, glm::mat4> m_universeFromOriginTransforms;
 	glm::mat4 m_hmdFromUniverse;
 	glm::mat4 m_mixedRealityFromUniverse;
-	vr::TrackedDeviceIndex_t m_unMixedRealityDeviceIndex = 5; 
 
 	const char* k_pchVargglesOverlayKey = "aardvark.varggles";
 	const char* k_pchVargglesOverlayName = "varggles";

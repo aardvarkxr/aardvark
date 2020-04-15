@@ -22,6 +22,10 @@
             {
                "output" : "/actions/aardvark/in/hand",
                "path" : "/user/hand/right/pose/tip"
+            },
+            {
+               "output" : "/actions/aardvark/in/camera",
+               "path" : "/user/head/pose/raw"
             }
          ],
          "sources" : [

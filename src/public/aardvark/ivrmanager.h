@@ -33,6 +33,7 @@ public:
 		bool detach = false;
 
 		glm::mat4 universeFromHand;
+		glm::mat4 universeFromCamera;
 	};
 
 	virtual ~IVrManager() {}
