@@ -73,7 +73,7 @@ bool aabbFromJavascript( CefRefPtr<CefV8Value> arg, AABB_t *out )
 
 bool CJavascriptModelInstance::init( CefRefPtr<CefV8Value > container )
 {
-	RegisterFunction( container, "setRenderingConfig", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	RegisterFunction( container, "setRendererConfig", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
 		//MOOSE wip
 		if (arguments.size() != 1)

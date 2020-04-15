@@ -1,4 +1,4 @@
-import { AvNodeTransform } from './aardvark_protocol';
+import { AvNodeTransform, AvRendererConfig } from './aardvark_protocol';
 import { v4 as uuid } from 'uuid';
 
 interface GadgetPersistence
@@ -14,12 +14,13 @@ export interface StoredGadget
 	uuid: string;
 }
 
-const AardvarkStateFormat = 3;
+const AardvarkStateFormat = 4;
 
 export interface AardvarkState
 {
 	format: number;
 	activeGadgets: { [uuid:string]: GadgetPersistence };
+	rendererConfig?: AvRendererConfig;
 	installedGadgets: string[];
 	localUserUuid: string;
 	localUserDisplayName: string;
@@ -105,9 +106,9 @@ export function readPersistentState( path: string ): AardvarkState
 		let fs = eval( "require( 'fs' )" );
 
 		let previousState = fs.readFileSync( path, 'utf8' );
-		let state:AardvarkState = JSON.parse( previousState );
+		let state: AardvarkState = JSON.parse( previousState );
 
-		if( state.format == 1 || state.format == 2 )
+		if( state.format == 1 || state.format == 2 || state.format == 3)
 		{
 			throw `Stored state ${state.format} is no longer supported.`;
 		}
@@ -115,6 +116,13 @@ export function readPersistentState( path: string ): AardvarkState
 		if( state.format != AardvarkStateFormat )
 		{
 			throw `Inappropriate state format ${state.format}`;
+		}
+
+		if( !state["rendererConfig"]) {
+			state.rendererConfig = {
+				enable_mixed_reality: false,
+				mixed_reality_fov: 50.3
+			};
 		}
 
 		if( !state.activeGadgets[ "gadget_menu" ] )

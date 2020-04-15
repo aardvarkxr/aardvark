@@ -1,4 +1,4 @@
-import { AardvarkState, StoredGadget, readPersistentState, AvGadgetManifest, AvNodeTransform, LocalUserInfo, signRequest, AuthedRequest } from '@aardvarkxr/aardvark-shared';
+import { AardvarkState, StoredGadget, readPersistentState, AvGadgetManifest, AvNodeTransform, LocalUserInfo, signRequest, AuthedRequest, AvRendererConfig } from '@aardvarkxr/aardvark-shared';
 import { v4 as uuid } from 'uuid';
 import * as os from 'os';
 import * as path from 'path';
@@ -133,6 +133,11 @@ class CPersistenceManager
 		{
 			return null;
 		}
+	}
+
+	public getRendererSettings(): AvRendererConfig
+	{
+		return this.m_state.rendererConfig;
 	}
 
 	public setGadgetHook( uuid: string, hook: string, hookFromGadget: AvNodeTransform )

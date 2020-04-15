@@ -2,7 +2,8 @@ import { AvGadgetManifest, AvPanelMouseEventType, EndpointAddr,
 	MsgGrabberState, MsgPokerProximity, AvSharedTextureInfo, 
 	EHand, 
 	AABB as Aabb,
-	Permission
+	Permission,
+	AvRendererConfig
 } from './aardvark_protocol';
 
 export interface AvTraversalRenderer
@@ -16,11 +17,11 @@ export interface AvHapticProcessor
 
 export interface AvModelInstance
 {
+	setRendererConfig( rendererConfig: AvRendererConfig ): void;
 	setUniverseFromModelTransform( universeFromModel: number[] ): void;
 	setOverrideTexture( textureInfo: AvSharedTextureInfo ): void;
 	setBaseColor( color: [ number, number, number, number ] ): void;
 }
-
 
 export interface AvActionState
 {
