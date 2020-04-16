@@ -15,7 +15,6 @@ public:
 	virtual void runFrame() override;
 	virtual void setVargglesTexture(const vr::Texture_t *pTexture) override;
 	virtual glm::mat4 getHmdFromUniverse() override { return m_hmdFromUniverse; }
-	virtual glm::mat4 getMixedRealityFromUniverse() override { return m_mixedRealityFromUniverse; }
 	virtual void getVargglesLookRotation(glm::mat4 &horizontalLooktransform) override;
 
 	vr::VRInputValueHandle_t getDeviceForHand( EHand hand );
@@ -50,7 +49,6 @@ protected:
 
 	std::unordered_map<std::string, glm::mat4> m_universeFromOriginTransforms;
 	glm::mat4 m_hmdFromUniverse;
-	glm::mat4 m_mixedRealityFromUniverse;
 
 	const char* k_pchVargglesOverlayKey = "aardvark.varggles";
 	const char* k_pchVargglesOverlayName = "varggles";

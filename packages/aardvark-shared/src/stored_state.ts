@@ -14,13 +14,13 @@ export interface StoredGadget
 	uuid: string;
 }
 
-const AardvarkStateFormat = 4;
+const AardvarkStateFormat = 3;
 
 export interface AardvarkState
 {
 	format: number;
 	activeGadgets: { [uuid:string]: GadgetPersistence };
-	rendererConfig?: AvRendererConfig;
+	rendererConfig: AvRendererConfig;
 	installedGadgets: string[];
 	localUserUuid: string;
 	localUserDisplayName: string;
@@ -87,6 +87,7 @@ export function v1ToV2( from: AardvarkState ): AardvarkState
 		format: 2,
 		activeGadgets: from.activeGadgets,
 		installedGadgets: [],
+		rendererConfig: { enableMixedReality: false, mixedRealityFov: 50.3 },
 		localUserUuid: uuid(),
 		localUserDisplayName: generateRandomName(),
 	};
@@ -108,7 +109,7 @@ export function readPersistentState( path: string ): AardvarkState
 		let previousState = fs.readFileSync( path, 'utf8' );
 		let state: AardvarkState = JSON.parse( previousState );
 
-		if( state.format == 1 || state.format == 2 || state.format == 3)
+		if( state.format == 1 || state.format == 2 )
 		{
 			throw `Stored state ${state.format} is no longer supported.`;
 		}
@@ -118,10 +119,10 @@ export function readPersistentState( path: string ): AardvarkState
 			throw `Inappropriate state format ${state.format}`;
 		}
 
-		if( !state["rendererConfig"]) {
+		if( !state.rendererConfig ) {
 			state.rendererConfig = {
-				enable_mixed_reality: false,
-				mixed_reality_fov: 50.3
+				enableMixedReality: false,
+				mixedRealityFov: 50.3
 			};
 		}
 
@@ -160,7 +161,7 @@ export function readPersistentState( path: string ): AardvarkState
 				},
 			},
 			installedGadgets: [],
-			rendererConfig: { mixed_reality_fov: 50.3, enable_mixed_reality: false },
+			rendererConfig: { mixedRealityFov: 50.3, enableMixedReality: false },
 			localUserUuid: uuid(),
 			localUserDisplayName: generateRandomName(),
 		}

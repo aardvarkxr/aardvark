@@ -280,7 +280,7 @@ protected:
 	int32_t debugViewInputs = 0;
 	int32_t debugViewEquation = 0;
 	float m_eyeFOV = 112.0f;
-	CAardvarkRendererConfig m_sRendererConfig;
+	CAardvarkRendererConfig m_rendererConfig;
 	CUriRequestHandler m_uriRequests;
 
 	std::vector< CVulkanRendererModelInstance *> m_modelsToRender;

@@ -343,8 +343,8 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 		CAardvarkRendererConfig rendererConfig;
 		try
 		{
-			rendererConfig.m_bMixedRealityEnabled = arguments[0]->GetValue("enable_mixed_reality")->GetBoolValue();
-			rendererConfig.m_fMixedRealityFOV = static_cast<float>(arguments[0]->GetValue("mixed_reality_fov")->GetDoubleValue());
+			rendererConfig.m_bMixedRealityEnabled = arguments[0]->GetValue("enableMixedReality")->GetBoolValue();
+			rendererConfig.m_fMixedRealityFOV = static_cast<float>(arguments[0]->GetValue("mixedRealityFov")->GetDoubleValue());
 		}
 		catch (nlohmann::json::exception &)
 		{

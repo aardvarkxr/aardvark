@@ -184,7 +184,6 @@ void CVRManager::updateCameraActionPose()
 
 	this->m_cameraActionState = getActionStateForHand(EHand::Left);
 	m_universeFromOriginTransforms["/user/camera"] = m_cameraActionState.universeFromCamera;
-	m_mixedRealityFromUniverse = glm::inverse(m_cameraActionState.universeFromCamera);
 }
 
 CVRManager::ActionState_t CVRManager::getActionStateForHand( EHand eHand )
