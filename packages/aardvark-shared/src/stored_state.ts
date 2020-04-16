@@ -160,6 +160,7 @@ export function readPersistentState( path: string ): AardvarkState
 				},
 			},
 			installedGadgets: [],
+			rendererConfig: { mixed_reality_fov: 50.3, enable_mixed_reality: false },
 			localUserUuid: uuid(),
 			localUserDisplayName: generateRandomName(),
 		}

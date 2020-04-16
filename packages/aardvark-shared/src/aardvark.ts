@@ -17,7 +17,6 @@ export interface AvHapticProcessor
 
 export interface AvModelInstance
 {
-	setRendererConfig( rendererConfig: AvRendererConfig ): void;
 	setUniverseFromModelTransform( universeFromModel: number[] ): void;
 	setOverrideTexture( textureInfo: AvSharedTextureInfo ): void;
 	setBaseColor( color: [ number, number, number, number ] ): void;
@@ -38,6 +37,7 @@ export interface AvActionState
 
 interface AvRenderer
 {
+	setRendererConfig( rendererConfig: AvRendererConfig ): void;
 	registerTraverser( traverser: AvTraversalRenderer ): void;
 	renderList( renderList: AvModelInstance[] ): void,
 	createModelInstance( uri: string): AvModelInstance;

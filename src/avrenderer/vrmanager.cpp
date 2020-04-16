@@ -179,7 +179,7 @@ void CVRManager::updateCameraActionPose()
 	}
 	else
 	{
-		m_cameraActionState.universeFromCamera = glm::mat4(1.f);
+		m_cameraActionState.universeFromCamera = m_universeFromOriginTransforms["/user/head"];
 	}
 
 	this->m_cameraActionState = getActionStateForHand(EHand::Left);

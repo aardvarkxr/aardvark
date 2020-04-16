@@ -1,5 +1,5 @@
 import { CRendererEndpoint } from '@aardvarkxr/aardvark-react';
-import { Av, AvActionState, AvConstraint, AvGrabEvent, AvGrabEventType, AvModelInstance, AvNode, AvNodeTransform, AvNodeType, EAction, EHand, emptyActionState, EndpointAddr, endpointAddrIsEmpty, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, EVolumeType, filterActionsForGadget, getActionFromState, g_builtinModelCylinder, g_builtinModelError, g_builtinModelPanel, g_builtinModelPanelInverted, LocalUserInfo, MessageType, MinimalPose, MsgAttachGadgetToHook, MsgDestroyGadget, MsgDetachGadgetFromHook, MsgGrabEvent, MsgLostEndpoint, MsgNodeHaptic, MsgResourceLoadFailed, MsgUpdateActionState, MsgUpdatePose, MsgUpdateSceneGraph, MsgUserInfo, parseEndpointFieldUri } from '@aardvarkxr/aardvark-shared';
+import { Av, AvActionState, AvConstraint, AvGrabEvent, AvGrabEventType, AvModelInstance, AvNode, AvNodeTransform, AvNodeType, EAction, EHand, emptyActionState, EndpointAddr, endpointAddrIsEmpty, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, EVolumeType, filterActionsForGadget, getActionFromState, g_builtinModelCylinder, g_builtinModelError, g_builtinModelPanel, g_builtinModelPanelInverted, LocalUserInfo, MessageType, MinimalPose, MsgAttachGadgetToHook, MsgDestroyGadget, MsgDetachGadgetFromHook, MsgGrabEvent, MsgLostEndpoint, MsgNodeHaptic, MsgResourceLoadFailed, MsgUpdateActionState, MsgUpdatePose, MsgUpdateSceneGraph, MsgUserInfo, parseEndpointFieldUri, AvRendererConfig } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3, vec4 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
 import { CGrabStateProcessor } from './grab_state_processor';
@@ -215,9 +215,9 @@ export class AvDefaultTraverser
 		this.m_endpoint.registerHandler( MessageType.LostEndpoint, this.onLostEndpoint );
 	}
 
-	@bind onEndpointOpen()
+	@bind onEndpointOpen(settings: AvRendererConfig)
 	{
-
+		Av().renderer.setRendererConfig(settings)
 	}
 
 	@bind

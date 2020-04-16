@@ -73,34 +73,6 @@ bool aabbFromJavascript( CefRefPtr<CefV8Value> arg, AABB_t *out )
 
 bool CJavascriptModelInstance::init( CefRefPtr<CefV8Value > container )
 {
-	RegisterFunction( container, "setRendererConfig", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
-	{
-		//MOOSE wip
-		if (arguments.size() != 1)
-		{
-			exception = "Invalid arguments";
-			return;
-		}
-		
-		auto renderingConfig = std::string(arguments[0]->GetStringValue());
-		try
-		{
-			nlohmann::json j = nlohmann::json::parse(renderingConfig.begin(), renderingConfig.end());
-			CAardvarkRendererConfig rendererConfig = j.get<CAardvarkRendererConfig>();
-
-			CefRefPtr<CefV8Value> manifest = CefV8Value::CreateObject(nullptr, nullptr);
-			manifest->SetValue("enable_mixed_reality", CefV8Value::CreateBool(rendererConfig.m_bMixedRealityEnabled),
-				V8_PROPERTY_ATTRIBUTE_NONE);
-			manifest->SetValue("mixed_reality_fov", CefV8Value::CreateDouble(rendererConfig.m_fMixedRealityFOV),
-				V8_PROPERTY_ATTRIBUTE_NONE);
-		}
-		catch (nlohmann::json::exception &)
-		{
-			// manifest parse failed. Return failure below
-			assert(false);
-		}
-	} );
-
 	RegisterFunction( container, "setUniverseFromModelTransform", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
 		if ( arguments.size() != 1 )
@@ -359,6 +331,30 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 {
 	m_vrManager->init();
 	m_renderer->init( nullptr, m_vrManager.get() );
+
+	RegisterFunction( container, "setRendererConfig", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if (arguments.size() != 1)
+		{
+			exception = "Invalid arguments";
+			return;
+		}
+		
+		CAardvarkRendererConfig rendererConfig;
+		try
+		{
+			rendererConfig.m_bMixedRealityEnabled = arguments[0]->GetValue("enable_mixed_reality")->GetBoolValue();
+			rendererConfig.m_fMixedRealityFOV = static_cast<float>(arguments[0]->GetValue("mixed_reality_fov")->GetDoubleValue());
+		}
+		catch (nlohmann::json::exception &)
+		{
+			exception = "invalid config";
+			return;
+		}
+
+		m_renderer->setRenderingConfiguration(rendererConfig);
+	} );
+
 
 	RegisterFunction( container, "registerTraverser", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{

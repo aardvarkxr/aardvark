@@ -1565,6 +1565,8 @@ class CEndpoint
 					addLocalGadget( room, localGadget );
 				} );
 			}
+		} else if (this.getType() == EndpointType.Renderer) {
+			msgResponse.settings = persistence.getRendererSettings();
 		}
 
 		this.sendMessage( MessageType.SetEndpointTypeResponse, msgResponse );

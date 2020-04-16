@@ -72,7 +72,6 @@ public:
 	void renderNode( std::shared_ptr<vkglTF::Model> pModel, std::shared_ptr<vkglTF::Node> node, uint32_t cbIndex, 
 		vkglTF::Material::AlphaMode alphaMode, bool doubleSided, EEye eEye );
 
-	void setRenderingConfiguration(const CAardvarkRendererConfig& cRendererConfig);
 
 	void recordCommandBuffers( uint32_t cbIndex );
 	void renderSceneToTarget( uint32_t cbIndex, vks::RenderTarget target, uint32_t targetWidth, uint32_t targetHeight, EEye eEye );
@@ -119,6 +118,7 @@ public:
 	// ----------- IRenderer implementation -------------
 	virtual void init( HINSTANCE hInstance, IVrManager *vrManager ) override;
 	virtual void runFrame( bool *shouldQuit, double frameTime ) override;
+	virtual void setRenderingConfiguration(const CAardvarkRendererConfig& cRendererConfig) override;
 	virtual std::unique_ptr<IModelInstance> createModelInstance( const std::string & uri, std::string *psError) override;
 	virtual void resetRenderList() override;
 	virtual void addToRenderList( IModelInstance *modelInstance ) override;
