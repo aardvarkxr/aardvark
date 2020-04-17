@@ -340,19 +340,18 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 			return;
 		}
 		
-		CAardvarkRendererConfig rendererConfig;
 		try
 		{
-			rendererConfig.m_bMixedRealityEnabled = arguments[0]->GetValue("enableMixedReality")->GetBoolValue();
-			rendererConfig.m_fMixedRealityFOV = static_cast<float>(arguments[0]->GetValue("mixedRealityFov")->GetDoubleValue());
+			auto settings = arguments[0]->GetStringValue().ToString();
+			nlohmann::json j = nlohmann::json::parse( settings.begin(), settings.end() );
+			auto rendererConfig = j.get<CAardvarkRendererConfig>();
+			m_renderer->setRenderingConfiguration(rendererConfig);
 		}
 		catch (nlohmann::json::exception &)
 		{
 			exception = "invalid config";
 			return;
 		}
-
-		m_renderer->setRenderingConfiguration(rendererConfig);
 	} );
 
 

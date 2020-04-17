@@ -217,7 +217,7 @@ export class AvDefaultTraverser
 
 	@bind onEndpointOpen(settings: AvRendererConfig)
 	{
-		Av().renderer.setRendererConfig(settings)
+		Av().renderer.setRendererConfig(JSON.stringify(settings))
 	}
 
 	@bind
