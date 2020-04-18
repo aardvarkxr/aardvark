@@ -57,7 +57,7 @@ private:
 	void InitAardvarkForContext( PerContextInfo_t &contextInfo );
 
 	aardvark::GadgetParams_t m_params;
-	std::unique_ptr<CAardvarkGadgetManifest> m_gadgetManifest;
+	std::unique_ptr<CWebAppManifest> m_gadgetManifest;
 	CUriRequestHandler m_uriRequestHandler;
 	bool m_needRunFrame = true;
 

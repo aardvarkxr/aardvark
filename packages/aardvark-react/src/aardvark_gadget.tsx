@@ -24,7 +24,7 @@ import { MessageType, MsgUpdateSceneGraph, EndpointAddr,
 	MsgGrabEvent, stringToEndpointAddr, MsgGadgetStarted, 
 	EndpointType, endpointAddrToString, MsgPokerProximity, 
 	MsgMouseEvent, MsgNodeHaptic, MsgMasterStartGadget, 
-	MsgSaveSettings, MsgUpdateActionState, AvGadgetManifest, AvPanelHandler, 
+	MsgSaveSettings, MsgUpdateActionState, AardvarkManifest, AvPanelHandler, 
 	PokerProximity, AvPanelMouseEventType, AvGrabEventProcessor, 
 	AvGrabEvent, AvNode, AvNodeType, AvPanelMouseEvent, ENodeFlags, 
 	EHand, MsgResourceLoadFailed,
@@ -91,7 +91,7 @@ export class AvGadget
 	m_nextFrameRequest: number = 0;
 	m_traversedNodes: {[nodeId:number]:IAvBaseNode } = {};
 	m_endpoint: CGadgetEndpoint = null;
-	m_manifest: AvGadgetManifest = null;
+	m_manifest: AardvarkManifest = null;
 	m_actualGadgetUri: string = null;
 	m_actionState: { [hand:number]: AvActionState } = {};
 	private m_persistenceUuid: string;
@@ -155,7 +155,7 @@ export class AvGadget
 	@bind public onEndpointOpen( settings: any, persistenceUuid: string )
 	{
 		this.m_endpoint.getGadgetManifest( this.m_actualGadgetUri )
-		.then( ( manifest: AvGadgetManifest ) =>
+		.then( ( manifest: AardvarkManifest ) =>
 		{
 			this.m_manifest = manifest;
 			this.markDirty();
@@ -218,7 +218,7 @@ export class AvGadget
 	 * @returns a promise that will resolve to the specified gadget's manifest
 	 * @public
 	 */
-	public loadManifest( gadgetUri: string ) : Promise<AvGadgetManifest>
+	public loadManifest( gadgetUri: string ) : Promise<AardvarkManifest>
 	{
 		return this.m_endpoint.getGadgetManifest( gadgetUri );
 	}

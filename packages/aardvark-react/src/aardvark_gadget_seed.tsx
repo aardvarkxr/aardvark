@@ -5,15 +5,16 @@ import { HighlightType, GrabResponse, AvGrabbable } from './aardvark_grabbable';
 import { AvTransform } from './aardvark_transform';
 import { AvSphereHandle } from './aardvark_handles';
 import { AvModel } from './aardvark_model';
-import { EndpointAddr, AvGrabEvent, AvGadgetManifest, endpointAddrIsEmpty, AvVector } from '@aardvarkxr/aardvark-shared';
+import { EndpointAddr, AvGrabEvent, AardvarkManifest, endpointAddrIsEmpty, AvVector, g_builtinModelError } from '@aardvarkxr/aardvark-shared';
 import { AvGadget } from './aardvark_gadget';
+import isUrl from 'is-url';
 
 
 interface AvGadgetSeedProps extends AvBaseNodeProps
 {
 	/** The URI of the gadget for which this node is a seed. 
 	 * Gadget URIs are everything up to but not including the 
-	 * "/gadget_manifest.json" part of the path.
+	 * "/manifest.webmanifest" part of the path.
 	*/
 	uri: string;
 
@@ -36,7 +37,7 @@ interface AvGadgetSeedState
  */
 export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSeedState >
 {
-	private m_manifest: AvGadgetManifest = null;
+	private m_manifest: AardvarkManifest = null;
 
 	constructor( props:any )
 	{
@@ -45,7 +46,7 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 		this.state = { grabbableHighlight: HighlightType.None };
 
 		AvGadget.instance().loadManifest( this.props.uri )
-		.then( ( manifest: AvGadgetManifest ) =>
+		.then( ( manifest: AardvarkManifest ) =>
 		{
 			this.m_manifest = manifest;
 			this.forceUpdate();
@@ -98,6 +99,36 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 		this.setState( { grabbableHighlight: highlight } );
 	}
 
+	private findIconOfType( mimeType: string )
+	{
+		if( !this.m_manifest.icons )
+			return null;
+
+		for( let icon of this.m_manifest.icons )
+		{
+			if( icon.type.toLowerCase() == mimeType.toLowerCase() )
+			{
+				return icon;
+			}
+		}
+
+		return null;
+	}
+
+
+	private renderGadgetIcon( radius: number )
+	{
+		let model = this.findIconOfType( "model/gltf-binary" );
+		if( model )
+		{
+			let modelUrl = isUrl( model.src ) ? model.src : this.props.uri + "/" + model.src;
+
+			return <AvModel uri= { model.src } scaleToFit={ { x: radius, y: radius, z: radius } }/>;
+		}
+
+		return <AvModel uri= { g_builtinModelError } scaleToFit={ { x: radius, y: radius, z: radius } }/>;
+	}
+
 	public render()
 	{
 		if( !this.m_manifest )
@@ -122,8 +153,7 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 				<AvSphereHandle radius={ radius } />
 				
 				<AvTransform uniformScale={ scale }>
-					<AvModel uri= { this.m_manifest.model } 
-						scaleToFit={ { x: radius, y: radius, z: radius } }/>
+					{ this.renderGadgetIcon( radius ) }
 				</AvTransform>
 			</AvGrabbable>
 		);

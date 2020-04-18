@@ -133,7 +133,7 @@ private:
 	bool m_isClosing;
 	IApplication *m_application = nullptr;
 
-	CAardvarkGadgetManifest m_gadgetManifest;
+	CWebAppManifest m_gadgetManifest;
 	std::string m_gadgetManifestString;
 
 	std::vector<uint32_t> m_gadgets;

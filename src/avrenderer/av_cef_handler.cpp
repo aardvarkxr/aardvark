@@ -39,7 +39,7 @@ CAardvarkCefHandler::~CAardvarkCefHandler()
 // Called after creation to kick off the gadget
 void CAardvarkCefHandler::start()
 {
-	m_uriRequestHandler.requestUri( m_params.uri + "/gadget_manifest.json",
+	m_uriRequestHandler.requestUri( m_params.uri + "/manifest.webmanifest",
 		[this]( CUriRequestHandler::Result_t & result )
 	{
 		this->onGadgetManifestReceived( result.success, result.data );
@@ -61,7 +61,7 @@ void CAardvarkCefHandler::onGadgetManifestReceived( bool success, const std::vec
 	try
 	{
 		nlohmann::json j = nlohmann::json::parse( manifestData.begin(), manifestData.end() );
-		m_gadgetManifest = j.get<CAardvarkGadgetManifest>();
+		m_gadgetManifest = j.get<CWebAppManifest>();
 	}
 	catch ( nlohmann::json::exception &  )
 	{
@@ -84,8 +84,8 @@ void CAardvarkCefHandler::onGadgetManifestReceived( bool success, const std::vec
 	window_info.windowless_rendering_enabled = true;
 	//window_info.shared_texture_enabled = true;
 
-	window_info.width = m_gadgetManifest.m_width;
-	window_info.height = m_gadgetManifest.m_height;
+	window_info.width = m_gadgetManifest.m_aardvark.m_width;
+	window_info.height = m_gadgetManifest.m_aardvark.m_height;
 	window_info.x = window_info.y = 0;
 
 	browser_settings.windowless_frame_rate = 90;
@@ -228,8 +228,8 @@ void CAardvarkCefHandler::GetViewRect( CefRefPtr<CefBrowser> browser, CefRect& r
 {
 	rect.x = 0;
 	rect.y = 0;
-	rect.width = m_gadgetManifest.m_width;
-	rect.height = m_gadgetManifest.m_height;
+	rect.width = m_gadgetManifest.m_aardvark.m_width;
+	rect.height = m_gadgetManifest.m_aardvark.m_height;
 }
 
 void CAardvarkCefHandler::OnPaint( CefRefPtr<CefBrowser> browser,
@@ -240,8 +240,8 @@ void CAardvarkCefHandler::OnPaint( CefRefPtr<CefBrowser> browser,
 	int height )
 {
 	// we don't care about the slow paint, just the GPU paint in OnAcceleratedPaint
-	assert( m_gadgetManifest.m_width == width );
-	assert( m_gadgetManifest.m_height == height );
+	assert( m_gadgetManifest.m_aardvark.m_width == width );
+	assert( m_gadgetManifest.m_aardvark.m_height == height );
 
 	m_application->updateTexture( m_sharedTexture, buffer, width, height );
 
@@ -318,8 +318,8 @@ bool CAardvarkCefHandler::OnProcessMessageReceived( CefRefPtr<CefBrowser> browse
 	else if ( message->GetName() == "mouse_event" )
 	{
 		CefMouseEvent cefEvent;
-		cefEvent.x = (int)(message->GetArgumentList()->GetDouble( 1 ) * (double)m_gadgetManifest.m_width );
-		cefEvent.y = (int)( message->GetArgumentList()->GetDouble( 2 ) * (double)m_gadgetManifest.m_height );
+		cefEvent.x = (int)(message->GetArgumentList()->GetDouble( 1 ) * (double)m_gadgetManifest.m_aardvark.m_width );
+		cefEvent.y = (int)( message->GetArgumentList()->GetDouble( 2 ) * (double)m_gadgetManifest.m_aardvark.m_height );
 		cefEvent.modifiers = 0;
 
 		switch ( (aardvark::EPanelMouseEventType)message->GetArgumentList()->GetInt( 0 ) )
@@ -371,8 +371,8 @@ void CAardvarkCefHandler::updateSceneGraphTextures()
 
 	CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "update_shared_texture" );
 	msg->GetArgumentList()->SetString( 0, std::to_string( (uint64_t)m_sharedTexture ) );
-	msg->GetArgumentList()->SetInt( 1, m_gadgetManifest.m_width );
-	msg->GetArgumentList()->SetInt( 2, m_gadgetManifest.m_height );
+	msg->GetArgumentList()->SetInt( 1, m_gadgetManifest.m_aardvark.m_width );
+	msg->GetArgumentList()->SetInt( 2, m_gadgetManifest.m_aardvark.m_height );
 	msg->GetArgumentList()->SetBool( 3, false );
 	m_browser->GetFocusedFrame()->SendProcessMessage( PID_RENDERER, msg );
 }

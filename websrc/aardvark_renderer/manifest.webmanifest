@@ -1,0 +1,10 @@
+{
+	"xr_type": "aardvark-gadget@0.6.0",
+	"name" : "Aardvark Renderer",
+	"aardvark":
+	{
+		"browserWidth": 16,
+		"browserHeight": 16,
+		"permissions" : [ "renderer" ]
+	}
+}

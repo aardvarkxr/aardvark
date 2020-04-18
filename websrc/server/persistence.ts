@@ -1,4 +1,4 @@
-import { AardvarkState, StoredGadget, readPersistentState, AvGadgetManifest, AvNodeTransform, LocalUserInfo, signRequest, AuthedRequest, AvRendererConfig } from '@aardvarkxr/aardvark-shared';
+import { AardvarkState, StoredGadget, readPersistentState, AardvarkManifest, AvNodeTransform, LocalUserInfo, signRequest, AuthedRequest, AvRendererConfig } from '@aardvarkxr/aardvark-shared';
 import { v4 as uuid } from 'uuid';
 import * as os from 'os';
 import * as path from 'path';
@@ -195,27 +195,35 @@ class CPersistenceManager
 	{
 		this.m_state = readPersistentState( this.statePath );
 
+
 		// make sure all installed startAutomatically gadgets
 		// are in the active list
 		for( let installedGadget of this.m_state.installedGadgets )
 		{
-			let manifest = await getJSONFromUri( installedGadget + "/gadget_manifest.json" ) as AvGadgetManifest;
-			if( manifest.startAutomatically )
+			try 
 			{
-				let foundOne = false;
-				for( let uuid in this.m_state.activeGadgets )
+				let manifest = await getJSONFromUri( installedGadget + "/manifest.webmanifest" ) as AardvarkManifest;
+				if( manifest.aardvark?.startAutomatically )
 				{
-					if( this.m_state.activeGadgets[ uuid ].uri == installedGadget )
+					let foundOne = false;
+					for( let uuid in this.m_state.activeGadgets )
 					{
-						foundOne = true;
-						break;
+						if( this.m_state.activeGadgets[ uuid ].uri == installedGadget )
+						{
+							foundOne = true;
+							break;
+						}
+					}
+	
+					if( !foundOne )
+					{
+						this.createGadgetPersistence( installedGadget );
 					}
 				}
-
-				if( !foundOne )
-				{
-					this.createGadgetPersistence( installedGadget );
-				}
+			}
+			catch( e )
+			{
+				console.log( `Unable to read gadget manifest for ${ installedGadget } when reading state` );
 			}
 		}
 

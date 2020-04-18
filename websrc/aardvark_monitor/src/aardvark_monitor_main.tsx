@@ -1,5 +1,5 @@
 import { CMonitorEndpoint, DegreesToRadians, EulerAnglesToQuaternion, QuaternionToEulerAngles, RadiansToDegrees } from '@aardvarkxr/aardvark-react';
-import { AvGadgetManifest, AvGrabEvent, AvGrabEventType, AvNode, AvNodeTransform, AvNodeType, AvQuaternion, AvVector, EndpointAddr, endpointAddrToString, EndpointType, ENodeFlags, Envelope, MessageType, MinimalPose, MsgGrabEvent, MsgLostEndpoint, MsgNewEndpoint, MsgOverrideTransform, MsgPokerProximity, MsgResourceLoadFailed, MsgUpdateSceneGraph } from '@aardvarkxr/aardvark-shared';
+import { AardvarkManifest, AvGrabEvent, AvGrabEventType, AvNode, AvNodeTransform, AvNodeType, AvQuaternion, AvVector, EndpointAddr, endpointAddrToString, EndpointType, ENodeFlags, Envelope, MessageType, MinimalPose, MsgGrabEvent, MsgLostEndpoint, MsgNewEndpoint, MsgOverrideTransform, MsgPokerProximity, MsgResourceLoadFailed, MsgUpdateSceneGraph } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import { action, computed, observable, ObservableMap } from 'mobx';
 import { observer } from 'mobx-react';
@@ -612,7 +612,7 @@ interface GadgetMonitorProps
 
 interface GadgetMonitorState
 {
-	manifest: AvGadgetManifest;
+	manifest: AardvarkManifest;
 	expanded: boolean;
 }
 
@@ -626,7 +626,7 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 
 		let gadgetData = MonitorStore.getGadgetData( this.props.gadgetId );
 		MonitorStore.getConnection().getGadgetManifest( gadgetData.gadgetUri )
-		.then( ( manifest: AvGadgetManifest ) =>
+		.then( ( manifest: AardvarkManifest ) =>
 		{
 			this.setState( { manifest });
 		});

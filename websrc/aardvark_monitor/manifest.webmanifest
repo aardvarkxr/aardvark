@@ -1,0 +1,11 @@
+{
+	"xr_type": "aardvark-gadget@0.6.0",
+	"name" : "Monitor",
+	"aardvark":
+	{
+		"browserWidth": 1024,
+		"browserHeight": 1024,
+		"permissions" : [ "scenegraph" ],
+		"shareInRooms": false			
+	}
+}

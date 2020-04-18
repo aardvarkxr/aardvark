@@ -1,5 +1,7 @@
+import { WebAppManifest } from './web_app_manifest';
 import { AvActionState } from './aardvark';
 import { AuthedRequest, GadgetAuthedRequest } from './auth';
+import { ExecFileOptionsWithStringEncoding } from 'child_process';
 
 export const AardvarkPort = 23842;
 
@@ -10,8 +12,8 @@ export enum MessageType
 	SetEndpointType = 100,
 	SetEndpointTypeResponse = 101,
 	Error = 102,
-	GetGadgetManifest = 103,
-	GetGadgetManifestResponse = 104,
+	GetAardvarkManifest = 103,
+	GetAardvarkManifestResponse = 104,
 	UserInfo = 105,
 
 	// Monitor messages
@@ -242,15 +244,15 @@ export interface MsgLostEndpoint
 	endpointId: number;
 }
 
-export interface MsgGetGadgetManifest
+export interface MsgGetAardvarkManifest
 {
 	gadgetUri: string;
 }
 
-export interface MsgGetGadgetManifestResponse
+export interface MsgGeAardvarkManifestResponse
 {
 	error?: string;
-	manifest?: AvGadgetManifest;
+	manifest?: AardvarkManifest;
 	gadgetUri?: string;
 }
 
@@ -856,16 +858,22 @@ export enum Permission
 	Room = "room",
 }
 
-export interface AvGadgetManifest
+export interface AardvarkManifestExtension
 {
-	name: string;
 	permissions: Permission[];
-	width: number;
-	height: number;
-	model: string;
+	browserWidth: number;
+	browserHeight: number;
 	startAutomatically: boolean;
 	shareInRooms?: boolean; // defaults to true
+
 }
+
+export interface AardvarkManifest extends WebAppManifest
+{
+	xr_type: string;
+	aardvark: AardvarkManifestExtension;
+}
+
 
 
 export enum EAction

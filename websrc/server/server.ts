@@ -1,4 +1,4 @@
-import { AardvarkPort, AuthedRequest, AvGadgetManifest, AvGrabEvent, AvGrabEventType, AvNode, AvNodeTransform, AvNodeType, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, EVolumeType, GadgetAuthedRequest, gadgetDetailsToId, GadgetRoomEnvelope, MessageType, MsgAttachGadgetToHook, MsgCreateRoom, MsgCreateRoomResponse, MsgDestroyGadget, MsgDestroyRoom, MsgDestroyRoomResponse, MsgDetachGadgetFromHook, MsgError, MsgGadgetStarted, MsgGetGadgetManifest, MsgGetGadgetManifestResponse, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgGrabberState, MsgGrabEvent, MsgInstallGadget, MsgLostEndpoint, MsgMasterStartGadget, MsgMouseEvent, MsgNewEndpoint, MsgNodeHaptic, MsgOverrideTransform, MsgPokerProximity, MsgResourceLoadFailed, MsgRoomMessageReceived, MsgRoomMessageReceivedResponse, MsgSaveSettings, MsgSendRoomMessage, MsgSetEndpointType, MsgSetEndpointTypeResponse, MsgSignRequest, MsgSignRequestResponse, MsgUpdateActionState, MsgUpdatePose, MsgUpdateSceneGraph, MsgUserInfo, parseEndpointFieldUri, parseEnvelope, Permission, SharedGadget, WebSocketCloseCodes } from '@aardvarkxr/aardvark-shared';
+import { AardvarkPort, AuthedRequest, AardvarkManifest, AvGrabEvent, AvGrabEventType, AvNode, AvNodeTransform, AvNodeType, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, EVolumeType, GadgetAuthedRequest, gadgetDetailsToId, GadgetRoomEnvelope, MessageType, MsgAttachGadgetToHook, MsgCreateRoom, MsgCreateRoomResponse, MsgDestroyGadget, MsgDestroyRoom, MsgDestroyRoomResponse, MsgDetachGadgetFromHook, MsgError, MsgGadgetStarted, MsgGetAardvarkManifest, MsgGeAardvarkManifestResponse, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgGrabberState, MsgGrabEvent, MsgInstallGadget, MsgLostEndpoint, MsgMasterStartGadget, MsgMouseEvent, MsgNewEndpoint, MsgNodeHaptic, MsgOverrideTransform, MsgPokerProximity, MsgResourceLoadFailed, MsgRoomMessageReceived, MsgRoomMessageReceivedResponse, MsgSaveSettings, MsgSendRoomMessage, MsgSetEndpointType, MsgSetEndpointTypeResponse, MsgSignRequest, MsgSignRequestResponse, MsgUpdateActionState, MsgUpdatePose, MsgUpdateSceneGraph, MsgUserInfo, parseEndpointFieldUri, parseEnvelope, Permission, SharedGadget, WebSocketCloseCodes } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import { buildPersistentHookPath, buildPersistentHookPathFromParts, HookPathParts, HookType, parsePersistentHookPath } from 'common/hook_utils';
 import * as express from 'express';
@@ -590,7 +590,7 @@ class CGadgetData
 {
 	private m_gadgetUri: string;
 	private m_ep: CEndpoint;
-	private m_manifest: AvGadgetManifest = null;
+	private m_manifest: AardvarkManifest = null;
 	private m_root: AvNode = null;
 	private m_hook: string | GadgetHookAddr = null;
 	private m_grabHook: string | GadgetHookAddr = null;
@@ -641,8 +641,8 @@ class CGadgetData
 	{
 		try
 		{
-			let manifestJson = await getJSONFromUri( this.m_gadgetUri + "/gadget_manifest.json" );
-			this.m_manifest = manifestJson as AvGadgetManifest;
+			let manifestJson = await getJSONFromUri( this.m_gadgetUri + "/manifest.webmanifest" );
+			this.m_manifest = manifestJson as AardvarkManifest;
 			console.log( `Gadget ${ this.m_ep.getId() } is ${ this.getName() }` );
 		}
 		catch( e )
@@ -682,7 +682,8 @@ class CGadgetData
 	public getRemoteUniversePath() { return this.m_remoteUniversePath; }
 	public getShareInRooms() 
 	{ 
-		return ( typeof this.m_manifest.shareInRooms == "boolean" ? this.m_manifest.shareInRooms : true )
+		return ( typeof this.m_manifest.aardvark?.shareInRooms == "boolean" ? 
+			this.m_manifest.aardvark?.shareInRooms : true )
 			&& !this.m_remoteUniversePath; 
 	}
 	public isMaster() { return this.m_persistenceUuid == "master"; }
@@ -980,7 +981,7 @@ class CGadgetData
 			throw new Error( `Verify permission ${ permissionName } on gadget with no manifest` );
 		}
 
-		if( !this.m_manifest?.permissions.includes( permissionName ) )
+		if( !this.m_manifest?.aardvark?.permissions.includes( permissionName ) )
 		{
 			throw new Error( `Verify permission ${ permissionName } on gadget ${ this.m_gadgetUri } FAILED` );
 		}
@@ -1297,7 +1298,7 @@ class CEndpoint
 		ws.on( 'close', this.onClose );
 
 		this.registerEnvelopeHandler( MessageType.SetEndpointType, this.onSetEndpointType );
-		this.registerEnvelopeHandler( MessageType.GetGadgetManifest, this.onGetGadgetManifest );
+		this.registerEnvelopeHandler( MessageType.GetAardvarkManifest, this.onGetGadgetManifest );
 		this.registerEnvelopeHandler( MessageType.UpdateSceneGraph, this.onUpdateSceneGraph );
 		this.registerForwardHandler( MessageType.GrabberState, ( m: MsgGrabberState ) =>
 		{
@@ -1429,32 +1430,27 @@ class CEndpoint
 
 	}
 
-	@bind private onGetGadgetManifest( env: Envelope, m: MsgGetGadgetManifest )
+	@bind private onGetGadgetManifest( env: Envelope, m: MsgGetAardvarkManifest )
 	{
-		getJSONFromUri( m.gadgetUri + "/gadget_manifest.json" )
+		getJSONFromUri( m.gadgetUri + "/manifest.webmanifest" )
 		.then( ( jsonManifest: any ) =>
 		{
-			let response: MsgGetGadgetManifestResponse =
+			let response: MsgGeAardvarkManifestResponse =
 			{
-				manifest: jsonManifest as AvGadgetManifest,
+				manifest: jsonManifest as AardvarkManifest,
 				gadgetUri: m.gadgetUri,
 			}
 
-			if( !isUrl( response.manifest.model ) )
-			{
-				response.manifest.model = m.gadgetUri + "/" + response.manifest.model;
-			}
-
-			this.sendReply( MessageType.GetGadgetManifestResponse, response, env );
+			this.sendReply( MessageType.GetAardvarkManifestResponse, response, env );
 		})
 		.catch( (reason:any ) =>
 		{
-			let response: MsgGetGadgetManifestResponse =
+			let response: MsgGeAardvarkManifestResponse =
 			{
 				error: "Unable to load manifest " + reason,
 				gadgetUri: m.gadgetUri,
 			}
-			this.sendReply( MessageType.GetGadgetManifestResponse, response, env );
+			this.sendReply( MessageType.GetAardvarkManifestResponse, response, env );
 		})
 
 	}

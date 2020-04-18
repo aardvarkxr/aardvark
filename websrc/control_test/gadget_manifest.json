@@ -1,7 +1,0 @@
-{
-	"name" : "Control Tester",
-	"permissions" : [ "scenegraph" ],
-	"width": 1024,
-	"height": 1024,
-	"model" : "http://localhost:23842/models/gear.glb"
-}

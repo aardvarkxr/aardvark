@@ -1,0 +1,18 @@
+{
+	"xr_type": "aardvark-gadget@0.6.0",
+	"name" : "Simple Social",
+	"icons" :
+	[
+		{
+			"src": "http://localhost:23842/models/head.glb",
+			"type": "model/gltf-binary"
+		}
+	],
+	"aardvark":
+	{
+		"browserWidth": 512,
+		"browserHeight": 256,
+		"permissions" : [ "scenegraph", "room" ],
+		"shareInRooms": false
+	}
+}

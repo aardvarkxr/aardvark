@@ -1,8 +1,0 @@
-{
-	"name" : "Master Gadget",
-	"width": 16,
-	"height": 16,
-	"permissions" : [ "master", "scenegraph" ],
-	"model" : "",
-	"shareInRooms": false
-}

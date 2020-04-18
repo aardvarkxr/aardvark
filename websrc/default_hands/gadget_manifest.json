@@ -1,7 +1,0 @@
-{
-	"name" : "default hands",
-	"permissions" : [ "scenegraph" ],
-	"width": 16,
-	"height": 16,
-	"model" : "http://localhost:23842/models/hand_left.glb"
-}

@@ -1,4 +1,4 @@
-import { EndpointAddr, MessageType, AardvarkPort, MsgSetEndpointType, EndpointType, Envelope, MsgSetEndpointTypeResponse, MsgGetGadgetManifest, MsgGetGadgetManifestResponse } from '@aardvarkxr/aardvark-shared';
+import { EndpointAddr, MessageType, AardvarkPort, MsgSetEndpointType, EndpointType, Envelope, MsgSetEndpointTypeResponse, MsgGetAardvarkManifest, MsgGeAardvarkManifestResponse } from '@aardvarkxr/aardvark-shared';
 import { CAardvarkEndpoint } from "@aardvarkxr/aardvark-react";
 import { WS  } from 'jest-websocket-mock';
 import { WebSocket } from 'mock-socket';
@@ -53,10 +53,10 @@ beforeEach( async() =>
 					}
 					break;
 
-				case MessageType.GetGadgetManifest:
+				case MessageType.GetAardvarkManifest:
 					{
-						let m = env.payloadUnpacked as MsgGetGadgetManifest;
-						let r: MsgGetGadgetManifestResponse = { gadgetUri: m.gadgetUri };
+						let m = env.payloadUnpacked as MsgGetAardvarkManifest;
+						let r: MsgGeAardvarkManifestResponse = { gadgetUri: m.gadgetUri };
 						if( m.gadgetUri == "http://fail.com" )
 						{
 							r.error = "Intentional Failure";
@@ -65,16 +65,26 @@ beforeEach( async() =>
 						{
 							r.manifest =
 							{
+								xr_type: "aardvark-gadget@0.6.0",
 								name: "Fred",
-								permissions: [],
-								width: 16,
-								height: 16,
-								model: "http://somewhere.com/model.glb",
-								startAutomatically: false,
+								icons:
+								[
+									{
+										src: "http://somewhere.com/model.glb",
+										type: "model/gltf-binary"
+									}	
+								],
+								aardvark:
+								{
+									permissions: [],
+									browserWidth: 16,
+									browserHeight: 16,
+									startAutomatically: false,	
+								}
 							}
 						}
 
-						sendMessage( MessageType.GetGadgetManifestResponse, r, env );
+						sendMessage( MessageType.GetAardvarkManifestResponse, r, env );
 					}
 					break;
 

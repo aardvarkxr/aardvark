@@ -1,0 +1,18 @@
+{
+	"xr_type": "aardvark-gadget@0.6.0",
+	"name" : "Hand Mirror",
+	"icons" :
+	[
+		{
+			"src": "http://localhost:23842/models/hand_mirror.glb",
+			"type": "model/gltf-binary"
+		}
+	],
+	"aardvark":
+	{
+		"browserWidth": 16,
+		"browserHeight": 16,
+		"permissions" : [ "scenegraph", "room" ],
+		"shareInRooms": false
+	}
+}

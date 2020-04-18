@@ -80,7 +80,7 @@ function createConfig( appName, appTitle, ext )
 		new CopyPlugin(
 			[
 				{ from: './' +appName + '/src/' + appName + '.css', to: appName + '.css' },
-				{ from: './' +appName + '/gadget_manifest.json', to: 'gadget_manifest.json' }
+				{ from: './' +appName + '/manifest.webmanifest', to: 'manifest.webmanifest' }
 			]
 			),
   	];

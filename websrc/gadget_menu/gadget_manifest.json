@@ -1,8 +1,0 @@
-{
-	"name" : "Gadget Menu",
-	"permissions" : [ "scenegraph", "master" ],
-	"width": 1024,
-	"height": 1024,
-	"model" : "http://localhost:23842/models/bracelet.glb",
-	"shareInRooms": false
-}

@@ -1,10 +1,4 @@
-import { AvGadgetManifest, AvPanelMouseEventType, EndpointAddr, 
-	MsgGrabberState, MsgPokerProximity, AvSharedTextureInfo, 
-	EHand, 
-	AABB as Aabb,
-	Permission,
-	AvRendererConfig
-} from './aardvark_protocol';
+import { AardvarkManifest, AABB as Aabb, AvPanelMouseEventType, AvSharedTextureInfo, EHand, EndpointAddr, MsgGrabberState, MsgPokerProximity, Permission } from './aardvark_protocol';
 
 export interface AvTraversalRenderer
 {
@@ -76,9 +70,9 @@ export interface AvStartGadgetResult
 	mainHandleId: EndpointAddr;
 }
 
-export interface AvGadgetManifestCallback
+export interface AvManifestCallback
 {
-	(manifest: AvGadgetManifest) : void;
+	(manifest: AardvarkManifest) : void;
 }
 
 
@@ -109,7 +103,6 @@ export interface Aardvark
 
 	// requires master permissions
 	startGadget( params: GadgetParams ): void;
-	getGadgetManifest( uri: string, callback: AvGadgetManifestCallback ): void;
 
 	/** Destroys the current browser. */
 	closeBrowser(): void;

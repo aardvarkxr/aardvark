@@ -1,7 +1,7 @@
 import bind from 'bind-decorator';
-import { AvGadgetManifest, AvGrabEvent, EndpointType, MessageType, 
-	Envelope, parseEnvelope, MsgSetEndpointType, MsgGetGadgetManifest, 
-	MsgGetGadgetManifestResponse, MsgGrabEvent, 
+import { AardvarkManifest, AvGrabEvent, EndpointType, MessageType, 
+	Envelope, parseEnvelope, MsgSetEndpointType, MsgGetAardvarkManifest, 
+	MsgGeAardvarkManifestResponse, MsgGrabEvent, 
 	MsgSetEndpointTypeResponse, AardvarkPort, WebSocketCloseCodes } from '@aardvarkxr/aardvark-shared';
 import { ENFILE } from 'constants';
 
@@ -208,18 +208,18 @@ export class CAardvarkEndpoint
 		this.sendMessage( MessageType.GrabEvent, msg );
 	}
 
-	public getGadgetManifest( gadgetUri: string ): Promise<AvGadgetManifest>
+	public getGadgetManifest( gadgetUri: string ): Promise<AardvarkManifest>
 	{
-		return new Promise<AvGadgetManifest>( ( resolve, reject ) =>
+		return new Promise<AardvarkManifest>( ( resolve, reject ) =>
 		{
-			let msgGetGadgetManifest: MsgGetGadgetManifest =
+			let msgGetGadgetManifest: MsgGetAardvarkManifest =
 			{
 				gadgetUri,
 			}
-			let prom = this.sendMessageAndWaitForResponse( MessageType.GetGadgetManifest, 
-				msgGetGadgetManifest, MessageType.GetGadgetManifestResponse );
+			let prom = this.sendMessageAndWaitForResponse( MessageType.GetAardvarkManifest, 
+				msgGetGadgetManifest, MessageType.GetAardvarkManifestResponse );
 
-			prom.then( ( [ msg, env ] : [ MsgGetGadgetManifestResponse, Envelope ] ) =>
+			prom.then( ( [ msg, env ] : [ MsgGeAardvarkManifestResponse, Envelope ] ) =>
 			{
 				if( msg.manifest )
 				{

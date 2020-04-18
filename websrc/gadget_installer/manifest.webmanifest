@@ -1,0 +1,17 @@
+{
+	"xr_type": "aardvark-gadget@0.6.0",
+	"name" : "Test Panel",
+	"icons" :
+	[
+		{
+			"src": "http://localhost:23842/models/panel/panel.glb",
+			"type": "model/gltf-binary"
+		}
+	],
+	"aardvark":
+	{
+		"browserWidth": 1024,
+		"browserHeight": 1024,
+		"permissions" : [ "scenegraph" ]
+	}
+}

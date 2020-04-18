@@ -2,7 +2,7 @@
 import { URL } from 'url';
 import axios, { AxiosResponse } from 'axios';
 import { getStandardAardvarkPath, getStandardPersistencePath, readPersistentState, 
-	writePersistentState, AvGadgetManifest } from '@aardvarkxr/aardvark-shared';
+	writePersistentState, AardvarkManifest } from '@aardvarkxr/aardvark-shared';
 import * as fs from 'fs';
 import fileUrl from 'file-url';
 import isUrl from 'is-url';
@@ -250,7 +250,7 @@ async function installGadgets( urls: string[] )
 
 		try
 		{
-			let gadgetManifest: AvGadgetManifest = await getJSONFromUri( gadgetUrl + "/gadget_manifest.json" ) as AvGadgetManifest
+			let gadgetManifest: AardvarkManifest = await getJSONFromUri( gadgetUrl + "/manifest.webmanifest" ) as AardvarkManifest
 			if( !gadgetManifest || !gadgetManifest.name )
 			{
 				throw "Invalid manifest";
