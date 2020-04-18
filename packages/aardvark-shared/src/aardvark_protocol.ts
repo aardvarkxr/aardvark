@@ -846,6 +846,7 @@ export interface AvRendererConfig
 {
 	enableMixedReality: boolean;
 	mixedRealityFov: number;
+	clearColor: [number, number, number];
 }
 
 export enum Permission

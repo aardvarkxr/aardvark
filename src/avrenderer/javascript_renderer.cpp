@@ -4,6 +4,7 @@
 #include "vrmanager.h"
 #include "json/json.hpp"
 #include <aardvark/aardvark_renderer_config.h>
+#include <algorithm>
 
 using aardvark::EEndpointType;
 using aardvark::EndpointAddr_t;
@@ -345,6 +346,11 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 			auto settings = arguments[0]->GetStringValue().ToString();
 			nlohmann::json j = nlohmann::json::parse( settings.begin(), settings.end() );
 			auto rendererConfig = j.get<CAardvarkRendererConfig>();
+			if ( std::any_of( rendererConfig.m_clearColor.begin(), rendererConfig.m_clearColor.end(),
+				 [](float x) { return x < 0.0f && x > 1.0f; } ) ) {
+				exception = "invalid clearColor, values must be in the range [0, 1]";
+				return;
+			}
 			m_renderer->setRenderingConfiguration(rendererConfig);
 		}
 		catch (nlohmann::json::exception &)

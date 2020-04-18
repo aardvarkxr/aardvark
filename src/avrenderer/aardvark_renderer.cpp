@@ -100,7 +100,7 @@ void VulkanExample::setRenderingConfiguration(const CAardvarkRendererConfig& sRe
 
 void VulkanExample::configureMirrorCamera() {
 	camera.type = Camera::CameraType::lookat;
-	camera.setPerspective( m_rendererConfig.m_fMixedRealityFOV, (float)width / (float)height, 0.1f, 256.0f );
+	camera.setPerspective( m_rendererConfig.m_mixedRealityFOV, (float)width / (float)height, 0.1f, 256.0f );
 	camera.rotationSpeed = 0.25f;
 	camera.movementSpeed = 0.1f;
 	camera.setPosition( { 0.0f, 0.0f, 1.0f } );
@@ -299,12 +299,15 @@ void VulkanExample::renderSceneToTarget( uint32_t cbIndex, vks::RenderTarget tar
 
 void VulkanExample::renderScene( uint32_t cbIndex, VkRenderPass targetRenderPass, VkFramebuffer targetFrameBuffer, uint32_t targetWidth, uint32_t targetHeight, EEye eEye )
 {
-	const VkClearColorValue k_vkClearColorValueDefault = { 0.0f, 0.0f, 0.0f, 0.0f };
-	const VkClearColorValue k_vkClearColorValueMixedReality= { 0.0f, 1.0f, 0.0f, 1.0f };
+	const VkClearColorValue k_vkClearColorDefault = { 0.0f, 0.0f, 0.0f, 0.0f };
 	VkClearValue clearValues[3];
-	VkClearColorValue clearColor = k_vkClearColorValueDefault;
-	if (eEye == EEye::Mirror && m_rendererConfig.m_bMixedRealityEnabled) {
-		clearColor = k_vkClearColorValueMixedReality;
+	VkClearColorValue clearColor = k_vkClearColorDefault;
+	if (eEye == EEye::Mirror && m_rendererConfig.m_mixedRealityEnabled) {
+		clearColor = {
+			m_rendererConfig.m_clearColor[0],
+			m_rendererConfig.m_clearColor[1],
+			m_rendererConfig.m_clearColor[2],
+			1.0f };
 	}
 
 	if ( settings.multiSampling ) {
@@ -1855,7 +1858,7 @@ void VulkanExample::prepareUniformBuffers()
 void VulkanExample::updateUniformBuffers()
 {
 	// Scene
-	if (m_rendererConfig.m_bMixedRealityEnabled) {
+	if (m_rendererConfig.m_mixedRealityEnabled) {
 		shaderValuesScene.matProjectionFromView = camera.matrices.perspective;
 		shaderValuesScene.matViewFromHmd = glm::mat4(1.f);
 		m_vrManager->getUniverseFromOrigin("/user/camera", &shaderValuesScene.matHmdFromStage);

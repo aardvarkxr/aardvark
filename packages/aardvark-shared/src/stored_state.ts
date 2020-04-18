@@ -87,7 +87,7 @@ export function v1ToV2( from: AardvarkState ): AardvarkState
 		format: 2,
 		activeGadgets: from.activeGadgets,
 		installedGadgets: [],
-		rendererConfig: { enableMixedReality: false, mixedRealityFov: 50.3 },
+		rendererConfig: { enableMixedReality: false, mixedRealityFov: 50.3, clearColor: [0, 1, 0] },
 		localUserUuid: uuid(),
 		localUserDisplayName: generateRandomName(),
 	};
@@ -122,7 +122,8 @@ export function readPersistentState( path: string ): AardvarkState
 		if( !state.rendererConfig ) {
 			state.rendererConfig = {
 				enableMixedReality: false,
-				mixedRealityFov: 50.3
+				mixedRealityFov: 50.3,
+				clearColor: [0, 1, 0]
 			};
 		}
 
@@ -161,7 +162,7 @@ export function readPersistentState( path: string ): AardvarkState
 				},
 			},
 			installedGadgets: [],
-			rendererConfig: { mixedRealityFov: 50.3, enableMixedReality: false },
+			rendererConfig: { mixedRealityFov: 50.3, enableMixedReality: false, clearColor: [0, 1, 0] },
 			localUserUuid: uuid(),
 			localUserDisplayName: generateRandomName(),
 		}
