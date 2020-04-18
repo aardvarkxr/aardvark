@@ -13,20 +13,11 @@ void from_json( const nlohmann::json & j, CAardvarkRendererConfig& gm )
 	try
 	{
 		j.at("enableMixedReality").get_to(gm.m_bMixedRealityEnabled);
-	}
-	catch ( nlohmann::json::exception & e )
-	{
-		(void)e;
-		gm.m_bMixedRealityEnabled = false;
-	}
-
-	try
-	{
 		j.at("mixedRealityFov").get_to(gm.m_bMixedRealityEnabled);
 	}
 	catch ( nlohmann::json::exception & e )
 	{
-		(void)e;
+		gm.m_bMixedRealityEnabled = false;
 		gm.m_fMixedRealityFOV = 50.3;
 	}
 }
