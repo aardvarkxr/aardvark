@@ -63,7 +63,17 @@
 			"sourceMaps": true,
 			"port": 9229,
 			"protocol": "auto",
-			"outFiles": [ "${workspaceRoot}/myOutFiles/**/*.js",  "${workspaceRoot}/node_modules/**/*.js" ]
+			"outFiles": [  
+				"${workspaceRoot}/node_modules/**/*.js",
+				"${worskpaceRoot}/../packages/aardvark-shared/**/*.js",
+				"${worskpaceRoot}/../packages/aardvark-shared/**/*.js.map",
+				"${worskpaceRoot}/../packages/aardvark-shared/**/*.ts",
+				"${worskpaceRoot}/../packages/aardvark-shared/**/*.js.map",
+				"${worskpaceRoot}/../packages/aardvark-react/**/*.js",
+				"${worskpaceRoot}/../packages/aardvark-react/**/*.js.map",
+				"${worskpaceRoot}/../packages/aardvark-react/**/*.ts",
+				"${worskpaceRoot}/../packages/aardvark-react/**/*.js.map",
+			 ]
 		},
 		{
 			"type": "node",

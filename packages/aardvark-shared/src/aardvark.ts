@@ -2,7 +2,8 @@ import { AvGadgetManifest, AvPanelMouseEventType, EndpointAddr,
 	MsgGrabberState, MsgPokerProximity, AvSharedTextureInfo, 
 	EHand, 
 	AABB as Aabb,
-	Permission
+	Permission,
+	AvRendererConfig
 } from './aardvark_protocol';
 
 export interface AvTraversalRenderer
@@ -21,7 +22,6 @@ export interface AvModelInstance
 	setBaseColor( color: [ number, number, number, number ] ): void;
 }
 
-
 export interface AvActionState
 {
 	// these actions are available to held gadgets
@@ -37,6 +37,7 @@ export interface AvActionState
 
 interface AvRenderer
 {
+	setRendererConfig( rendererConfig: string ): void;
 	registerTraverser( traverser: AvTraversalRenderer ): void;
 	renderList( renderList: AvModelInstance[] ): void,
 	createModelInstance( uri: string): AvModelInstance;

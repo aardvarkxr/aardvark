@@ -842,6 +842,13 @@ export interface AvSharedTextureInfo
 	height: number;
 }
 
+export interface AvRendererConfig
+{
+	enableMixedReality: boolean;
+	mixedRealityFov: number;
+	clearColor: [number, number, number];
+}
+
 export enum Permission
 {
 	Master = "master",

@@ -21,7 +21,7 @@
 #include "av_cef_handler.h"
 #include "uri_request_handler.h"
 #include <aardvark/irenderer.h>
-
+#include <aardvark/aardvark_renderer_config.h>
 #include <aardvark/aardvark_scene_graph.h>
 
 
@@ -72,6 +72,7 @@ public:
 	void renderNode( std::shared_ptr<vkglTF::Model> pModel, std::shared_ptr<vkglTF::Node> node, uint32_t cbIndex, 
 		vkglTF::Material::AlphaMode alphaMode, bool doubleSided, EEye eEye );
 
+
 	void recordCommandBuffers( uint32_t cbIndex );
 	void renderSceneToTarget( uint32_t cbIndex, vks::RenderTarget target, uint32_t targetWidth, uint32_t targetHeight, EEye eEye );
 	void renderVarggles( uint32_t cbIndex, vks::RenderTarget target, uint32_t targetWidth, uint32_t targetHeight);
@@ -117,6 +118,7 @@ public:
 	// ----------- IRenderer implementation -------------
 	virtual void init( HINSTANCE hInstance, IVrManager *vrManager ) override;
 	virtual void runFrame( bool *shouldQuit, double frameTime ) override;
+	virtual void setRenderingConfiguration(const CAardvarkRendererConfig& cRendererConfig) override;
 	virtual std::unique_ptr<IModelInstance> createModelInstance( const std::string & uri, std::string *psError) override;
 	virtual void resetRenderList() override;
 	virtual void addToRenderList( IModelInstance *modelInstance ) override;
@@ -124,6 +126,8 @@ public:
 	virtual bool getModelBox( const std::string & uri, AABB_t *pBox, std::string *psError ) override;
 
 protected:
+	void configureMirrorCamera();
+
 	IVrManager *m_vrManager;
 
 	bool m_updateDescriptors = false;
@@ -276,7 +280,7 @@ protected:
 	int32_t debugViewInputs = 0;
 	int32_t debugViewEquation = 0;
 	float m_eyeFOV = 112.0f;
-
+	CAardvarkRendererConfig m_rendererConfig;
 	CUriRequestHandler m_uriRequests;
 
 	std::vector< CVulkanRendererModelInstance *> m_modelsToRender;

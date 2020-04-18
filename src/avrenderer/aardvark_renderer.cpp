@@ -93,6 +93,20 @@ VulkanExample::~VulkanExample() noexcept
 	textures.empty.destroy();
 }
 
+void VulkanExample::setRenderingConfiguration(const CAardvarkRendererConfig& sRendererConfig) {
+	m_rendererConfig = sRendererConfig;
+	configureMirrorCamera();
+}
+
+void VulkanExample::configureMirrorCamera() {
+	camera.type = Camera::CameraType::lookat;
+	camera.setPerspective( m_rendererConfig.m_mixedRealityFOV, (float)width / (float)height, 0.1f, 256.0f );
+	camera.rotationSpeed = 0.25f;
+	camera.movementSpeed = 0.1f;
+	camera.setPosition( { 0.0f, 0.0f, 1.0f } );
+	camera.setRotation( { 0.0f, 0.0f, 0.0f } );
+}
+
 void VulkanExample::renderNode( std::shared_ptr<vkglTF::Model> pModel, std::shared_ptr<vkglTF::Node> node, uint32_t cbIndex, 
 	vkglTF::Material::AlphaMode alphaMode, bool doubleSided, EEye eEye )
 {
@@ -285,15 +299,24 @@ void VulkanExample::renderSceneToTarget( uint32_t cbIndex, vks::RenderTarget tar
 
 void VulkanExample::renderScene( uint32_t cbIndex, VkRenderPass targetRenderPass, VkFramebuffer targetFrameBuffer, uint32_t targetWidth, uint32_t targetHeight, EEye eEye )
 {
-
+	const VkClearColorValue k_vkClearColorDefault = { 0.0f, 0.0f, 0.0f, 0.0f };
 	VkClearValue clearValues[3];
+	VkClearColorValue clearColor = k_vkClearColorDefault;
+	if (eEye == EEye::Mirror && m_rendererConfig.m_mixedRealityEnabled) {
+		clearColor = {
+			m_rendererConfig.m_clearColor[0],
+			m_rendererConfig.m_clearColor[1],
+			m_rendererConfig.m_clearColor[2],
+			1.0f };
+	}
+
 	if ( settings.multiSampling ) {
-		clearValues[0].color = { { 0.0f, 0.0f, 0.0f, 0.0f } };
-		clearValues[1].color = { { 0.0f, 0.0f, 0.0f, 0.0f } };
+		clearValues[0].color = clearColor;
+		clearValues[1].color = clearColor;
 		clearValues[2].depthStencil = { 1.0f, 0 };
 	}
 	else {
-		clearValues[0].color = { { 0.0f, 0.0f, 0.0f, 0.0f } };
+		clearValues[0].color = clearColor;
 		clearValues[1].depthStencil = { 1.0f, 0 };
 	}
 
@@ -1835,26 +1858,36 @@ void VulkanExample::prepareUniformBuffers()
 void VulkanExample::updateUniformBuffers()
 {
 	// Scene
-	shaderValuesScene.matProjectionFromView = camera.matrices.perspective;
-	shaderValuesScene.matViewFromHmd = camera.matrices.view;
+	if (m_rendererConfig.m_mixedRealityEnabled) {
+		shaderValuesScene.matProjectionFromView = camera.matrices.perspective;
+		shaderValuesScene.matViewFromHmd = glm::mat4(1.f);
+		m_vrManager->getUniverseFromOrigin("/user/camera", &shaderValuesScene.matHmdFromStage);
+		shaderValuesScene.matHmdFromStage = glm::inverse(shaderValuesScene.matHmdFromStage);
+		shaderValuesScene.camPos = glm::vec3(
+			glm::inverse(shaderValuesScene.matViewFromHmd)
+			* glm::vec4(0, 0, 0, 1));
+	}
+	else {
+		shaderValuesScene.matViewFromHmd = camera.matrices.view;
 
-	// Center and scale model
-	glm::mat4 aabb( 1.f );
-	float scale = ( 1.0f / std::max( aabb[0][0], std::max( aabb[1][1], aabb[2][2] ) ) ) * 0.5f;
-	glm::vec3 translate = -glm::vec3( aabb[3][0], aabb[3][1], aabb[3][2] );
-	translate += -0.5f * glm::vec3( aabb[0][0], aabb[1][1], aabb[2][2] );
+		// Center and scale model
+		glm::mat4 aabb(1.f);
+		float scale = (1.0f / std::max(aabb[0][0], std::max(aabb[1][1], aabb[2][2]))) * 0.5f;
+		glm::vec3 translate = -glm::vec3(aabb[3][0], aabb[3][1], aabb[3][2]);
+		translate += -0.5f * glm::vec3(aabb[0][0], aabb[1][1], aabb[2][2]);
 
-	shaderValuesScene.matHmdFromStage = glm::mat4( 1.0f );
-	shaderValuesScene.matHmdFromStage[0][0] = scale;
-	shaderValuesScene.matHmdFromStage[1][1] = scale;
-	shaderValuesScene.matHmdFromStage[2][2] = scale;
-	shaderValuesScene.matHmdFromStage = glm::translate( shaderValuesScene.matHmdFromStage, translate );
+		shaderValuesScene.matHmdFromStage = glm::mat4(1.0f);
+		shaderValuesScene.matHmdFromStage[0][0] = scale;
+		shaderValuesScene.matHmdFromStage[1][1] = scale;
+		shaderValuesScene.matHmdFromStage[2][2] = scale;
+		shaderValuesScene.matHmdFromStage = glm::translate(shaderValuesScene.matHmdFromStage, translate);
 
-	shaderValuesScene.camPos = glm::vec3(
-		-camera.position.z * sin( glm::radians( camera.rotation.y ) ) * cos( glm::radians( camera.rotation.x ) ),
-		-camera.position.z * sin( glm::radians( camera.rotation.x ) ),
-		camera.position.z * cos( glm::radians( camera.rotation.y ) ) * cos( glm::radians( camera.rotation.x ) )
-	);
+		shaderValuesScene.camPos = glm::vec3(
+			-camera.position.z * sin(glm::radians(camera.rotation.y)) * cos(glm::radians(camera.rotation.x)),
+			-camera.position.z * sin(glm::radians(camera.rotation.x)),
+			camera.position.z * cos(glm::radians(camera.rotation.y)) * cos(glm::radians(camera.rotation.x))
+		);
+	}
 
 	// Skybox
 	shaderValuesSkybox.matProjectionFromView = camera.matrices.perspective;
@@ -1897,13 +1930,7 @@ void VulkanExample::prepare()
 {
 	VulkanExampleBase::prepare();
 
-	camera.type = Camera::CameraType::lookat;
-
-	camera.setPerspective( 45.0f, (float)width / (float)height, 0.1f, 256.0f );
-	camera.rotationSpeed = 0.25f;
-	camera.movementSpeed = 0.1f;
-	camera.setPosition( { 0.0f, 0.0f, 1.0f } );
-	camera.setRotation( { 0.0f, 0.0f, 0.0f } );
+	configureMirrorCamera();
 
 	waitFences.resize( renderAhead );
 	presentCompleteSemaphores.resize( renderAhead );

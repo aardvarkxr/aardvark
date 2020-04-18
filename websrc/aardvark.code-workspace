@@ -4,10 +4,10 @@
 			"path": "."
 		},
 		{
-			"path": "E:\\homedev\\aardvark\\packages\\aardvark-shared\\src"
+			"path": "..\\packages\\aardvark-shared\\src"
 		},
 		{
-			"path": "E:\\homedev\\aardvark\\packages\\aardvark-react\\src"
+			"path": "..\\packages\\aardvark-react\\src"
 		}
 	],
 	"settings": {}

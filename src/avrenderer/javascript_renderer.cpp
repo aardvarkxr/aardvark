@@ -2,6 +2,9 @@
 #include "av_cef_javascript.h"
 #include "aardvark_renderer.h"
 #include "vrmanager.h"
+#include "json/json.hpp"
+#include <aardvark/aardvark_renderer_config.h>
+#include <algorithm>
 
 using aardvark::EEndpointType;
 using aardvark::EndpointAddr_t;
@@ -329,6 +332,34 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 {
 	m_vrManager->init();
 	m_renderer->init( nullptr, m_vrManager.get() );
+
+	RegisterFunction( container, "setRendererConfig", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if (arguments.size() != 1)
+		{
+			exception = "Invalid arguments";
+			return;
+		}
+		
+		try
+		{
+			auto settings = arguments[0]->GetStringValue().ToString();
+			nlohmann::json j = nlohmann::json::parse( settings.begin(), settings.end() );
+			auto rendererConfig = j.get<CAardvarkRendererConfig>();
+			if ( std::any_of( rendererConfig.m_clearColor.begin(), rendererConfig.m_clearColor.end(),
+				 [](float x) { return x < 0.0f && x > 1.0f; } ) ) {
+				exception = "invalid clearColor, values must be in the range [0, 1]";
+				return;
+			}
+			m_renderer->setRenderingConfiguration(rendererConfig);
+		}
+		catch (nlohmann::json::exception &)
+		{
+			exception = "invalid config";
+			return;
+		}
+	} );
+
 
 	RegisterFunction( container, "registerTraverser", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
