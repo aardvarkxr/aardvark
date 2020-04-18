@@ -461,6 +461,16 @@ export enum RoomMessageType
 	MemberLeft = "MemberLeft",
 }
 
+
+/** These flags affect room message routing and may be used by a gadget's
+ * room implementation to adjust how they process room messages.
+ */
+export enum RoomMessageRoutingFlag
+{
+	WillResend = 1 << 0,
+}
+
+
 /** Every message sent to a data WebRTC connection for an Aardvark
  * is a JSON object string with this format.
  * 
@@ -480,6 +490,7 @@ export enum RoomMessageType
 export interface GadgetRoomEnvelope
 {
 	type: RoomMessageType|string;
+	routingFlags?: RoomMessageRoutingFlag;
 	destination?: string | RoomMemberIdReserved;
 	source?: string | RoomMemberIdReserved;
 }

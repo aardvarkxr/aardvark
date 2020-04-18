@@ -1,4 +1,4 @@
-import { RoomMessageType, RoomMemberIdReserved, GadgetRoomCallbacks, GadgetRoomEnvelope, RMMemberJoined, RMMemberLeft, SharedGadget, MinimalPose } from '@aardvarkxr/aardvark-shared';
+import { RoomMessageType, RoomMemberIdReserved, GadgetRoomCallbacks, GadgetRoomEnvelope, RMMemberJoined, RMMemberLeft, SharedGadget, MinimalPose, RoomMessageRoutingFlag } from '@aardvarkxr/aardvark-shared';
 
 export interface RoomMemberGadget
 {
@@ -260,6 +260,7 @@ export function updateRoomPose( room: Room, originPath: string, newPose: Minimal
 {
 	let m: RMUpdatePose =
 	{
+		routingFlags: RoomMessageRoutingFlag.WillResend,
 		type: RoomMessageTypePrivate.UpdatePose,
 		destination: RoomMemberIdReserved.Broadcast,
 		originPath,
