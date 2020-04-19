@@ -1,7 +1,6 @@
 import { WebAppManifest } from './web_app_manifest';
 import { AvActionState } from './aardvark';
 import { AuthedRequest, GadgetAuthedRequest } from './auth';
-import { ExecFileOptionsWithStringEncoding } from 'child_process';
 
 export const AardvarkPort = 23842;
 
