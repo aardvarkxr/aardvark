@@ -1,6 +1,6 @@
 {
   "name": "@aardvarkxr/aardvark-react",
-  "version": "0.5.3",
+  "version": "0.6.6",
   "description": "React-based utilities for Aardvark",
   "repository": "https://github.com/aardvarkxr/aardvark-react.git",
   "main": "lib/index",
@@ -19,6 +19,7 @@
   },
   "devDependencies": {
     "@types/color": "^3.0.0",
+    "@types/is-url": "^1.2.28",
     "@types/react": "^16.8.22",
     "@types/react-dom": "^16.8.4",
     "jss": "^9.7.0",
@@ -32,12 +33,13 @@
     "webpack-cli": "^3.3.11"
   },
   "dependencies": {
-    "@aardvarkxr/aardvark-shared": "^0.5.2",
+    "@aardvarkxr/aardvark-shared": "^0.6.6",
     "@tlaukkan/tsm": "^0.8.5",
     "@types/uuid": "^3.4.5",
     "axios": "^0.19.0",
     "bind-decorator": "^1.0.11",
     "color": "^3.1.2",
+    "is-url": "^1.2.4",
     "npm": "^6.14.4",
     "react": "^16.8.6",
     "react-dom": "^16.8.6"
