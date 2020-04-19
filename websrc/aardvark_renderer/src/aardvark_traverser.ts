@@ -22,6 +22,7 @@ interface NodeData
 	transform0Time?: number;	
 	transform1?: AvNodeTransform;
 	transform1Time?: number;	
+	graphParent?: EndpointAddr;
 }
 
 
@@ -110,6 +111,11 @@ class PendingTransform
 	{
 		return this.m_needsUpdate;
 	}
+	public isResolved(): boolean
+	{
+		return this.m_universeFromNode != null;
+	}
+	
 	public update( parents: PendingTransform[], parentFromNode: mat4, 
 		updateCallback?: ( universeFromNode:mat4 ) => void,
 		computeCallback?: TransformComputeFunction)
@@ -150,11 +156,19 @@ function minimalToMat4Transform( minimal: MinimalPose ): mat4
 	return nodeTransformToMat4( transform );
 }
 
+enum AnchorState
+{
+	Grabbed,
+	Hooked,
+	Parented,
+}
+
 interface NodeToNodeAnchor_t
 {
+	state: AnchorState;
 	parentGlobalId: EndpointAddr;
 	handleGlobalId?: EndpointAddr;
-	grabberFromGrabbable: mat4;
+	parentFromGrabbable: mat4;
 	grabbableParentFromGrabbableOrigin?: mat4;
 	anchorToRestore?: NodeToNodeAnchor_t;
 }
@@ -523,7 +537,7 @@ export class AvDefaultTraverser
 			{
 				event.hookId = oldAnchor.anchorToRestore.parentGlobalId;
 				event.hookFromGrabbable = 
-					nodeTransformFromMat4( oldAnchor.anchorToRestore.grabberFromGrabbable );
+					nodeTransformFromMat4( oldAnchor.anchorToRestore.parentFromGrabbable );
 			}
 		}
 
@@ -646,7 +660,7 @@ export class AvDefaultTraverser
 				}
 			}
 
-			this.traverseNode( rootNode, null );
+			this.traverseNode( rootNode, null, null );
 
 			// send empty action data for any hand that we don't care about anymore
 			for( let hand of oldRelevantHands )
@@ -708,11 +722,13 @@ export class AvDefaultTraverser
 	}
 	
 
-	@bind 
-	traverseNode( node: AvNode, defaultParent: PendingTransform ): void
+	traverseNode( node: AvNode, defaultParent: PendingTransform, parentGlobalId?: EndpointAddr ): void
 	{
 		let handBefore = this.m_currentHand;
 		let visibilityBefore = this.m_currentVisibility;
+
+		let nodeData = this.getNodeData( node );
+		nodeData.graphParent = parentGlobalId;
 
 		this.m_currentVisibility = ( 0 != ( node.flags & ENodeFlags.Visible ) ) 
 			&& this.m_currentVisibility;
@@ -792,7 +808,6 @@ export class AvDefaultTraverser
 		}
 		this.m_currentNodeByType[ node.type ].push( node );
 
-		let nodeData = this.getNodeData( node );
 		nodeData.lastFlags = node.flags;
 		nodeData.lastNode = node;
 		
@@ -808,7 +823,7 @@ export class AvDefaultTraverser
 		{
 			for ( let child of node.children )
 			{
-				this.traverseNode( child, thisNodeTransform );
+				this.traverseNode( child, thisNodeTransform, node.globalId );
 			}
 		}
 
@@ -869,8 +884,9 @@ export class AvDefaultTraverser
 			}
 			this.m_nodeToNodeAnchors[ endpointAddrToString( node.globalId ) ] =
 			{
+				state: AnchorState.Hooked,
 				parentGlobalId: origin,
-				grabberFromGrabbable,
+				parentFromGrabbable: grabberFromGrabbable,
 			}
 		}
 	}
@@ -1165,11 +1181,14 @@ export class AvDefaultTraverser
 			{
 				// this is a simple grabbable that is transformed by its grabber directly
 				this.updateTransform( node.globalId, grabberTransform, 
-					parentInfo.grabberFromGrabbable, 
+					parentInfo.parentFromGrabbable, 
 					( universeFromNode: mat4 ) =>
 					{
-						this.preserveTransform( node, parentInfo.parentGlobalId, grabberTransform, 
-							universeFromNode );
+						if( parentInfo.state == AnchorState.Grabbed )
+						{
+							this.preserveTransform( node, parentInfo.parentGlobalId, grabberTransform, 
+								universeFromNode );	
+						}
 					} );
 			}
 			else
@@ -1189,7 +1208,7 @@ export class AvDefaultTraverser
 						//		This may be the same as the parent, but if there was any kind of
 						//		previous grabbing and dragging of the grabbable, this would include that
 						//		previous transform. 
-						let grabberFromGrabbable = parentInfo.grabberFromGrabbable;
+						let grabberFromGrabbable = parentInfo.parentFromGrabbable;
 						let grabPoint = grabberFromGrabbable.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) );
 						let universeFromGrabber = universeFromParents[1];
 						let universeFromParent = universeFromParents[0];
@@ -1266,6 +1285,8 @@ export class AvDefaultTraverser
 
 		if( node.flags & ENodeFlags.PreserveGrabTransform )
 		{
+			// console.log( `preserveTransform for ${ endpointAddrToString( node.globalId ) } `
+			// 	+ `setting lastParentFromNode` );
 			let nodeData = this.getNodeData( node );
 			nodeData.lastParentFromNode = parentFromNode;
 		}
@@ -1576,9 +1597,10 @@ export class AvDefaultTraverser
 
 				this.m_nodeToNodeAnchors[ grabbableIdStr ] = 
 				{
+					state: AnchorState.Grabbed,
 					parentGlobalId: grabEvent.grabberId,
 					handleGlobalId: grabEvent.handleId,
-					grabberFromGrabbable,
+					parentFromGrabbable: grabberFromGrabbable,
 					grabbableParentFromGrabbableOrigin, 
 					anchorToRestore,
 				};
@@ -1600,15 +1622,17 @@ export class AvDefaultTraverser
 
 			case AvGrabEventType.EndGrab:
 			{
-				console.log( "Traverser ending grab of " + grabEvent.grabbableId + " by " + grabEvent.grabberId );
+				console.log( `Traverser ending grab of ${ endpointAddrToString( grabEvent.grabbableId ) }`
+					+ ` by ${ endpointAddrToString( grabEvent.grabberId ) }` );
 				Av().renderer.endGrab( grabEvent.grabberId, grabEvent.grabbableId );
 				let oldAnchor = this.m_nodeToNodeAnchors[ grabbableIdStr ];
 				if( !endpointAddrIsEmpty( grabEvent.hookId ) )
 				{
 					let anchor: NodeToNodeAnchor_t =
 					{
+						state: AnchorState.Hooked,
 						parentGlobalId: grabEvent.hookId,
-						grabberFromGrabbable: null,
+						parentFromGrabbable: null,
 					};
 
 					let msg: MsgAttachGadgetToHook =
@@ -1622,10 +1646,12 @@ export class AvDefaultTraverser
 					if( hookData.lastFlags & ENodeFlags.PreserveGrabTransform )
 					{
 						// this hook wants to retain the relative transform
-						anchor.grabberFromGrabbable = nodeTransformToMat4( grabEvent.hookFromGrabbable );
+						anchor.parentFromGrabbable = nodeTransformToMat4( grabEvent.hookFromGrabbable );
 						msg.hookFromGrabbable = grabEvent.hookFromGrabbable;
 					}
 
+					let nodeData = this.getNodeDataByEpa( grabEvent.grabbableId, AvNodeType.Grabbable );
+					nodeData.lastParentFromNode = nodeTransformToMat4( grabEvent.hookFromGrabbable );
 					this.m_nodeToNodeAnchors[ grabbableIdStr ] = anchor;
 
 					this.m_endpoint.sendMessage( MessageType.AttachGadgetToHook, msg );
@@ -1643,6 +1669,22 @@ export class AvDefaultTraverser
 				{
 					// we're dropping into open space
 					delete this.m_nodeToNodeAnchors[ endpointAddrToString( grabEvent.grabbableId ) ];
+
+					// figure out our current transform relative to our non-grabbed parent in the scene
+					// graph
+					let grabbableData = this.getNodeDataByEpa( grabEvent.grabbableId );
+					let graphParentTransform = grabbableData.graphParent ? 
+						this.getTransform( grabbableData.graphParent ) : null;
+					let universeFromGraphParent = graphParentTransform?.getUniverseFromNode() ?? mat4.identity;
+					let universeFromGrabbable = this.getTransform( grabEvent.grabbableId ).getUniverseFromNode();
+					let graphParentFromUniverse = universeFromGraphParent.inverse();
+					let graphParentFromGrabbable = mat4.product( graphParentFromUniverse, universeFromGrabbable, 
+						new mat4 );
+
+					// remember our transform so we'll save that state and also so we'll draw
+					// in the right place next frame
+					this.preserveTransform( grabbableData.lastNode, null, null, 
+						universeFromGrabbable, graphParentFromGrabbable );
 				}
 
 
