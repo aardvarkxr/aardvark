@@ -123,7 +123,7 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 		{
 			let modelUrl = isUrl( model.src ) ? model.src : this.props.uri + "/" + model.src;
 
-			return <AvModel uri= { model.src } scaleToFit={ { x: radius, y: radius, z: radius } }/>;
+			return <AvModel uri= { modelUrl } scaleToFit={ { x: radius, y: radius, z: radius } }/>;
 		}
 
 		return <AvModel uri= { g_builtinModelError } scaleToFit={ { x: radius, y: radius, z: radius } }/>;
