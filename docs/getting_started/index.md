@@ -41,8 +41,8 @@ Aardvark gadget project create script (0.4.0)
 ? Texture height 1024
 ? Does your gadget start other gadgets? (y/N)
 ? Does your gadget start other gadgets? No
-? Does your gadget join multi-user chambers? (y/N)
-? Does your gadget join multi-user chambers? No
+? Does your gadget join multi-user rooms? (y/N)
+? Does your gadget join multi-user rooms? No
 ? Do you want to debug with VS Code? (Y/n)
 ? Do you want to debug with VS Code? Yes
 Your answers:  {
@@ -52,12 +52,12 @@ Your answers:  {
   width: 1024,
   height: 1024,
   startsGadgets: false,
-  joinsChambers: false,
+  joinsRooms: false,
   wantsVSCode: true
 }
 Using @aardvarkxr/aardvark-react@^0.4.0 and @aardvarkxr/aardvark-shared@^0.4.0
 Created ./src
-Added gadget_manifest.json
+Added manifest.webmanifest
 Added tsconfig.json
 Added package.json
 Added src/styles.css
@@ -81,7 +81,7 @@ E:\GETTINGSTARTED
 |       launch.json
 |
 \---src
-    |   gadget_manifest.json
+    |   manifest.webmanifest
     |   index.html
     |   main.tsx
     |   styles.css
@@ -154,7 +154,7 @@ Child
     Built at: 04/04/2020 9:47:13 AM
                      Asset       Size  Chunks             Chunk Names
               ./index.html  297 bytes          [emitted]
-      gadget_manifest.json  168 bytes          [emitted]
+      manifest.webmanifest  168 bytes          [emitted]
                   index.js   10.9 MiB    main  [emitted]  main
                  main.d.ts   12 bytes          [emitted]
     models/placeholder.glb   9.38 KiB          [emitted]
@@ -192,7 +192,7 @@ Changing any of the source files will cause webpack to build again and update th
 At this point the output directory should look like this:
 ```
 E:\GETTINGSTARTED\DIST
-|   gadget_manifest.json
+|   manifest.webmanifest
 |   index.html
 |   index.js
 |   main.d.ts
@@ -227,32 +227,39 @@ If you grab the placeholder sphere icon, you'll see your gadget's panel.
 ![Gadget panel](gadget_panel.jpg "Gadget Panel")
 
 
-# Step 4 - Understanding gadget_manifest.json
+# Step 4 - Understanding manifest.webmanifest
 
-Your gadget's src directory contains a file called gadget_manifest.json that has the following in it.
-```json
+Your gadget's src directory contains a file called manifest.webmanifest that has the following in it.
+```webmanifest
 {
+	"xr_type": "aardvark-gadget@^0.6.6",
 	"name": "My Awesome Gadget",
-	"permissions": [
-		"scenegraph"
+	"icons": [
+		{
+			"src": "models/placeholder.glb",
+			"type": "model/gltf-binary"
+		}
 	],
-	"width": 1024,
-	"height": 1024,
-	"model": "models/placeholder.glb",
-	"startAutomatically": false
+	"aardvark": {
+		"permissions": [
+			"scenegraph"
+		],
+		"browserWidth": 1024,
+		"browserHeight": 1024,
+		"startAutomatically": false
+	}
 }
 ```
 
 Every gadget needs to define a manifest file to tell Aardvark how to deal with that gadget. The fields in the manifest file are:
 * name - The user facing name of the gadget. This isn't currently shown to a user anywhere, but please set one anyway.
+* icons - The URL of a glTF model to use to represent this gadget in the gadget menu. If this does not start with HTTP or HTTPS it must be a relative file path (using forward slashes) to the model file that is relative to the gadget manifest file itself. **(note that if you use a custom icon you currently need to ensure it's placed in `dist/models`)** 
 * permissions - Aardvark has a rudimentary permission system that allows gadgets to have access to certain blocks of functionality. Possible values are:
   * scenegraph - The gadget is allowed to submit a scene graph. Pretty much every gadget has this permission.
-  * chamber - The gadget is allowed to join and leave chambers on behalf of the user.
+  * room - The gadget is allowed to join and leave rooms on behalf of the user.
   * master - The gadget is the master gadget and is allowed to start other gadgets. You shouldn't set this in your own gadget. 
-* width, height - The width and height of the browser that is created for this gadget. Gadgets that don't use panels should set this to small numbers like 16x16 to save on video memory. 
-* model - The URL of a glTF model to use to represent this gadget in the gadget menu. If this does not start with HTTP or HTTPS it must be a relative file path (using forward slashes) to the model file that is relative to the gadget manifest file itself.
+* browserWidth, browserHeight - The width and height of the browser that is created for this gadget. Gadgets that don't use panels should set this to small numbers like 16x16 to save on video memory. 
 * startAutomatically - If this is true and the gadget is installed, the gadget will start automatically when Aardvark starts. This is useful for gadgets that don't have a grabbable at their root. Defaults to false.
-* shareInChamber - If this is true, the gadget will be shared with other members of any chamber that the local user is a member of. Defaults to true.
 
 
 # Step 5 - Understanding the gadget scene graph
