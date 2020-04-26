@@ -1910,8 +1910,26 @@ class CServer
 			this.m_wss.on('connection', this.onConnection );
 		} );
 
-		this.m_app.use( "/gadgets", express.static( path.resolve( g_localInstallPath, "gadgets" ) ) );
-		this.m_app.use( "/models", express.static( path.resolve( g_localInstallPath, "models" ) ) );
+		this.m_app.use( "/gadgets", express.static( path.resolve( g_localInstallPath, "gadgets" ),
+		{
+			setHeaders: ( res: express.Response, path: string ) =>
+			{
+				if( path.endsWith( ".webmanifest" ) )
+				{
+					res.setHeader( "Access-Control-Allow-Origin", "*" );
+				}
+			}
+		}) );
+		this.m_app.use( "/models", express.static( path.resolve( g_localInstallPath, "models" ),
+		{
+			setHeaders: ( res: express.Response, path: string ) =>
+			{
+				if( path.endsWith( ".glb" ) )
+				{
+					res.setHeader( "Access-Control-Allow-Origin", "*" );
+				}
+			}
+		} ) );
 	}
 
 	async init()
