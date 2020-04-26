@@ -165,12 +165,12 @@ export class AvHook extends AvBaseNode< AvHookProps, {} >
 			case AvGrabEventType.EnterHookRange:
 				newHighlight = HookHighlight.InRange;
 				this.m_lastGrabbableInRange = evt.grabbableId;
-				console.log( "Setting lastGrabbableInProgress", evt.grabbableId );
+				//console.log( "Setting lastGrabbableInProgress", evt.grabbableId );
 				break;
 
 			case AvGrabEventType.LeaveHookRange:
 				newHighlight = HookHighlight.GrabInProgress;
-				console.log( "Clearing lastGrabbableInProgress", evt.grabbableId );
+				//console.log( "Clearing lastGrabbableInProgress", evt.grabbableId );
 				this.m_lastGrabbableInRange = null;
 				break;
 		}
@@ -180,7 +180,7 @@ export class AvHook extends AvBaseNode< AvHookProps, {} >
 			this.m_lastHighlight = newHighlight;
 			if( this.props.updateHighlight )
 			{
-				console.log( "Updating hook highlight", this.m_lastHighlight, this.m_lastGrabbableInRange);
+				//console.log( "Updating hook highlight", this.m_lastHighlight, this.m_lastGrabbableInRange);
 				this.props.updateHighlight( this.m_lastHighlight, this.m_lastGrabbableInRange );
 			}
 		}

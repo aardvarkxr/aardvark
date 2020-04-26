@@ -3,7 +3,7 @@ import { AvTransform } from './aardvark_transform';
 import bind from 'bind-decorator';
 import { AvModel } from './aardvark_model';
 import { EndpointAddr } from '@aardvarkxr/aardvark-shared';
-import { HighlightType, AvGrabbable } from './aardvark_grabbable';
+import { HighlightType, AvGrabbable, HookInteraction } from './aardvark_grabbable';
 import { AvModelBoxHandle } from './aardvark_handles';
 
 export enum ShowGrabbableChildren
@@ -139,7 +139,8 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 
 		return (
 			<AvGrabbable updateHighlight={ this.onUpdateHighlight } preserveDropTransform={ true }
-				grabWithIdentityTransform={ this.props.grabWithIdentityTransform } dropOnHooks={ true }>
+				grabWithIdentityTransform={ this.props.grabWithIdentityTransform } 
+				hookInteraction={ HookInteraction.HighlightAndDrop }>
 				<AvTransform uniformScale={ scale }>
 					<AvModel uri={ this.props.modelUri} color={ this.props.modelColor }/>
 					<AvModelBoxHandle uri={ this.props.modelUri } />

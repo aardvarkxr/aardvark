@@ -1,9 +1,9 @@
-import * as React from 'react';
-import  * as ReactDOM from 'react-dom';
-
+import { AvGadget, AvGadgetSeed, AvGrabbable, AvModel, AvModelBoxHandle, AvPanel, AvPanelAnchor, AvTransform, HighlightType, HookInteraction } from '@aardvarkxr/aardvark-react';
+import { EndpointAddr, g_builtinModelGear } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
-import { AvGadget, AvTransform, AvGrabButton, AvPanelAnchor, AvGadgetSeed, AvPanel, AvGrabbable, AvModelBoxHandle, HighlightType, AvModel } from '@aardvarkxr/aardvark-react';
-import { g_builtinModelGear, EndpointAddr } from '@aardvarkxr/aardvark-shared';
+import * as React from 'react';
+import * as ReactDOM from 'react-dom';
+
 
 
 interface ControlPanelState
@@ -82,7 +82,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		return (
 			<AvGrabbable updateHighlight={ this.onUpdateHighlight } preserveDropTransform={ true }
 				grabWithIdentityTransform={ true }
-				dropOnHooks={ true }> 
+				hookInteraction={ HookInteraction.HighlightAndDrop }> 
 				<AvTransform uniformScale={ this.state.highlight == HighlightType.InRange ? 1.1 : 1.0 } >
 					<AvModel uri={ g_builtinModelGear } />
 					<AvModelBoxHandle uri={ g_builtinModelGear }/>

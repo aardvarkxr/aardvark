@@ -1,5 +1,5 @@
 import { EndpointAddr, indexOfEndpointAddrs, endpointAddrsMatch, MsgGrabberState,
-	AvGrabEvent, AvGrabEventType, GrabberHighlight, AvGrabbableCollision, ENodeFlags, EAction, EHand, GrabberHookState, EHookVolume } 
+	AvGrabEvent, AvGrabEventType, GrabberHighlight, AvGrabbableCollision, ENodeFlags, EAction, EHand, GrabberHookState, EHookVolume, AvNodeTransform } 
 	from '@aardvarkxr/aardvark-shared';
 import { assert } from '@aardvarkxr/aardvark-react';
 import { mat4 } from '@tlaukkan/tsm';
@@ -361,7 +361,8 @@ export class CGrabStateProcessor
 				{
 					let bestHook = findBestHook( state.hooks, false );
 					if( bestHook 
-						&& 0 != ( lastGrabbableCollision.grabbableFlags & ENodeFlags.AllowDropOnHooks ) )
+						&& 0 != ( lastGrabbableCollision.grabbableFlags & 
+							( ENodeFlags.HighlightHooks | ENodeFlags.AllowDropOnHooks ) ) )
 					{
 						// we handle hooks before dropping in case we got the
 						// unpress and the hook in the same update
@@ -435,10 +436,17 @@ export class CGrabStateProcessor
 							hookId: this.m_lastHook,
 						});
 
-					let universeFromGrabbable = this.m_context.getUniverseFromNode( this.m_lastGrabbable );
-					let universeFromHook = this.m_context.getUniverseFromNode( this.m_lastHook );
-					let hookFromUniverse = universeFromHook.copy( new mat4( ) ).inverse();
-					let hookFromGrabbable = hookFromUniverse.multiply( universeFromGrabbable );
+					let hookFromGrabbableTransform: AvNodeTransform;
+					let hookId: EndpointAddr;
+					if( 0 != ( this.m_lastGrabbableFlags & ENodeFlags.AllowDropOnHooks ) )
+					{
+						let universeFromGrabbable = this.m_context.getUniverseFromNode( this.m_lastGrabbable );
+						let universeFromHook = this.m_context.getUniverseFromNode( this.m_lastHook );
+						let hookFromUniverse = universeFromHook.copy( new mat4( ) ).inverse();
+						let hookFromGrabbable = hookFromUniverse.multiply( universeFromGrabbable );
+						hookFromGrabbableTransform = nodeTransformFromMat4( hookFromGrabbable );
+						hookId = this.m_lastHook;
+					}
 
 					this.m_context.sendGrabEvent( 
 						{
@@ -448,8 +456,8 @@ export class CGrabStateProcessor
 							grabbableId: this.m_lastGrabbable,
 							grabbableFlags: this.m_lastGrabbableFlags,
 							handleId: this.m_lastHandle,
-							hookId: this.m_lastHook,
-							hookFromGrabbable: nodeTransformFromMat4( hookFromGrabbable ),
+							hookId,
+							hookFromGrabbable: hookFromGrabbableTransform,
 						});
 					this.m_lastHighlight = GrabberHighlight.InRange;
 					break;

@@ -1,5 +1,5 @@
-import { AvGadget, AvStandardGrabbable, AvPrimitive, PrimitiveYOrigin, PrimitiveZOrigin, PrimitiveType, AvTransform, AvGrabbable, AvModelBoxHandle } from '@aardvarkxr/aardvark-react';
-import { g_builtinModelBox, AvNodeTransform, g_builtinModelCylinder } from '@aardvarkxr/aardvark-shared';
+import { AvGadget, AvStandardGrabbable, AvPrimitive, PrimitiveYOrigin, PrimitiveZOrigin, PrimitiveType, AvTransform, AvGrabbable, AvModelBoxHandle, AvHook, HookHighlight, HookInteraction } from '@aardvarkxr/aardvark-react';
+import { g_builtinModelBox, AvNodeTransform, g_builtinModelCylinder, EndpointAddr } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
@@ -38,8 +38,28 @@ interface PaintBucketProps
 
 function PaintBucket( props: PaintBucketProps )
 {
-	return <AvPrimitive type={ PrimitiveType.Cylinder } height={0.1} width={0.07} depth={0.07} 
-		originY={ PrimitiveYOrigin.Bottom } color={ props.color }/>
+	const [ touched, setTouched ] = React.useState( false );
+
+	let updateHighlight = ( highlightType: HookHighlight, grabbableEpa: EndpointAddr )=>
+	{
+		if( highlightType == HookHighlight.InRange )
+		{
+			console.log( `Touched ${ props.color } bucket` );
+			setTouched( true );
+		}
+		else
+		{
+			setTouched( false );
+		}
+	};
+
+	return <>
+			<AvPrimitive type={ PrimitiveType.Cylinder } height={0.1} width={0.07} depth={0.07} 
+				originY={ PrimitiveYOrigin.Bottom } color={ touched ? "yellow" : props.color }/>
+			<AvHook updateHighlight={ updateHighlight } xMin={ -0.035 } xMax={0.035 }
+				zMin={ -0.035 } zMax={0.035 } yMin={0} yMax={0.1} dropIconUri=""
+				/>
+		</>
 }
 
 interface MarkerProps
@@ -52,7 +72,7 @@ function Marker( props: MarkerProps )
 {
 	let fn = ( parentFromNode: AvNodeTransform, universeFromNode: AvNodeTransform ) =>
 	{
-		console.log( "new transform", parentFromNode );
+		//console.log( "new transform", parentFromNode );
 	};
 
 	const markerRadius = 0.015;
@@ -60,7 +80,7 @@ function Marker( props: MarkerProps )
 
 	return <AvGrabbable onTransformUpdated={ fn } preserveDropTransform={ true } 
 		initialTransform={ { position: { x: props.initialXOffset, y: 0.005, z: 0 } } }
-		showGrabIndicator={ false }
+		showGrabIndicator={ false } hookInteraction={ HookInteraction.HighlightOnly }
 		persistentName={`${props.initialColor }_marker`} >
 			<AvTransform scaleX={markerRadius} scaleY={ 0.06 } scaleZ={ markerRadius } translateY={ 0.03 }>
 				<AvModelBoxHandle uri={ g_builtinModelCylinder } />

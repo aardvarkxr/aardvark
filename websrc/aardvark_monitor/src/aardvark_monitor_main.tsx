@@ -1,5 +1,5 @@
 import { CMonitorEndpoint, DegreesToRadians, EulerAnglesToQuaternion, QuaternionToEulerAngles, RadiansToDegrees } from '@aardvarkxr/aardvark-react';
-import { AardvarkManifest, AvGrabEvent, AvGrabEventType, AvNode, AvNodeTransform, AvNodeType, AvQuaternion, AvVector, EndpointAddr, endpointAddrToString, EndpointType, ENodeFlags, Envelope, MessageType, MinimalPose, MsgGrabEvent, MsgLostEndpoint, MsgNewEndpoint, MsgOverrideTransform, MsgPokerProximity, MsgResourceLoadFailed, MsgUpdateSceneGraph } from '@aardvarkxr/aardvark-shared';
+import { AardvarkManifest, AvGrabEvent, AvGrabEventType, AvNode, AvNodeTransform, AvNodeType, AvQuaternion, AvVector, EndpointAddr, endpointAddrToString, EndpointType, ENodeFlags, Envelope, MessageType, MinimalPose, MsgGrabEvent, MsgLostEndpoint, MsgNewEndpoint, MsgOverrideTransform, MsgPokerProximity, MsgResourceLoadFailed, MsgUpdateSceneGraph, AvVolume, EVolumeType } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import { action, computed, observable, ObservableMap } from 'mobx';
 import { observer } from 'mobx-react';
@@ -681,6 +681,27 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 	
 	}
 
+	public renderVolume( volume: AvVolume ): JSX.Element
+	{
+		if( !volume )
+			return null;
+
+		switch( volume.type )
+		{
+			case EVolumeType.Sphere:
+				return <div className="AvNodeProperty">volume: radius={volume.radius }</div>;
+
+			case EVolumeType.AABB:
+				return <div className="AvNodeProperty">volume: AABB({ JSON.stringify( volume.aabb ) } )</div>;
+
+			case EVolumeType.ModelBox:
+				return <div className="AvNodeProperty">volume: model box={ volume.uri }</div>;
+
+			default:
+				return <div className="AvNodeProperty">volume: Unknown/invalid</div>;
+		}
+	}
+
 	public renderNode( node: AvNode ): JSX.Element
 	{
 		if( !node )
@@ -714,7 +735,7 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 				{ node.propColor.b.toFixed( 2 ) }
 				{ node.propColor.r != undefined && ( ", " + node.propColor.a ) }
 				</div> }
-			{ node.propVolume && <div className="AvNodeProperty">volume: radius={node.propVolume.radius }</div> }
+			{ this.renderVolume( node.propVolume ) }
 			{ node.propInteractive && <div className="AvNodeProperty">Interactive</div> }
 			{ node.propConstraint && <div className="AvNodeProperty">Constraint: 
 				[ { node.propConstraint.minX }, {node.propConstraint.maxX } ]

@@ -1,4 +1,5 @@
 
+#include <tools/logging.h>
 #include "collision_tester.h"
 
 CCollisionTester::CCollisionTester()
@@ -145,6 +146,39 @@ bool sphereBoxIntersect( const CCollisionTester::Volume_t & sphere, const CColli
 }
 
 
+bool boxBoxIntersectInternal( const CCollisionTester::Volume_t& box1, const CCollisionTester::Volume_t& box2 )
+{
+	glm::mat4 box1FromBox2 = glm::inverse( box1.universeFromVolume ) * box2.universeFromVolume;
+
+	// TODO: We need a real box/box intersection test. Until then, sample some points
+	glm::vec4 points[] =
+	{
+		glm::vec4( box2.box.xMin, box2.box.yMin, box2.box.zMin, 1 ),
+		glm::vec4( box2.box.xMin, box2.box.yMin, box2.box.zMax, 1 ),
+		glm::vec4( box2.box.xMin, box2.box.yMax, box2.box.zMin, 1 ),
+		glm::vec4( box2.box.xMin, box2.box.yMax, box2.box.zMax, 1 ),
+		glm::vec4( box2.box.xMax, box2.box.yMin, box2.box.zMin, 1 ),
+		glm::vec4( box2.box.xMax, box2.box.yMin, box2.box.zMax, 1 ),
+		glm::vec4( box2.box.xMax, box2.box.yMax, box2.box.zMin, 1 ),
+		glm::vec4( box2.box.xMax, box2.box.yMax, box2.box.zMax, 1 ),
+	};
+
+	for ( const glm::vec4 & point : points )
+	{
+		glm::vec4 pointInBox1 = box1FromBox2 * point;
+		if ( pointInBox1.x >= box1.box.xMin && pointInBox1.x <= box1.box.xMax
+			&& pointInBox1.y >= box1.box.yMin && pointInBox1.y <= box1.box.yMax
+			&& pointInBox1.z >= box1.box.zMin && pointInBox1.z <= box1.box.zMax )
+			return true;
+	}
+	return false;
+}
+
+bool boxBoxIntersect( const CCollisionTester::Volume_t& box1, const CCollisionTester::Volume_t& box2 )
+{
+	return boxBoxIntersectInternal( box1, box2 ) || boxBoxIntersectInternal( box2, box1 );
+}
+
 bool volumesIntersect( const CCollisionTester::Volume_t & v1, const CCollisionTester::Volume_t &v2 )
 {
 	if ( v1.type == CCollisionTester::VolumeType::Sphere && v2.type == CCollisionTester::VolumeType::Sphere )
@@ -159,8 +193,11 @@ bool volumesIntersect( const CCollisionTester::Volume_t & v1, const CCollisionTe
 	{
 		return sphereBoxIntersect( v2, v1 );
 	}
+	if ( v2.type == CCollisionTester::VolumeType::Box && v1.type == CCollisionTester::VolumeType::Box )
+	{
+		return boxBoxIntersect( v2, v1 );
+	}
 
-	// TODO: probably need box/box intersection eventually
 
 	return false;
 }
@@ -238,6 +275,8 @@ std::vector<GrabberCollisionState_t> CCollisionTester::updateGrabberIntersection
 				grabberState.hooks.push_back( { hook.globalHookId, inner ? EHookVolume::Inner : EHookVolume::Outer } );
 			}
 		}
+
+		//tools::LogDefault()->info( "grabber %v has %v hooks", endpointAddrToString( grabber.globalGrabberId ).c_str(), grabberState.hooks.size() );
 
 		results.push_back( std::move( grabberState ) );
 	}

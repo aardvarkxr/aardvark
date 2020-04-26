@@ -3,7 +3,7 @@ import  * as ReactDOM from 'react-dom';
 
 import bind from 'bind-decorator';
 
-import { AvGadget, AvTransform, AvPanel, AvGrabbable, HighlightType, GrabResponse, AvSphereHandle } from '@aardvarkxr/aardvark-react';
+import { AvGadget, AvTransform, AvPanel, AvGrabbable, HighlightType, GrabResponse, AvSphereHandle, HookInteraction } from '@aardvarkxr/aardvark-react';
 import { EndpointAddr, AvGrabEvent, EAction, EHand } from '@aardvarkxr/aardvark-shared';
 import { ACModel, ACView } from 'common/croquet_utils';
 import { CroquetSession, startSession } from '@croquet/croquet';
@@ -234,7 +234,7 @@ class TestPanel extends React.Component< {}, TestPanelState >
 				<div>
 					<AvGrabbable updateHighlight={ this.onHighlightGrabbable }
 						onGrabRequest={ this.onGrabRequest }
-						dropOnHooks={ true }>
+						hookInteraction={ HookInteraction.HighlightAndDrop }>
 						<AvSphereHandle radius={0.1} />
 						
 						<AvTransform uniformScale={ scale }>

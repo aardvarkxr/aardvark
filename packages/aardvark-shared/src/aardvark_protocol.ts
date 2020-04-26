@@ -774,6 +774,7 @@ export enum ENodeFlags
 	Tethered					= 1 << 6,
 	ShowGrabIndicator			= 1 << 7,
 	Remote						= 1 << 8,
+	HighlightHooks  			= 1 << 9,
 }
 
 export interface AvConstraint

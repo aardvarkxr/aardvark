@@ -28,6 +28,19 @@ export enum HighlightType
 }
 
 
+/** Options for how to interact with hooks. */
+export enum HookInteraction
+{
+	/** No interaction with hooks at all. */
+	None = 0,
+
+	/** Highlight the hook, but never drop on a hook. */
+	HighlightOnly = 1,
+
+	/** Highlight the hook and drop on it when appropriate. */
+	HighlightAndDrop = 2,
+}
+
 interface AvGrabbableProps extends AvBaseNodeProps
 {
 	/** This callback is called whenever the highlight state of the grabbable is updated. 
@@ -79,11 +92,11 @@ interface AvGrabbableProps extends AvBaseNodeProps
 	 */
 	initialTransform?: AvNodeTransform;
 
-	/** If this prop is true the grabbable can be attached to hooks by dropping on them.
+	/** Controls how this grabbable interacts wtih hooks
 	 * 
-	 * @default false
+	 * @default HighlightAndDrop
 	 */
-	dropOnHooks?: boolean;
+	hookInteraction?: HookInteraction;
 
 	/** If this is true, the grabbable will always be grabbed with an identity transform
 	 * instead of preserving the transform between the grabbable and the grabber at the
@@ -162,9 +175,25 @@ export class AvGrabbable extends AvBaseNode< AvGrabbableProps, AvGrabbableState 
 		{
 			node.flags |= ENodeFlags.PreserveGrabTransform;
 		}
-		if( this.props.dropOnHooks && !this.state.hook )
+		switch( this.props.hookInteraction ?? HookInteraction.None )
 		{
-			node.flags |= ENodeFlags.AllowDropOnHooks;
+			case HookInteraction.None:
+				// no flags
+				break;
+
+			case HookInteraction.HighlightOnly:
+				if( !this.state.hook )
+				{
+					node.flags |= ENodeFlags.HighlightHooks;
+				}
+				break;
+
+			case HookInteraction.HighlightOnly:
+				if( !this.state.hook )
+				{
+					node.flags |= ENodeFlags.HighlightHooks | ENodeFlags.AllowDropOnHooks;
+				}
+				break;
 		}
 		if( this.state.hook )
 		{
