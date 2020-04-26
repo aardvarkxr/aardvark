@@ -13,6 +13,7 @@ const g_alwaysInstalledGadgets =
 	"http://localhost:23842/gadgets/test_panel",
 	"http://localhost:23842/gadgets/hand_mirror",
 	"http://localhost:23842/gadgets/control_test",
+	"http://localhost:23842/gadgets/whiteboard",
 ];
 
 const g_builtinGadgets =

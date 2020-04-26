@@ -698,7 +698,8 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 		}
 
 		return <div className="AvNode" key={node.id }>
-			<div className="AvNodeType">{AvNodeType[ node.type ] } @{ node.id } 
+			<div className="AvNodeType">{AvNodeType[ node.type ] } @{ node.id }
+				{ node.persistentName ? `" ${ node.persistentName }"` : "" }
 				{ this.renderFlags( node.flags ) } 
 			</div>
 			{ node.propUniverseName && <div className="AvNodeProperty">remote: {node.propUniverseName }</div> }

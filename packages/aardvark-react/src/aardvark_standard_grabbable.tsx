@@ -42,6 +42,18 @@ interface StandardGrabbableProps
 	*/
 	showChildren?: ShowGrabbableChildren;
 
+	/** Uniform scale to apply to the grab handle.
+	 * 
+	 * @default 1.0
+	*/
+	modelScale?: number;
+
+	/** Color to apply to the grab handle.
+	 * 
+	 * @default none
+	*/
+	modelColor?: string;
+
 	/** Called when the grabbable is grabbed. 
 	 * 
 	 * @default none
@@ -119,11 +131,17 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 				break;
 		}
 
+		let scale = this.state.highlight == HighlightType.InRange ? 1.1 : 1.0;
+		if( this.props.modelScale )
+		{
+			scale *= this.props.modelScale;
+		}
+
 		return (
 			<AvGrabbable updateHighlight={ this.onUpdateHighlight } preserveDropTransform={ true }
 				grabWithIdentityTransform={ this.props.grabWithIdentityTransform } dropOnHooks={ true }>
-				<AvTransform uniformScale={ this.state.highlight == HighlightType.InRange ? 1.1 : 1.0 }>
-					<AvModel uri={ this.props.modelUri} />
+				<AvTransform uniformScale={ scale }>
+					<AvModel uri={ this.props.modelUri} color={ this.props.modelColor }/>
 					<AvModelBoxHandle uri={ this.props.modelUri } />
 				</AvTransform>
 

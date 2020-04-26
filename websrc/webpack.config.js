@@ -101,6 +101,7 @@ module.exports =
 	createConfig( 'simple_social', 'Simple Social', 'tsx' ),
 	createConfig( 'hand_mirror', 'Hand Mirror', 'tsx' ),
 	createConfig( 'control_test', 'Control Tester', 'tsx' ),
+	createConfig( 'whiteboard', 'Whiteboard', 'tsx' ),
 	{
 		target: "node",
 		entry: 
