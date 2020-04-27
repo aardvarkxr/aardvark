@@ -104,6 +104,8 @@ export class CAardvarkEndpoint
 		if( this.m_messageInProgress )
 		{
 			// process this event when whatever is currently being processed returns
+			// let env = parseEnvelope( msgEvent.data );
+			// console.log( `Pushing message of type ${ MessageType[ env.type ] }` );
 			this.m_waitingIncomingMessages.push( msgEvent );
 		}
 		else
@@ -125,6 +127,8 @@ export class CAardvarkEndpoint
 		let env = parseEnvelope( msgEvent.data );
 		if( !env )
 			return;
+
+		//console.log( `Processing message of type ${ MessageType[ env.type ] }` );
 
 		if( this.m_handlers[ env.type ] )
 		{
@@ -188,7 +192,7 @@ export class CAardvarkEndpoint
 
 		if( !this.m_endpointId && type != MessageType.SetEndpointType )
 		{
-			console.log( `Queueing message of type ${ MessageType[ type ] } to be sent when we connect` );
+			//console.log( `Queueing message of type ${ MessageType[ type ] } to be sent when we connect` );
 			this.m_queuedMessages.push( env );
 		}
 		else
