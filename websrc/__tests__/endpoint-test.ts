@@ -90,7 +90,7 @@ beforeEach( async() =>
 
 				case MessageType.CreateRoom:
 					{
-						sendMessage( MessageType.CreateRoom, {} );
+						sendMessage( MessageType.CreateRoomResponse, {} );
 						sendMessage( MessageType.SendRoomMessage, {} );
 					}
 					break;
