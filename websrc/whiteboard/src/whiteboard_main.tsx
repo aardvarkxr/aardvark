@@ -58,6 +58,7 @@ function PaintBucket( props: PaintBucketProps )
 				originY={ PrimitiveYOrigin.Bottom } color={ touched ? "yellow" : props.color }/>
 			<AvHook updateHighlight={ updateHighlight } xMin={ -0.035 } xMax={0.035 }
 				zMin={ -0.035 } zMax={0.035 } yMin={0} yMax={0.1} dropIconUri=""
+				interfaces={ [ "color-picker@1" ] }
 				/>
 		</>
 }
@@ -81,7 +82,9 @@ function Marker( props: MarkerProps )
 	return <AvGrabbable onTransformUpdated={ fn } preserveDropTransform={ true } 
 		initialTransform={ { position: { x: props.initialXOffset, y: 0.005, z: 0 } } }
 		showGrabIndicator={ false } hookInteraction={ HookInteraction.HighlightOnly }
-		persistentName={`${props.initialColor }_marker`} >
+		persistentName={`${props.initialColor }_marker`} 
+		interfaces={ [ "color-picker@1", "surface-drawing@1" ] }
+		>
 			<AvTransform scaleX={markerRadius} scaleY={ 0.06 } scaleZ={ markerRadius } translateY={ 0.03 }>
 				<AvModelBoxHandle uri={ g_builtinModelCylinder } />
 			</AvTransform>

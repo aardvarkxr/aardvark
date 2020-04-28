@@ -80,6 +80,16 @@ interface AvHookProps extends AvBaseNodeProps
 	/** The model to show as an icon when this hook is the drop point for the grabbable.
 	 */
 	dropIconUri: string;
+
+	/** The list of interfaces that this hook implements. These can be any string of the form
+	 * <interfacename>@<version>. When selecting an interface for a grabbable that is in range 
+	 * of a hook Aardvark will select the first matching interface in the list, so the hook
+	 * should order its interfaces from highest to lowest priority if multiple interfaces of the 
+	 * same type are available.
+	 * 
+	 * @default [ "aardvark-gadget@1" ]
+	 */
+	interfaces?: string[];
 }
 
 
@@ -109,6 +119,7 @@ export class AvHook extends AvBaseNode< AvHookProps, {} >
 		
 		node.propOuterVolumeScale = this.props.outerVolumeScale;
 		node.propModelUri = this.props.dropIconUri;
+		node.propInterfaces = this.props.interfaces;
 		
 		if( this.props.xMin || this.props.xMax 
 			|| this.props.yMin || this.props.yMax 

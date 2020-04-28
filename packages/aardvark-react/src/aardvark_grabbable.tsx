@@ -112,6 +112,15 @@ interface AvGrabbableProps extends AvBaseNodeProps
 	 */
 	showGrabIndicator?: boolean;
 
+	/** The list of interfaces that this grabbable implements. These can be any string of the form
+	 * <interfacename>@<version>. When selecting an interface for a grabbable that is in range 
+	 * of a hook Aardvark will select the first matching interface in the list, so the grabbable
+	 * should order its interfaces from highest to lowest priority if multiple interfaces of the 
+	 * same type are available.
+	 * 
+	 * @default [ "aardvark-gadget@1" ]
+	 */
+	interfaces?: string[];
 }
 
 interface AvGrabbableState
@@ -203,6 +212,7 @@ export class AvGrabbable extends AvBaseNode< AvGrabbableProps, AvGrabbableState 
 		{
 			node.flags |= ENodeFlags.ShowGrabIndicator;
 		}
+		node.propInterfaces = this.props.interfaces;
 
 		return node;
 	}

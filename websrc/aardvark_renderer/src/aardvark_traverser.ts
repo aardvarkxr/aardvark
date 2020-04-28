@@ -460,55 +460,61 @@ export class AvDefaultTraverser
 			}
 
 			// figure out which handles are only here to detect proximity
-			if( state.grabbables )
+			for( let intersection of state.grabbables ?? [] )
 			{
-				for( let intersection of state.grabbables )
+				let handleData = this.getNodeDataByEpa( intersection.handleId );
+				if( handleData && typeof handleData.lastFlags === "number" )
 				{
-					let handleData = this.getNodeDataByEpa( intersection.handleId );
-					if( handleData && typeof handleData.lastFlags === "number" )
+					intersection.handleFlags = handleData.lastFlags;
+				}
+				else
+				{
+					intersection.handleFlags = 0;
+				}
+
+				let grabbableData = this.getNodeDataByEpa( intersection.grabbableId );
+				if( grabbableData && typeof grabbableData.lastFlags === "number" )
+				{
+					intersection.grabbableFlags = grabbableData.lastFlags;
+				}
+				else
+				{
+					intersection.grabbableFlags = 0;
+				}
+
+				intersection.interfaces = grabbableData?.lastNode.propInterfaces ?? [ "aardvark-gadget@1" ];
+
+				let grabbableIdStr = endpointAddrToString( intersection.grabbableId );
+				let anchor = this.m_nodeToNodeAnchors[ grabbableIdStr ];
+				if( anchor )
+				{
+					if( anchor.anchorToRestore )
 					{
-						intersection.handleFlags = handleData.lastFlags;
+						// console.log( `Figuring out current hook for ${ grabbableIdStr } - anchorToRestore=${ endpointAddrToString( anchor.anchorToRestore.parentGlobalId ) }` );
+						intersection.currentHook = anchor.anchorToRestore.parentGlobalId;
 					}
 					else
 					{
-						intersection.handleFlags = 0;
-					}
-
-					let grabbableData = this.getNodeDataByEpa( intersection.grabbableId );
-					if( grabbableData && typeof grabbableData.lastFlags === "number" )
-					{
-						intersection.grabbableFlags = grabbableData.lastFlags;
-					}
-					else
-					{
-						intersection.grabbableFlags = 0;
-					}
-
-					let grabbableIdStr = endpointAddrToString( intersection.grabbableId );
-					let anchor = this.m_nodeToNodeAnchors[ grabbableIdStr ];
-					if( anchor )
-					{
-						if( anchor.anchorToRestore )
+						let possibleHookData = this.getNodeDataByEpa( anchor.parentGlobalId );
+						if( possibleHookData.lastNode 
+							&& possibleHookData.lastNode.type == AvNodeType.Hook )
 						{
-							// console.log( `Figuring out current hook for ${ grabbableIdStr } - anchorToRestore=${ endpointAddrToString( anchor.anchorToRestore.parentGlobalId ) }` );
-							intersection.currentHook = anchor.anchorToRestore.parentGlobalId;
+							// console.log( `Figuring out current hook for ${ grabbableIdStr } - Using parent ${ endpointAddrToString( anchor.parentGlobalId ) }` );
+							intersection.currentHook = anchor.parentGlobalId;
 						}
-						else
-						{
-							let possibleHookData = this.getNodeDataByEpa( anchor.parentGlobalId );
-							if( possibleHookData.lastNode 
-								&& possibleHookData.lastNode.type == AvNodeType.Hook )
-							{
-								// console.log( `Figuring out current hook for ${ grabbableIdStr } - Using parent ${ endpointAddrToString( anchor.parentGlobalId ) }` );
-								intersection.currentHook = anchor.parentGlobalId;
-							}
-							// else
-							// {
-							// 	console.log( `Figuring out current hook for ${ grabbableIdStr } - No current hook` );
-							// }
-						}
+						// else
+						// {
+						// 	console.log( `Figuring out current hook for ${ grabbableIdStr } - No current hook` );
+						// }
 					}
 				}
+			}
+
+			// Include interfaces for all the hooks
+			for( let hook of state.hooks ?? [] )
+			{
+				let hookData = this.getNodeDataByEpa( hook.hookId );
+				hook.interfaces = hookData?.lastNode?.propInterfaces ?? [ "aardvark-gadget@1" ];
 			}
 
 			nodeData.grabberProcessor.onGrabberIntersections( state );

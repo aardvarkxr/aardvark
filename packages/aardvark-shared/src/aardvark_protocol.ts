@@ -274,6 +274,7 @@ export interface GrabberHookState
 {
 	hookId: EndpointAddr;
 	whichVolume: EHookVolume;
+	interfaces: string[];
 }
 
 export interface MsgGrabberState
@@ -666,6 +667,7 @@ export enum AvGrabEventType
 	UpdateGrabberHighlight = 11,
 	TransformUpdated = 12,
 	Detach = 13,
+	InterfaceMessage = 14,
 };
 
 export enum GrabberHighlight
@@ -696,6 +698,8 @@ export interface AvGrabEvent
 	universeFromNode?: AvNodeTransform;
 	hookFromGrabbable?: AvNodeTransform;
 	grabberFromGrabbable?: AvNodeTransform;
+	interface?: string;
+	interfaceData?: object;
 }
 
 export interface AvGrabEventProcessor
@@ -710,6 +714,7 @@ export interface AvGrabbableCollision
 	handleFlags: number;
 	grabbableFlags: number;
 	currentHook?: EndpointAddr;
+	interfaces?: string[];
 }
 
 export interface AvVector
@@ -824,6 +829,7 @@ export interface AvNode
 	propStartGap?: number;
 	propEndGap?: number;
 	propScaleToFit?: AvVector;
+	propInterfaces?: string[];
 }
 
 export enum EHand

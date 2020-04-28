@@ -32,16 +32,13 @@ function isProximityOnly( handle: AvGrabbableCollision ): boolean
 	return 0 != ( handle.handleFlags & ENodeFlags.NotifyProximityWithoutGrab );
 }
 
-function findBestHook( hooks: GrabberHookState[], allowOuter: boolean ): GrabberHookState
+export function findBestInterface( grabbable: AvGrabbableCollision, hook: GrabberHookState ): string | null
 {
-	if( !hooks )
-		return null;
-
-	for( let hook of hooks )
+	for( let grabbableInterface of grabbable.interfaces )
 	{
-		if( allowOuter || hook.whichVolume == EHookVolume.Inner )
+		if( hook.interfaces.includes( grabbableInterface ) )
 		{
-			return hook
+			return grabbableInterface;
 		}
 	}
 
@@ -49,20 +46,51 @@ function findBestHook( hooks: GrabberHookState[], allowOuter: boolean ): Grabber
 }
 
 
-function findHook( hooks: GrabberHookState[], hookId: EndpointAddr ): GrabberHookState
+function findBestHook( grabbable: AvGrabbableCollision, hooks: GrabberHookState[], 
+	allowOuter: boolean ): [ GrabberHookState, string ]
 {
 	if( !hooks )
-		return null;
+		return [ null, null ];
 
 	for( let hook of hooks )
 	{
-		if( endpointAddrsMatch( hook.hookId, hookId ) )
+		let iface = findBestInterface( grabbable, hook );
+		if( !iface )
 		{
-			return hook
+			continue;
+		}
+
+		if( allowOuter || hook.whichVolume == EHookVolume.Inner )
+		{
+			return [ hook, iface ];
 		}
 	}
 
-	return null;
+	return [ null, null ];
+}
+
+
+function findHook( grabbable: AvGrabbableCollision, hooks: GrabberHookState[], 
+	hookId: EndpointAddr ): [ GrabberHookState, string ]
+{
+	if( !hooks )
+		return [ null, null ];
+
+	for( let hook of hooks )
+	{
+		let iface = findBestInterface( grabbable, hook );
+		if( !iface )
+		{
+			continue;
+		}
+
+		if( endpointAddrsMatch( hook.hookId, hookId ) )
+		{
+			return [ hook, iface ];
+		}
+	}
+
+	return [ null, null ];
 }
 
 
@@ -359,7 +387,7 @@ export class CGrabStateProcessor
 
 				if( 0 == ( lastGrabbableCollision.grabbableFlags & ENodeFlags.Tethered ) )
 				{
-					let bestHook = findBestHook( state.hooks, false );
+					let [ bestHook, iface ] = findBestHook( lastGrabbableCollision, state.hooks, false );
 					if( bestHook 
 						&& 0 != ( lastGrabbableCollision.grabbableFlags & 
 							( ENodeFlags.HighlightHooks | ENodeFlags.AllowDropOnHooks ) ) )
@@ -376,6 +404,7 @@ export class CGrabStateProcessor
 								grabbableFlags: lastGrabbableCollision.grabbableFlags,
 								handleId: this.m_lastHandle,
 								hookId: this.m_lastHook,
+								interface: iface,
 							});
 						this.m_lastHighlight = GrabberHighlight.NearHook;
 						break;
@@ -400,7 +429,8 @@ export class CGrabStateProcessor
 				break;
 
 			case GrabberHighlight.NearHook:
-				let oldHookState = findHook( state.hooks, this.m_lastHook)
+				let grabberCollision = state.grabbables[ lastGrabbableIndex ];
+				let [ oldHookState, iface ] = findHook( grabberCollision, state.hooks, this.m_lastHook);
 				if( !oldHookState || -1 == lastGrabbableIndex )
 				{
 					// losing our hook or grabbable both kick us back to Grabbed. The 
@@ -420,7 +450,6 @@ export class CGrabStateProcessor
 					break;
 				}
 
-				let grabberCollision = state.grabbables[ lastGrabbableIndex ];
 				this.m_lastGrabbableFlags = grabberCollision.grabbableFlags;
 				if( !this.m_context.getActionState( state.hand, EAction.Grab ) )
 				{
@@ -434,6 +463,7 @@ export class CGrabStateProcessor
 							grabbableFlags: this.m_lastGrabbableFlags,
 							handleId: this.m_lastHandle,
 							hookId: this.m_lastHook,
+							interface: iface,
 						});
 
 					let hookFromGrabbableTransform: AvNodeTransform;
@@ -458,6 +488,7 @@ export class CGrabStateProcessor
 							handleId: this.m_lastHandle,
 							hookId,
 							hookFromGrabbable: hookFromGrabbableTransform,
+							interface: iface,
 						});
 					this.m_lastHighlight = GrabberHighlight.InRange;
 					break;
