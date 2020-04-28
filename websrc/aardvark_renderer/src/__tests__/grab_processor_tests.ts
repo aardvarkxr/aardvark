@@ -25,6 +25,7 @@ function blankHookWithInterfaces( interfaces: string[] ): GrabberHookState
 	return {
 		hookId: null,
 		whichVolume: EHookVolume.Inner,
+		hookFlags: 0,
 		interfaces,
 	};
 }

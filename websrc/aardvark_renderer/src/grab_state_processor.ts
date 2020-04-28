@@ -233,6 +233,15 @@ export class CGrabStateProcessor
 		}
 	}
 	
+	public computeNodeFromNodeTransform( toNode: EndpointAddr, fromNode: EndpointAddr )
+	{
+		let universeFromTN = this.m_context.getUniverseFromNode( toNode );
+		let universeFromFN = this.m_context.getUniverseFromNode( fromNode );
+		let tnFromUniverse = universeFromTN.copy( new mat4( ) ).inverse();
+		let tnFromFN = tnFromUniverse.multiply( universeFromFN );
+		return nodeTransformFromMat4( tnFromFN );
+	}
+
 	public onGrabberIntersections( state: MsgGrabberState )
 	{
 		let bestGrabbable = this.findBestGrabbable( state );
@@ -448,6 +457,19 @@ export class CGrabStateProcessor
 					this.m_lastHook = null;
 					this.m_lastHighlight = GrabberHighlight.Grabbed;
 					break;
+				}
+
+				if( 0 != ( oldHookState.hookFlags & ENodeFlags.NotifyOnTransformChange ) )
+				{
+					this.m_context.sendGrabEvent( 
+						{
+							type: AvGrabEventType.HookTransformUpdated,
+							grabbableId: grabberCollision.grabbableId,
+							hookId: this.m_lastHook,
+							hookFromGrabbable: this.computeNodeFromNodeTransform( this.m_lastHook,
+								grabberCollision.grabbableId ),
+						}
+					)
 				}
 
 				this.m_lastGrabbableFlags = grabberCollision.grabbableFlags;

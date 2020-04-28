@@ -276,6 +276,7 @@ export interface GrabberHookState
 	hookId: EndpointAddr;
 	whichVolume: EHookVolume;
 	interfaces: string[];
+	hookFlags: number;
 }
 
 export interface MsgGrabberState
@@ -675,6 +676,7 @@ export enum AvGrabEventType
 	UpdateGrabberHighlight = 11,
 	TransformUpdated = 12,
 	Detach = 13,
+	HookTransformUpdated = 14,
 };
 
 export enum GrabberHighlight

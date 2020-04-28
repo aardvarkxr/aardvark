@@ -2,7 +2,7 @@ import { AvGadget } from './aardvark_gadget';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 import bind from 'bind-decorator';
 import { endpointAddrsMatch, EndpointAddr, AvNodeType, AvGrabEventType, 
-	AvGrabEvent, EVolumeType, ENodeFlags } from '@aardvarkxr/aardvark-shared';
+	AvGrabEvent, EVolumeType, ENodeFlags, AvNodeTransform } from '@aardvarkxr/aardvark-shared';
 
 
 /** The highlight states that a hook can be in. */
@@ -94,6 +94,14 @@ interface AvHookProps extends AvBaseNodeProps
 	 * @default { "aardvark-gadget@1": null }
 	 */
 	interfaces?: { [interfaceName: string] : HookInterfaceEventProcessor };
+
+	/** This callback allows the hook's owner to respond when the transform for the
+	 * grabbable has been updated relative to a hook it is intersecting.
+	 * 
+	 * * hookFromGrabbable - The transform from the coordinate system of the grabbable itself to the 
+	 * 		coordinate system of the hook.
+	 */
+	onTransformUpdated?: ( grabbable: EndpointAddr, hookFromGrabbable: AvNodeTransform ) => void;
 }
 
 
@@ -120,7 +128,11 @@ export class AvHook extends AvBaseNode< AvHookProps, {} >
 		{
 			node.flags |= ENodeFlags.AllowMultipleDrops;
 		}
-		
+		if( this.props.onTransformUpdated )
+		{
+			node.flags |= ENodeFlags.NotifyOnTransformChange;
+		}
+
 		node.propOuterVolumeScale = this.props.outerVolumeScale;
 		node.propModelUri = this.props.dropIconUri;
 
@@ -207,6 +219,13 @@ export class AvHook extends AvBaseNode< AvHookProps, {} >
 				newHighlight = HookHighlight.GrabInProgress;
 				//console.log( "Clearing lastGrabbableInProgress", evt.grabbableId );
 				this.m_lastGrabbableInRange = null;
+				break;
+
+			case AvGrabEventType.HookTransformUpdated:
+				if( this.props.onTransformUpdated )
+				{
+					this.props.onTransformUpdated( evt.grabbableId, evt.hookFromGrabbable );
+				}
 				break;
 		}
 

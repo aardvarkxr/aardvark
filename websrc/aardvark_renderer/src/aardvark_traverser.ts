@@ -515,6 +515,7 @@ export class AvDefaultTraverser
 			{
 				let hookData = this.getNodeDataByEpa( hook.hookId );
 				hook.interfaces = hookData?.lastNode?.propInterfaces ?? [ "aardvark-gadget@1" ];
+				hook.hookFlags = hookData?.lastFlags ?? 0;
 			}
 
 			nodeData.grabberProcessor.onGrabberIntersections( state );
