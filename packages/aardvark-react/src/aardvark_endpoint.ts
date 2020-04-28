@@ -1,9 +1,8 @@
 import bind from 'bind-decorator';
-import { AardvarkManifest, AvGrabEvent, EndpointType, MessageType, 
+import { AardvarkManifest, AvGrabEvent, EndpointType, MessageType, EndpointAddr,
 	Envelope, parseEnvelope, MsgSetEndpointType, MsgGetAardvarkManifest, 
 	MsgGeAardvarkManifestResponse, MsgGrabEvent, 
 	MsgSetEndpointTypeResponse, AardvarkPort, WebSocketCloseCodes } from '@aardvarkxr/aardvark-shared';
-import { ENFILE } from 'constants';
 
 export interface MessageHandler
 {
@@ -178,7 +177,7 @@ export class CAardvarkEndpoint
 		this.m_queuedMessages = [];
 	}
 
-	public sendMessage( type: MessageType, msg: any )
+	public sendMessage( type: MessageType, msg: any, sendingNode ?: number )
 	{
 		let env: Envelope =
 		{
@@ -188,6 +187,15 @@ export class CAardvarkEndpoint
 		if( msg != undefined )
 		{
 			env.payload = JSON.stringify( msg );
+		}
+		if( sendingNode != undefined )
+		{
+			env.sender = 
+			{ 
+				type: EndpointType.Node, 
+				endpointId: this.m_endpointId, 
+				nodeId: sendingNode 
+			};
 		}
 
 		if( !this.m_endpointId && type != MessageType.SetEndpointType )

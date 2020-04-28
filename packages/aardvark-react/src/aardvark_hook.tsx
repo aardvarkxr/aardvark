@@ -25,6 +25,10 @@ export enum HookHighlight
 	Occupied,
 }
 
+export interface HookInterfaceEventProcessor
+{
+	( sender: EndpointAddr, data: object ): void;
+}
 
 interface AvHookProps extends AvBaseNodeProps
 {
@@ -87,9 +91,9 @@ interface AvHookProps extends AvBaseNodeProps
 	 * should order its interfaces from highest to lowest priority if multiple interfaces of the 
 	 * same type are available.
 	 * 
-	 * @default [ "aardvark-gadget@1" ]
+	 * @default { "aardvark-gadget@1": null }
 	 */
-	interfaces?: string[];
+	interfaces?: { [interfaceName: string] : HookInterfaceEventProcessor };
 }
 
 
@@ -119,8 +123,28 @@ export class AvHook extends AvBaseNode< AvHookProps, {} >
 		
 		node.propOuterVolumeScale = this.props.outerVolumeScale;
 		node.propModelUri = this.props.dropIconUri;
-		node.propInterfaces = this.props.interfaces;
-		
+
+		if( this.props.interfaces )
+		{
+			let interfaces: string[] = [];
+			let needProcessor = false;
+			for( let interfaceName in this.props.interfaces )
+			{
+				interfaces.push( interfaceName );
+				needProcessor = needProcessor || ( this.props.interfaces[ interfaceName ] != null )
+			}
+			node.propInterfaces = interfaces;
+
+			if( needProcessor )
+			{
+				AvGadget.instance().setInterfaceEventProcessor( this.m_nodeId, this.onInterfaceEvent );
+			}
+		}
+		else
+		{
+			node.propInterfaces = [ "aardvark-gadget@1" ];
+		}
+
 		if( this.props.xMin || this.props.xMax 
 			|| this.props.yMin || this.props.yMax 
 			|| this.props.zMin || this.props.zMax )
@@ -197,4 +221,13 @@ export class AvHook extends AvBaseNode< AvHookProps, {} >
 		}
 	}
 
+	@bind
+	private onInterfaceEvent( interfaceName: string, sender: EndpointAddr, data: object )
+	{
+		let processor = this.props.interfaces?.[ interfaceName ];
+		if( processor )
+		{
+			processor( sender, data );
+		}
+	}
 }

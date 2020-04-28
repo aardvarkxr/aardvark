@@ -1,4 +1,4 @@
-import { AardvarkPort, AuthedRequest, AardvarkManifest, AvGrabEvent, AvGrabEventType, AvNode, AvNodeTransform, AvNodeType, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, EVolumeType, GadgetAuthedRequest, gadgetDetailsToId, GadgetRoomEnvelope, MessageType, MsgAttachGadgetToHook, MsgCreateRoom, MsgCreateRoomResponse, MsgDestroyGadget, MsgDestroyRoom, MsgDestroyRoomResponse, MsgDetachGadgetFromHook, MsgError, MsgGadgetStarted, MsgGetAardvarkManifest, MsgGeAardvarkManifestResponse, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgGrabberState, MsgGrabEvent, MsgInstallGadget, MsgLostEndpoint, MsgMasterStartGadget, MsgMouseEvent, MsgNewEndpoint, MsgNodeHaptic, MsgOverrideTransform, MsgPokerProximity, MsgResourceLoadFailed, MsgRoomMessageReceived, MsgRoomMessageReceivedResponse, MsgSaveSettings, MsgSendRoomMessage, MsgSetEndpointType, MsgSetEndpointTypeResponse, MsgSignRequest, MsgSignRequestResponse, MsgUpdateActionState, MsgUpdatePose, MsgUpdateSceneGraph, MsgUserInfo, parseEndpointFieldUri, parseEnvelope, Permission, SharedGadget, WebSocketCloseCodes } from '@aardvarkxr/aardvark-shared';
+import { AardvarkPort, AuthedRequest, AardvarkManifest, AvGrabEvent, AvGrabEventType, AvNode, AvNodeTransform, AvNodeType, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, EVolumeType, GadgetAuthedRequest, gadgetDetailsToId, GadgetRoomEnvelope, MessageType, MsgAttachGadgetToHook, MsgCreateRoom, MsgCreateRoomResponse, MsgDestroyGadget, MsgDestroyRoom, MsgDestroyRoomResponse, MsgDetachGadgetFromHook, MsgError, MsgGadgetStarted, MsgGetAardvarkManifest, MsgGeAardvarkManifestResponse, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgGrabberState, MsgGrabEvent, MsgInstallGadget, MsgLostEndpoint, MsgMasterStartGadget, MsgMouseEvent, MsgNewEndpoint, MsgNodeHaptic, MsgOverrideTransform, MsgPokerProximity, MsgResourceLoadFailed, MsgRoomMessageReceived, MsgRoomMessageReceivedResponse, MsgSaveSettings, MsgSendRoomMessage, MsgSetEndpointType, MsgSetEndpointTypeResponse, MsgSignRequest, MsgSignRequestResponse, MsgUpdateActionState, MsgUpdatePose, MsgUpdateSceneGraph, MsgUserInfo, parseEndpointFieldUri, parseEnvelope, Permission, SharedGadget, WebSocketCloseCodes, MsgInterfaceEvent } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import { buildPersistentHookPath, buildPersistentHookPathFromParts, HookPathParts, HookType, parsePersistentHookPath } from 'common/hook_utils';
 import * as express from 'express';
@@ -1331,6 +1331,10 @@ class CEndpoint
 		});
 
 		this.registerEnvelopeHandler( MessageType.OverrideTransform, this.onOverrideTransform );
+		this.registerForwardHandler( MessageType.InterfaceEvent, ( m: MsgInterfaceEvent ) =>
+		{
+			return [ m.destination ];
+		} );
 
 		this.registerEnvelopeHandler( MessageType.GetInstalledGadgets, this.onGetInstalledGadgets );
 		this.registerEnvelopeHandler( MessageType.DestroyGadget, this.onDestroyGadget );

@@ -38,6 +38,7 @@ export enum MessageType
 	ResourceLoadFailed = 313,
 	SignRequest = 314,
 	SignRequestResponse = 315,
+	InterfaceEvent = 316,
 
 	// System messages
 	GetInstalledGadgets = 400,
@@ -338,6 +339,13 @@ export interface MsgNodeHaptic
 	amplitude: number;
 	frequency: number;
 	duration: number;
+}
+
+export interface MsgInterfaceEvent
+{
+	destination: EndpointAddr;
+	interface: string;
+	data: object;
 }
 
 export interface MsgAttachGadgetToHook
@@ -667,7 +675,6 @@ export enum AvGrabEventType
 	UpdateGrabberHighlight = 11,
 	TransformUpdated = 12,
 	Detach = 13,
-	InterfaceMessage = 14,
 };
 
 export enum GrabberHighlight
@@ -699,7 +706,6 @@ export interface AvGrabEvent
 	hookFromGrabbable?: AvNodeTransform;
 	grabberFromGrabbable?: AvNodeTransform;
 	interface?: string;
-	interfaceData?: object;
 }
 
 export interface AvGrabEventProcessor
@@ -716,6 +722,12 @@ export interface AvGrabbableCollision
 	currentHook?: EndpointAddr;
 	interfaces?: string[];
 }
+
+export interface AvInterfaceEventProcessor
+{
+	( iface: string, sender: EndpointAddr, data: object ): void;
+}
+
 
 export interface AvVector
 {

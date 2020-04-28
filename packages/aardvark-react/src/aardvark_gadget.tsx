@@ -16,6 +16,8 @@ import { Av, AvActionState, EAction, getActionFromState,
 	MsgDestroyRoomResponse,
 	MsgSendRoomMessage,
 	MsgRoomMessageReceivedResponse,
+	MsgInterfaceEvent,
+	AvInterfaceEventProcessor,
 } from '@aardvarkxr/aardvark-shared';
 import { IAvBaseNode } from './aardvark_base_node';
 import bind from 'bind-decorator';
@@ -110,6 +112,7 @@ export class AvGadget
 	m_grabEventProcessors: {[nodeId:number]: AvGrabEventProcessor } = {};
 	m_pokerProcessors: {[nodeId:number]: AvPokerHandler } = {};
 	m_panelProcessors: {[nodeId:number]: AvPanelHandler } = {};
+	m_interfaceEventProcessors: {[nodeId: number]: AvInterfaceEventProcessor } = {}
 	m_startGadgetPromises: {[nodeId:number]: 
 		[ ( res: AvStartGadgetResult ) => void, ( reason: any ) => void ] } = {};
 	m_actionStateListeners: { [listenerId: number] : ActionStateListener } = {};
@@ -170,6 +173,7 @@ export class AvGadget
 		this.m_endpoint.registerHandler( MessageType.ResourceLoadFailed, this.onResourceLoadFailed );
 		this.m_endpoint.registerHandler( MessageType.UserInfo, this.onUserInfo );
 		this.m_endpoint.registerHandler( MessageType.SendRoomMessage, this.onSendRoomMessage );
+		this.m_endpoint.registerAsyncHandler( MessageType.InterfaceEvent, this.onInterfaceEvent );
 		if( this.m_onSettingsReceived )
 		{
 			this.m_onSettingsReceived( settings );
@@ -317,6 +321,53 @@ export class AvGadget
 		this.m_endpoint.sendGrabEvent( event );
 	}
 
+	public setInterfaceEventProcessor( nodeId: number, processor: AvInterfaceEventProcessor )
+	{
+		this.m_interfaceEventProcessors[ nodeId ] = processor;
+		this.markDirty();
+	}
+
+	public sendInterfaceEvent( nodeId: number, destination: EndpointAddr, iface: string, data: object )
+	{
+		let m: MsgInterfaceEvent =
+		{
+			destination,
+			interface: iface,
+			data,
+		};
+
+		if( destination.endpointId == this.m_endpoint.getEndpointId() )
+		{
+			let env: Envelope =
+			{
+				type: MessageType.InterfaceEvent,
+				sender: { type: EndpointType.Node, endpointId: this.m_endpoint.getEndpointId(), nodeId },
+				sequenceNumber: -1,
+			}
+
+			// if this is a local send, just bounce it back to our own node
+			// Does this need to be async?
+			this.onInterfaceEvent( m, env );
+		}
+		else
+		{
+			this.sendMessage( MessageType.InterfaceEvent, m );
+		}
+	}
+
+	@bind
+	private async onInterfaceEvent( m: MsgInterfaceEvent, env: Envelope )
+	{
+		let processor = this.m_interfaceEventProcessors[ m.destination.nodeId ];
+		if( !processor )
+		{
+			console.log( `Received interface event for ${ m.destination.nodeId }, which doesn't have a processor`)
+		}
+		else
+		{
+			processor( m.interface, env.sender, m.data );
+		}
+	}
 
 	@bind private onPokerProximity( m: MsgPokerProximity, env: Envelope )
 	{
@@ -855,9 +906,9 @@ export class AvGadget
 	}
 
 	/** Sends a message to the server. You probably don't need this either. */
-	public sendMessage( type: MessageType, message: object )
+	public sendMessage( type: MessageType, message: object, sendingNode?: number )
 	{
-		this.m_endpoint.sendMessage( type, message );
+		this.m_endpoint.sendMessage( type, message, sendingNode );
 	}
 
 	/** Sends a request to the server to be authenticated. */

@@ -41,6 +41,11 @@ export enum HookInteraction
 	HighlightAndDrop = 2,
 }
 
+export interface GrabbableInterfaceEventProcessor
+{
+	( sender: EndpointAddr, data: object ): void;
+}
+
 interface AvGrabbableProps extends AvBaseNodeProps
 {
 	/** This callback is called whenever the highlight state of the grabbable is updated. 
@@ -118,9 +123,9 @@ interface AvGrabbableProps extends AvBaseNodeProps
 	 * should order its interfaces from highest to lowest priority if multiple interfaces of the 
 	 * same type are available.
 	 * 
-	 * @default [ "aardvark-gadget@1" ]
+	 * @default { "aardvark-gadget@1": null }
 	 */
-	interfaces?: string[];
+	interfaces?: { [interfaceName: string] : GrabbableInterfaceEventProcessor };
 }
 
 interface AvGrabbableState
@@ -212,7 +217,28 @@ export class AvGrabbable extends AvBaseNode< AvGrabbableProps, AvGrabbableState 
 		{
 			node.flags |= ENodeFlags.ShowGrabIndicator;
 		}
-		node.propInterfaces = this.props.interfaces;
+
+		if( this.props.interfaces )
+		{
+			let interfaces: string[] = [];
+			let needProcessor = false;
+			for( let interfaceName in this.props.interfaces )
+			{
+				interfaces.push( interfaceName );
+				needProcessor = needProcessor || ( this.props.interfaces[ interfaceName ] != null )
+			}
+			node.propInterfaces = interfaces;
+
+			if( needProcessor )
+			{
+				AvGadget.instance().setInterfaceEventProcessor( this.m_nodeId, this.onInterfaceEvent );
+			}
+		}
+		else
+		{
+			node.propInterfaces = [ "aardvark-gadget@1" ];
+		}
+
 
 		return node;
 	}
@@ -347,6 +373,16 @@ export class AvGrabbable extends AvBaseNode< AvGrabbableProps, AvGrabbableState 
 				{
 					this.props.onTransformUpdated( evt.parentFromNode, evt.universeFromNode );
 				}
+		}
+	}
+
+	@bind
+	private onInterfaceEvent( interfaceName: string, sender: EndpointAddr, data: object )
+	{
+		let processor = this.props.interfaces?.[ interfaceName ];
+		if( processor )
+		{
+			processor( sender, data );
 		}
 	}
 }
