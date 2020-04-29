@@ -32,16 +32,6 @@ interface IESurfaceDrawing
 }
 
 
-interface WhiteboardState
-{
-	strokes?: Stroke[];
-}
-
-interface WhiteboardSettings
-{
-	strokes?: Stroke[];
-}
-
 interface PaintBucketProps
 {
 	color: string;
@@ -143,7 +133,7 @@ function Marker( props: MarkerProps )
 
 interface SurfaceProps
 {
-
+	addStroke: ( newStroke: Stroke ) => void;
 }
 
 let nextStrokeId = 1;
@@ -184,7 +174,6 @@ function Surface( props: SurfaceProps )
 {
 	const [ nodeId, setNodeId ] = React.useState<EndpointAddr>( null );
 	const [ contacts, setContacts ] = React.useState<SurfaceContactDetailsMap>({});
-	const [ strokes, setStrokes ] = React.useState<Stroke[]>([]);
 
 	let onSurfaceDrawing = ( markerId: EndpointAddr, surfaceDrawingEvent: IESurfaceDrawing ) =>
 	{
@@ -215,7 +204,7 @@ function Surface( props: SurfaceProps )
 				let newStroke = newMap[ markerAddrString ];
 				if( newStroke.points.length > 2 )
 				{
-					setStrokes( [ ...strokes, newStroke ] );
+					props.addStroke( newStroke );
 				}
 				delete newMap[ endpointAddrToString( markerEpa ) ];
 				setContacts( newMap );	
@@ -237,10 +226,6 @@ function Surface( props: SurfaceProps )
 	}
 
 	let strokeLines: JSX.Element[] = [];
-	for( let stroke of strokes )
-	{
-		strokeLines.push( <StrokeLines stroke={ stroke }/> );
-	}
 	for( let markerId in contacts )
 	{
 		let markerStroke = contacts[ markerId ];
@@ -263,6 +248,16 @@ function Surface( props: SurfaceProps )
 		</>
 }
 
+interface WhiteboardState
+{
+	strokes?: Stroke[];
+}
+
+interface WhiteboardSettings
+{
+	strokes?: Stroke[];
+}
+
 class Whiteboard extends React.Component< {}, WhiteboardState >
 {
 	private nextStrokeId = 0;
@@ -272,9 +267,16 @@ class Whiteboard extends React.Component< {}, WhiteboardState >
 		super( props );
 		this.state = 
 		{ 
+			strokes: []
 		};
 
 		AvGadget.instance().registerForSettings( this.onSettingsReceived );
+	}
+
+	@bind
+	private onAddStroke( newStroke: Stroke )
+	{
+		this.setState( { strokes: [...this.state.strokes, newStroke ] } );
 	}
 
 	public componentDidMount()
@@ -296,11 +298,17 @@ class Whiteboard extends React.Component< {}, WhiteboardState >
 			}
 		}
 
-		this.setState( { strokes: settings?.strokes } );
+		//this.setState( { strokes: settings?.strokes } );
 	}
 
 	public render()
 	{
+		let strokeLines: JSX.Element[] = [];
+		for( let stroke of this.state.strokes )
+		{
+			strokeLines.push( <StrokeLines stroke={ stroke }/> );
+		}
+
 		return (
 			<AvStandardGrabbable modelUri={ g_builtinModelBox } modelScale={ 0.1 } modelColor="lightblue">
 				<AvTransform translateY={0.2}>
@@ -309,7 +317,8 @@ class Whiteboard extends React.Component< {}, WhiteboardState >
 							originY={ PrimitiveYOrigin.Top } height={0.02 } width={1.0} depth={0.10 } 
 							color="grey"/>
 					</AvTransform>
-					<Surface />
+					<Surface addStroke={ this.onAddStroke } />
+					{ strokeLines }
 					<AvTransform translateZ={ 0.06 } persistentName="traycontents">
 						<AvTransform translateX={ -0.375 } persistentName="bluebucket" >
 							<PaintBucket color="blue"/>
