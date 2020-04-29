@@ -54,6 +54,13 @@ interface AvPrimitiveProps
 	 */
 	depth?: number;
 
+	/** If radius is set, width, height, and depth all
+	 * default to this value. Otherwise, it has no effect.
+	 * 
+	 * @default none
+	 */
+	radius?: number;
+
 	/** The color of the primitive
 	 * 
 	 * @default white
@@ -82,9 +89,9 @@ interface AvPrimitiveProps
 
 export function AvPrimitive( props: AvPrimitiveProps )
 {
-	let xScale = props.width ?? 1.0;
-	let yScale = props.height ?? 1.0;
-	let zScale = props.depth ?? 1.0;
+	let xScale = props.width ?? ( props.radius ?? 1.0 );
+	let yScale = props.height ?? ( props.radius ?? 1.0 );
+	let zScale = props.depth ?? ( props.radius ?? 1.0 );
 
 	let xOffset: number;
 	switch( props.originX ?? PrimitiveXOrigin.Center )

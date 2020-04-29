@@ -147,9 +147,18 @@ interface StrokeLineProps
 
 function StrokeLines( props: StrokeLineProps )
 {
-	if( !props.stroke.color || props.stroke.points.length < 2 
+	if( !props.stroke.color || props.stroke.points.length == 0
 		|| props.stroke.thickness <= 0 )
 		return null;
+
+	if( props.stroke.points.length == 1 )
+	{
+		let point = props.stroke.points[0];
+		return <AvTransform translateX={ point.x } translateY={ point.y }>
+			<AvPrimitive type={ PrimitiveType.Sphere } radius={ props.stroke.thickness / 2 }
+				color={ props.stroke.color } />
+		</AvTransform>;
+	}
 
 	let strokeId = `stroke${ props.stroke.id}`;
 	let transforms: JSX.Element[] = [];
@@ -202,7 +211,7 @@ function Surface( props: SurfaceProps )
 			if( newMap[ markerAddrString ] )
 			{
 				let newStroke = newMap[ markerAddrString ];
-				if( newStroke.points.length > 2 )
+				if( newStroke.points.length > 0 )
 				{
 					props.addStroke( newStroke );
 				}
@@ -215,21 +224,37 @@ function Surface( props: SurfaceProps )
 
 	let onTransformUpdated = ( grabbableId: EndpointAddr, hookFromGrabbable: AvNodeTransform ) =>
 	{
-		//console.log( "transform updates", hookFromGrabbable );
+		if( !hookFromGrabbable.position )
+			return;
+
 		let markerAddrString = endpointAddrToString( grabbableId );		
-		if( contacts[ markerAddrString ] && hookFromGrabbable.position )
+		let contact = contacts[ markerAddrString ];
+		if( !contact )
+			return;
+
+		let newPoint = { x: hookFromGrabbable.position.x, y: hookFromGrabbable.position.y } as Point;
+		if( contact.points.length > 0 )
 		{
-			let newMap = { ...contacts };
-			newMap[ markerAddrString ].points.push( hookFromGrabbable.position );
-			setContacts( newMap );
+			let lastPoint = contact.points[ contact.points.length - 1 ];
+			let diff = { x: newPoint.x - lastPoint.x, y: newPoint.y - lastPoint.y };
+			let dist = Math.sqrt( diff.x * diff.x + diff.y * diff.y );
+			if( dist < 0.005 )
+			{
+				// require that the marker move at least 5mm to add a point
+				return;
+			}
 		}
+
+		let newMap = { ...contacts };
+		newMap[ markerAddrString ].points.push( hookFromGrabbable.position );
+		setContacts( newMap );
 	}
 
 	let strokeLines: JSX.Element[] = [];
 	for( let markerId in contacts )
 	{
 		let markerStroke = contacts[ markerId ];
-		if( markerStroke.color && markerStroke.points.length > 1 )
+		if( markerStroke.color && markerStroke.points.length > 0 )
 		{
 			strokeLines.push( <StrokeLines stroke={ markerStroke } />)
 		}
