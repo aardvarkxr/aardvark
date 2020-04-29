@@ -1,11 +1,11 @@
 ---
 layout: post
-title: Let's Make A Watch
+title: Let's Make A Watch Gadget!
 ---
 
-# Step 0: _Time After Time_ - Introduction
+# Let's Make A Watch Gadget!
 
-This tutorial is intended to follow the [first one](https://aardvarkxr.github.io/aardvark/getting_started/), where you've learned about prerequisites, gadget initialization, and some scene graph anatomy. If you haven't worked through that tutorial yet, please do so and come back when you're ready for more - we'll be building on that information and assuming you've mastered the basics.
+This tutorial is intended to follow the [first one](https://aardvarkxr.github.io/aardvark/getting_started/), where you've learned about the prerequisites for developing AardvarkXR gadgets, gadget initialization, and some scene graph anatomy. If you haven't worked through that tutorial yet, please do so and come back when you're ready for more - we'll be building on that information and assuming you've mastered the basics.
 
 In this guide we'll be building a simple digital watch; we'll utilize panels and 3D models and implement a a little interactivity. Once you've worked through this guide, you should have two things:
 
@@ -34,9 +34,15 @@ This is what my workflow typically looks like - IDE, test in SteamVR, back to ID
 
 # Step 2: _Time of the Season_ - Adding a time/date panel)
 
-Alright, now that we've got a dev environment and a nice workflow, we can jump into the code. We'll be working primarily in `main.tsx` and `styles.css` located in the `src/` folder, which get compiled after every save to the `dist/` folder. This is an important fact to keep in mind; for one thing, you'll want to place whatever 3D models and various media files you'll be using in the `dist` folder since that'll be the root of your local references - where `main.tsx` will be solving paths from.
+Alright, now that we've got a dev environment and a nice workflow, we can jump into the code. 
 
-Let's start by cleaning up the default scene graph created in `main.tsx` to a bare minimum, so that it only contains the bare bones:
+You can find and download the **necessary media assets** we'll be using [here](https://github.com/MichaelHazani/av-watch-gadget/tree/master/PROJECT_ASSETS). You'll notice that repo is the finished project, but I highly recommend starting from scratch and working your way through the tutorial). 
+
+Let's start [instantiating a new gadget](https://aardvarkxr.github.io/aardvark/getting_started/). Give it any name you want, and select the defaults for everything. 
+
+We'll be working primarily in `main.tsx` and `styles.css` located in the `src/` folder, which (after running `npm start` as described in the previous tutorial) get compiled after every save  to the `dist/` folder. This is an important fact to keep in mind; for one thing, you'll want to place whatever 3D models and various media files you'll be using in the `dist` folder since that'll be the root of your local references - where `main.tsx` will be solving paths from.
+
+Now, let's clean up the default scene graph created in `main.tsx` to a bare minimum, so that it only contains the bare bones:
 
 ```tsx
 import * as React from 'react';
@@ -301,7 +307,6 @@ class WatchGadget extends React.Component<{}, WatchState> {
     }
 
     @bind public changeDisplay() {
-
         this.state.watchDisplayTypeInstance == watchDisplayType.Date ?
             this.setState({ watchDisplayTypeInstance: watchDisplayType.Time }) :
             this.setState({ watchDisplayTypeInstance: watchDisplayType.Date });
