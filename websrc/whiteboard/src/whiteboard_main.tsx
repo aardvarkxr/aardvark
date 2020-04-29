@@ -1,10 +1,8 @@
-import { AvGadget, AvStandardGrabbable, AvPrimitive, PrimitiveYOrigin, PrimitiveZOrigin, PrimitiveType, AvTransform, AvGrabbable, AvModelBoxHandle, AvHook, HookHighlight, HookInteraction } from '@aardvarkxr/aardvark-react';
-import { g_builtinModelBox, AvNodeTransform, g_builtinModelCylinder, EndpointAddr, endpointAddrToString } from '@aardvarkxr/aardvark-shared';
+import { AvGadget, AvStandardGrabbable, AvPrimitive, AvLine, PrimitiveYOrigin, PrimitiveZOrigin, PrimitiveType, AvTransform, AvGrabbable, AvModelBoxHandle, AvHook, HookHighlight, HookInteraction, HighlightType } from '@aardvarkxr/aardvark-react';
+import { g_builtinModelBox, AvNodeTransform, g_builtinModelCylinder, EndpointAddr, endpointAddrToString, endpointAddrsMatch, AvVector } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
-
-
 
 
 
@@ -17,6 +15,7 @@ interface Point
 interface Stroke
 {
 	id: number;
+	thickness: number;
 	points: Point[];
 	color: string;
 }
@@ -28,6 +27,8 @@ interface IEColorPicker
 
 interface IESurfaceDrawing
 {
+	color: string;
+	thickness: number;
 }
 
 
@@ -87,33 +88,42 @@ interface MarkerProps
 {
 	initialColor: string;
 	initialXOffset: number;
+	thickness: number;
 }
 
 function Marker( props: MarkerProps )
 {
 	const [ color, setColor ] = React.useState( props.initialColor );
-
-	let fn = ( parentFromNode: AvNodeTransform, universeFromNode: AvNodeTransform ) =>
-	{
-		//console.log( "new transform", parentFromNode );
-	};
+	const [ nodeId, setNodeId ] = React.useState<EndpointAddr>( null );
 
 	let onColorPicker = ( sender: EndpointAddr, colorPicker: IEColorPicker ) =>
 	{
 		console.log( `Setting color to ${ colorPicker.color } from ${ endpointAddrToString( sender ) }` );
 		setColor( colorPicker.color );
 	};
+
 	let onSurfaceDrawing = ( sender: EndpointAddr, colorPicker: IESurfaceDrawing ) =>
 	{
 	};
 
+	let onUpdateHighlight =  ( highlightType: HighlightType, handleAddr: EndpointAddr, tethered: boolean,
+		interfaceName: string, nearbyHook: EndpointAddr ) =>
+	{
+		if( highlightType == HighlightType.InHookRange && interfaceName == "surface-drawing@1" )
+		{
+			AvGadget.instance().sendInterfaceEvent( nodeId.nodeId, nearbyHook, interfaceName, 
+				{ color, thickness: props.thickness } as IESurfaceDrawing );
+		}	
+	}
+
 	const markerRadius = 0.015;
 	const markerTipRadius = 0.003;
 
-	return <AvGrabbable onTransformUpdated={ fn } preserveDropTransform={ true } 
+	return <AvGrabbable preserveDropTransform={ true } onIdAssigned={ setNodeId }
 		initialTransform={ { position: { x: props.initialXOffset, y: 0.005, z: 0 } } }
 		showGrabIndicator={ false } hookInteraction={ HookInteraction.HighlightOnly }
 		persistentName={`${props.initialColor }_marker`} 
+		updateHighlight={ onUpdateHighlight }
 		interfaces={ 
 			{
 				"color-picker@1": onColorPicker, 
@@ -126,9 +136,131 @@ function Marker( props: MarkerProps )
 				<AvPrimitive type={PrimitiveType.Cylinder} originY={ PrimitiveYOrigin.Bottom }
 					width={markerRadius} depth={markerRadius} height={0.065 } color={ color } />
 			</AvTransform>
-			<AvPrimitive type={PrimitiveType.Sphere} width={markerTipRadius} height={markerTipRadius} 
-				depth={markerTipRadius} color={props.initialColor }/>
+			<AvPrimitive type={PrimitiveType.Sphere} width={ props.thickness } height={ props.thickness } 
+				depth={ props.thickness } color={props.initialColor }/>
 		</AvGrabbable>
+}
+
+interface SurfaceProps
+{
+
+}
+
+let nextStrokeId = 1;
+
+type SurfaceContactDetailsMap = {[endpointAddr: string]: Stroke };
+
+interface StrokeLineProps
+{
+	stroke: Stroke;
+}
+
+function StrokeLines( props: StrokeLineProps )
+{
+	if( !props.stroke.color || props.stroke.points.length < 2 
+		|| props.stroke.thickness <= 0 )
+		return null;
+
+	let strokeId = `stroke${ props.stroke.id}`;
+	let transforms: JSX.Element[] = [];
+	for( let pointIndex = 0; pointIndex < props.stroke.points.length; pointIndex++ )
+	{
+		let point = props.stroke.points[pointIndex];
+		let pointId = `stroke${ props.stroke.id}_${ pointIndex }`;
+		transforms.push( <AvTransform translateX={ point.x } translateY={ point.y } 
+			id={ pointId } key={ pointId }>
+				{ pointIndex > 0 && 
+					<AvLine endId={ `stroke${ props.stroke.id}_${ pointIndex - 1 }` }
+						key={ "line_" + pointId }
+						thickness={ props.stroke.thickness } color={ props.stroke.color }/> }
+			</AvTransform> )
+	}
+
+	return <div key={ strokeId }>{ transforms } </div>;
+}
+
+
+function Surface( props: SurfaceProps )
+{
+	const [ nodeId, setNodeId ] = React.useState<EndpointAddr>( null );
+	const [ contacts, setContacts ] = React.useState<SurfaceContactDetailsMap>({});
+	const [ strokes, setStrokes ] = React.useState<Stroke[]>([]);
+
+	let onSurfaceDrawing = ( markerId: EndpointAddr, surfaceDrawingEvent: IESurfaceDrawing ) =>
+	{
+		let markerAddrString = endpointAddrToString( markerId );
+		console.log( `contact from ${ markerAddrString } started`)
+		let newMap = { ...contacts };
+		newMap[ markerAddrString ] =
+		{
+			id: nextStrokeId++,
+			color: surfaceDrawingEvent.color,
+			thickness: surfaceDrawingEvent.thickness,
+			points:[],
+		}
+		setContacts( newMap );
+
+		AvGadget.instance().sendHapticEvent( markerId, 1, 1, 0)
+	};
+
+	let updateHighlight = ( highlightType: HookHighlight, markerEpa: EndpointAddr )=>
+	{
+		if( highlightType != HookHighlight.InRange )
+		{
+			console.log( `contact from ${ endpointAddrToString( markerEpa ) } ended`)
+			let newMap = { ...contacts };
+			let markerAddrString = endpointAddrToString( markerEpa );
+			if( newMap[ markerAddrString ] )
+			{
+				let newStroke = newMap[ markerAddrString ];
+				if( newStroke.points.length > 2 )
+				{
+					setStrokes( [ ...strokes, newStroke ] );
+				}
+				delete newMap[ endpointAddrToString( markerEpa ) ];
+				setContacts( newMap );	
+				AvGadget.instance().sendHapticEvent( markerEpa, 0.7, 1, 0)
+			}
+		}
+	};
+
+	let onTransformUpdated = ( grabbableId: EndpointAddr, hookFromGrabbable: AvNodeTransform ) =>
+	{
+		//console.log( "transform updates", hookFromGrabbable );
+		let markerAddrString = endpointAddrToString( grabbableId );		
+		if( contacts[ markerAddrString ] && hookFromGrabbable.position )
+		{
+			let newMap = { ...contacts };
+			newMap[ markerAddrString ].points.push( hookFromGrabbable.position );
+			setContacts( newMap );
+		}
+	}
+
+	let strokeLines: JSX.Element[] = [];
+	for( let stroke of strokes )
+	{
+		strokeLines.push( <StrokeLines stroke={ stroke }/> );
+	}
+	for( let markerId in contacts )
+	{
+		let markerStroke = contacts[ markerId ];
+		if( markerStroke.color && markerStroke.points.length > 1 )
+		{
+			strokeLines.push( <StrokeLines stroke={ markerStroke } />)
+		}
+	}
+
+	return <>
+		<AvHook xMin={ -0.5 } xMax={0.5 }
+			zMin={ -0.03 } zMax={ 0.01 } yMin={ 0 } yMax={ 0.75 } dropIconUri=""
+			interfaces={ { "surface-drawing@1": onSurfaceDrawing } }
+			onIdAssigned={ setNodeId } updateHighlight={ updateHighlight }
+			onTransformUpdated={ onTransformUpdated }/>
+		<AvPrimitive type={ PrimitiveType.Cube } originY={ PrimitiveYOrigin.Bottom }
+			originZ={ PrimitiveZOrigin.Forward }
+			height={ 0.75 } width={ 1.0 } depth={ 0.005 }/>
+		{ strokeLines }
+		</>
 }
 
 class Whiteboard extends React.Component< {}, WhiteboardState >
@@ -172,11 +304,12 @@ class Whiteboard extends React.Component< {}, WhiteboardState >
 		return (
 			<AvStandardGrabbable modelUri={ g_builtinModelBox } modelScale={ 0.1 } modelColor="lightblue">
 				<AvTransform translateY={0.2}>
-					<AvPrimitive type={PrimitiveType.Cube} originZ={ PrimitiveZOrigin.Back }
-						originY={ PrimitiveYOrigin.Top } height={0.02 } width={1.0} depth={0.10 } 
-						color="grey"/>
-					<AvPrimitive type={ PrimitiveType.Cube } originY={ PrimitiveYOrigin.Bottom }
-						height={ 0.75 } width={ 1.0 } depth={ 0.01 }/>
+					<AvTransform translateZ={ -0.005 }>
+						<AvPrimitive type={PrimitiveType.Cube} originZ={ PrimitiveZOrigin.Back }
+							originY={ PrimitiveYOrigin.Top } height={0.02 } width={1.0} depth={0.10 } 
+							color="grey"/>
+					</AvTransform>
+					<Surface />
 					<AvTransform translateZ={ 0.06 } persistentName="traycontents">
 						<AvTransform translateX={ -0.375 } persistentName="bluebucket" >
 							<PaintBucket color="blue"/>
@@ -191,10 +324,10 @@ class Whiteboard extends React.Component< {}, WhiteboardState >
 							<PaintBucket color="purple"/>
 						</AvTransform>
 
-						<Marker initialColor="blue" initialXOffset={-0.450 }/>
-						<Marker initialColor="red" initialXOffset={-0.200 }/>
-						<Marker initialColor="green" initialXOffset={ 0.050 }/>
-						<Marker initialColor="purple" initialXOffset={ 0.300 }/>
+						<Marker initialColor="blue" initialXOffset={-0.450 } thickness={ 0.003 }/>
+						<Marker initialColor="red" initialXOffset={-0.200 } thickness={ 0.003 }/>
+						<Marker initialColor="green" initialXOffset={ 0.050 } thickness={ 0.006 }/>
+						<Marker initialColor="purple" initialXOffset={ 0.300 } thickness={ 0.009 }/>
 					</AvTransform>
 				</AvTransform>
 			</AvStandardGrabbable>

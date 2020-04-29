@@ -55,7 +55,8 @@ interface AvGrabbableProps extends AvBaseNodeProps
 	 * 
 	 * @default no highlight
 	 */
-	updateHighlight?: ( highlightType: HighlightType, handleAddr: EndpointAddr, tethered: boolean ) => void;
+	updateHighlight?: ( highlightType: HighlightType, handleAddr: EndpointAddr, tethered: boolean,
+		interfaceName: string, hookId: EndpointAddr ) => void;
 
 	/** This callback allows the grabbable's owner to override the default behavior
 	 * when the grabbable is grabbed. If this is not specified, the grabbable's transform
@@ -144,6 +145,11 @@ interface AvGrabbableState
 	/** The last handle that we told anyone */
 	lastHandle: EndpointAddr;
 
+	/** the last interface name we were told */
+	lastInterfaceName: string;
+
+	/** the last nearby hook */
+	nearbyHook?: EndpointAddr;
 }
 
 
@@ -157,6 +163,8 @@ export class AvGrabbable extends AvBaseNode< AvGrabbableProps, AvGrabbableState 
 	private m_lastNotifiedHighlight: HighlightType = HighlightType.None;
 	private m_lastNotifiedHandle: EndpointAddr = null;
 	private m_lastNotifiedTethered: boolean = false;
+	private m_lastNotifiedInterfaceName: string = null;
+	private m_lastNotifiedHook: EndpointAddr = null;
 
 	constructor( props: any )
 	{
@@ -166,6 +174,7 @@ export class AvGrabbable extends AvBaseNode< AvGrabbableProps, AvGrabbableState 
 		{ 
 			lastHighlight: HighlightType.None,
 			lastHandle: null,
+			lastInterfaceName: null,
 		};
 	}
 
@@ -255,12 +264,16 @@ export class AvGrabbable extends AvBaseNode< AvGrabbableProps, AvGrabbableState 
 		{
 			if( this.state.lastHighlight != this.m_lastNotifiedHighlight
 				|| this.state.lastHandle != this.m_lastNotifiedHandle 
-				|| !!this.state.hook != this.m_lastNotifiedTethered )
+				|| !!this.state.hook != this.m_lastNotifiedTethered 
+				|| this.state.lastInterfaceName != this.m_lastNotifiedInterfaceName
+				|| this.state.nearbyHook != this.m_lastNotifiedHook )
 			{
 				this.m_lastNotifiedHighlight = this.state.lastHighlight;
 				this.m_lastNotifiedHandle = this.state.lastHandle;
 				this.m_lastNotifiedTethered = !!this.state.hook;
-				this.props.updateHighlight( this.state.lastHighlight, this.state.lastHandle, !!this.state.hook );
+				this.m_lastNotifiedInterfaceName = this.state.lastInterfaceName;
+				this.props.updateHighlight( this.state.lastHighlight, this.state.lastHandle, !!this.state.hook,
+					this.state.lastInterfaceName, this.state.nearbyHook );
 			}
 		}
 	}
@@ -298,11 +311,23 @@ export class AvGrabbable extends AvBaseNode< AvGrabbableProps, AvGrabbableState 
 				break;
 
 			case AvGrabEventType.EnterHookRange:
-				this.setState( { lastHighlight: HighlightType.InHookRange, lastHandle: evt.handleId } );
+				this.setState( 
+					{ 
+						lastHighlight: HighlightType.InHookRange, 
+						lastHandle: evt.handleId,
+						lastInterfaceName: evt.interface,
+						nearbyHook: evt.hookId,
+					} );
 				break;
 
 			case AvGrabEventType.LeaveHookRange:
-				this.setState( { lastHighlight: HighlightType.Grabbed, lastHandle: evt.handleId } );
+				this.setState( 
+					{ 
+						lastHighlight: HighlightType.Grabbed, 
+						lastHandle: evt.handleId,
+						lastInterfaceName: null,
+						nearbyHook: null,
+					} );
 				break;
 
 			case AvGrabEventType.RequestGrab:

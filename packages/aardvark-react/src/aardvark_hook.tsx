@@ -2,7 +2,8 @@ import { AvGadget } from './aardvark_gadget';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 import bind from 'bind-decorator';
 import { endpointAddrsMatch, EndpointAddr, AvNodeType, AvGrabEventType, 
-	AvGrabEvent, EVolumeType, ENodeFlags, AvNodeTransform } from '@aardvarkxr/aardvark-shared';
+	AvGrabEvent, EVolumeType, ENodeFlags, AvNodeTransform, endpointAddrToString } from '@aardvarkxr/aardvark-shared';
+import { HighlightType } from './aardvark_grabbable';
 
 
 /** The highlight states that a hook can be in. */
@@ -110,8 +111,7 @@ interface AvHookProps extends AvBaseNodeProps
  */
 export class AvHook extends AvBaseNode< AvHookProps, {} >
 {
-	m_lastHighlight = HookHighlight.None;
-	m_lastGrabbableInRange: EndpointAddr = null;
+	m_grabbablesInRange: Set<string> = new Set();
 	m_lastGrabbable: EndpointAddr = null;
 
 	public buildNode()
@@ -188,37 +188,30 @@ export class AvHook extends AvBaseNode< AvHookProps, {} >
 
 	@bind private onGrabEvent( evt: AvGrabEvent )
 	{
-		let newHighlight: HookHighlight = null;
-	
+		let grabbableIdString = endpointAddrToString( evt.grabbableId );
+
 		switch( evt.type )
 		{
-			case AvGrabEventType.StartGrab:
-				newHighlight = HookHighlight.GrabInProgress;
-				this.m_lastGrabbable = null;
-				break;
-
-			case AvGrabEventType.EndGrab:
-				if( endpointAddrsMatch( evt.hookId, this.endpointAddr() ) )
-				{
-					newHighlight = HookHighlight.Occupied;
-					this.m_lastGrabbable = evt.grabbableId;
-				}
-				else
-				{
-					newHighlight = HookHighlight.None;
-				}
-				break;
-
 			case AvGrabEventType.EnterHookRange:
-				newHighlight = HookHighlight.InRange;
-				this.m_lastGrabbableInRange = evt.grabbableId;
-				//console.log( "Setting lastGrabbableInProgress", evt.grabbableId );
+				if( !this.m_grabbablesInRange.has( grabbableIdString ) )
+				{
+					this.m_grabbablesInRange.add( grabbableIdString );
+					if( this.props.updateHighlight )
+					{
+						this.props.updateHighlight( HookHighlight.InRange, evt.grabbableId );
+					}
+				}
 				break;
 
 			case AvGrabEventType.LeaveHookRange:
-				newHighlight = HookHighlight.GrabInProgress;
-				//console.log( "Clearing lastGrabbableInProgress", evt.grabbableId );
-				this.m_lastGrabbableInRange = null;
+				if( this.m_grabbablesInRange.has( grabbableIdString ) )
+				{
+					this.m_grabbablesInRange.delete( grabbableIdString );
+					if( this.props.updateHighlight )
+					{
+						this.props.updateHighlight( HookHighlight.None, evt.grabbableId );
+					}
+				}
 				break;
 
 			case AvGrabEventType.HookTransformUpdated:
@@ -227,16 +220,6 @@ export class AvHook extends AvBaseNode< AvHookProps, {} >
 					this.props.onTransformUpdated( evt.grabbableId, evt.hookFromGrabbable );
 				}
 				break;
-		}
-
-		if( newHighlight != null && newHighlight != this.m_lastHighlight )
-		{
-			this.m_lastHighlight = newHighlight;
-			if( this.props.updateHighlight )
-			{
-				//console.log( "Updating hook highlight", this.m_lastHighlight, this.m_lastGrabbableInRange);
-				this.props.updateHighlight( this.m_lastHighlight, this.m_lastGrabbableInRange );
-			}
 		}
 	}
 
