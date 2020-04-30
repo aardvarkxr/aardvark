@@ -32,17 +32,17 @@ This is what my workflow typically looks like - IDE, test in SteamVR, back to ID
 3. For debugging, remember you can use Chrome's devtools on the Aardvark Server (http://localhost:8042/), as well as the Gadget Monitor (http://localhost:23842/gadgets/aardvark_monitor/index.html). You can also debug your gadget from VS Code, provided you've installed the Debugger for Chrome extension and answered "yes" to the `Do you want to debug with VS Code?` question when [instantiating your gadget](https://aardvarkxr.github.io/aardvark/getting_started/). 
 
 
-# Step 2: _Time of the Season_ - Adding a time/date panel)
+# Step 2: _Time of the Season_ - Adding a time/date panel
 
 Alright, now that we've got a dev environment and a nice workflow, we can jump into the code. 
 
 You can find and download the **necessary media assets** we'll be using [here](https://github.com/MichaelHazani/av-watch-gadget/tree/master/PROJECT_ASSETS). You'll notice that repo is the finished project, but I highly recommend starting from scratch and working your way through the tutorial). 
 
-Let's start [instantiating a new gadget](https://aardvarkxr.github.io/aardvark/getting_started/). Give it any name you want, and select the defaults for everything. 
+Let's start by [instantiating a new gadget](https://aardvarkxr.github.io/aardvark/getting_started/). Give it any name you want, and select the defaults for everything (see the [previous tutorial](https://aardvarkxr.github.io/aardvark/getting_started/) for a recap if you'd like). 
 
-We'll be working primarily in `main.tsx` and `styles.css` located in the `src/` folder, which (after running `npm start` as described in the previous tutorial) get compiled after every save  to the `dist/` folder. This is an important fact to keep in mind; for one thing, you'll want to place whatever 3D models and various media files you'll be using in the `dist` folder since that'll be the root of your local references - where `main.tsx` will be solving paths from.
+We'll be working primarily in `main.tsx` and `styles.css` located in the `src/` folder, which (after running `npm start` as described in the previous tutorial) get recompiled to the `dist/` folder after every save. This is an important fact to keep in mind; for one thing, you'll want to place whatever 3D models and various media files you'll be using in the `dist` folder since that'll be the root of your local references - where `main.tsx` will be solving paths from.
 
-Now, let's clean up the default scene graph created in `main.tsx` to a bare minimum, so that it only contains the bare bones:
+Now, let's shave down the default scene graph created in `main.tsx` to a minimum, so that it only contains the bare bones:
 
 ```tsx
 import * as React from 'react';
@@ -61,40 +61,40 @@ interface WatchState {}
 class WatchGadget extends React.Component<{}, WatchState>
 {
 	constructor(props: any) {
-		super(props);
+	super(props);
 	}
 
 	public render() {
 		let scale = 0.2;
 
-		return (
-				<div>
-					<AvGrabbable dropOnHooks={true}>
-						<AvSphereHandle radius={0.1} />
-						<AvTransform uniformScale={0.2}>
-							<AvPanel interactive={true} >
-							</AvPanel>
-						</AvTransform>
-					</AvGrabbable>
-				</div>
+return (
+	<div>
+		<AvGrabbable dropOnHooks={true}>
+			<AvSphereHandle radius={0.1} />
+			<AvTransform uniformScale={0.2}>
+				<AvPanel interactive={true} >
+				</AvPanel>
+			</AvTransform>
+		</AvGrabbable>
+	</div>
 		)
 	}
 }
 ReactDOM.render(<WatchGadget />, document.getElementById("root"));
 ```
 
-You'll note we've kept a few things that will be immediately useful: 
+You'll notice we've kept a few things that will be immediately useful: 
 *  `<AvSphereHandle />`, because we'll want to interact with our gadget - no sense in losing the handler. 
 *  `<AvTransform>` to easily manipulate our panel, as well as the contained panel.
 
-Aside from that, and new empty WatchState object and a few naming tweaks, this is a barebones version of the initialdefault gadget. Let's get to it!
+Aside from that, and new empty WatchState object and a few naming tweaks, this is a barebones version of the default gadget. Let's get to work!
 
 First, right before the final `</div>` tag in the `render` method, let's add a simple sanity check to make sure our dev environment is fully functional and the gadget is being updated:
 
 ```tsx
-	<div className="Watch">
-		Hello Aardvark!
-	</div>
+<div className="Watch">
+	Hello Aardvark!
+</div>
 ```
 Upon saving and instantiating a new gadget, you should be able to see immediate results, but they'll default to the size of fairly small chicken scratch. In `styles.css`, let's fix that!
 
@@ -115,13 +115,12 @@ A nice trick here is making the panel background transparent, because we don't w
 	font-family: 'digital-7';
 	src: url('./fonts/digital-7\ \(mono\).ttf')
 }
-body, html
-{
+
+body, html {
 	background-color: transparent;
 }
 
-.Watch
-{
+.Watch {
 	font-family: 'digital-7', monospace;
 	font-size: 2.8rem;
 	color: #4Af626;
@@ -138,7 +137,7 @@ et voilà!
 
 # Step 3: _Time After Time_ - Adding the Watch model
 
-After scouring Poly and Sketchfab for potential digital watch models, I found this [great-looking, downloadable photogrammetized model of a Casio G-Shock](https://sketchfab.com/3d-models/casio-g-shock-digital-watch-b6466b64dd8b495c99f24a5054491f4d) by [jeandiz](https://sketchfab.com/jeandiz). Clocking in at ~25MB, its textures are way too nice and detailed for our purposes, so I've optimized them in imagemagick and also some cleanup in Blender; you can find the optimized, <1MB gltf file [here](media/watch.glb). 
+After scouring Poly and Sketchfab for good, free digital watch models, I found this [great-looking, downloadable photogrammetized model of a Casio G-Shock](https://sketchfab.com/3d-models/casio-g-shock-digital-watch-b6466b64dd8b495c99f24a5054491f4d) by [jeandiz](https://sketchfab.com/jeandiz). Clocking in at ~25MB, its textures are way too nice and detailed for our purposes, so I've resized them in imagemagick and did some model cleanup in Blender; you can find the optimized, <1MB gltf file [here](media/watch.glb). 
 
 ![Casio](media/casio.jpg)
 
@@ -155,44 +154,39 @@ Let's add this make this the gadget preview model while we're at it! in `manifes
 
 Now that our gadget preview is all set up, let's add the watch to the gadget itself:
 ```tsx
-		<div>
-			<AvGrabbable dropOnHooks={true}>
-				<AvSphereHandle radius={0.1} />
-				<AvTransform uniformScale={0.2}>
-					<AvPanel interactive={true} >
-						<AvTransform translateX={.063} 
-									 translateY={-.28} 
-									 translateZ={-.023}>
-							<AvModel uri="./models/watch.glb" 
-							scaleToFit={{ x: 0.35, 
-										  y: 0.35, 
-										  z: 0.35 }} />
-						</AvTransform>
-						<div className="Watch">
-						Hello Aardvark!
-						</div>
-					</AvPanel>
+<div>
+	<AvGrabbable dropOnHooks={true}>
+		<AvSphereHandle radius={0.1} />
+		<AvTransform uniformScale={0.2}>
+			<AvPanel interactive={true} >
+				<AvTransform translateX={.063} translateY={-.28} translateZ={-.023}>
+					<AvModel uri="./models/watch.glb" scaleToFit={{ x: 0.35, y: 0.35, z: 0.35 }} />
 				</AvTransform>
-			</AvGrabbable>
-		</div>
+				<div className="Watch">
+				Hello Aardvark!
+				</div>
+			</AvPanel>
+		</AvTransform>
+	</AvGrabbable>
+</div>
 ```
 
-Hopefully this looks pretty straightforward. Inside AvPanel, we've added a `<AvTransform>` component and inside *it*, an `<AvModel>` component. We're using the transform component to place the model where we want it in the gadget and `<AvModel>`'s `scaleToFit` property to lock the model's scale into an (imaginary) box of a certain size. The values are a result of trial and error - our main concern is having the watch in a reasonable place and setting the digits' size and location with CSS.
+Not *too* much happening here. Inside AvPanel, we've added a `<AvTransform>` component and inside *it*, an `<AvModel>` component. We're using the `<AvTransform>` component to place the model where we want it in the gadget and `<AvModel>`'s `scaleToFit` property to lock the model's scale into an (imaginary) box of a certain size. The values are a result of trial and error - our main concern is having the watch in a reasonable place and setting the digits' size and location with CSS.
 
 # Step 4: _Time for Action_ - Making it interactive
 
 Alright, so we've got a watch; time (heh) to make it tick! 
-In the spirit of old school digital watches, let's have a `time` display and - when the screen is "pressed" - a `date` display as well. We'll start by adding a "watchDisplay" string and an instance of a "watchDisplayType" enum to our state interface:
+In the spirit of old school digital watches, let's have a `time` display and - when the screen is "pressed" - a `date` display as well. We'll start by adding a "watchDisplay" string and an instance of a "watchDisplayType" enum to our state interface, to manage the display state:
 
 ```tsx
 enum watchDisplayType {
-    Time,
-    Date
+	Time,
+	Date
 }
 
 interface WatchState {
-    watchDisplayTypeInstance: watchDisplayType;
-    watchDisplay: string;
+	watchDisplayTypeInstance: watchDisplayType;
+	watchDisplay: string;
 }
 ```
 
@@ -203,20 +197,22 @@ In the `WatchGadget` class, we'll:
 ```tsx
 
 class WatchGadget extends React.Component<{}, WatchState> {
+
     constructor(props: any) {
-        super(props);
-        this.state =
-        {
-            watchDisplayTypeInstance: watchDisplayType.Time,
-            watchDisplay: ""
-        };
+			super(props);
+			this.state =
+			{
+				watchDisplayTypeInstance: watchDisplayType.Time,
+				watchDisplay: ""
+			};
     }
+		
     componentDidMount() {
-        setInterval(this.getTime, 1000);
+			setInterval(this.getTime, 1000);
     }
 
     @bind public getTime() {
-        switch (this.state.watchDisplayTypeInstance) {
+			switch (this.state.watchDisplayTypeInstance) {
 
             case watchDisplayType.Time:
                 this.setState({ watchDisplay: new Date().toLocaleTimeString() });
@@ -224,24 +220,20 @@ class WatchGadget extends React.Component<{}, WatchState> {
 
             case watchDisplayType.Date:
                 this.setState({ watchDisplay: new Date().toLocaleDateString(
-					undefined, 
-				{ month: "2-digit", day: "2-digit", year: "2-digit" }) 
-				});
+								undefined, { month: "2-digit", day: "2-digit", year: "2-digit" })});
                 break;
 			
-			default:
-				break;
+						default:
+							break;
+			}
 		}
-    }
 
     @bind public changeDisplay() {
         this.state.watchDisplayTypeInstance == watchDisplayType.Date ?
             this.setState({ watchDisplayTypeInstance: watchDisplayType.Time }) :
             this.setState({ watchDisplayTypeInstance: watchDisplayType.Date });    
-	}
+		}
 }
-
-
 ```
 
 finally, we'll update what we're displaying in the `Watch` div and add an `onMouseDown` event handler, in order to trigger the display change:
@@ -267,50 +259,50 @@ import { EndpointAddr, AvGrabEvent,
 endpointAddrToString } from '@aardvarkxr/aardvark-shared';
 
 enum watchDisplayType {
-    Time,
-    Date
+	Time,
+	Date
 }
 
 interface WatchState {
-    watchDisplayTypeInstance: watchDisplayType;
-    watchDisplay: string;
+	watchDisplayTypeInstance: watchDisplayType;
+	watchDisplay: string;
 }
 
 class WatchGadget extends React.Component<{}, WatchState> {
-    constructor(props: any) {
-        super(props);
-        this.state =
-        {
-            watchDisplayTypeInstance: watchDisplayType.Time,
-            watchDisplay: ""
-        };
-    }
+	constructor(props: any) {
+			super(props);
+			this.state =
+			{
+				watchDisplayTypeInstance: watchDisplayType.Time,
+				watchDisplay: ""
+			};
+	}
 
-    componentDidMount() {
-        setInterval(this.getTime, 1000);
-    }
+	componentDidMount() {
+			setInterval(this.getTime, 1000);
+	}
 
-    @bind public getTime() {
-        switch (this.state.watchDisplayTypeInstance) {
+	@bind public getTime() {
+		switch (this.state.watchDisplayTypeInstance) {
+			
+				case watchDisplayType.Time:
+					this.setState({ watchDisplay: new Date().toLocaleTimeString() });
+					break;
 
-            case watchDisplayType.Time:
-                this.setState({ watchDisplay: new Date().toLocaleTimeString() });
-                break;
+				case watchDisplayType.Date:
+					this.setState({ watchDisplay: new Date().toLocaleDateString(undefined, { month: "2-digit", day: "2-digit", year: "2-digit" }) });
+					break;
 
-            case watchDisplayType.Date:
-                this.setState({ watchDisplay: new Date().toLocaleDateString(undefined, { month: "2-digit", day: "2-digit", year: "2-digit" }) });
-                break;
+				default:
+					break;
+		}
+	}
 
-			default:
-				break;
-        }
-    }
-
-    @bind public changeDisplay() {
-        this.state.watchDisplayTypeInstance == watchDisplayType.Date ?
-            this.setState({ watchDisplayTypeInstance: watchDisplayType.Time }) :
-            this.setState({ watchDisplayTypeInstance: watchDisplayType.Date });
-    }
+	@bind public changeDisplay() {
+		this.state.watchDisplayTypeInstance == watchDisplayType.Date ?
+			this.setState({ watchDisplayTypeInstance: watchDisplayType.Time }) :
+			this.setState({ watchDisplayTypeInstance: watchDisplayType.Date });
+	}
 
 	public render() {
 		let scale = 0.2;
@@ -323,13 +315,12 @@ class WatchGadget extends React.Component<{}, WatchState> {
 						<AvTransform
 							uniformScale={0.2}>
 							<AvPanel interactive={true} >
-								<div className="Watch"
-								onMouseDown={this.changeDisplay}>
+								<div className="Watch" onMouseDown={this.changeDisplay}>
 									{this.state.watchDisplay}
 								</div>
 								<AvTransform translateX={.063}
-									         translateY={-.28}
-									         translateZ={-.023}>
+									    	     translateY={-.28}
+									     	     translateZ={-.023}>
 									<AvModel uri="./models/watch.glb"
 										scaleToFit={{
 											x: 0.35,
@@ -348,21 +339,20 @@ class WatchGadget extends React.Component<{}, WatchState> {
 
 ReactDOM.render(<WatchGadget />, document.getElementById("root"));
 ```
+
 And here's our gadget in action:
-
-
-There you have it. Your own Casio Watch gadget. Now go wander the metaverse in style!
 
 ![final](./media/final-opt.gif)
 
+There you have it. Your own Casio Watch gadget. Now go wander the metaverse in style!
 
 # Step 5: _Closing Time_ - a few tips for the road:
 
-* Remember, Aardvark is designed as a **gadget** overlay for the metaverse. It's open source, built with the state of the art frameworks and standards, and can do quite a lot - but it's best thought of as a tool for making _things_ in the **people-places-things** trifecta. While you could conceivably use it to make places (or, ahem, _people_?) - it is decidedly not its purpose or planned use case; _things_ are where it shines. 
+* Remember, Aardvark is designed as an overlay for **gadgets**. It's open source, built with the state of the art frameworks and standards, and can do quite a lot - but it's best thought of as a tool for making the _things_ in the **people-places-things** trifecta. While you could conceivably use it to make places (or, ahem, _people_?) - it is decidedly not its purpose or planned use case; _things_ are where it shines. 
      
 * The [Aardvark React documentation](https://aardvarkxr.github.io/aardvark/aardvark-react/) is a good next step: it describes most of the available node types in Aardvark, as well as what their properties are. 
 
-* Work on Aardvark is currently in progress. Docs are updated, the API evolves, and new features land frequently. You're welcome to join the [AardvarkXR Slack](aardvarkxr.slack.com) to chat with the folks working on it and have your questions answered, your feedback listened to and your troubles melt away like lemon drops. You should also drop by if you've made something cool and would like to share it or even have it featured.
+* Work on Aardvark is currently in progress. Docs are constantly updated, the API evolves almost daily, and new features land frequently. You're welcome to join the [AardvarkXR Slack](aardvarkxr.slack.com) to chat with the folks working on it and have your questions answered, your feedback listened to and your troubles melt away like lemon drops. You should also drop by if you've made something cool and would like to share it or even have it featured.
 
 Thanks for reading, and happy hacking!
 
