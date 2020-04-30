@@ -220,7 +220,8 @@ class WatchGadget extends React.Component<{}, WatchState> {
 
             case watchDisplayType.Date:
                 this.setState({ watchDisplay: new Date().toLocaleDateString(
-								undefined, { month: "2-digit", day: "2-digit", year: "2-digit" })});
+								undefined, 
+								{ month: "2-digit", day: "2-digit", year: "2-digit" })});
                 break;
 			
 						default:
@@ -290,7 +291,9 @@ class WatchGadget extends React.Component<{}, WatchState> {
 					break;
 
 				case watchDisplayType.Date:
-					this.setState({ watchDisplay: new Date().toLocaleDateString(undefined, { month: "2-digit", day: "2-digit", year: "2-digit" }) });
+					this.setState({ watchDisplay: new Date().toLocaleDateString(
+					undefined, 
+					{ month: "2-digit", day: "2-digit", year: "2-digit" }) });
 					break;
 
 				default:
