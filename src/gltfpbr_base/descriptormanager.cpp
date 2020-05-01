@@ -28,9 +28,9 @@ CDescriptorManager::~CDescriptorManager()
 
 bool CDescriptorManager::init()
 {
-	static const uint32_t k_unUniformBufferDescriptorCount = 4096;
-	static const uint32_t k_unImageSamplerDescriptorCount = 4096;
-	static const uint32_t k_unMaxSets = 4096;
+	static const uint32_t k_unUniformBufferDescriptorCount = 10000;
+	static const uint32_t k_unImageSamplerDescriptorCount = 10000;
+	static const uint32_t k_unMaxSets = 10000;
 
 	std::array<VkDescriptorPoolSize, 2 > poolSizes = 
 	{
