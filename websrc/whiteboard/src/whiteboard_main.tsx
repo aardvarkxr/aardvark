@@ -3,22 +3,68 @@ import { g_builtinModelBox, AvNodeTransform, g_builtinModelCylinder, EndpointAdd
 import bind from 'bind-decorator';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
+import { vec2 } from '@tlaukkan/tsm';
 
 
-
-interface Point
+function vec2FromAvTransformPosition( transform: AvNodeTransform )
 {
-	x: number;
-	y: number;
+	if( !transform.position )
+		return null;
+
+	return new vec2( [ transform.position.x, transform.position.y ] );
 }
 
 interface Stroke
 {
 	id: number;
 	thickness: number;
-	points: Point[];
+	points: vec2[];
 	color: string;
 }
+
+function optimizeStroke( stroke: Stroke )
+{
+	if( !stroke || stroke.points.length < 3 )
+	{
+		return 0;
+	}
+
+	let pointsRemoved = 0;
+	while( true )
+	{
+		let bestIndex: number;
+		let bestError = 99999;
+
+		// Look for points we can slice out of the stroke because 
+		// their error is too small to matter
+		for( let n = 0; n < stroke.points.length - 2; n++ )
+		{
+			let distN1 = vec2.distance( stroke.points[n], stroke.points[n + 1] );
+			let distN2 = vec2.distance( stroke.points[n], stroke.points[n + 2] );
+
+			let fakeN1 = vec2.mix(stroke.points[n], stroke.points[n+2], distN1/distN2, new vec2() );
+			let error = vec2.distance(stroke.points[n+1], fakeN1);
+			if( error < bestError )
+			{
+				bestIndex = n + 1;
+				bestError = error;
+			}
+		}
+
+		if( !bestIndex || bestError > 0.001 )
+		{
+			break;
+		}
+		else
+		{
+			stroke.points.splice( bestIndex, 1 );
+			pointsRemoved++;
+		}
+	}
+
+	return pointsRemoved;
+}
+
 
 interface IEColorPicker
 {
@@ -232,13 +278,13 @@ function Surface( props: SurfaceProps )
 		if( !contact )
 			return;
 
-		let newPoint = { x: hookFromGrabbable.position.x, y: hookFromGrabbable.position.y } as Point;
+		let newPoint = vec2FromAvTransformPosition( hookFromGrabbable );
 		if( contact.points.length > 0 )
 		{
-			let lastPoint = contact.points[ contact.points.length - 1 ];
-			let diff = { x: newPoint.x - lastPoint.x, y: newPoint.y - lastPoint.y };
-			let dist = Math.sqrt( diff.x * diff.x + diff.y * diff.y );
-			if( dist < 0.005 )
+			let n1Point = contact.points[ contact.points.length - 1 ];
+			let diffN1 = vec2.difference( newPoint, n1Point, new vec2() );
+			let distN1 = diffN1.length();
+			if( distN1 < 0.005 )
 			{
 				// require that the marker move at least 5mm to add a point
 				return;
@@ -246,7 +292,7 @@ function Surface( props: SurfaceProps )
 		}
 
 		let newMap = { ...contacts };
-		newMap[ markerAddrString ].points.push( hookFromGrabbable.position );
+		newMap[ markerAddrString ].points.push( newPoint );
 		setContacts( newMap );
 	}
 
@@ -301,6 +347,8 @@ class Whiteboard extends React.Component< {}, WhiteboardState >
 	@bind
 	private onAddStroke( newStroke: Stroke )
 	{
+		let removed = optimizeStroke( newStroke );
+		console.log( `Adding stroke. Optimized away ${ removed } points. ${ newStroke.points.length } remain` );
 		this.setState( { strokes: [...this.state.strokes, newStroke ] } );
 	}
 
