@@ -745,6 +745,8 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 			{ node.propSharedTexture && <div className="AvNodeProperty">{ JSON.stringify( node.propSharedTexture ) }</div> }
 			{ node.propTransform && <TransformMonitor 
 				nodeId={ { type: EndpointType.Node, endpointId: this.props.gadgetId, nodeId: node.id } } /> }
+			{ node.propInterfaces 
+				&& <div className="AvNodeProperty">Interfaces: { node.propInterfaces.join( ", " ) }</div> }
 			{ childElements }
 		</div>
 	}
