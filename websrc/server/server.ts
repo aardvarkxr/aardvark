@@ -1692,6 +1692,12 @@ class CEndpoint
 
 	private async attachToHook( hookId: EndpointAddr, hookFromGrabbable: AvNodeTransform )
 	{
+		if( !hookId )
+		{
+			// we're just clearing the hook
+			return this.getGadgetData().attachToHook( null );
+		}
+
 		let holderGadget = this.m_dispatcher.findGadgetById( hookId.endpointId );
 		let hookNode = holderGadget?.findNode( hookId.nodeId );
 		if( !hookNode || hookNode.type != AvNodeType.Hook )

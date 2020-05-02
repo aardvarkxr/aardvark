@@ -352,7 +352,7 @@ export interface MsgInterfaceEvent
 export interface MsgAttachGadgetToHook
 {
 	grabbableNodeId: EndpointAddr;
-	hookNodeId: EndpointAddr;
+	hookNodeId: EndpointAddr | null;
 	hookFromGrabbable?: AvNodeTransform;
 }
 

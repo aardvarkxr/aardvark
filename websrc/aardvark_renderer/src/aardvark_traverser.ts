@@ -1632,7 +1632,6 @@ export class AvDefaultTraverser
 				console.log( `Traverser ending grab of ${ endpointAddrToString( grabEvent.grabbableId ) }`
 					+ ` by ${ endpointAddrToString( grabEvent.grabberId ) }` );
 				Av().renderer.endGrab( grabEvent.grabberId, grabEvent.grabbableId );
-				let oldAnchor = this.m_nodeToNodeAnchors[ grabbableIdStr ];
 				if( !endpointAddrIsEmpty( grabEvent.hookId ) )
 				{
 					let anchor: NodeToNodeAnchor_t =
@@ -1692,6 +1691,13 @@ export class AvDefaultTraverser
 					// in the right place next frame
 					this.preserveTransform( grabbableData.lastNode, null, null, 
 						universeFromGrabbable, graphParentFromGrabbable );
+
+					let msg: MsgAttachGadgetToHook =
+					{
+						grabbableNodeId: grabEvent.grabbableId,
+						hookNodeId: null,
+					}
+					this.m_endpoint.sendMessage( MessageType.AttachGadgetToHook, msg );
 				}
 
 
