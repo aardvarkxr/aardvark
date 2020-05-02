@@ -211,7 +211,7 @@ export class AvGrabbable extends AvBaseNode< AvGrabbableProps, AvGrabbableState 
 				}
 				break;
 
-			case HookInteraction.HighlightOnly:
+			case HookInteraction.HighlightAndDrop:
 				if( !this.state.hook )
 				{
 					node.flags |= ENodeFlags.HighlightHooks | ENodeFlags.AllowDropOnHooks;
@@ -268,10 +268,12 @@ export class AvGrabbable extends AvBaseNode< AvGrabbableProps, AvGrabbableState 
 				|| this.state.lastInterfaceName != this.m_lastNotifiedInterfaceName
 				|| this.state.nearbyHook != this.m_lastNotifiedHook )
 			{
+				//console.log( "updating highlight", this.state );
 				this.m_lastNotifiedHighlight = this.state.lastHighlight;
 				this.m_lastNotifiedHandle = this.state.lastHandle;
 				this.m_lastNotifiedTethered = !!this.state.hook;
 				this.m_lastNotifiedInterfaceName = this.state.lastInterfaceName;
+				this.m_lastNotifiedHook = this.state.nearbyHook;
 				this.props.updateHighlight( this.state.lastHighlight, this.state.lastHandle, !!this.state.hook,
 					this.state.lastInterfaceName, this.state.nearbyHook );
 			}
