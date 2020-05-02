@@ -24,6 +24,15 @@ export enum ShowGrabbableChildren
 	OnlyWhenNotGrabbed = 2,
 }
 
+export enum DropStyle
+{
+	/** Drop this grabbable on hooks */
+	DropOnHooks = 1,
+
+	/** Drop this grabbable in the world */
+	DropInTheWorld = 2,
+}
+
 interface StandardGrabbableProps
 {
 	/** The model to use for the grab handle of this grabbable. */
@@ -65,6 +74,12 @@ interface StandardGrabbableProps
 	 * @default none
 	*/
 	onEndGrab?: () => void;
+
+	/** Controls where this grabbable can be dropped.
+	 * 
+	 * @default DropOnHooks
+	 */
+	dropStyle?: DropStyle;
 }
 
 
@@ -137,10 +152,26 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 			scale *= this.props.modelScale;
 		}
 
+		let hookInteraction: HookInteraction;
+		let preserveDropTransform: boolean;
+		switch( this.props.dropStyle ?? DropStyle.DropOnHooks )
+		{
+			case DropStyle.DropOnHooks:
+				hookInteraction = HookInteraction.HighlightAndDrop;
+				preserveDropTransform = false;
+				break;
+
+			case DropStyle.DropInTheWorld:
+				hookInteraction = HookInteraction.None;
+				preserveDropTransform = true;
+				break;
+		}
+
 		return (
-			<AvGrabbable updateHighlight={ this.onUpdateHighlight } preserveDropTransform={ true }
+			<AvGrabbable updateHighlight={ this.onUpdateHighlight } 
+				preserveDropTransform={ preserveDropTransform }
 				grabWithIdentityTransform={ this.props.grabWithIdentityTransform } 
-				hookInteraction={ HookInteraction.HighlightAndDrop }>
+				hookInteraction={ hookInteraction }>
 				<AvTransform uniformScale={ scale }>
 					<AvModel uri={ this.props.modelUri} color={ this.props.modelColor }/>
 					<AvModelBoxHandle uri={ this.props.modelUri } />

@@ -1,4 +1,4 @@
-import { AvGadget, AvStandardGrabbable, AvPrimitive, AvLine, PrimitiveYOrigin, PrimitiveZOrigin, PrimitiveType, AvTransform, AvGrabbable, AvModelBoxHandle, AvHook, HookHighlight, HookInteraction, HighlightType } from '@aardvarkxr/aardvark-react';
+import { AvGadget, AvStandardGrabbable, AvPrimitive, AvLine, PrimitiveYOrigin, PrimitiveZOrigin, PrimitiveType, AvTransform, AvGrabbable, AvModelBoxHandle, AvHook, HookHighlight, HookInteraction, HighlightType, DropStyle } from '@aardvarkxr/aardvark-react';
 import { g_builtinModelBox, AvNodeTransform, g_builtinModelCylinder, EndpointAddr, endpointAddrToString, endpointAddrsMatch, AvVector } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
@@ -383,7 +383,8 @@ class Whiteboard extends React.Component< {}, WhiteboardState >
 		}
 
 		return (
-			<AvStandardGrabbable modelUri={ g_builtinModelBox } modelScale={ 0.1 } modelColor="lightblue">
+			<AvStandardGrabbable modelUri={ g_builtinModelBox } modelScale={ 0.1 } 
+				modelColor="lightblue" dropStyle={ DropStyle.DropInTheWorld }>
 				<AvTransform translateY={0.2}>
 					<AvTransform translateZ={ -0.005 }>
 						<AvPrimitive type={PrimitiveType.Cube} originZ={ PrimitiveZOrigin.Back }
