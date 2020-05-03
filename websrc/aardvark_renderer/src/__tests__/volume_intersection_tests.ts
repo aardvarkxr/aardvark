@@ -1,7 +1,7 @@
-import { TransformedVolume, volumesIntersect } from './../volume_intersection';
-import { vec3, mat4 } from '@tlaukkan/tsm';
-import { AvVolume, EVolumeType, AABB } from '@aardvarkxr/aardvark-shared';
-import { translateMat, scaleMat, rotationMatFromEulerDegrees } from '../traverser_utils';
+import { mat4, vec3 } from '@tlaukkan/tsm';
+import { rotationMatFromEulerDegrees, scaleMat, translateMat } from '../traverser_utils';
+import { volumesIntersect } from './../volume_intersection';
+import { makeBox, makeInfinite, makeSphere } from '../volume_test_utils';
 
 beforeEach( async() =>
 {
@@ -10,45 +10,6 @@ beforeEach( async() =>
 afterEach( () =>
 {
 } );
-
-function makeSphere( radius: number, position?: vec3, scale?: number )
-{
-	let mscale = scale ? scaleMat( new vec3( [ scale, scale, scale ] ) ) : mat4.identity;
-	let mtranslate = position ? translateMat( position ) : mat4.identity;
-	return (
-		{
-			type: EVolumeType.Sphere,
-			radius,
-			universeFromVolume: mat4.product( mtranslate, mscale, new mat4() ),
-		} as TransformedVolume );
-}
-
-function makeBox( ranges: [number, number, number, number, number, number], universeFromVolume?: mat4 )
-{
-	return (
-		{
-			type: EVolumeType.AABB,
-			aabb: {
-				xMin: ranges[0],
-				xMax: ranges[1],
-				yMin: ranges[2],
-				yMax: ranges[3],
-				zMin: ranges[4],
-				zMax: ranges[5],
-			},
-			universeFromVolume: universeFromVolume ?? mat4.identity,
-		} as TransformedVolume );
-}
-
-function makeInfinite()
-{
-	return (
-		{
-			type: EVolumeType.Infinite,
-			universeFromVolume: mat4.identity,
-		} as TransformedVolume );
-}
-
 
 describe( "volume intersections ", () =>
 {
