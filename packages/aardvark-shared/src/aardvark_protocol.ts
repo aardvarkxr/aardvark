@@ -979,6 +979,14 @@ export function gadgetDetailsToId( gadgetName: string, gadgetUri: string, gadget
 }
 
 
+export enum InterfaceLockResult
+{
+	Success = 0,
+	AlreadyLocked = 1,
+	NotLocked = 2,
+	InterfaceNotFound = 3,
+	InterfaceNameMismatch = 4,
+}
 
 /** Gadgets are also responsible for providing transforms for all the members of
  * the room so that Aardvark knows where to render them relative to the local

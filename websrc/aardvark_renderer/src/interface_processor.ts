@@ -1,4 +1,4 @@
-import { EndpointAddr, endpointAddrToString } from '@aardvarkxr/aardvark-shared';
+import { EndpointAddr, endpointAddrToString, endpointAddrsMatch, InterfaceLockResult } from '@aardvarkxr/aardvark-shared';
 import { mat4 } from '@tlaukkan/tsm';
 import { TransformedVolume, volumesIntersect } from './volume_intersection';
 
@@ -89,7 +89,7 @@ class InterfaceEntityMap
 export class CInterfaceProcessor
 {
 	private interfacesInProgress: InterfaceInProgress[] = [];
-	private lostLockedInterfaces: { [ transmitterEpa: string ] : InterfaceInProgress } = {};
+	private lostLockedInterfaces = new Map<string, InterfaceInProgress>();
 	private callbacks: InterfaceProcessorCallbacks;
 
 	constructor( callbacks: InterfaceProcessorCallbacks )
@@ -102,7 +102,7 @@ export class CInterfaceProcessor
 		let entityMap = new InterfaceEntityMap( entities );
 
 		// end interfaces where one end or the other is gone
-		let transmittersInUse = new Map<string, InterfaceInProgress | false >();
+		let transmittersInUse = new Map<string, InterfaceInProgress | boolean >();
 		let newInterfacesInProgress: InterfaceInProgress[] = []
 		for( let iip of this.interfacesInProgress )
 		{
@@ -125,7 +125,8 @@ export class CInterfaceProcessor
 				this.callbacks.interfaceEnded(iip.transmitter, iip.receiver, iip.iface );
 				if( iip.locked )
 				{
-					this.lostLockedInterfaces[ endpointAddrToString( iip.transmitter ) ] = iip;
+					console.log( "adding lost lock to list for " + endpointAddrToString( iip.transmitter ) );
+					this.lostLockedInterfaces.set( endpointAddrToString( iip.transmitter ), iip );
 				}
 				continue;
 			}
@@ -149,7 +150,7 @@ export class CInterfaceProcessor
 		}
 
 		// lost locks count as "in use" so they won't trigger new interfaces
-		for( let transmitterEpaString in this.lostLockedInterfaces )
+		for( let transmitterEpaString of this.lostLockedInterfaces.keys() )
 		{
 			transmittersInUse.set( transmitterEpaString, false );
 		}
@@ -163,8 +164,9 @@ export class CInterfaceProcessor
 				continue;
 			}
 
-			let currentIip: InterfaceInProgress | false 
+			let currentIip: InterfaceInProgress | boolean 
 				= transmittersInUse.get(endpointAddrToString( transmitter.epa ));
+			console.log( "current iip", currentIip );
 			if( typeof currentIip == "boolean" || ( currentIip && currentIip.locked ) )
 			{
 				// This interface was locked. Wait for the unlock before changing anything
@@ -277,13 +279,77 @@ export class CInterfaceProcessor
 
 	}
 
+	private findIip( transmitter: EndpointAddr ): InterfaceInProgress
+	{
+		for( let iip of this.interfacesInProgress )
+		{
+			if( endpointAddrsMatch( transmitter, iip.transmitter ) )
+			{
+				return iip;
+			}
+		}
+
+		return null;
+	}
+
 	public lockInterface( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string )
 	{
+		let iip = this.findIip(transmitter);
+		if( !iip )
+		{
+			return InterfaceLockResult.InterfaceNotFound;
+		}
 
+		if( iip.locked )
+		{
+			return InterfaceLockResult.AlreadyLocked;
+		}
+
+		if( iip.iface != iface )
+		{
+			return InterfaceLockResult.InterfaceNameMismatch;
+		}
+
+		iip.locked = true;
+		return InterfaceLockResult.Success;
 	}
+
 
 	public unlockInterface( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string )
 	{
+		let iip = this.findIip(transmitter);
+		if( !iip )
+		{
+			if( this.lostLockedInterfaces.has( endpointAddrToString( transmitter ) ) )
+			{
+				iip = this.lostLockedInterfaces.get( endpointAddrToString( transmitter ) );
+				if( iip.iface != iface )
+				{
+					return InterfaceLockResult.InterfaceNameMismatch;
+				}
+
+				// we lost the other end of the lock and told the transmitter about that already.
+				this.lostLockedInterfaces.delete( endpointAddrToString( transmitter ) );
+				return InterfaceLockResult.Success;
+			}
+			else
+			{
+				return InterfaceLockResult.InterfaceNotFound;
+			}
+		}
+
+		if( !iip.locked )
+		{
+			return InterfaceLockResult.NotLocked;
+		}
+
+		if( iip.iface != iface )
+		{
+			return InterfaceLockResult.InterfaceNameMismatch;
+		}
+
+		iip.locked = false;
+		return InterfaceLockResult.Success;
 		
 	}
 
