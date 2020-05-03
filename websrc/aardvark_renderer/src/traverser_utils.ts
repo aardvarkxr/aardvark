@@ -19,6 +19,24 @@ export function scaleMat( s: vec3)
 	return m;
 }
 
+function quatFromAxisAngleDegrees( axis: vec3, deg?: number ): quat
+{
+	if( !deg )
+		return new quat( quat.identity.xyzw );
+
+	return quat.fromAxisAngle( axis, deg * Math.PI / 180 );
+}
+
+export function rotationMatFromEulerDegrees( r: vec3 )
+{
+	let qx = quatFromAxisAngleDegrees( vec3.right, r.x );
+	let qy = quatFromAxisAngleDegrees( vec3.up, r.y );
+	let qz = quatFromAxisAngleDegrees( vec3.forward, r.z );
+
+	let q = qx.multiply( qy ).multiply( qz );
+	return q.toMat4();
+}
+
 export function getRowFromMat( m: mat4, n: number ) : vec3 
 {
 	let row = m.row( n );

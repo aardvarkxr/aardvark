@@ -760,6 +760,7 @@ export enum EVolumeType
 	Sphere = 0,
 	ModelBox = 1,
 	AABB = 1,
+	Infinite = 3,
 };
 
 
