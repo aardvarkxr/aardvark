@@ -125,7 +125,7 @@ export class CInterfaceProcessor
 				this.callbacks.interfaceEnded(iip.transmitter, iip.receiver, iip.iface );
 				if( iip.locked )
 				{
-					console.log( "adding lost lock to list for " + endpointAddrToString( iip.transmitter ) );
+					//console.log( "adding lost lock to list for " + endpointAddrToString( iip.transmitter ) );
 					this.lostLockedInterfaces.set( endpointAddrToString( iip.transmitter ), iip );
 				}
 				continue;
@@ -166,7 +166,7 @@ export class CInterfaceProcessor
 
 			let currentIip: InterfaceInProgress | boolean 
 				= transmittersInUse.get(endpointAddrToString( transmitter.epa ));
-			console.log( "current iip", currentIip );
+			//console.log( "current iip", currentIip );
 			if( typeof currentIip == "boolean" || ( currentIip && currentIip.locked ) )
 			{
 				// This interface was locked. Wait for the unlock before changing anything
@@ -276,7 +276,37 @@ export class CInterfaceProcessor
 
 	public interfaceEvent( destination: EndpointAddr, peer: EndpointAddr, iface: string, event: object ): void
 	{
+		let foundIip = false;
+		for( let iip of this.interfacesInProgress )
+		{
+			// look for an iip where the destination is the transmitter and the peer is the receiver
+			// or vice versa
+			if( endpointAddrsMatch( destination, iip.transmitter ) 
+					&& endpointAddrsMatch( peer, iip.receiver )
+				|| endpointAddrsMatch( destination, iip.receiver ) 
+					&& endpointAddrsMatch( peer, iip.transmitter ) )
+			{
+				foundIip = true;
+				if( iip.iface != iface )
+				{
+					console.log( `Discarding interface event from ${ endpointAddrToString( peer ) } `
+						+` to ${ endpointAddrToString( destination ) } for ${ iface }`
+						+` because the interface between those two is ${ iip.iface }`, event );
+					break;
+				}
 
+				this.callbacks.interfaceEvent( destination, peer, iface, event );
+				// we should only have one iip for this transmitter
+				break;
+			}
+		}
+
+		if( !foundIip )
+		{
+			console.log( `Discarding interface event from ${ endpointAddrToString( peer ) } `
+			+` to ${ endpointAddrToString( destination ) } for ${ iface }`
+			+` because the interface was not found`, event );
+		}
 	}
 
 	private findIip( transmitter: EndpointAddr ): InterfaceInProgress
@@ -292,7 +322,7 @@ export class CInterfaceProcessor
 		return null;
 	}
 
-	public lockInterface( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string )
+	public lockInterface( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string ): InterfaceLockResult
 	{
 		let iip = this.findIip(transmitter);
 		if( !iip )
@@ -315,7 +345,7 @@ export class CInterfaceProcessor
 	}
 
 
-	public unlockInterface( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string )
+	public unlockInterface( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string ): InterfaceLockResult
 	{
 		let iip = this.findIip(transmitter);
 		if( !iip )

@@ -691,6 +691,65 @@ describe( "interface processor", () =>
 
 	} );
 
+	it( "events", async () =>
+	{
+		let cb = new TestCallbacks();
+		let ip = new CInterfaceProcessor( cb );
+
+		let t1 = new CTestEntity();
+		t1.addSphere( 1 );
+		t1.transmits.push( "test@1" );
+
+		let r1 = new CTestEntity();
+		r1.addSphere( 1 );
+		r1.originPath = "/space/stage";
+		r1.receives.push( "test@1" );
+
+		let r2 = new CTestEntity();
+		r2.addSphere( 1 );
+		r2.originPath = "/space/stage";
+		r2.receives.push( "test@1" );
+
+		ip.processFrame([r1, r2, t1]);
+		expect( cb.calls.length ).toBe(1);
+		cb.calls = [];
+
+		ip.interfaceEvent(t1.epa, r1.epa, "test@1", {msg: "Hello"} );
+		ip.interfaceEvent(t1.epa, r1.epa, "bargle@5", {msg: "failed"} );
+		ip.interfaceEvent(t1.epa, r2.epa, "test@1", {msg: "failed"} );
+
+		// End will be sent, but the transmitter won't match with r2 because it's still locked
+		ip.processFrame([r2, r1, t1]);
+		expect( cb.calls.length ).toBe(1);
+		expect( cb.calls[0] ).toEqual(
+			{
+				type: CallType.Event,
+				transmitter: t1.epa,
+				receiver: r1.epa,
+				iface: "test@1",
+				event: { msg: "Hello" },
+			});
+		cb.calls = [];
+
+		ip.interfaceEvent(r1.epa, t1.epa, "test@1", {msg: "Goodbye"} );
+		ip.interfaceEvent(r1.epa, t1.epa, "bargle@5", {msg: "failed"} );
+		ip.interfaceEvent(r2.epa, t1.epa, "test@1", {msg: "failed"} );
+
+		// End will be sent, but the transmitter won't match with r2 because it's still locked
+		ip.processFrame([r2, r1, t1]);
+		expect( cb.calls.length ).toBe(1);
+		expect( cb.calls[0] ).toEqual(
+			{
+				type: CallType.Event,
+				transmitter: r1.epa,
+				receiver: t1.epa,
+				iface: "test@1",
+				event: { msg: "Goodbye" },
+			});
+		cb.calls = [];
+
+	} );
+
 } );
 
 
