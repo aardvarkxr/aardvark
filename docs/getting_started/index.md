@@ -253,7 +253,7 @@ Your gadget's src directory contains a file called manifest.webmanifest that has
 
 Every gadget needs to define a manifest file to tell Aardvark how to deal with that gadget. The fields in the manifest file are:
 * name - The user facing name of the gadget. This isn't currently shown to a user anywhere, but please set one anyway.
-* icons - The URL of a glTF model to use to represent this gadget in the gadget menu. If this does not start with HTTP or HTTPS it must be a relative file path (using forward slashes) to the model file that is relative to the gadget manifest file itself. **(note that if you use a custom icon you currently need to ensure it's placed in `dist/models`)** 
+* icons - The URL of a glTF model to use to represent this gadget in the gadget menu. If this does not start with HTTP or HTTPS it must be a relative file path (using forward slashes) to the model file that is relative to the gadget manifest file itself. 
 * permissions - Aardvark has a rudimentary permission system that allows gadgets to have access to certain blocks of functionality. Possible values are:
   * scenegraph - The gadget is allowed to submit a scene graph. Pretty much every gadget has this permission.
   * room - The gadget is allowed to join and leave rooms on behalf of the user.
