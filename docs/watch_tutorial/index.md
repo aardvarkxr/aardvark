@@ -109,13 +109,12 @@ A nice trick here is making the panel background transparent, because we don't w
 	font-family: 'digital-7';
 	src: url('./fonts/digital-7\ \(mono\).ttf')
 }
-body, html
-{
+
+body, html {
 	background-color: transparent;
 }
 
-.Watch
-{
+.Watch {
 	font-family: 'digital-7', monospace;
 	font-size: 2.8rem;
 	color: #4Af626;
@@ -153,7 +152,6 @@ to ensure that our model and font get properly copied over to the `dist` folder,
 
 Now that our gadget preview is all set up, let's add the watch to the gadget itself:
 ```tsx
-
 			<div>
 				<AvStandardGrabbable modelUri={"./models/placeholder.watch.glb"} modelScale={0.03}>
 					<AvTransform
@@ -242,7 +240,7 @@ class WatchGadget extends React.Component<{}, WatchState>
         this.state.watchDisplayTypeInstance == watchDisplayType.Date ?
             this.setState({ watchDisplayTypeInstance: watchDisplayType.Time }) :
             this.setState({ watchDisplayTypeInstance: watchDisplayType.Date });    
-	}
+		}
 }
 ```
 
