@@ -736,6 +736,8 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 				{ node.propColor.r != undefined && ( ", " + node.propColor.a ) }
 				</div> }
 			{ this.renderVolume( node.propVolume ) }
+			{ node.propVolumes &&
+				node.propVolumes.map( ( volume ) => this.renderVolume( volume ) ) }
 			{ node.propInteractive && <div className="AvNodeProperty">Interactive</div> }
 			{ node.propConstraint && <div className="AvNodeProperty">Constraint: 
 				[ { node.propConstraint.minX }, {node.propConstraint.maxX } ]
@@ -747,6 +749,10 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 				nodeId={ { type: EndpointType.Node, endpointId: this.props.gadgetId, nodeId: node.id } } /> }
 			{ node.propInterfaces 
 				&& <div className="AvNodeProperty">Interfaces: { node.propInterfaces.join( ", " ) }</div> }
+			{ node.propTransmits && node.propTransmits.length > 0
+				&& <div className="AvNodeProperty">Transmits: { node.propTransmits.join( ", " ) }</div> }
+			{ node.propReceives && node.propReceives.length > 0
+				&& <div className="AvNodeProperty">Receives: { node.propReceives.join( ", " ) }</div> }
 			{ childElements }
 		</div>
 	}

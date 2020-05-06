@@ -1,8 +1,11 @@
+import { EndpointAddrMap } from './endpoint_addr_map';
+import { TransformedVolume } from './volume_intersection';
 import { CRendererEndpoint } from '@aardvarkxr/aardvark-react';
-import { Av, AvActionState, AvConstraint, AvGrabEvent, AvGrabEventType, AvModelInstance, AvNode, AvNodeTransform, AvNodeType, EAction, EHand, emptyActionState, EndpointAddr, endpointAddrIsEmpty, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, EVolumeType, filterActionsForGadget, getActionFromState, g_builtinModelCylinder, g_builtinModelError, g_builtinModelPanel, g_builtinModelPanelInverted, LocalUserInfo, MessageType, MinimalPose, MsgAttachGadgetToHook, MsgDestroyGadget, MsgDetachGadgetFromHook, MsgGrabEvent, MsgLostEndpoint, MsgNodeHaptic, MsgResourceLoadFailed, MsgUpdateActionState, MsgUpdatePose, MsgUpdateSceneGraph, MsgUserInfo, parseEndpointFieldUri, AvRendererConfig } from '@aardvarkxr/aardvark-shared';
+import { Av, AvActionState, AvConstraint, AvGrabEvent, AvGrabEventType, AvModelInstance, AvNode, AvNodeTransform, AvNodeType, AvRendererConfig, EAction, EHand, emptyActionState, EndpointAddr, endpointAddrIsEmpty, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, EVolumeType, filterActionsForGadget, getActionFromState, g_builtinModelCylinder, g_builtinModelError, g_builtinModelPanel, g_builtinModelPanelInverted, LocalUserInfo, MessageType, MinimalPose, MsgAttachGadgetToHook, MsgDestroyGadget, MsgDetachGadgetFromHook, MsgGrabEvent, MsgInterfaceEnded, MsgInterfaceLock, MsgInterfaceSendEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgInterfaceUnlock, MsgLostEndpoint, MsgNodeHaptic, MsgResourceLoadFailed, MsgUpdateActionState, MsgUpdatePose, MsgUpdateSceneGraph, MsgUserInfo, parseEndpointFieldUri, MsgInterfaceReceiveEvent } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3, vec4 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
 import { CGrabStateProcessor } from './grab_state_processor';
+import { CInterfaceProcessor, InterfaceProcessorCallbacks, InterfaceEntity } from './interface_processor';
 import { computeUniverseFromLine, minIgnoringNulls, nodeTransformFromMat4, nodeTransformToMat4, scaleAxisToFit, scaleMat, translateMat, vec3MultiplyAndAdd } from './traverser_utils';
 const equal = require( 'fast-deep-equal' );
 
@@ -42,6 +45,7 @@ class PendingTransform
 	private m_applyFunction: (universeFromNode: mat4) => void = null;
 	private m_computeFunction: TransformComputeFunction = null;
 	private m_currentlyResolving = false;
+	private m_originPath: string = null;
 
 	constructor( id: string )
 	{
@@ -102,6 +106,28 @@ class PendingTransform
 		}
 
 	}
+
+	public setOriginPath( originPath: string )
+	{
+		this.m_originPath = originPath;
+	}
+
+	public getOriginPath(): string
+	{
+		if( this.m_originPath )
+		{
+			return this.m_originPath;
+		}
+		else if( this.m_parents && this.m_parents.length > 0 )
+		{
+			return this.m_parents[0].getOriginPath();
+		}
+		else
+		{
+			return null;
+		}
+	}
+
 
 	public getUniverseFromNode():mat4
 	{
@@ -190,7 +216,7 @@ interface RemoteUniverse
 	remoteFromOrigin: { [originPath: string] : PendingTransform };
 }
 
-export class AvDefaultTraverser
+export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 {
 	private m_inFrameTraversal = false;
 	private m_handDeviceForNode: { [nodeGlobalId:string]:EHand } = {};
@@ -214,6 +240,8 @@ export class AvDefaultTraverser
 	private m_localUserInfo: LocalUserInfo;
 	private m_remoteUniverse: { [ universeUuid: string ]: RemoteUniverse } = {};
 	private m_grabsInProgress: string[] = [];
+	private m_interfaceProcessor = new CInterfaceProcessor( this );
+	private m_interfaceEntities: AvNode[] = [];
 
 	constructor()
 	{
@@ -227,7 +255,10 @@ export class AvDefaultTraverser
 		this.m_endpoint.registerHandler( MessageType.NodeHaptic, this.onNodeHaptic );
 		this.m_endpoint.registerHandler( MessageType.UserInfo, this.onUserInfo );
 		this.m_endpoint.registerHandler( MessageType.LostEndpoint, this.onLostEndpoint );
-	}
+		this.m_endpoint.registerHandler( MessageType.InterfaceSendEvent, this.onInterfaceSendEvent );
+		this.m_endpoint.registerHandler( MessageType.InterfaceLock, this.onInterfaceLock );
+		this.m_endpoint.registerHandler( MessageType.InterfaceUnlock, this.onInterfaceUnlock );
+		}
 
 	@bind onEndpointOpen(settings: AvRendererConfig)
 	{
@@ -281,6 +312,67 @@ export class AvDefaultTraverser
 	onLostEndpoint( m: MsgLostEndpoint )
 	{
 		this.forgetGadget( m.endpointId );
+	}
+
+	@bind
+	onInterfaceSendEvent( m: MsgInterfaceSendEvent )
+	{
+		this.m_interfaceProcessor.interfaceEvent(m.destination, m.peer, m.iface, m.event );
+	}
+
+	@bind
+	onInterfaceLock( m: MsgInterfaceLock )
+	{
+		this.m_interfaceProcessor.lockInterface(m.transmitter, m.receiver, m.iface );
+	}
+	
+	@bind
+	onInterfaceUnlock( m: MsgInterfaceUnlock )
+	{
+		this.m_interfaceProcessor.unlockInterface(m.transmitter, m.receiver, m.iface );
+	}
+	
+	interfaceStarted( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string ):void
+	{
+		this.m_endpoint.sendMessage( MessageType.InterfaceStarted, 
+			{
+				transmitter,
+				receiver,
+				iface,
+			} as MsgInterfaceStarted );
+	}
+
+	interfaceEnded( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string ):void
+	{
+		this.m_endpoint.sendMessage( MessageType.InterfaceEnded, 
+			{
+				transmitter,
+				receiver,
+				iface,
+			} as MsgInterfaceEnded );
+	}
+
+	interfaceTransformUpdated( destination: EndpointAddr, peer: EndpointAddr, iface: string, 
+		destinationFromPeer: mat4 ): void
+	{
+		this.m_endpoint.sendMessage( MessageType.InterfaceTransformUpdated, 
+			{
+				destination,
+				peer,
+				iface,
+				destinationFromPeer: nodeTransformFromMat4( destinationFromPeer ),
+			} as MsgInterfaceTransformUpdated );
+	}
+
+	interfaceEvent( destination: EndpointAddr, peer: EndpointAddr, iface: string, event: object ): void
+	{
+		this.m_endpoint.sendMessage( MessageType.InterfaceReceiveEvent, 
+			{
+				destination,
+				peer,
+				iface,
+				event,
+			} as MsgInterfaceReceiveEvent );
 	}
 
 	@bind 
@@ -343,6 +435,8 @@ export class AvDefaultTraverser
 		this.m_currentNodeByType = {};
 		this.m_universeFromNodeTransforms = {};
 		this.m_renderList = [];
+		this.m_interfaceEntities = [];
+
 		this.clearHooksInUse();
 		this.m_frameNumber++;
 
@@ -366,6 +460,7 @@ export class AvDefaultTraverser
 		this.updateInput();
 		this.updateGrabberIntersections();
 		this.updatePokerProximity();
+		this.updateInterfaceProcessor();
 
 		for( let gadgetId of this.m_dirtyGadgetActions )
 		{
@@ -396,7 +491,7 @@ export class AvDefaultTraverser
 		}
 
 		let actionState: AvActionState;
-		if( root.wasGadgetDraggedLastFrame && root.handIsRelevant.has( hand ) )
+		if( /*root.wasGadgetDraggedLastFrame &&*/ root.handIsRelevant.has( hand ) )
 		{
 			actionState = filterActionsForGadget( this.m_actionState[ hand ] ); 
 		}
@@ -530,6 +625,56 @@ export class AvDefaultTraverser
 			proximity.actionState = this.m_actionState[ proximity.hand ];
 			this.m_endpoint.sendMessage( MessageType.PokerProximity, proximity );
 		}
+	}
+
+	private updateInterfaceProcessor()
+	{
+		let entities: InterfaceEntity[] = [];
+		for( let entityNode of this.m_interfaceEntities )
+		{
+			let universeFromEntity = this.getTransform( entityNode.globalId );
+
+			if( !universeFromEntity.isResolved() )
+			{
+				console.log( "Refusing to process interface entity because it has an unresolved transform",
+					endpointAddrToString( entityNode.globalId ) );
+				continue;
+			}
+
+			if( !universeFromEntity.getOriginPath() )
+			{
+				console.log( "Refusing to process interface entity because it has no origin path",
+					endpointAddrToString( entityNode.globalId ) );
+				continue;
+			}
+
+			// compute the transform to universe for each volume
+			let volumes: TransformedVolume[] = [];
+			for( let volume of entityNode.propVolumes ?? [] )
+			{
+				volumes.push( 
+					{
+						...volume,
+						universeFromVolume: mat4.product( universeFromEntity.getUniverseFromNode(), 
+							nodeTransformToMat4( volume.nodeFromVolume ?? {} ), new mat4() ),
+					} );
+			}
+
+			entities.push(
+				{ 
+					epa: entityNode.globalId,
+					transmits: entityNode.propTransmits ?? [],
+					receives: entityNode.propReceives ?? [],
+					originPath: universeFromEntity.getOriginPath(),
+					universeFromEntity: universeFromEntity.getUniverseFromNode(),
+					wantsTransforms: 0 != ( entityNode.flags & ENodeFlags.NotifyOnTransformChange ),
+					priority: entityNode.propPriority ?? 0,
+					volumes,
+				}
+			)
+		}
+
+		this.m_interfaceProcessor.processFrame( entities );
 	}
 
 	private sendGrabEvent( event: AvGrabEvent )
@@ -803,6 +948,14 @@ export class AvDefaultTraverser
 			case AvNodeType.RoomMember:
 				this.traverseRoomMember( node, defaultParent );
 				break;
+			
+			case AvNodeType.Child:
+				this.traverseChild( node, defaultParent );
+				break;
+
+			case AvNodeType.InterfaceEntity:
+				this.traverseInterfaceEntity( node, defaultParent );
+				break;
 				
 			default:
 				throw "Invalid node type";
@@ -858,14 +1011,17 @@ export class AvDefaultTraverser
 			{
 				let originTransform = this.getRemoteOriginTransform( this.m_currentRoot.remoteUniverse, 
 					origin );
-				this.updateTransform( node.globalId, originTransform, null, null );
+				let transform = this.updateTransform( node.globalId, originTransform, null, null );
+				transform.setOriginPath( this.m_currentRoot + origin );
 			}
 			else
 			{
 				let parentFromOriginArray = Av().renderer.getUniverseFromOriginTransform( origin );
 				if( parentFromOriginArray )
 				{
-					this.updateTransform( node.globalId, null, new mat4( parentFromOriginArray ), null );
+					let transform = this.updateTransform( node.globalId, null, 
+						new mat4( parentFromOriginArray ), null );
+					transform.setOriginPath( this.m_currentRoot + origin );
 				}
 			}
 
@@ -1543,7 +1699,45 @@ export class AvDefaultTraverser
 		}
 	}
 	
+	private m_entityParentTransforms = new EndpointAddrMap<PendingTransform >();
 
+	traverseChild( node: AvNode, defaultParent: PendingTransform )
+	{
+		if( node.propChildAddr )
+		{
+			// TODO: Remember the ID of the parent entity and ignore child nodes that
+			// don't match the parent specified on the child entity itself
+			if( this.m_entityParentTransforms.has( node.propChildAddr ) )
+			{
+				let oldTransform = this.m_entityParentTransforms.get( node.propChildAddr );
+				oldTransform.update( [ defaultParent ], mat4.identity );
+			}
+			else
+			{
+				this.m_entityParentTransforms.set( node.propChildAddr, defaultParent );
+			}
+		}
+	}
+	
+	traverseInterfaceEntity( node: AvNode, defaultParent: PendingTransform )
+	{
+		this.m_interfaceEntities.push( node );
+
+		if( node.propParentAddr )
+		{
+			// TODO: Only look for parent transforms that match this node's propParent addr
+			if( !this.m_entityParentTransforms.has( node.globalId ) )
+			{
+				let newParent = new PendingTransform( endpointAddrToString( node.globalId ) + "_parent" );
+				this.m_entityParentTransforms.set( node.globalId, newParent );
+			}
+
+			this.updateTransform( node.globalId, this.m_entityParentTransforms.get( node.globalId ), 
+				null, null );
+		}
+	}
+
+	
 	@bind
 	public grabEvent( grabEvent: AvGrabEvent )
 	{

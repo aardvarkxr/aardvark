@@ -39,6 +39,7 @@ export enum MessageType
 	SignRequest = 314,
 	SignRequestResponse = 315,
 	InterfaceEvent = 316,
+	SetParent = 317,
 
 	// System messages
 	GetInstalledGadgets = 400,
@@ -54,6 +55,17 @@ export enum MessageType
 	RoomMessageReceivedResponse = 605,
 	SendRoomMessage = 606,
 	UpdatePose = 607,
+
+	// Interfaces and interface entities
+	InterfaceStarted = 700,
+	InterfaceEnded = 701,
+	InterfaceTransformUpdated = 702,
+	InterfaceSendEvent = 703,
+	InterfaceReceiveEvent = 704,
+	InterfaceLock = 705,
+	InterfaceLockResponse = 706,
+	InterfaceUnlock = 707,
+	InterfaceUnlockResponse = 708,
 }
 
 export enum WebSocketCloseCodes
@@ -612,6 +624,77 @@ export interface PokerProximity
 	distance: number;
 }
 
+export interface MsgInterfaceStarted
+{
+	transmitter: EndpointAddr;
+	receiver: EndpointAddr;
+	iface: string;
+}
+
+export interface MsgInterfaceEnded
+{
+	transmitter: EndpointAddr;
+	receiver: EndpointAddr;
+	iface: string;
+}
+
+export interface MsgInterfaceLock
+{
+	transmitter: EndpointAddr;
+	receiver: EndpointAddr;
+	iface: string;
+}
+
+export enum InterfaceLockResult
+{
+	Success = 0,
+	AlreadyLocked = 1,
+	NotLocked = 2,
+	InterfaceNotFound = 3,
+	InterfaceNameMismatch = 4,
+}
+
+export interface MsgInterfaceLockResponse
+{
+	result: InterfaceLockResult;
+}
+
+export interface MsgInterfaceUnlock
+{
+	transmitter: EndpointAddr;
+	receiver: EndpointAddr;
+	iface: string;
+}
+
+export interface MsgInterfaceUnlockResponse
+{
+	result: InterfaceLockResult;
+}
+
+export interface MsgInterfaceTransformUpdated
+{
+	destination: EndpointAddr;
+	peer: EndpointAddr;
+	iface: string;
+	destinationFromPeer: AvNodeTransform;
+}
+
+export interface MsgInterfaceSendEvent
+{
+	destination: EndpointAddr;
+	peer: EndpointAddr;
+	iface: string;
+	event: object;
+}
+
+export interface MsgInterfaceReceiveEvent
+{
+	destination: EndpointAddr;
+	peer: EndpointAddr;
+	iface: string;
+	event: object;
+}
+
 export enum AvNodeType
 {
 	Invalid = -1,
@@ -633,6 +716,8 @@ export enum AvNodeType
 	RemoteUniverse = 14,
 	RemoteOrigin = 15,
 	RoomMember = 16,
+	InterfaceEntity = 17,
+	Child = 18,
 }
 
 
@@ -730,6 +815,18 @@ export interface AvInterfaceEventProcessor
 	( iface: string, sender: EndpointAddr, data: object ): void;
 }
 
+export function interfaceToString( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string )
+{
+	return endpointAddrToString( transmitter ) + "->" + endpointAddrToString( receiver ) 
+		+ "(" + iface + ")";
+}
+
+export function interfaceStringFromMsg( m: { transmitter: EndpointAddr, receiver: EndpointAddr, 
+	iface: string } )
+{
+	return interfaceToString(m.transmitter, m.receiver, m.iface );
+}
+
 
 export interface AvVector
 {
@@ -777,7 +874,8 @@ export interface AABB
 export interface AvVolume
 {
 	type: EVolumeType;
-
+	nodeFromVolume?: AvNodeTransform;
+	
 	radius?: number;
 	uri?: string;
 	aabb?: AABB;
@@ -833,6 +931,8 @@ export interface AvNode
 	propModelUri?: string;
 	propVolume?: AvVolume;
 	propOuterVolumeScale?: number;
+	propVolumes?: AvVolume[];
+	propPriority?: number;
 	propParentAddr?: EndpointAddr;
 	propInteractive?: boolean;
 	propCustomNodeType?: string;
@@ -845,6 +945,9 @@ export interface AvNode
 	propEndGap?: number;
 	propScaleToFit?: AvVector;
 	propInterfaces?: string[];
+	propTransmits?: string[];
+	propReceives?: string[];
+	propChildAddr?: EndpointAddr;
 }
 
 export enum EHand
@@ -976,16 +1079,6 @@ export function gadgetDetailsToId( gadgetName: string, gadgetUri: string, gadget
 	}
 
 	return filteredName;
-}
-
-
-export enum InterfaceLockResult
-{
-	Success = 0,
-	AlreadyLocked = 1,
-	NotLocked = 2,
-	InterfaceNotFound = 3,
-	InterfaceNameMismatch = 4,
 }
 
 /** Gadgets are also responsible for providing transforms for all the members of

@@ -1,4 +1,4 @@
-import { AardvarkPort, AuthedRequest, AardvarkManifest, AvGrabEvent, AvGrabEventType, AvNode, AvNodeTransform, AvNodeType, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, EVolumeType, GadgetAuthedRequest, gadgetDetailsToId, GadgetRoomEnvelope, MessageType, MsgAttachGadgetToHook, MsgCreateRoom, MsgCreateRoomResponse, MsgDestroyGadget, MsgDestroyRoom, MsgDestroyRoomResponse, MsgDetachGadgetFromHook, MsgError, MsgGadgetStarted, MsgGetAardvarkManifest, MsgGeAardvarkManifestResponse, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgGrabberState, MsgGrabEvent, MsgInstallGadget, MsgLostEndpoint, MsgMasterStartGadget, MsgMouseEvent, MsgNewEndpoint, MsgNodeHaptic, MsgOverrideTransform, MsgPokerProximity, MsgResourceLoadFailed, MsgRoomMessageReceived, MsgRoomMessageReceivedResponse, MsgSaveSettings, MsgSendRoomMessage, MsgSetEndpointType, MsgSetEndpointTypeResponse, MsgSignRequest, MsgSignRequestResponse, MsgUpdateActionState, MsgUpdatePose, MsgUpdateSceneGraph, MsgUserInfo, parseEndpointFieldUri, parseEnvelope, Permission, SharedGadget, WebSocketCloseCodes, MsgInterfaceEvent } from '@aardvarkxr/aardvark-shared';
+import { MsgInterfaceReceiveEvent, MsgInterfaceTransformUpdated, AardvarkManifest, AardvarkPort, AuthedRequest, AvGrabEvent, AvGrabEventType, AvNode, AvNodeTransform, AvNodeType, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, EVolumeType, GadgetAuthedRequest, gadgetDetailsToId, GadgetRoomEnvelope, MessageType, MsgAttachGadgetToHook, MsgCreateRoom, MsgCreateRoomResponse, MsgDestroyGadget, MsgDestroyRoom, MsgDestroyRoomResponse, MsgDetachGadgetFromHook, MsgError, MsgGadgetStarted, MsgGeAardvarkManifestResponse, MsgGetAardvarkManifest, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgGrabberState, MsgGrabEvent, MsgInstallGadget, MsgInterfaceEnded, MsgInterfaceEvent, MsgInterfaceSendEvent, MsgInterfaceStarted, MsgLostEndpoint, MsgMasterStartGadget, MsgMouseEvent, MsgNewEndpoint, MsgNodeHaptic, MsgOverrideTransform, MsgPokerProximity, MsgResourceLoadFailed, MsgRoomMessageReceived, MsgRoomMessageReceivedResponse, MsgSaveSettings, MsgSendRoomMessage, MsgSetEndpointType, MsgSetEndpointTypeResponse, MsgSignRequest, MsgSignRequestResponse, MsgUpdateActionState, MsgUpdatePose, MsgUpdateSceneGraph, MsgUserInfo, parseEndpointFieldUri, parseEnvelope, Permission, SharedGadget, WebSocketCloseCodes, MsgInterfaceLock } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import { buildPersistentHookPath, buildPersistentHookPathFromParts, HookPathParts, HookType, parsePersistentHookPath } from 'common/hook_utils';
 import * as express from 'express';
@@ -32,6 +32,12 @@ function computeRemoteIds( roomGadgetPersistenceUuid: string, roomId: string,
 			remoteUserId,
 			computeRemoteGadgetId( remoteUserId, persistenceUuid ),
 		] );
+}
+
+interface PendingResponse
+{
+	resolve( resp: [ any, Envelope ] ): void;
+	reject( reason: any ): void;
 }
 
 
@@ -212,6 +218,17 @@ class CDispatcher
 							this.buildNewEndpointMessage( ep ) ) );
 					break;
 			}
+		}
+	}
+
+	public forwardMessageAndWaitForResponse<T>( ept: EndpointType, type: MessageType, 
+		msg: any, responseType: MessageType ):
+		Promise< [ T, Envelope ] >
+	{
+		let list = this.getListForType( ept );
+		if( list && list.length >= 1 )
+		{
+			return list[0].sendMessageAndWaitForResponse( type, msg, responseType );
 		}
 	}
 
@@ -1275,6 +1292,12 @@ interface ForwardHandler
 	(m: any ): ( EndpointAddr | EndpointType ) [];
 }
 
+interface ForwardHandlerWithReply
+{
+	handler: ForwardHandler;
+	replyType: MessageType;
+}
+
 class CEndpoint
 {
 	private m_ws: WebSocket = null;
@@ -1285,6 +1308,15 @@ class CEndpoint
 	private m_gadgetData: CGadgetData = null;
 	private m_envelopeHandlers: { [ type:number]: EnvelopeHandler } = {};
 	private m_forwardHandlers: { [type: number]: ForwardHandler } = {};
+	private m_pendingResponses: 
+	{ 
+		[ responseType: number ]: 
+		{ 
+			[ sequenceNumber: number ]: 
+			PendingResponse 
+		}
+		
+	} = {};
 
 	constructor( ws: WebSocket, origin: string | string[], id: number, dispatcher: CDispatcher )
 	{
@@ -1336,6 +1368,33 @@ class CEndpoint
 			return [ m.destination ];
 		} );
 
+		this.registerForwardHandler( MessageType.InterfaceStarted, ( m: MsgInterfaceStarted ) =>
+		{
+			return [ m.transmitter, m.receiver ];
+		} );
+		this.registerForwardHandler( MessageType.InterfaceEnded, ( m: MsgInterfaceEnded ) =>
+		{
+			return [ m.transmitter, m.receiver ];
+		} );
+		this.registerForwardHandler( MessageType.InterfaceTransformUpdated, ( m: MsgInterfaceTransformUpdated ) =>
+		{
+			return [ m.destination ];
+		} );
+		this.registerForwardHandler( MessageType.InterfaceReceiveEvent, ( m: MsgInterfaceReceiveEvent ) =>
+		{
+			return [ m.destination ];
+		} );
+		this.registerForwardHandler( MessageType.InterfaceSendEvent, ( m: MsgInterfaceSendEvent ) =>
+		{
+			return [ EndpointType.Monitor, EndpointType.Renderer ];
+		} );
+		this.registerForwardHandlerWithReply( MessageType.InterfaceLock, 
+			MessageType.InterfaceLockResponse,
+			EndpointType.Renderer );
+		this.registerForwardHandlerWithReply( MessageType.InterfaceUnlock, 
+			MessageType.InterfaceUnlockResponse,
+			EndpointType.Renderer );
+
 		this.registerEnvelopeHandler( MessageType.GetInstalledGadgets, this.onGetInstalledGadgets );
 		this.registerEnvelopeHandler( MessageType.DestroyGadget, this.onDestroyGadget );
 		this.registerEnvelopeHandler( MessageType.InstallGadget, this.onInstallGadget );
@@ -1369,11 +1428,42 @@ class CEndpoint
 			}
 			return true;
 		}
+		else if( this.m_pendingResponses[ env.type ] )
+		{
+			let pendingResponse = this.m_pendingResponses[ env.type ][ env.replyTo ];
+			if( !pendingResponse )
+			{
+				console.log( `Received message of type ${ MessageType[ env.type ] } that didn't `
+					+ `have a matching sequence number ${ env.replyTo }` );
+			}
+			else
+			{
+				pendingResponse.resolve( [ env.payloadUnpacked, env ] );
+				delete this.m_pendingResponses[ env.type ][ env.replyTo ];
+			}
+		}
 		else
 		{
 			return false;
 		}
 	}
+
+	public sendMessageAndWaitForResponse<T>( type: MessageType, msg: any, responseType: MessageType ):
+		Promise< [ T, Envelope ] >
+	{
+		return new Promise( ( resolve, reject ) =>
+		{
+			let seqNumber = this.sendMessage( type, msg );
+
+			if( !this.m_pendingResponses[ responseType ] )
+			{
+				this.m_pendingResponses[ responseType ] = {};
+			}
+
+			this.m_pendingResponses[ responseType ][ seqNumber ] = { resolve, reject };
+		} );
+	}
+
 	private registerForwardHandler( type: MessageType, handler: ForwardHandler )
 	{
 		this.m_forwardHandlers[ type ] = handler;
@@ -1401,6 +1491,20 @@ class CEndpoint
 				}
 			}
 		}
+	}
+
+	private registerForwardHandlerWithReply( msgType: MessageType, replyType: MessageType, 
+		handlerEpt: EndpointType )
+	{
+		this.registerEnvelopeHandler( msgType, 
+			async ( env: Envelope, m: any ) =>
+			{
+				let replyMsg = await this.m_dispatcher.forwardMessageAndWaitForResponse(
+					handlerEpt, msgType, m, 
+					replyType );
+
+				this.sendReply( replyType, replyMsg, env );
+			} );
 	}
 
 	@bind onMessage( message: string )
@@ -1833,6 +1937,7 @@ class CEndpoint
 			payload: JSON.stringify( msg ),
 		}
 		this.sendMessageString( JSON.stringify( env ) )
+		return env.sequenceNumber;
 	}
 
 	public sendReply( type: MessageType, msg: any, replyTo: Envelope, sender:EndpointAddr = undefined  )

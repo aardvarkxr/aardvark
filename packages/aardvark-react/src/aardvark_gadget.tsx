@@ -18,6 +18,10 @@ import { Av, AvActionState, EAction, getActionFromState,
 	MsgRoomMessageReceivedResponse,
 	MsgInterfaceEvent,
 	AvInterfaceEventProcessor,
+	MsgInterfaceStarted,
+	interfaceStringFromMsg,
+	MsgInterfaceReceiveEvent,
+	MsgInterfaceTransformUpdated,
 } from '@aardvarkxr/aardvark-shared';
 import { IAvBaseNode } from './aardvark_base_node';
 import bind from 'bind-decorator';
@@ -33,8 +37,17 @@ import { MessageType, MsgUpdateSceneGraph, EndpointAddr,
 	MsgGetInstalledGadgets,
 	MsgGetInstalledGadgetsResponse} from '@aardvarkxr/aardvark-shared';
 import { MessageHandler, AsyncMessageHandler } from './aardvark_endpoint';
+import { InterfaceEntityProcessor } from './aardvark_interface_entity';
 const equal = require( 'fast-deep-equal' );
 
+export interface AvInterfaceEntityProcessor
+{
+	started( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string,  ): void;
+	ended( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string,  ): void;
+	event( destination: EndpointAddr, peer: EndpointAddr, iface: string, data: object ): void;
+	transformUpdated( destination: EndpointAddr, peer: EndpointAddr, iface: string, 
+		destinationFromPeer: AvNodeTransform ): void;
+}
 
 export interface AvPokerHandler
 {
@@ -113,6 +126,7 @@ export class AvGadget
 	m_pokerProcessors: {[nodeId:number]: AvPokerHandler } = {};
 	m_panelProcessors: {[nodeId:number]: AvPanelHandler } = {};
 	m_interfaceEventProcessors: {[nodeId: number]: AvInterfaceEventProcessor } = {}
+	m_interfaceEntityProcessors = new Map<number, AvInterfaceEntityProcessor>();
 	m_startGadgetPromises: {[nodeId:number]: 
 		[ ( res: AvStartGadgetResult ) => void, ( reason: any ) => void ] } = {};
 	m_actionStateListeners: { [listenerId: number] : ActionStateListener } = {};
@@ -174,6 +188,13 @@ export class AvGadget
 		this.m_endpoint.registerHandler( MessageType.UserInfo, this.onUserInfo );
 		this.m_endpoint.registerHandler( MessageType.SendRoomMessage, this.onSendRoomMessage );
 		this.m_endpoint.registerAsyncHandler( MessageType.InterfaceEvent, this.onInterfaceEvent );
+		this.m_endpoint.registerAsyncHandler( MessageType.InterfaceStarted, this.onInterfaceStarted );
+		this.m_endpoint.registerAsyncHandler( MessageType.InterfaceEnded, this.onInterfaceEnded );
+		this.m_endpoint.registerAsyncHandler( MessageType.InterfaceReceiveEvent, 
+			this.onInterfaceReceivedEvent );
+		this.m_endpoint.registerAsyncHandler( MessageType.InterfaceTransformUpdated, 
+			this.onInterfaceTransformUpdated );
+
 		if( this.m_onSettingsReceived )
 		{
 			this.m_onSettingsReceived( settings );
@@ -319,6 +340,104 @@ export class AvGadget
 	public sendGrabEvent( event: AvGrabEvent )
 	{
 		this.m_endpoint.sendGrabEvent( event );
+	}
+
+	public setInterfaceEntityProcessor( nodeId: number, processor: AvInterfaceEntityProcessor )
+	{
+		this.m_interfaceEntityProcessors.set( nodeId, processor );
+		this.markDirty();
+	}
+
+	public clearInterfaceEntityProcessor( nodeId: number )
+	{
+		this.m_interfaceEntityProcessors.delete( nodeId );
+		this.markDirty();
+	}
+
+	private getInterfaceEntityProcessor( epa: EndpointAddr ): AvInterfaceEntityProcessor
+	{
+		if( epa.endpointId != this.m_endpoint.getEndpointId() )
+		{
+			return null;
+		}
+
+		return this.m_interfaceEntityProcessors.get( epa.nodeId );
+	}
+
+	@bind
+	private async onInterfaceStarted( m: MsgInterfaceStarted, env: Envelope )
+	{
+		let transmitProcessor = this.getInterfaceEntityProcessor( m.transmitter );
+		if( transmitProcessor )
+		{
+			transmitProcessor.started(m.transmitter, m.receiver, m.iface );
+		}
+
+		let receiveProcessor = this.getInterfaceEntityProcessor( m.receiver );
+		if( receiveProcessor )
+		{
+			receiveProcessor.started(m.transmitter, m.receiver, m.iface );
+		}
+
+		if( !transmitProcessor && !receiveProcessor )
+		{
+			console.log( `Received interface start for ${ interfaceStringFromMsg( m ) },`
+				+ ` which doesn't have a processor` );
+		}
+	}
+
+	@bind
+	private async onInterfaceEnded( m: MsgInterfaceStarted, env: Envelope )
+	{
+		let transmitProcessor = this.getInterfaceEntityProcessor( m.transmitter );
+		if( transmitProcessor )
+		{
+			transmitProcessor.ended(m.transmitter, m.receiver, m.iface );
+		}
+
+		let receiveProcessor = this.getInterfaceEntityProcessor( m.receiver );
+		if( receiveProcessor )
+		{
+			receiveProcessor.ended(m.transmitter, m.receiver, m.iface );
+		}
+
+		if( !transmitProcessor && !receiveProcessor )
+		{
+			console.log( `Received interface start for ${ interfaceStringFromMsg( m ) },`
+				+ ` which doesn't have a processor` );
+		}
+	}
+
+	@bind
+	private async onInterfaceReceivedEvent( m: MsgInterfaceReceiveEvent, env: Envelope )
+	{
+		let processor = this.getInterfaceEntityProcessor( m.destination );
+		if( processor )
+		{
+			processor.event(m.destination, m.peer, m.iface, m.event );
+		}
+
+		if( !processor )
+		{
+			console.log( `Received interface event for ${ endpointAddrToString( m.destination ) },`
+				+ ` which doesn't have a processor` );
+		}
+	}
+
+	@bind
+	private async onInterfaceTransformUpdated( m: MsgInterfaceTransformUpdated, env: Envelope )
+	{
+		let processor = this.getInterfaceEntityProcessor( m.destination );
+		if( processor )
+		{
+			processor.transformUpdated( m.destination, m.peer, m.iface, m.destinationFromPeer );
+		}
+
+		if( !processor )
+		{
+			console.log( `Received interface transformUpdated for ${ endpointAddrToString( m.destination ) },`
+				+ ` which doesn't have a processor` );
+		}
 	}
 
 	public setInterfaceEventProcessor( nodeId: number, processor: AvInterfaceEventProcessor )
@@ -909,6 +1028,15 @@ export class AvGadget
 	public sendMessage( type: MessageType, message: object, sendingNode?: number )
 	{
 		this.m_endpoint.sendMessage( type, message, sendingNode );
+	}
+
+	/** Sends a message and returns a promise that resolves when the response to that message
+	 * arrives.
+	 */
+	public sendMessageAndWaitForResponse<T>( type: MessageType, msg: any, responseType: MessageType ):
+		Promise< [ T, Envelope ] >
+	{
+		return this.m_endpoint.sendMessageAndWaitForResponse<T>( type, msg, responseType );
 	}
 
 	/** Sends a request to the server to be authenticated. */
