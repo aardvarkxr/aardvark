@@ -150,10 +150,10 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 					<AvTransform translateY={ 1 } >
 						<AvInterfaceEntity volume={ { type: EVolumeType.Sphere, radius: 0.1} }
 							receives={
-								{ "aardvark-grab@1": this.onGrabStart }
+								[ { iface: "aardvark-grab@1", processor: this.onGrabStart } ]
 							} 
 							transmits={
-								{ "aardvark-container@1": this.onContainerStart }
+								[ { iface: "aardvark-container@1", processor: this.onContainerStart } ]
 							}
 							parent={ parent }
 							>
@@ -161,7 +161,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 								color={ this.state.activeGrab ? "yellow" : "turquoise" } />
 						</AvInterfaceEntity>
 					</AvTransform>
-				</AvOrigin>
+				</AvOrigin> 
 			</AvGrabbable>	);
 	}
 }

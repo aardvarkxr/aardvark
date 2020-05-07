@@ -185,6 +185,12 @@ export interface InterfaceEntityProcessor
 	( iface: ActiveInterface ): void;
 }
 
+export interface InterfaceProp
+{
+	iface: string;
+	processor?: InterfaceEntityProcessor;
+}
+
 interface AvInterfaceEntityProps extends AvBaseNodeProps
 {
 	/** The address of the parent entity that will provide the transform
@@ -214,7 +220,7 @@ interface AvInterfaceEntityProps extends AvBaseNodeProps
 	 * 
 	 * @default []
 	 */
-	transmits?: { [interfaceName: string] : InterfaceEntityProcessor };
+	transmits?: InterfaceProp[];
 
 	/** The list of interfaces that this entity receives. These can be any string of the form
 	 * <interfacename>@<version>. When selecting an interface for a transmitter that is in range 
@@ -225,7 +231,7 @@ interface AvInterfaceEntityProps extends AvBaseNodeProps
 	 * An entity could have any number of active received interfaces.
 	 * @default []
 	 */
-	receives?: { [interfaceName: string] : InterfaceEntityProcessor };
+	receives?: InterfaceProp[];
 
 	/** The volume to use when matching this entity with other interface entities. */
 	volume: AvVolume;
@@ -243,17 +249,17 @@ export class AvInterfaceEntity extends AvBaseNode< AvInterfaceEntityProps, {} >
 		let needProcessor = false;
 
 		node.propTransmits = [];
-		for( let interfaceName in this.props.transmits )
+		for( let interfaceProp of this.props.transmits ?? [] )
 		{
-			node.propTransmits.push( interfaceName );
-			needProcessor = needProcessor || ( this.props.transmits[ interfaceName ] != null );
+			node.propTransmits.push( interfaceProp.iface );
+			needProcessor = needProcessor || ( interfaceProp.processor != null );
 		}
 
 		node.propReceives = [];
-		for( let interfaceName in this.props.receives )
+		for( let interfaceProp of this.props.receives ?? [] )
 		{
-			node.propReceives.push( interfaceName );
-			needProcessor = needProcessor || ( this.props.receives[ interfaceName ] != null );
+			node.propReceives.push( interfaceProp.iface );
+			needProcessor = needProcessor || ( interfaceProp.processor != null );
 		}
 
 		node.propVolumes = [ this.props.volume ];
@@ -285,17 +291,29 @@ export class AvInterfaceEntity extends AvBaseNode< AvInterfaceEntityProps, {} >
 		if( transmitter.endpointId == AvGadget.instance().getEndpointId() && 
 			this.m_nodeId == transmitter.nodeId )
 		{
-			return [ this.props.transmits[ iface ], InterfaceRole.Transmitter ];
+			for( let interfaceProp of this.props.transmits )
+			{
+				if( interfaceProp.iface == iface )
+				{
+					return [ interfaceProp.processor, InterfaceRole.Transmitter ];
+				}
+			}
 		}
 
 		if( receiver.endpointId == AvGadget.instance().getEndpointId() && 
 			this.m_nodeId == receiver.nodeId )
 		{
-			return [ this.props.receives[ iface ], InterfaceRole.Receiver ];
+			for( let interfaceProp of this.props.receives )
+			{
+				if( interfaceProp.iface == iface )
+				{
+					return [ interfaceProp.processor, InterfaceRole.Receiver ];
+				}
+			}
 		}
 
 		console.log( "getProcessor called when we weren't the transmitter or receiver" );
-		return null;
+		return [ null, InterfaceRole.Invalid ];
 	}
 
 	@bind

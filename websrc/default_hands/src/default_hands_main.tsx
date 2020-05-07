@@ -160,9 +160,9 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 					zMin={-0.15} zMax={0.15}
 					/>
 				<AvInterfaceEntity transmits={
-					{ 
-						"aardvark-grab@1": this.onGrabStart }
-					} 
+					[ 
+						{ iface: "aardvark-grab@1", processor: this.onGrabStart },
+					] }
 					volume={ { type: EVolumeType.Sphere, radius: 0.01 } } >
 						{
 							this.state.activeInterface && this.state.grabberFromGrabbable 
@@ -249,7 +249,8 @@ class DefaultHands extends React.Component< {}, {} >
 					</AvTransform>
 				</AvOrigin>
 				<AvOrigin path="/space/stage">
-					<AvInterfaceEntity receives={ { "aardvark-container@1": this.onContainerStart } }
+					<AvInterfaceEntity 
+						receives={ [ { iface: "aardvark-container@1", processor: this.onContainerStart } ] }
 						volume={ { type: EVolumeType.Infinite } }>
 						{ contents }
 					</AvInterfaceEntity>
