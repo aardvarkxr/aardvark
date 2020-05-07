@@ -1,5 +1,5 @@
 import { mat4, vec3 } from '@tlaukkan/tsm';
-import { rotationMatFromEulerDegrees, scaleMat, translateMat } from '../traverser_utils';
+import { rotationMatFromEulerDegrees, scaleMat, translateMat } from '@aardvarkxr/aardvark-react';
 import { volumesIntersect } from './../volume_intersection';
 import { makeBox, makeInfinite, makeSphere } from '../volume_test_utils';
 

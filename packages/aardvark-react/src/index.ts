@@ -29,3 +29,4 @@ export * from './aardvark_translate_control';
 export * from './aardvark_utils';
 export * from './gadget_endpoint';
 export * from './renderer_endpoint';
+export * from './math_utils';

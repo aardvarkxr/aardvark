@@ -4,7 +4,7 @@ import { mat4, vec3, vec4 } from '@tlaukkan/tsm';
 import { CInterfaceProcessor, InterfaceProcessorCallbacks, InterfaceEntity } from './../interface_processor';
 import { makeSphere, makeInfinite } from '../volume_test_utils';
 import { syncBuiltinESMExports } from 'module';
-import { translateMat } from '../traverser_utils';
+import { translateMat } from '@aardvarkxr/aardvark-react';
 
 beforeEach( async() =>
 {

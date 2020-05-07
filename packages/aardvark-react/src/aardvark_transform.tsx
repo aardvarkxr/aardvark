@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import { AvNodeType, AvQuaternion } from '@aardvarkxr/aardvark-shared';
+import { AvNodeType, AvQuaternion, AvNodeTransform } from '@aardvarkxr/aardvark-shared';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 import { quat, vec3 } from '@tlaukkan/tsm';
 
@@ -79,6 +79,14 @@ interface AvTransformProps extends AvBaseNodeProps
 	 * @default none
 	 */
 	rotation?: AvQuaternion;
+
+	/** Applies an already-constructed AvNodeTransform to the transform.
+	 * If this prop is set, all other properties will replace the matching
+	 * components of this transform.
+	 * 
+	 * @default none
+	 */
+	transform?: AvNodeTransform;
 }
 
 function quatFromAxisAngleDegrees( axis: vec3, deg?: number ): quat
@@ -96,7 +104,7 @@ export class AvTransform extends AvBaseNode< AvTransformProps, {} >
 	{
 		let node = this.createNodeObject( AvNodeType.Transform, this.m_nodeId );
 
-		node.propTransform = {};
+		node.propTransform = this.props.transform ? { ...this.props.transform } : {};
 		if( this.props.uniformScale != null )
 		{
 			node.propTransform.scale = 

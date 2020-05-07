@@ -1,12 +1,11 @@
 import { EndpointAddrMap } from './endpoint_addr_map';
 import { TransformedVolume } from './volume_intersection';
-import { CRendererEndpoint } from '@aardvarkxr/aardvark-react';
-import { Av, AvActionState, AvConstraint, AvGrabEvent, AvGrabEventType, AvModelInstance, AvNode, AvNodeTransform, AvNodeType, AvRendererConfig, EAction, EHand, emptyActionState, EndpointAddr, endpointAddrIsEmpty, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, EVolumeType, filterActionsForGadget, getActionFromState, g_builtinModelCylinder, g_builtinModelError, g_builtinModelPanel, g_builtinModelPanelInverted, LocalUserInfo, MessageType, MinimalPose, MsgAttachGadgetToHook, MsgDestroyGadget, MsgDetachGadgetFromHook, MsgGrabEvent, MsgInterfaceEnded, MsgInterfaceLock, MsgInterfaceSendEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgInterfaceUnlock, MsgLostEndpoint, MsgNodeHaptic, MsgResourceLoadFailed, MsgUpdateActionState, MsgUpdatePose, MsgUpdateSceneGraph, MsgUserInfo, parseEndpointFieldUri, MsgInterfaceReceiveEvent } from '@aardvarkxr/aardvark-shared';
+import { computeUniverseFromLine, minIgnoringNulls, nodeTransformFromMat4, nodeTransformToMat4, scaleAxisToFit, scaleMat, translateMat, vec3MultiplyAndAdd, CRendererEndpoint } from '@aardvarkxr/aardvark-react';
+import { Av, AvActionState, AvConstraint, AvGrabEvent, AvGrabEventType, AvModelInstance, AvNode, AvNodeTransform, AvNodeType, AvRendererConfig, EAction, EHand, emptyActionState, EndpointAddr, endpointAddrIsEmpty, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, EVolumeType, filterActionsForGadget, getActionFromState, g_builtinModelCylinder, g_builtinModelError, g_builtinModelPanel, g_builtinModelPanelInverted, LocalUserInfo, MessageType, MinimalPose, MsgAttachGadgetToHook, MsgDestroyGadget, MsgDetachGadgetFromHook, MsgGrabEvent, MsgInterfaceEnded, MsgInterfaceLock, MsgInterfaceSendEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgInterfaceUnlock, MsgLostEndpoint, MsgNodeHaptic, MsgResourceLoadFailed, MsgUpdateActionState, MsgUpdatePose, MsgUpdateSceneGraph, MsgUserInfo, parseEndpointFieldUri, MsgInterfaceReceiveEvent, MsgInterfaceLockResponse, MsgInterfaceUnlockResponse } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3, vec4 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
 import { CGrabStateProcessor } from './grab_state_processor';
 import { CInterfaceProcessor, InterfaceProcessorCallbacks, InterfaceEntity } from './interface_processor';
-import { computeUniverseFromLine, minIgnoringNulls, nodeTransformFromMat4, nodeTransformToMat4, scaleAxisToFit, scaleMat, translateMat, vec3MultiplyAndAdd } from './traverser_utils';
 const equal = require( 'fast-deep-equal' );
 
 interface NodeData
@@ -321,34 +320,50 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 	}
 
 	@bind
-	onInterfaceLock( m: MsgInterfaceLock )
+	onInterfaceLock( m: MsgInterfaceLock, env: Envelope )
 	{
-		this.m_interfaceProcessor.lockInterface(m.transmitter, m.receiver, m.iface );
+		let result = this.m_interfaceProcessor.lockInterface(m.transmitter, m.receiver, m.iface );
+		let response: MsgInterfaceLockResponse =
+		{
+			result,
+		};
+		this.m_endpoint.sendReply(MessageType.InterfaceLockResponse, response, env, 
+			{ type: EndpointType.Renderer } );
 	}
 	
 	@bind
-	onInterfaceUnlock( m: MsgInterfaceUnlock )
+	onInterfaceUnlock( m: MsgInterfaceUnlock, env: Envelope )
 	{
-		this.m_interfaceProcessor.unlockInterface(m.transmitter, m.receiver, m.iface );
+		let result = this.m_interfaceProcessor.unlockInterface(m.transmitter, m.receiver, m.iface );
+		let response: MsgInterfaceUnlockResponse =
+		{
+			result,
+		};
+		this.m_endpoint.sendReply(MessageType.InterfaceUnlockResponse, response, env, 
+			{ type: EndpointType.Renderer } );
 	}
 	
-	interfaceStarted( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string ):void
+	interfaceStarted( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string,
+		transmitterFromReceiver: mat4 ):void
 	{
 		this.m_endpoint.sendMessage( MessageType.InterfaceStarted, 
 			{
 				transmitter,
 				receiver,
 				iface,
+				transmitterFromReceiver: nodeTransformFromMat4( transmitterFromReceiver ),
 			} as MsgInterfaceStarted );
 	}
 
-	interfaceEnded( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string ):void
+	interfaceEnded( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string,
+		transmitterFromReceiver: mat4 ):void
 	{
 		this.m_endpoint.sendMessage( MessageType.InterfaceEnded, 
 			{
 				transmitter,
 				receiver,
 				iface,
+				transmitterFromReceiver: nodeTransformFromMat4( transmitterFromReceiver ),
 			} as MsgInterfaceEnded );
 	}
 
@@ -364,7 +379,8 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 			} as MsgInterfaceTransformUpdated );
 	}
 
-	interfaceEvent( destination: EndpointAddr, peer: EndpointAddr, iface: string, event: object ): void
+	interfaceEvent( destination: EndpointAddr, peer: EndpointAddr, iface: string, event: object,
+		destinationFromPeer: mat4 ): void
 	{
 		this.m_endpoint.sendMessage( MessageType.InterfaceReceiveEvent, 
 			{
@@ -372,6 +388,7 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 				peer,
 				iface,
 				event,
+				destinationFromPeer: nodeTransformFromMat4( destinationFromPeer ),
 			} as MsgInterfaceReceiveEvent );
 	}
 

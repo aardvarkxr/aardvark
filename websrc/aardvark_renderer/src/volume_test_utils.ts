@@ -1,6 +1,6 @@
 import { EVolumeType } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3 } from '@tlaukkan/tsm';
-import { scaleMat, translateMat } from './traverser_utils';
+import { scaleMat, translateMat } from '@aardvarkxr/aardvark-react';
 import { TransformedVolume } from './volume_intersection';
 
 export function makeSphere( radius: number, position?: vec3, scale?: number )

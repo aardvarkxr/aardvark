@@ -45,6 +45,11 @@ export function getRowFromMat( m: mat4, n: number ) : vec3
 
 export function nodeTransformFromMat4( m: mat4 ) : AvNodeTransform
 {
+	if( !m )
+	{
+		return undefined;
+	}
+
 	let transform: AvNodeTransform = {};
 	let pos = m.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) );
 	if( pos.x != 0 || pos.y != 0 || pos.z != 0 )
@@ -227,3 +232,11 @@ export function lerpAvTransforms( xf0: AvNodeTransform, xf1: AvNodeTransform, t:
 	return result;
 }
 
+export function invertNodeTransform( from: AvNodeTransform ): AvNodeTransform
+{
+	if( !from )
+		return from;
+
+	let fromMat = nodeTransformToMat4( from );
+	return nodeTransformFromMat4( fromMat.copy().inverse() );
+}

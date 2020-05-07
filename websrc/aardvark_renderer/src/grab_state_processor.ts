@@ -1,9 +1,8 @@
 import { EndpointAddr, indexOfEndpointAddrs, endpointAddrsMatch, MsgGrabberState,
 	AvGrabEvent, AvGrabEventType, GrabberHighlight, AvGrabbableCollision, ENodeFlags, EAction, EHand, GrabberHookState, EHookVolume, AvNodeTransform } 
 	from '@aardvarkxr/aardvark-shared';
-import { assert } from '@aardvarkxr/aardvark-react';
+import { assert, nodeTransformFromMat4 } from '@aardvarkxr/aardvark-react';
 import { mat4 } from '@tlaukkan/tsm';
-import { nodeTransformFromMat4 } from './traverser_utils';
 
 
 interface GrabContext

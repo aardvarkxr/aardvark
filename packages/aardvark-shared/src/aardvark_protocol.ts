@@ -629,6 +629,7 @@ export interface MsgInterfaceStarted
 	transmitter: EndpointAddr;
 	receiver: EndpointAddr;
 	iface: string;
+	transmitterFromReceiver: AvNodeTransform;
 }
 
 export interface MsgInterfaceEnded
@@ -636,6 +637,7 @@ export interface MsgInterfaceEnded
 	transmitter: EndpointAddr;
 	receiver: EndpointAddr;
 	iface: string;
+	transmitterFromReceiver?: AvNodeTransform;
 }
 
 export interface MsgInterfaceLock
@@ -693,6 +695,7 @@ export interface MsgInterfaceReceiveEvent
 	peer: EndpointAddr;
 	iface: string;
 	event: object;
+	destinationFromPeer: AvNodeTransform;
 }
 
 export enum AvNodeType

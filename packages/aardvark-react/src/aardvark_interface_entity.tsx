@@ -2,6 +2,7 @@ import { AvNodeTransform, AvNodeType, EndpointAddr, endpointAddrsMatch, Interfac
 import bind from 'bind-decorator';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 import { AvGadget } from './aardvark_gadget';
+import { invertNodeTransform } from './math_utils';
 
 export enum InterfaceRole
 {
@@ -15,6 +16,8 @@ export interface ActiveInterface
 	readonly peer: EndpointAddr;
 	readonly interface: string;
 	readonly role: InterfaceRole;
+	readonly transmitterFromReceiver: AvNodeTransform;
+	readonly selfFromPeer: AvNodeTransform;
 	lock():Promise<InterfaceLockResult>;
 	unlock():Promise<InterfaceLockResult>;
 	sendEvent( event: object ):void;
@@ -33,12 +36,15 @@ class CActiveInterface implements ActiveInterface
 	private endedCallback:() => void;
 	private eventCallback:( event: object ) => void;
 	private transformCallback:( entityFromPeer: AvNodeTransform ) => void;
+	private lastTransmitterFromReceiver: AvNodeTransform;
 
-	constructor( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string, role: InterfaceRole )
+	constructor( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string, 
+		transmitterFromReceiver: AvNodeTransform, role: InterfaceRole )
 	{
 		this.transmitter = transmitter;
 		this.receiver = receiver;
 		this.iface = iface;
+		this.lastTransmitterFromReceiver = transmitterFromReceiver;
 		this.role = role;
 	}
 
@@ -89,6 +95,23 @@ class CActiveInterface implements ActiveInterface
 		return this.iface;
 	}
 
+	public get transmitterFromReceiver() : AvNodeTransform
+	{
+		return this.lastTransmitterFromReceiver;
+	}
+
+	public get selfFromPeer() : AvNodeTransform
+	{
+		if( this.role == InterfaceRole.Transmitter )
+		{
+			return this.lastTransmitterFromReceiver;
+		}
+		else
+		{
+			return invertNodeTransform( this.lastTransmitterFromReceiver );
+		}
+	}
+
 	sendEvent( event: object ):void
 	{
 		AvGadget.instance().sendMessage(MessageType.InterfaceSendEvent, 
@@ -105,8 +128,12 @@ class CActiveInterface implements ActiveInterface
 		this.endedCallback = endedCallback;
 	}
 
-	end()
+	end( transmitterFromReceiver : AvNodeTransform )
 	{
+		if( transmitterFromReceiver )
+		{
+			this.lastTransmitterFromReceiver = transmitterFromReceiver;
+		}
 		this.endedCallback?.();
 	}
 
@@ -115,8 +142,20 @@ class CActiveInterface implements ActiveInterface
 		this.eventCallback = eventCallback;
 	}
 
-	event( event: object )
+	event( event: object, destinationFromPeer: AvNodeTransform )
 	{
+		if( destinationFromPeer )
+		{
+			if( this.role == InterfaceRole.Transmitter )
+			{
+				this.lastTransmitterFromReceiver = destinationFromPeer;
+			}
+			else
+			{
+				this.lastTransmitterFromReceiver = invertNodeTransform( destinationFromPeer );
+			}
+		}
+
 		this.eventCallback?.( event );
 	}
 
@@ -127,7 +166,15 @@ class CActiveInterface implements ActiveInterface
 
 	transformUpdated( entityFromPeer: AvNodeTransform )
 	{
-		this.transformCallback?.( entityFromPeer );
+		if( this.role == InterfaceRole.Transmitter )
+		{
+			this.lastTransmitterFromReceiver = entityFromPeer;
+		}
+		else
+		{
+			this.lastTransmitterFromReceiver = invertNodeTransform( entityFromPeer );
+		}
+	this.transformCallback?.( entityFromPeer );
 	}
 	
 }
@@ -211,6 +258,8 @@ export class AvInterfaceEntity extends AvBaseNode< AvInterfaceEntityProps, {} >
 
 		node.propVolumes = [ this.props.volume ];
 
+		node.propParentAddr = this.props.parent;
+		
 		if( this.props.wantsTransforms )
 		{
 			node.flags |= ENodeFlags.NotifyOnTransformChange;
@@ -250,12 +299,14 @@ export class AvInterfaceEntity extends AvBaseNode< AvInterfaceEntityProps, {} >
 	}
 
 	@bind
-	private onInterfaceStarted( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string  ): void
+	private onInterfaceStarted( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string,
+		transmitterFromReceiver: AvNodeTransform  ): void
 	{
 		let [ processor, role ] = this.getProcessor( transmitter, receiver, iface );
 		if( processor )
 		{
-			let newInterface = new CActiveInterface( transmitter, receiver, iface, role );
+			let newInterface = new CActiveInterface( transmitter, receiver, iface, transmitterFromReceiver, 
+				role );
 			this.activeInterfaces.push( newInterface );
 			processor( newInterface );
 		}
@@ -292,24 +343,26 @@ export class AvInterfaceEntity extends AvBaseNode< AvInterfaceEntityProps, {} >
 	}
 
 	@bind
-	private onInterfaceEnded( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string ): void
+	private onInterfaceEnded( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string,
+		transmitterFromReceiver: AvNodeTransform ): void
 	{
 		let activeInterface = this.findActiveInterface(transmitter, receiver, iface);
 		if( activeInterface )
 		{
-			activeInterface.end();
+			activeInterface.end( transmitterFromReceiver );
 
 			this.activeInterfaces.splice( this.activeInterfaces.indexOf( activeInterface ), 1 );
 		}
 	}
 
 	@bind
-	private onInterfaceEvent( destination: EndpointAddr, peer: EndpointAddr, iface: string, data: object ): void
+	private onInterfaceEvent( destination: EndpointAddr, peer: EndpointAddr, iface: string, data: object,
+		destinationFromPeer: AvNodeTransform ): void
 	{
 		let activeInterface = this.findActiveInterfaceByDest(destination, peer, iface);
 		if( activeInterface )
 		{
-			activeInterface.event( data );
+			activeInterface.event( data, destinationFromPeer );
 		}
 	}
 

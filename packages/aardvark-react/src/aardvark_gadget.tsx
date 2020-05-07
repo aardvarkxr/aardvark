@@ -22,6 +22,7 @@ import { Av, AvActionState, EAction, getActionFromState,
 	interfaceStringFromMsg,
 	MsgInterfaceReceiveEvent,
 	MsgInterfaceTransformUpdated,
+	MsgInterfaceEnded,
 } from '@aardvarkxr/aardvark-shared';
 import { IAvBaseNode } from './aardvark_base_node';
 import bind from 'bind-decorator';
@@ -42,9 +43,12 @@ const equal = require( 'fast-deep-equal' );
 
 export interface AvInterfaceEntityProcessor
 {
-	started( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string,  ): void;
-	ended( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string,  ): void;
-	event( destination: EndpointAddr, peer: EndpointAddr, iface: string, data: object ): void;
+	started( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string, 
+		transmitterFromReceiver: AvNodeTransform ): void;
+	ended( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string, 
+		transmitterFromReceiver: AvNodeTransform ): void;
+	event( destination: EndpointAddr, peer: EndpointAddr, iface: string, data: object, 
+		destinationFromPeer: AvNodeTransform ): void;
 	transformUpdated( destination: EndpointAddr, peer: EndpointAddr, iface: string, 
 		destinationFromPeer: AvNodeTransform ): void;
 }
@@ -370,13 +374,13 @@ export class AvGadget
 		let transmitProcessor = this.getInterfaceEntityProcessor( m.transmitter );
 		if( transmitProcessor )
 		{
-			transmitProcessor.started(m.transmitter, m.receiver, m.iface );
+			transmitProcessor.started(m.transmitter, m.receiver, m.iface, m.transmitterFromReceiver );
 		}
 
 		let receiveProcessor = this.getInterfaceEntityProcessor( m.receiver );
 		if( receiveProcessor )
 		{
-			receiveProcessor.started(m.transmitter, m.receiver, m.iface );
+			receiveProcessor.started(m.transmitter, m.receiver, m.iface, m.transmitterFromReceiver );
 		}
 
 		if( !transmitProcessor && !receiveProcessor )
@@ -387,18 +391,18 @@ export class AvGadget
 	}
 
 	@bind
-	private async onInterfaceEnded( m: MsgInterfaceStarted, env: Envelope )
+	private async onInterfaceEnded( m: MsgInterfaceEnded, env: Envelope )
 	{
 		let transmitProcessor = this.getInterfaceEntityProcessor( m.transmitter );
 		if( transmitProcessor )
 		{
-			transmitProcessor.ended(m.transmitter, m.receiver, m.iface );
+			transmitProcessor.ended(m.transmitter, m.receiver, m.iface, m.transmitterFromReceiver );
 		}
 
 		let receiveProcessor = this.getInterfaceEntityProcessor( m.receiver );
 		if( receiveProcessor )
 		{
-			receiveProcessor.ended(m.transmitter, m.receiver, m.iface );
+			receiveProcessor.ended(m.transmitter, m.receiver, m.iface, m.transmitterFromReceiver );
 		}
 
 		if( !transmitProcessor && !receiveProcessor )
@@ -414,7 +418,7 @@ export class AvGadget
 		let processor = this.getInterfaceEntityProcessor( m.destination );
 		if( processor )
 		{
-			processor.event(m.destination, m.peer, m.iface, m.event );
+			processor.event(m.destination, m.peer, m.iface, m.event, m.destinationFromPeer );
 		}
 
 		if( !processor )

@@ -4,10 +4,13 @@ import { TransformedVolume, volumesIntersect } from './volume_intersection';
 
 export interface InterfaceProcessorCallbacks
 {
-	interfaceStarted( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string ):void;
-	interfaceEnded( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string ):void;
+	interfaceStarted( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string,
+		transmitterFromReceiver: mat4 ):void;
+	interfaceEnded( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string,
+		transmitterFromReceiver?: mat4 ):void;
 	interfaceTransformUpdated( destination: EndpointAddr, peer: EndpointAddr, iface: string, destinationFromPeer: mat4 ): void;
-	interfaceEvent( destination: EndpointAddr, peer: EndpointAddr, iface: string, event: object ): void;
+	interfaceEvent( destination: EndpointAddr, peer: EndpointAddr, iface: string, event: object,
+		destinationFromPeer: mat4 ): void;
 }
 
 export interface InterfaceEntity
@@ -91,6 +94,7 @@ export class CInterfaceProcessor
 	private interfacesInProgress: InterfaceInProgress[] = [];
 	private lostLockedInterfaces = new Map<string, InterfaceInProgress>();
 	private callbacks: InterfaceProcessorCallbacks;
+	private lastEntityMap: InterfaceEntityMap;
 
 	constructor( callbacks: InterfaceProcessorCallbacks )
 	{
@@ -138,7 +142,8 @@ export class CInterfaceProcessor
 				if ( !entitiesIntersect( transmitter, receiver ) )
 				{
 					// console.log( "entities no longer intersect");
-					this.callbacks.interfaceEnded( iip.transmitter, iip.receiver, iip.iface );
+					this.callbacks.interfaceEnded( iip.transmitter, iip.receiver, iip.iface,
+						this.computeEntityTransform( transmitter, receiver ) );
 					continue;
 				}
 			}
@@ -233,7 +238,8 @@ export class CInterfaceProcessor
 				}
 
 				// we found a transmitter and receiver that are touching and share an interface.
-				this.callbacks.interfaceStarted( transmitter.epa, bestReceiver.epa, bestIface );
+				this.callbacks.interfaceStarted( transmitter.epa, bestReceiver.epa, bestIface,
+					this.computeEntityTransform( transmitter, bestReceiver ) );
 
 				newInterfacesInProgress.push(
 					{
@@ -262,40 +268,57 @@ export class CInterfaceProcessor
 
 			if( iip.transmitterWantsTransforms )
 			{
-				let transmitterFromReceiver = mat4.product( transmitter.universeFromEntity.copy().inverse(), receiver.universeFromEntity, new mat4() );
-				this.callbacks.interfaceTransformUpdated(iip.transmitter, iip.receiver, iip.iface, transmitterFromReceiver );
+				this.callbacks.interfaceTransformUpdated(iip.transmitter, iip.receiver, iip.iface, 
+					this.computeEntityTransform( transmitter, receiver ) );
 			}
 
 			if( iip.receiverWantsTransforms )
 			{
-				let receiverFromTransmitter = mat4.product( receiver.universeFromEntity.copy().inverse(), transmitter.universeFromEntity, new mat4() );
-				this.callbacks.interfaceTransformUpdated( iip.receiver, iip.transmitter, iip.iface, receiverFromTransmitter );
+				this.callbacks.interfaceTransformUpdated( iip.receiver, iip.transmitter, iip.iface,
+					this.computeEntityTransform( receiver, transmitter ) );
 			}
 		}
+
+		this.lastEntityMap = entityMap;
 	}
 
-	public interfaceEvent( destination: EndpointAddr, peer: EndpointAddr, iface: string, event: object ): void
+	computeEntityTransform( to: InterfaceEntity, from: InterfaceEntity )
+	{
+		if( !to || !from )
+		{
+			return undefined;
+		}
+
+		return mat4.product( to.universeFromEntity.copy().inverse(), from.universeFromEntity, new mat4() );
+	}
+
+	public interfaceEvent( destEpa: EndpointAddr, peerEpa: EndpointAddr, iface: string, event: object ): void
 	{
 		let foundIip = false;
 		for( let iip of this.interfacesInProgress )
 		{
 			// look for an iip where the destination is the transmitter and the peer is the receiver
 			// or vice versa
-			if( endpointAddrsMatch( destination, iip.transmitter ) 
-					&& endpointAddrsMatch( peer, iip.receiver )
-				|| endpointAddrsMatch( destination, iip.receiver ) 
-					&& endpointAddrsMatch( peer, iip.transmitter ) )
+			if( endpointAddrsMatch( destEpa, iip.transmitter ) 
+					&& endpointAddrsMatch( peerEpa, iip.receiver )
+				|| endpointAddrsMatch( destEpa, iip.receiver ) 
+					&& endpointAddrsMatch( peerEpa, iip.transmitter ) )
 			{
 				foundIip = true;
 				if( iip.iface != iface )
 				{
-					console.log( `Discarding interface event from ${ endpointAddrToString( peer ) } `
-						+` to ${ endpointAddrToString( destination ) } for ${ iface }`
+					console.log( `Discarding interface event from ${ endpointAddrToString( peerEpa ) } `
+						+` to ${ endpointAddrToString( destEpa ) } for ${ iface }`
 						+` because the interface between those two is ${ iip.iface }`, event );
 					break;
 				}
 
-				this.callbacks.interfaceEvent( destination, peer, iface, event );
+				let destination = this.lastEntityMap?.find( destEpa );
+				let peer = this.lastEntityMap?.find( peerEpa );
+
+				this.callbacks.interfaceEvent( destEpa, peerEpa, iface, event,
+					this.computeEntityTransform( destination, peer ) );
+
 				// we should only have one iip for this transmitter
 				break;
 			}
@@ -303,8 +326,8 @@ export class CInterfaceProcessor
 
 		if( !foundIip )
 		{
-			console.log( `Discarding interface event from ${ endpointAddrToString( peer ) } `
-			+` to ${ endpointAddrToString( destination ) } for ${ iface }`
+			console.log( `Discarding interface event from ${ endpointAddrToString( peerEpa ) } `
+			+` to ${ endpointAddrToString( destEpa ) } for ${ iface }`
 			+` because the interface was not found`, event );
 		}
 	}

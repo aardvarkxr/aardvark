@@ -210,6 +210,20 @@ export class CAardvarkEndpoint
 		return env.sequenceNumber;
 	}
 
+	public sendReply( type: MessageType, msg: any, replyTo: Envelope, sender:EndpointAddr = undefined  )
+	{
+		let env: Envelope =
+		{
+			type,
+			sequenceNumber: this.m_nextSequenceNumber++,
+			sender: sender ? sender : { type: EndpointType.Hub, endpointId: 0 },
+			target: replyTo.sender,
+			replyTo: replyTo.sequenceNumber,
+			payload: JSON.stringify( msg ),
+		}
+		this.m_ws.send( JSON.stringify( env ) );
+	}
+
 	public sendGrabEvent( event: AvGrabEvent )
 	{
 		let msg: MsgGrabEvent =
