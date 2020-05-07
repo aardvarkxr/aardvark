@@ -697,6 +697,9 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 			case EVolumeType.ModelBox:
 				return <div className="AvNodeProperty">volume: model box={ volume.uri }</div>;
 
+			case EVolumeType.Infinite:
+				return <div className="AvNodeProperty">volume: infinite</div>;
+
 			default:
 				return <div className="AvNodeProperty">volume: Unknown/invalid</div>;
 		}
@@ -753,6 +756,10 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 				&& <div className="AvNodeProperty">Transmits: { node.propTransmits.join( ", " ) }</div> }
 			{ node.propReceives && node.propReceives.length > 0
 				&& <div className="AvNodeProperty">Receives: { node.propReceives.join( ", " ) }</div> }
+			{ node.propParentAddr 
+				&& <div className="AvNodeProperty">Parent: { endpointAddrToString( node.propParentAddr ) }</div> }
+			{ node.propChildAddr 
+				&& <div className="AvNodeProperty">Child: { endpointAddrToString( node.propChildAddr ) }</div> }
 			{ childElements }
 		</div>
 	}
