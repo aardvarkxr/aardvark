@@ -1,5 +1,5 @@
-import { AvGadget, AvGadgetSeed, AvGrabbable, AvModel, AvModelBoxHandle, AvPanel, AvPanelAnchor, AvTransform, HighlightType, HookInteraction } from '@aardvarkxr/aardvark-react';
-import { EndpointAddr, g_builtinModelGear } from '@aardvarkxr/aardvark-shared';
+import { AvGadget, AvGadgetSeed, AvGrabbable, AvModel, AvModelBoxHandle, AvPanel, AvPanelAnchor, AvTransform, HighlightType, HookInteraction, AvOrigin, AvPrimitive, PrimitiveType, AvInterfaceEntity, ActiveInterface } from '@aardvarkxr/aardvark-react';
+import { EndpointAddr, g_builtinModelGear, EVolumeType, EAction } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
@@ -10,6 +10,9 @@ interface ControlPanelState
 {
 	highlight: HighlightType;
 	installedGadgets?: string[];
+	activeGrab: ActiveInterface;
+	grabber?: EndpointAddr;
+	activeContainer: ActiveInterface;
 }
 
 class ControlPanel extends React.Component< {}, ControlPanelState >
@@ -20,6 +23,8 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		this.state = 
 		{ 
 			highlight: HighlightType.None,
+			activeGrab: null,
+			activeContainer: null,
 		};
 
 		AvGadget.instance().getInstalledGadgets()
@@ -77,8 +82,59 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 			</AvTransform>;
 	}
 
+	@bind
+	private onGrabStart( activeGrab: ActiveInterface )
+	{
+		activeGrab.onEnded(() =>
+		{
+			this.setState( { activeGrab: null } );
+		} );
+
+		activeGrab.onEvent( async ( event: any ) =>
+		{
+			console.log( "Event received", event );
+			switch( event.type )
+			{
+				case "SetGrabber":
+					this.setState( { grabber: this.state.activeGrab.peer } );
+
+					if( this.state.activeContainer )
+					{
+						this.state.activeContainer?.sendEvent( { state: "Moving" } );
+						this.state.activeContainer.unlock();
+					}
+
+					break;
+
+				case "DropYourself":
+					if( this.state.activeContainer )
+					{
+						await this.state.activeContainer.lock();
+						this.state.activeContainer?.sendEvent( { state: "Resting" } );
+					}
+					this.setState( { grabber: null } );
+					break;
+			}
+		} );
+
+		this.setState( { activeGrab } );
+	}
+
+	@bind
+	private onContainerStart( activeContainer: ActiveInterface )
+	{
+		activeContainer.onEnded(() =>
+		{
+			this.setState( { activeContainer: null } );
+		} );
+
+		this.setState( { activeContainer } );
+	}
+
 	public render()
 	{
+		let parent = this.state.grabber ?? this.state.activeContainer?.peer;
+		
 		return (
 			<AvGrabbable updateHighlight={ this.onUpdateHighlight } preserveDropTransform={ true }
 				grabWithIdentityTransform={ true }
@@ -89,6 +145,23 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 				</AvTransform>
 
 				{ this.renderPanel() }
+
+				<AvOrigin path="/space/stage">
+					<AvTransform translateY={ 1 } >
+						<AvInterfaceEntity volume={ { type: EVolumeType.Sphere, radius: 0.1} }
+							receives={
+								{ "aardvark-grab@1": this.onGrabStart }
+							} 
+							transmits={
+								{ "aardvark-container@1": this.onContainerStart }
+							}
+							parent={ parent }
+							>
+							<AvPrimitive type={ PrimitiveType.Sphere } radius={0.1}
+								color={ this.state.activeGrab ? "yellow" : "turquoise" } />
+						</AvInterfaceEntity>
+					</AvTransform>
+				</AvOrigin>
 			</AvGrabbable>	);
 	}
 }
