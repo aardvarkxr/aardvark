@@ -10,6 +10,7 @@ export interface EntityComponent
 	readonly parent: EndpointAddr;
 	readonly wantsTransforms: boolean;
 	onUpdate( callback: () => void ): void;
+	render() : JSX.Element;
 }
 
 
@@ -81,6 +82,7 @@ export class AvComposedEntity extends React.Component< AvComposedEntityProps, {}
 		return <AvInterfaceEntity transmits={transmits} receives={ receives } wantsTransforms={ wantsTransforms }
 					parent={ parent } volume={ this.props.volume }>
 					{ this.props.children }
+					{ this.props.components.map( ( value: EntityComponent ) => value.render() ) }
 				</AvInterfaceEntity>;
 	}
 }

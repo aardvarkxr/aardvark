@@ -127,4 +127,8 @@ export class MoveableComponent implements EntityComponent
 		this.entityCallback = callback;
 	}
 
+	public render(): JSX.Element
+	{
+		return null;
+	}
 }

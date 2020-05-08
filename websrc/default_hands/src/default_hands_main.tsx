@@ -2,7 +2,7 @@ import * as React from 'react';
 import  * as ReactDOM from 'react-dom';
 import bind from 'bind-decorator';
 import { AvGadget,AvOrigin, AvTransform, AvGrabber, AvModel, AvPoker, AvPanelIntersection,
-	AvLine,	AvStandardBoxHook, InterfaceEntityProcessor, ActiveInterface, AvInterfaceEntity, AvEntityChild } 
+	AvLine,	AvStandardBoxHook, InterfaceEntityProcessor, ActiveInterface, AvInterfaceEntity, AvEntityChild, SimpleContainerComponent, AvComposedEntity } 
 	from '@aardvarkxr/aardvark-react';
 import { Av, EndpointAddr, EHand, GrabberHighlight, g_builtinModelSphere, EAction, g_builtinModelHead,
 	g_builtinModelHandRight, g_builtinModelHandLeft, Permission, EVolumeType, AvNodeTransform, endpointAddrToString, endpointAddrsMatch } from '@aardvarkxr/aardvark-shared'
@@ -176,63 +176,17 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 	}
 }
 
-interface ContainerItem
-{
-	epa: EndpointAddr;
-	containerFromEntity: AvNodeTransform;
-	state: "Moving" | "Resting";
-}
-
 class DefaultHands extends React.Component< {}, {} >
 {
-	private contents: ContainerItem[] = [];
+	private containerComponent = new SimpleContainerComponent();
 
 	@bind
 	private onContainerStart( activeContainer: ActiveInterface )
 	{
-		let myItem: ContainerItem =
-		{
-			epa: activeContainer.peer,
-			containerFromEntity: activeContainer.selfFromPeer,
-			state: "Moving",
-		};
-		this.contents.push( myItem );
-
-		activeContainer.onEvent( 
-			( event: any ) =>
-			{
-				myItem.state = event.state;
-				myItem.containerFromEntity = activeContainer.selfFromPeer;
-				this.forceUpdate();
-			}
-		)
-
-		activeContainer.onEnded( 
-			() =>
-			{
-				let i = this.contents.indexOf( myItem );
-				if( i != -1 )
-				{
-					this.contents.splice( i, 1 );
-				}
-				this.forceUpdate();
-			} );
 	}
 
 	public render()
 	{
-		let contents: JSX.Element[] = [];
-		for( let item of this.contents )
-		{
-			if( item.state == "Resting" )
-			{
-				contents.push( 
-					<AvTransform transform={ item.containerFromEntity } key={ endpointAddrToString( item.epa ) }>
-						<AvEntityChild child={ item.epa } />
-					</AvTransform> );
-			}
-		}
-
 		return (
 			<>
 				<DefaultHand hand={ EHand.Left } />
@@ -249,11 +203,9 @@ class DefaultHands extends React.Component< {}, {} >
 					</AvTransform>
 				</AvOrigin>
 				<AvOrigin path="/space/stage">
-					<AvInterfaceEntity 
-						receives={ [ { iface: "aardvark-container@1", processor: this.onContainerStart } ] }
+					<AvComposedEntity components={ [this.containerComponent ] }
 						volume={ { type: EVolumeType.Infinite } }>
-						{ contents }
-					</AvInterfaceEntity>
+					</AvComposedEntity>
 				</AvOrigin>
 			</>
 		);

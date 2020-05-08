@@ -29,6 +29,7 @@ export * from './aardvark_transform';
 export * from './aardvark_translate_control';
 export * from './aardvark_utils';
 export * from './component_moveable';
+export * from './component_simple_container';
 export * from './gadget_endpoint';
 export * from './renderer_endpoint';
 export * from './math_utils';
