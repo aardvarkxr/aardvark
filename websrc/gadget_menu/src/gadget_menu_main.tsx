@@ -1,4 +1,4 @@
-import { AvGadget, AvGadgetSeed, AvGrabbable, AvModel, AvModelBoxHandle, AvPanel, AvPanelAnchor, AvTransform, HighlightType, HookInteraction, AvOrigin, AvPrimitive, PrimitiveType, AvInterfaceEntity, ActiveInterface } from '@aardvarkxr/aardvark-react';
+import { AvGadget, AvGadgetSeed, AvGrabbable, AvModel, AvModelBoxHandle, AvPanel, AvPanelAnchor, AvTransform, HighlightType, HookInteraction, AvOrigin, AvPrimitive, PrimitiveType, AvInterfaceEntity, ActiveInterface, MoveableComponent, AvComposedEntity, MoveableComponentState } from '@aardvarkxr/aardvark-react';
 import { EndpointAddr, g_builtinModelGear, EVolumeType, EAction } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
@@ -10,21 +10,23 @@ interface ControlPanelState
 {
 	highlight: HighlightType;
 	installedGadgets?: string[];
-	activeGrab: ActiveInterface;
-	grabber?: EndpointAddr;
-	activeContainer: ActiveInterface;
+	// activeGrab: ActiveInterface;
+	// grabber?: EndpointAddr;
+	// activeContainer: ActiveInterface;
 }
 
 class ControlPanel extends React.Component< {}, ControlPanelState >
 {
+	private ballMoveable = new MoveableComponent( () => { this.forceUpdate(); } );
+
 	constructor( props: any )
 	{
 		super( props );
 		this.state = 
 		{ 
 			highlight: HighlightType.None,
-			activeGrab: null,
-			activeContainer: null,
+			// activeGrab: null,
+			// activeContainer: null,
 		};
 
 		AvGadget.instance().getInstalledGadgets()
@@ -82,59 +84,57 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 			</AvTransform>;
 	}
 
-	@bind
-	private onGrabStart( activeGrab: ActiveInterface )
-	{
-		activeGrab.onEnded(() =>
-		{
-			this.setState( { activeGrab: null } );
-		} );
+	// @bind
+	// private onGrabStart( activeGrab: ActiveInterface )
+	// {
+	// 	activeGrab.onEnded(() =>
+	// 	{
+	// 		this.setState( { activeGrab: null } );
+	// 	} );
 
-		activeGrab.onEvent( async ( event: any ) =>
-		{
-			console.log( "Event received", event );
-			switch( event.type )
-			{
-				case "SetGrabber":
-					this.setState( { grabber: this.state.activeGrab.peer } );
+	// 	activeGrab.onEvent( async ( event: any ) =>
+	// 	{
+	// 		console.log( "Event received", event );
+	// 		switch( event.type )
+	// 		{
+	// 			case "SetGrabber":
+	// 				this.setState( { grabber: this.state.activeGrab.peer } );
 
-					if( this.state.activeContainer )
-					{
-						this.state.activeContainer?.sendEvent( { state: "Moving" } );
-						this.state.activeContainer.unlock();
-					}
+	// 				if( this.state.activeContainer )
+	// 				{
+	// 					this.state.activeContainer?.sendEvent( { state: "Moving" } );
+	// 					this.state.activeContainer.unlock();
+	// 				}
 
-					break;
+	// 				break;
 
-				case "DropYourself":
-					if( this.state.activeContainer )
-					{
-						await this.state.activeContainer.lock();
-						this.state.activeContainer?.sendEvent( { state: "Resting" } );
-					}
-					this.setState( { grabber: null } );
-					break;
-			}
-		} );
+	// 			case "DropYourself":
+	// 				if( this.state.activeContainer )
+	// 				{
+	// 					await this.state.activeContainer.lock();
+	// 					this.state.activeContainer?.sendEvent( { state: "Resting" } );
+	// 				}
+	// 				this.setState( { grabber: null } );
+	// 				break;
+	// 		}
+	// 	} );
 
-		this.setState( { activeGrab } );
-	}
+	// 	this.setState( { activeGrab } );
+	// }
 
-	@bind
-	private onContainerStart( activeContainer: ActiveInterface )
-	{
-		activeContainer.onEnded(() =>
-		{
-			this.setState( { activeContainer: null } );
-		} );
+	// @bind
+	// private onContainerStart( activeContainer: ActiveInterface )
+	// {
+	// 	activeContainer.onEnded(() =>
+	// 	{
+	// 		this.setState( { activeContainer: null } );
+	// 	} );
 
-		this.setState( { activeContainer } );
-	}
+	// 	this.setState( { activeContainer } );
+	// }
 
 	public render()
 	{
-		let parent = this.state.grabber ?? this.state.activeContainer?.peer;
-		
 		return (
 			<AvGrabbable updateHighlight={ this.onUpdateHighlight } preserveDropTransform={ true }
 				grabWithIdentityTransform={ true }
@@ -148,21 +148,16 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 
 				<AvOrigin path="/space/stage">
 					<AvTransform translateY={ 1 } >
-						<AvInterfaceEntity volume={ { type: EVolumeType.Sphere, radius: 0.1} }
-							receives={
-								[ { iface: "aardvark-grab@1", processor: this.onGrabStart } ]
-							} 
-							transmits={
-								[ { iface: "aardvark-container@1", processor: this.onContainerStart } ]
-							}
-							parent={ parent }
-							>
+						<AvComposedEntity components={ [this.ballMoveable ] } 
+							volume={ { type: EVolumeType.Sphere, radius: 0.1} }>
 							<AvPrimitive type={ PrimitiveType.Sphere } radius={0.1}
-								color={ this.state.activeGrab ? "yellow" : "turquoise" } />
-						</AvInterfaceEntity>
+								color={ ( this.ballMoveable.state == MoveableComponentState.GrabberNearby
+										|| this.ballMoveable.state == MoveableComponentState.Grabbed )
+										? "yellow" : "turquoise" } />
+						</AvComposedEntity>
 					</AvTransform>
 				</AvOrigin> 
-			</AvGrabbable>	);
+			</AvGrabbable> );
 	}
 }
 

@@ -233,6 +233,13 @@ interface AvInterfaceEntityProps extends AvBaseNodeProps
 	 */
 	receives?: InterfaceProp[];
 
+	/** The priority to use when breaking ties among multiple simultaneous intersections for the same entity.
+	 * Higher numbers are chosen before lower numbers.
+	 * 
+	 * @default 0
+	 */
+	priority?: number;
+
 	/** The volume to use when matching this entity with other interface entities. */
 	volume: AvVolume;
 }
@@ -263,8 +270,8 @@ export class AvInterfaceEntity extends AvBaseNode< AvInterfaceEntityProps, {} >
 		}
 
 		node.propVolumes = [ this.props.volume ];
-
 		node.propParentAddr = this.props.parent;
+		node.propPriority = this.props.priority;
 		
 		if( this.props.wantsTransforms )
 		{

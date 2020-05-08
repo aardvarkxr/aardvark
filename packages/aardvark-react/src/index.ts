@@ -1,4 +1,5 @@
 export * from './aardvark_base_node';
+export * from './aardvark_composed_entity';
 export * from './aardvark_drop_indicator';
 export * from './aardvark_endpoint';
 export * from './aardvark_interface_entity';
@@ -27,6 +28,7 @@ export * from './aardvark_standard_hook';
 export * from './aardvark_transform';
 export * from './aardvark_translate_control';
 export * from './aardvark_utils';
+export * from './component_moveable';
 export * from './gadget_endpoint';
 export * from './renderer_endpoint';
 export * from './math_utils';
