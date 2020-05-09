@@ -1,7 +1,8 @@
-import { AvVolume, EndpointAddr } from '@aardvarkxr/aardvark-shared';
+import { AvVolume, EndpointAddr, EndpointType } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import { AvInterfaceEntity, InterfaceProp } from './aardvark_interface_entity';
+import { AvGadget } from './aardvark_gadget';
 
 export interface EntityComponent
 {
@@ -25,6 +26,12 @@ export interface AvComposedEntityProps
 
 	/** The volume to use when matching this entity with other interface entities. */
 	volume: AvVolume;
+
+	/** The priority to use for the entity. 
+	 * 
+	 * @default 0
+	*/
+	priority?: number;
 }
 
 /** Allows for the construction of interface entities out of reusable interface components.
@@ -36,6 +43,7 @@ export interface AvComposedEntityProps
  */
 export class AvComposedEntity extends React.Component< AvComposedEntityProps, {} >
 {
+	private refEntity = React.createRef<AvInterfaceEntity>();
 
 	constructor(props: any)
 	{
@@ -54,6 +62,11 @@ export class AvComposedEntity extends React.Component< AvComposedEntityProps, {}
 		{
 			comp.onUpdate( this.onComponentUpdate );
 		}
+	}
+
+	public get globalId(): EndpointAddr
+	{
+		return this.refEntity.current?.globalId;
 	}
 
 	@bind
@@ -80,7 +93,8 @@ export class AvComposedEntity extends React.Component< AvComposedEntityProps, {}
 		}
 
 		return <AvInterfaceEntity transmits={transmits} receives={ receives } wantsTransforms={ wantsTransforms }
-					parent={ parent } volume={ this.props.volume }>
+					parent={ parent } volume={ this.props.volume } ref={ this.refEntity } 
+					priority={ this.props.priority }>
 					{ this.props.children }
 					{ this.props.components.map( ( value: EntityComponent ) => value.render() ) }
 				</AvInterfaceEntity>;

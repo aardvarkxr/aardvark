@@ -19,6 +19,7 @@ export class MoveableComponent implements EntityComponent
 	private activeGrab: ActiveInterface = null;
 	private activeContainer: ActiveInterface = null;
 	private grabber: EndpointAddr = null;
+	private wasEverDropped: boolean = false;
 
 	constructor( callback: () => void )
 	{
@@ -41,7 +42,7 @@ export class MoveableComponent implements EntityComponent
 		{
 			return MoveableComponentState.GrabberNearby;
 		}
-		else if( this.activeContainer )
+		else if( this.activeContainer && this.wasEverDropped )
 		{
 			return MoveableComponentState.InContainer;
 		}
@@ -78,6 +79,7 @@ export class MoveableComponent implements EntityComponent
 					await this.activeContainer?.lock();
 					this.activeContainer?.sendEvent( { state: "Resting" } );
 
+					this.wasEverDropped = true;
 					this.grabber = null;
 					this.updateListener();
 					break;
@@ -113,7 +115,23 @@ export class MoveableComponent implements EntityComponent
 
 	public get parent(): EndpointAddr
 	{
-		return this.grabber ?? this.activeContainer?.peer;
+		if( this.grabber )
+		{
+			// if we're currently grabbed, that's our parent
+			return this.grabber;
+		}
+		else if( this.wasEverDropped )
+		{
+			// if we've ever been dropped into a container,
+			// that can be our parent
+			return this.activeContainer?.peer;
+		}
+		else
+		{
+			// otherwise, we have no parent and should obey whatever
+			// the scene graph provides as our transform
+			return null;
+		}
 	}
 	
 	public get wantsTransforms()

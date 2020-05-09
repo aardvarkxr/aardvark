@@ -2,9 +2,11 @@ import * as React from 'react';
 import { AvTransform } from './aardvark_transform';
 import bind from 'bind-decorator';
 import { AvModel } from './aardvark_model';
-import { EndpointAddr } from '@aardvarkxr/aardvark-shared';
+import { EndpointAddr, EVolumeType } from '@aardvarkxr/aardvark-shared';
 import { HighlightType, AvGrabbable, HookInteraction } from './aardvark_grabbable';
 import { AvModelBoxHandle } from './aardvark_handles';
+import { MoveableComponent, MoveableComponentState } from './component_moveable';
+import { AvComposedEntity } from './aardvark_composed_entity';
 
 export enum ShowGrabbableChildren
 {
@@ -38,13 +40,6 @@ interface StandardGrabbableProps
 	/** The model to use for the grab handle of this grabbable. */
 	modelUri: string;
 
-	/** Causes the grabbable to always use an identity transform when it is 
-	 * grabbed.
-	 * 
-	 * @default false
-	 */
-	grabWithIdentityTransform?: boolean;
-
 	/** Tells the standard grabbable when to show its children. 
 	 * 
 	 * @default ShowGrabbableChildren.Always
@@ -74,12 +69,6 @@ interface StandardGrabbableProps
 	 * @default none
 	*/
 	onEndGrab?: () => void;
-
-	/** Controls where this grabbable can be dropped.
-	 * 
-	 * @default DropOnHooks
-	 */
-	dropStyle?: DropStyle;
 }
 
 
@@ -91,6 +80,8 @@ interface StandardGrabbableState
 /** A grabbable that shows a model for its handle and highlights automatically. */
 export class AvStandardGrabbable extends React.Component< StandardGrabbableProps, StandardGrabbableState >
 {
+	private moveableComponent = new MoveableComponent( this.onMoveableUpdate );
+
 	constructor( props: any )
 	{
 		super( props );
@@ -101,8 +92,27 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 		};
 	}
 
-	@bind onUpdateHighlight( highlight: HighlightType, handleAddr: EndpointAddr, tethered: boolean )
+	@bind
+	private async onMoveableUpdate()
 	{
+		let highlight: HighlightType;
+		switch( this.moveableComponent.state )
+		{
+			default:
+			case MoveableComponentState.Idle:
+			case MoveableComponentState.InContainer:
+				highlight = HighlightType.None;
+				break;
+
+			case MoveableComponentState.GrabberNearby:
+				highlight = HighlightType.InRange;
+				break;
+
+			case MoveableComponentState.Grabbed:
+				highlight = HighlightType.Grabbed;
+				break;
+		}
+
 		this.setState( ( oldState: StandardGrabbableState ) =>
 		{
 			if( oldState.highlight == HighlightType.InRange || oldState.highlight == HighlightType.None )
@@ -152,33 +162,15 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 			scale *= this.props.modelScale;
 		}
 
-		let hookInteraction: HookInteraction;
-		let preserveDropTransform: boolean;
-		switch( this.props.dropStyle ?? DropStyle.DropOnHooks )
-		{
-			case DropStyle.DropOnHooks:
-				hookInteraction = HookInteraction.HighlightAndDrop;
-				preserveDropTransform = false;
-				break;
-
-			case DropStyle.DropInTheWorld:
-				hookInteraction = HookInteraction.None;
-				preserveDropTransform = true;
-				break;
-		}
-
 		return (
-			<AvGrabbable updateHighlight={ this.onUpdateHighlight } 
-				preserveDropTransform={ preserveDropTransform }
-				grabWithIdentityTransform={ this.props.grabWithIdentityTransform } 
-				hookInteraction={ hookInteraction }>
-				<AvTransform uniformScale={ scale }>
-					<AvModel uri={ this.props.modelUri} color={ this.props.modelColor }/>
-					<AvModelBoxHandle uri={ this.props.modelUri } />
-				</AvTransform>
-
-				{ showChildren && this.props.children }
-			</AvGrabbable> );
+			<AvComposedEntity components={ [ this.moveableComponent ] }
+				volume={ {type: EVolumeType.ModelBox, uri: this.props.modelUri } }>
+					<AvTransform uniformScale={ scale }>
+						<AvModel uri={ this.props.modelUri} color={ this.props.modelColor }/>
+						<AvModelBoxHandle uri={ this.props.modelUri } />
+					</AvTransform>
+					{ showChildren && this.props.children }
+				</AvComposedEntity> );
 	}
 }
 

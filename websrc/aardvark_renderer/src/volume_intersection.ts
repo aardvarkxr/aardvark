@@ -23,6 +23,11 @@ function spheresIntersect( v1: TransformedVolume, v2: TransformedVolume )
 
 function sphereBoxIntersect( sphere: TransformedVolume, box: TransformedVolume )
 {
+	if( !box.aabb )
+	{
+		return false;
+	}
+	
 	let boxFromUniverse = box.universeFromVolume.copy( new mat4() ).inverse();
 	let boxFromSphere = mat4.product( boxFromUniverse, sphere.universeFromVolume, new mat4() );
 	let sphereCenter = boxFromSphere.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) );
@@ -42,6 +47,11 @@ function sphereBoxIntersect( sphere: TransformedVolume, box: TransformedVolume )
 
 function boxBoxIntersect( box1: TransformedVolume, box2: TransformedVolume )
 {
+	if( !box1.aabb || !box2.aabb )
+	{
+		return false;
+	}
+
 	// TODO: For now do the rough "turn one box into an AABB in the other's space" approach.
 	// Eventually this should do the actual unaligned box intersection
 	let box1FromUniverse = box1.universeFromVolume.copy( new mat4() ).inverse();

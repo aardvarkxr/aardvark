@@ -19,6 +19,8 @@ interface DefaultHandState
 	currentPanel: EndpointAddr;
 	activeInterface: ActiveInterface;
 	grabberFromGrabbable?: AvNodeTransform;
+	grabButtonDown: boolean;
+	lostGrab: boolean;
 }
 
 
@@ -36,6 +38,8 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 			pokerHighlight: false,
 			currentPanel: null,
 			activeInterface: null,
+			grabButtonDown: false,
+			lostGrab: false,
 		};
 
 		this.m_actionListenerHandle = AvGadget.instance().listenForActionStateWithComponent( this.props.hand, 
@@ -60,9 +64,10 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 	@bind
 	private onGrabStart( activeInterface: ActiveInterface )
 	{
-		let listenHandle = AvGadget.instance().listenForActionState(EAction.A, this.props.hand, 
+		let listenHandle = AvGadget.instance().listenForActionState( EAction.A, this.props.hand, 
 			async () =>
 			{
+				this.setState( { grabButtonDown: true } );
 				// A was pressed
 				await activeInterface.lock();
 				activeInterface.sendEvent( { type: "SetGrabber" } );
@@ -71,9 +76,17 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 			() =>
 			{
 				// A was released
-				activeInterface.sendEvent( { type: "DropYourself" } );
-				activeInterface.unlock();
-				this.setState( { grabberFromGrabbable: null } );
+				if( !this.state.lostGrab )
+				{
+					activeInterface.sendEvent( { type: "DropYourself" } );
+					activeInterface.unlock();	
+				}
+				else
+				{
+					AvGadget.instance().unlistenForActionState( listenHandle );
+					this.setState( { activeInterface: null } );	
+				}
+				this.setState( { grabberFromGrabbable: null, grabButtonDown: false, lostGrab: false } );
 			} );
 
 		activeInterface.onEvent( 
@@ -84,8 +97,15 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 
 		activeInterface.onEnded( () =>
 		{
-			AvGadget.instance().unlistenForActionState( listenHandle );
-			this.setState( { activeInterface: null } );
+			if( this.state.grabButtonDown )
+			{
+				this.setState( { lostGrab: true } );
+			}
+			else
+			{
+				AvGadget.instance().unlistenForActionState( listenHandle );
+				this.setState( { activeInterface: null } );	
+			}
 		} );
 
 		this.setState( { activeInterface } );

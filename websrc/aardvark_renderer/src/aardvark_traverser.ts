@@ -1738,6 +1738,33 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 	
 	traverseInterfaceEntity( node: AvNode, defaultParent: PendingTransform )
 	{
+		for( let volume of node.propVolumes ?? [] )
+		{
+			if( volume.type == EVolumeType.ModelBox && !volume.aabb)
+			{
+				try
+				{
+					volume.aabb = Av().renderer.getAABBForModel( volume.uri );
+				}
+				catch( e )
+				{
+					let nodeData = this.getNodeData( node );
+					if( nodeData.lastFailedModelUri != volume.uri )
+					{
+						let m: MsgResourceLoadFailed =
+						{
+							nodeId: node.globalId,
+							resourceUri: node.propVolume.uri,
+							error: e.message,
+						};
+		
+						this.m_endpoint.sendMessage( MessageType.ResourceLoadFailed, m );
+					}
+				}
+			}
+		}
+
+
 		this.m_interfaceEntities.push( node );
 
 		if( node.propParentAddr )

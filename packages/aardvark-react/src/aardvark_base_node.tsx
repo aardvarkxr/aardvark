@@ -101,6 +101,11 @@ export abstract class AvBaseNode<TProps, TState> extends React.Component<TProps,
 		return this.buildNode();
 	}
 
+	public get globalId(): EndpointAddr
+	{
+		return { type: EndpointType.Node, endpointId: AvGadget.instance().getEndpointId(), nodeId: this.m_nodeId };
+	}
+
 	public componentWillUnmount()
 	{
 		AvGadget.instance().unregister( this );
