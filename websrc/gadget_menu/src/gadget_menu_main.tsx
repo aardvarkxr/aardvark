@@ -37,34 +37,31 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		}
 		else
 		{
+			const k_cellWidth = 0.06;
+			let rowCount = Math.ceil( this.state.installedGadgets.length / 3 );
+			let top = rowCount * -k_cellWidth;
 			let seeds: JSX.Element[] = [];
-			for( let gadget of this.state.installedGadgets )
+			for( let gadgetIndex = 0; gadgetIndex < this.state.installedGadgets.length; gadgetIndex++ )
 			{
+				let gadget = this.state.installedGadgets[ gadgetIndex ];
+				let col = gadgetIndex % 3;
+				let row = Math.floor( gadgetIndex / 3 );
+
 				seeds.push( 
-					<div className="GadgetSeed">
-						<AvPanelAnchor>
-							<AvGadgetSeed key="gadget" uri={ gadget } 
-								radius={ 0.1 }/>
-						</AvPanelAnchor>
-					</div> );
+					<AvTransform translateZ = { top + row * k_cellWidth } 
+						translateX = { ( col - 1 ) * k_cellWidth } 
+						key={ gadget } >
+						<AvGadgetSeed key="gadget" uri={ gadget } radius={ 0.025 }/>
+					</AvTransform>);
 			}
-			return <div className="GadgetSeedContainer">{ seeds }</div>;
+			return <>{ seeds }</>;
 		}
 	}
 
 	public renderPanel()
 	{
 		return <AvTransform rotateX={ 45 } translateZ={ -0.1 }>
-				<AvTransform uniformScale={0.25}>
-					<AvTransform translateZ={ -0.55 }>
-						<AvPanel interactive={false}>
-							<div className="FullPage" >
-								<h1>This is the control panel</h1>
-								{ this.renderGadgetSeedList() }
-							</div>;
-						</AvPanel>
-					</AvTransform>
-				</AvTransform>
+					{ this.renderGadgetSeedList() }
 			</AvTransform>;
 	}
 
