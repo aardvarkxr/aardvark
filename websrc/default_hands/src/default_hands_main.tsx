@@ -79,13 +79,13 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 				if( !this.state.lostGrab )
 				{
 					activeInterface.sendEvent( { type: "DropYourself" } );
-					activeInterface.unlock();	
 				}
 				else
 				{
 					AvGadget.instance().unlistenForActionState( listenHandle );
 					this.setState( { activeInterface: null } );	
 				}
+				activeInterface.unlock();	
 				this.setState( { grabberFromGrabbable: null, grabButtonDown: false, lostGrab: false } );
 			} );
 
