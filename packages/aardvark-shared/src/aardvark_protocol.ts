@@ -861,6 +861,7 @@ export enum EVolumeType
 	ModelBox = 1,
 	AABB = 1,
 	Infinite = 3,
+	Empty = 4,
 };
 
 
@@ -916,6 +917,12 @@ export interface AvColor
 	a?: number;
 }
 
+export interface InitialInterfaceLock
+{
+	iface: string;
+	receiver: EndpointAddr;
+}
+
 export interface AvNode
 {
 	type: AvNodeType;
@@ -950,6 +957,7 @@ export interface AvNode
 	propInterfaces?: string[];
 	propTransmits?: string[];
 	propReceives?: string[];
+	propInterfaceLocks?: InitialInterfaceLock[];
 	propChildAddr?: EndpointAddr;
 }
 

@@ -1,8 +1,8 @@
 import { TransformedVolume } from './../volume_intersection';
-import { EndpointAddr, EndpointType, endpointAddrsMatch, endpointAddrToString, InterfaceLockResult } from '@aardvarkxr/aardvark-shared';
+import { EndpointAddr, EndpointType, endpointAddrsMatch, endpointAddrToString, InterfaceLockResult, InitialInterfaceLock } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3, vec4 } from '@tlaukkan/tsm';
 import { CInterfaceProcessor, InterfaceProcessorCallbacks, InterfaceEntity } from './../interface_processor';
-import { makeSphere, makeInfinite } from '../volume_test_utils';
+import { makeSphere, makeInfinite, makeEmpty } from '../volume_test_utils';
 import { syncBuiltinESMExports } from 'module';
 import { translateMat } from '@aardvarkxr/aardvark-react';
 
@@ -97,15 +97,21 @@ class CTestEntity implements InterfaceEntity
 	public wantsTransforms = false;
 	public priority = 0;
 	public volumes: TransformedVolume[] = [];
+	public initialLocks: InitialInterfaceLock[] = [];
 
 	public addSphere( radius: number, position?: vec3 )
 	{
 		this.volumes.push( makeSphere( radius, position ) );
 	}
 
-	public addInifinite( )
+	public addInfinite( )
 	{
 		this.volumes.push( makeInfinite() );
+	}
+
+	public addEmpty( )
+	{
+		this.volumes.push( makeEmpty() );
 	}
 }
 
@@ -689,6 +695,225 @@ describe( "interface processor", () =>
 			});
 		cb.calls = [];
 
+	} );
+
+	it( "new shiny but initially locked", async () =>
+	{
+		let cb = new TestCallbacks();
+		let ip = new CInterfaceProcessor( cb );
+
+		let r1 = new CTestEntity();
+		r1.addEmpty(); // nothing will pick this without an initial lock
+		r1.originPath = "/space/stage";
+		r1.receives.push( "test@1" );
+
+		let r2 = new CTestEntity();
+		r2.addSphere( 1 );
+		r2.originPath = "/space/stage";
+		r2.priority = 100;
+		r2.receives.push( "test@1" );
+
+		let t1 = new CTestEntity();
+		t1.addSphere( 1 );
+		t1.transmits.push( "test@1" );
+		t1.initialLocks.push(
+			{
+				receiver: r1.epa,
+				iface: "test@1",
+			}
+		)
+
+		ip.processFrame([r1, t1]);
+		expect( cb.calls.length ).toBe(1);
+		expect( cb.calls[0] ).toEqual(
+			{
+				type: CallType.Start,
+				transmitter: t1.epa,
+				receiver: r1.epa,
+				iface: "test@1",
+			});
+		cb.calls = [];
+
+		expect( ip.lockInterface(r2.epa, r1.epa, "blargh@34") ).toBe( InterfaceLockResult.InterfaceNotFound );
+		expect( ip.lockInterface(t1.epa, r1.epa, "test@1") ).toBe( InterfaceLockResult.AlreadyLocked );
+
+		// t1 should not switch interfaces to
+		// r2 because it's locked
+		ip.processFrame([r2, r1, t1]);
+		expect( cb.calls.length ).toBe(0);
+		cb.calls = [];
+
+		expect( ip.unlockInterface(r2.epa, r1.epa, "blargh@34") ).toBe( InterfaceLockResult.InterfaceNotFound );
+		expect( ip.unlockInterface(t1.epa, r1.epa, "blargh@34") ).toBe( InterfaceLockResult.InterfaceNameMismatch );
+		expect( ip.unlockInterface(t1.epa, r1.epa, "test@1") ).toBe( InterfaceLockResult.Success );
+		expect( ip.unlockInterface(t1.epa, r1.epa, "test@1") ).toBe( InterfaceLockResult.NotLocked );
+
+		// t1 should not switch interfaces to
+		// r2 because it's locked
+		ip.processFrame([r2, r1, t1]);
+		expect( cb.calls.length ).toBe(2);
+		expect( cb.calls[0] ).toEqual(
+			{
+				type: CallType.End,
+				transmitter: t1.epa,
+				receiver: r1.epa,
+				iface: "test@1",
+			});
+		expect( cb.calls[1] ).toEqual(
+			{
+				type: CallType.Start,
+				transmitter: t1.epa,
+				receiver: r2.epa,
+				iface: "test@1",
+			});
+		cb.calls = [];
+	} );
+
+	it( "initial lock but no matching interface", async () =>
+	{
+		let cb = new TestCallbacks();
+		let ip = new CInterfaceProcessor( cb );
+
+		let r1 = new CTestEntity();
+		r1.addEmpty(); // nothing will pick this without an initial lock
+		r1.originPath = "/space/stage";
+		r1.receives.push( "test@1" );
+
+		let r2 = new CTestEntity();
+		r2.addSphere( 1 );
+		r2.originPath = "/space/stage";
+		r2.priority = 100;
+		r2.receives.push( "test@1" );
+
+		let t1 = new CTestEntity();
+		t1.addSphere( 1 );
+		t1.transmits.push( "fred@1" );
+		t1.transmits.push( "test@1" );
+		t1.initialLocks.push(
+			{
+				receiver: r1.epa,
+				iface: "fred@1",
+			}
+		)
+
+		ip.processFrame([r1, t1]);
+		expect( cb.calls.length ).toBe(2);
+		expect( cb.calls[0] ).toEqual(
+			{
+				type: CallType.Start,
+				transmitter: t1.epa,
+				receiver: r1.epa,
+				iface: "fred@1",
+			});
+		expect( cb.calls[1] ).toEqual(
+			{
+				type: CallType.End,
+				transmitter: t1.epa,
+				receiver: r1.epa,
+				iface: "fred@1",
+			});
+		cb.calls = [];
+
+		expect( ip.lockInterface(r2.epa, r1.epa, "blargh@34") ).toBe( InterfaceLockResult.InterfaceNotFound );
+		expect( ip.lockInterface(t1.epa, r1.epa, "fred@1") ).toBe( InterfaceLockResult.InterfaceNotFound );
+
+		// t1 should not switch interfaces to
+		// r2 because it's locked
+		ip.processFrame([r2, t1]);
+		expect( cb.calls.length ).toBe(0);
+		cb.calls = [];
+
+		expect( ip.unlockInterface(r2.epa, r1.epa, "blargh@34") ).toBe( InterfaceLockResult.InterfaceNotFound );
+		expect( ip.unlockInterface(t1.epa, r1.epa, "blargh@34") ).toBe( InterfaceLockResult.InterfaceNameMismatch );
+		expect( ip.unlockInterface(t1.epa, r1.epa, "fred@1") ).toBe( InterfaceLockResult.Success );
+		expect( ip.unlockInterface(t1.epa, r1.epa, "fred@1") ).toBe( InterfaceLockResult.InterfaceNotFound );
+
+		// t1 should switch interfaces to
+		// r2 because it's no longer locked
+		// There's no end with r1 here because we already sent it
+		ip.processFrame([r2, r1, t1]);
+		expect( cb.calls.length ).toBe(1);
+		expect( cb.calls[0] ).toEqual(
+			{
+				type: CallType.Start,
+				transmitter: t1.epa,
+				receiver: r2.epa,
+				iface: "test@1",
+			});
+		cb.calls = [];
+	} );
+
+	it( "initial lock with missing receiver", async () =>
+	{
+		let cb = new TestCallbacks();
+		let ip = new CInterfaceProcessor( cb );
+
+		let r1 = new CTestEntity();
+		r1.addEmpty(); // nothing will pick this without an initial lock
+		r1.originPath = "/space/stage";
+		r1.receives.push( "test@1" );
+
+		let r2 = new CTestEntity();
+		r2.addSphere( 1 );
+		r2.originPath = "/space/stage";
+		r2.priority = 100;
+		r2.receives.push( "test@1" );
+
+		let t1 = new CTestEntity();
+		t1.addSphere( 1 );
+		t1.transmits.push( "test@1" );
+		t1.initialLocks.push(
+			{
+				receiver: r1.epa,
+				iface: "test@1",
+			}
+		)
+
+		ip.processFrame([r2, t1]);
+		expect( cb.calls.length ).toBe(2);
+		expect( cb.calls[0] ).toEqual(
+			{
+				type: CallType.Start,
+				transmitter: t1.epa,
+				receiver: r1.epa,
+				iface: "test@1",
+			});
+		expect( cb.calls[1] ).toEqual(
+			{
+				type: CallType.End,
+				transmitter: t1.epa,
+				receiver: r1.epa,
+				iface: "test@1",
+			});
+		cb.calls = [];
+
+		expect( ip.lockInterface(r2.epa, r1.epa, "blargh@34") ).toBe( InterfaceLockResult.InterfaceNotFound );
+		expect( ip.lockInterface(t1.epa, r1.epa, "test@1") ).toBe( InterfaceLockResult.InterfaceNotFound );
+
+		// t1 should not switch interfaces to
+		// r2 because it's locked
+		ip.processFrame([r2, t1]);
+		expect( cb.calls.length ).toBe(0);
+		cb.calls = [];
+
+		expect( ip.unlockInterface(r2.epa, r1.epa, "blargh@34") ).toBe( InterfaceLockResult.InterfaceNotFound );
+		expect( ip.unlockInterface(t1.epa, r1.epa, "blargh@34") ).toBe( InterfaceLockResult.InterfaceNameMismatch );
+		expect( ip.unlockInterface(t1.epa, r1.epa, "test@1") ).toBe( InterfaceLockResult.Success );
+		expect( ip.unlockInterface(t1.epa, r1.epa, "test@1") ).toBe( InterfaceLockResult.InterfaceNotFound );
+
+		// t1 should not switch interfaces to
+		// r2 because it's no longer locked
+		// There's no end with r1 here because we already sent it
+		ip.processFrame([r2, r1, t1]);
+		expect( cb.calls.length ).toBe(1);
+		expect( cb.calls[0] ).toEqual(
+			{
+				type: CallType.Start,
+				transmitter: t1.epa,
+				receiver: r2.epa,
+				iface: "test@1",
+			});
+		cb.calls = [];
 	} );
 
 	it( "events", async () =>

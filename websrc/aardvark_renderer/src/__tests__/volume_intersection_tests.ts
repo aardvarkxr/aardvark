@@ -1,7 +1,7 @@
 import { mat4, vec3 } from '@tlaukkan/tsm';
 import { rotationMatFromEulerDegrees, scaleMat, translateMat } from '@aardvarkxr/aardvark-react';
 import { volumesIntersect } from './../volume_intersection';
-import { makeBox, makeInfinite, makeSphere } from '../volume_test_utils';
+import { makeBox, makeInfinite, makeSphere, makeEmpty } from '../volume_test_utils';
 
 beforeEach( async() =>
 {
@@ -13,6 +13,30 @@ afterEach( () =>
 
 describe( "volume intersections ", () =>
 {
+	it( "empty infinite", async () =>
+	{
+		let i1 = makeInfinite();
+		let e1 = makeEmpty();
+		expect( volumesIntersect( i1, e1 ) ).toBe( false );
+		expect( volumesIntersect( e1, i1 ) ).toBe( false );
+	} );
+
+	it( "empty sphere", async () =>
+	{
+		let s1 = makeSphere( 999 );
+		let e1 = makeEmpty();
+		expect( volumesIntersect( s1, e1 ) ).toBe( false );
+		expect( volumesIntersect( e1, s1 ) ).toBe( false );
+	} );
+
+	it( "empty box", async () =>
+	{
+		let b1 = makeBox( [ -999, 999, -999, 999, -999, 999, ] );
+		let e1 = makeEmpty();
+		expect( volumesIntersect( b1, e1 ) ).toBe( false );
+		expect( volumesIntersect( e1, b1 ) ).toBe( false );
+	} );
+
 	it( "infinite infinite", async () =>
 	{
 		let i1 = makeInfinite();

@@ -93,6 +93,11 @@ function boxBoxIntersect( box1: TransformedVolume, box2: TransformedVolume )
 
 export function volumesIntersect( v1: TransformedVolume, v2: TransformedVolume )
 {
+	if( v1.type == EVolumeType.Empty || v2.type == EVolumeType.Empty )
+	{
+		// empty volumes don't intersect with anything, including infinite volumes
+		return false;
+	}
 	if( v1.type == EVolumeType.Infinite || v2.type == EVolumeType.Infinite )
 	{
 		return true;

@@ -40,3 +40,12 @@ export function makeInfinite()
 			universeFromVolume: mat4.identity,
 		} as TransformedVolume );
 }
+
+export function makeEmpty()
+{
+	return (
+		{
+			type: EVolumeType.Empty,
+			universeFromVolume: mat4.identity,
+		} as TransformedVolume );
+}

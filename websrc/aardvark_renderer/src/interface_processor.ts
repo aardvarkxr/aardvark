@@ -1,4 +1,4 @@
-import { EndpointAddr, endpointAddrToString, endpointAddrsMatch, InterfaceLockResult } from '@aardvarkxr/aardvark-shared';
+import { EndpointAddr, endpointAddrsMatch, endpointAddrToString, InitialInterfaceLock, InterfaceLockResult } from '@aardvarkxr/aardvark-shared';
 import { mat4 } from '@tlaukkan/tsm';
 import { TransformedVolume, volumesIntersect } from './volume_intersection';
 
@@ -22,6 +22,7 @@ export interface InterfaceEntity
 	readonly volumes: TransformedVolume[];
 	readonly originPath: string;
 	readonly wantsTransforms: boolean;
+	readonly initialLocks: InitialInterfaceLock[];
 
 	/** High numbers are selected before low numbers if multiple volumes match. */
 	readonly priority: number;
@@ -86,6 +87,11 @@ class InterfaceEntityMap
 	{
 		this.entities[ endpointAddrToString( entity.epa ) ] = entity;
 	}
+
+	public has( epa: EndpointAddr )
+	{
+		return this.entities.hasOwnProperty( endpointAddrToString( epa ) );
+	}
 }
 
 
@@ -104,6 +110,48 @@ export class CInterfaceProcessor
 	public processFrame( entities: InterfaceEntity[]  )
 	{
 		let entityMap = new InterfaceEntityMap( entities );
+
+		// Start interfaces from the initial interface list of new entities
+		for( let transmitter of entities )
+		{
+			// we only do this the very first frame we see an entity
+			if( this.lastEntityMap?.has( transmitter.epa ) )
+			{
+				continue;
+			}
+
+			for( let initialLock of transmitter.initialLocks )
+			{
+				let receiver = entityMap.find( initialLock.receiver );
+				let transmitterFromReceiver = this.computeEntityTransform( transmitter, receiver );
+				this.callbacks.interfaceStarted( transmitter.epa, initialLock.receiver, initialLock.iface, 
+					transmitterFromReceiver );
+				
+				let iip: InterfaceInProgress =
+				{
+					transmitter: transmitter.epa,
+					receiver: initialLock.receiver,
+					iface: initialLock.iface,
+					locked: true,
+					transmitterWantsTransforms: transmitter.wantsTransforms,
+					receiverWantsTransforms: receiver?.wantsTransforms ?? false,
+				};
+
+				if( receiver && receiver.receives.includes( initialLock.iface ) )
+				{
+					// we actually know this receiver, so this new forced interface/lock goes on the
+					// active list
+					this.interfacesInProgress.push( iip );
+				}
+				else
+				{
+					// There is no such receiver, so the interface is immediately lost. Because of
+					// the implied lock, it goes into our lost lock list
+					this.callbacks.interfaceEnded( transmitter.epa, initialLock.receiver, initialLock.iface );
+					this.lostLockedInterfaces.set( endpointAddrToString( transmitter.epa ), iip );
+				}
+			}
+		}
 
 		// end interfaces where one end or the other is gone
 		let transmittersInUse = new Map<string, InterfaceInProgress | boolean >();
