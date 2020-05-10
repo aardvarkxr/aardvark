@@ -93,7 +93,7 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 		super( props );
 
 		this.moveableComponent = new MoveableComponent( this.onMoveableUpdate, this.props.initialParent );
-		
+
 		this.state = 
 		{ 
 			highlight: HighlightType.None
@@ -143,6 +143,12 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 		} );
 	}
 
+	public get isGrabbed()
+	{
+		return this.state.highlight == HighlightType.Grabbed 
+			|| this.state.highlight == HighlightType.InHookRange;
+	}
+
 	public render()
 	{
 		let showChildren: boolean;
@@ -177,7 +183,8 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 						<AvModel uri={ this.props.modelUri} color={ this.props.modelColor }/>
 						<AvModelBoxHandle uri={ this.props.modelUri } />
 					</AvTransform>
-					{ showChildren && this.props.children }
+					{ this.props.children && 
+						<AvTransform visible={ showChildren }>{ this.props.children }</AvTransform> }
 				</AvComposedEntity> );
 	}
 }

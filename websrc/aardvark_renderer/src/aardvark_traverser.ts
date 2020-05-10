@@ -25,6 +25,7 @@ interface NodeData
 	transform1?: AvNodeTransform;
 	transform1Time?: number;	
 	graphParent?: EndpointAddr;
+	lastVisible?: boolean;
 }
 
 
@@ -658,8 +659,9 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 				continue;
 			}
 
+			let entityData = this.getNodeData( entityNode );
 			let volumes: TransformedVolume[] = [];
-			if( !universeFromEntity.getOriginPath() )
+			if( !universeFromEntity.getOriginPath() || !entityData.lastVisible )
 			{
 				// if this entity doesn't have an origin path, forbid anything
 				// from intersecting with it. It will still be able to participate in
@@ -913,81 +915,78 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 		this.m_currentVisibility = ( 0 != ( node.flags & ENodeFlags.Visible ) ) 
 			&& this.m_currentVisibility;
 
-		if( this.m_currentVisibility )
+		switch ( node.type )
 		{
-			switch ( node.type )
-			{
-			case AvNodeType.Container:
-				// nothing special to do here
-				break;
+		case AvNodeType.Container:
+			// nothing special to do here
+			break;
 
-			case AvNodeType.Origin:
-				this.traverseOrigin( node, defaultParent );
-				break;
+		case AvNodeType.Origin:
+			this.traverseOrigin( node, defaultParent );
+			break;
 
-			case AvNodeType.Transform:
-				this.traverseTransform( node, defaultParent );
-				break;
+		case AvNodeType.Transform:
+			this.traverseTransform( node, defaultParent );
+			break;
 
-			case AvNodeType.Model:
-				this.traverseModel( node, defaultParent );
-				break;
+		case AvNodeType.Model:
+			this.traverseModel( node, defaultParent );
+			break;
 
-			case AvNodeType.Panel:
-				this.traversePanel( node, defaultParent );
-				break;
+		case AvNodeType.Panel:
+			this.traversePanel( node, defaultParent );
+			break;
 
-			case AvNodeType.Poker:
-				this.traversePoker( node, defaultParent );
-				break;
+		case AvNodeType.Poker:
+			this.traversePoker( node, defaultParent );
+			break;
 
-			case AvNodeType.Grabbable:
-				this.traverseGrabbable( node, defaultParent );
-				break;
+		case AvNodeType.Grabbable:
+			this.traverseGrabbable( node, defaultParent );
+			break;
 
-			case AvNodeType.Handle:
-				this.traverseHandle( node, defaultParent );
-				break;
+		case AvNodeType.Handle:
+			this.traverseHandle( node, defaultParent );
+			break;
 
-			case AvNodeType.Grabber:
-				this.traverseGrabber( node, defaultParent );
-				break;
+		case AvNodeType.Grabber:
+			this.traverseGrabber( node, defaultParent );
+			break;
 
-			case AvNodeType.Hook:
-				this.traverseHook( node, defaultParent );
-				break;
+		case AvNodeType.Hook:
+			this.traverseHook( node, defaultParent );
+			break;
+		
+		case AvNodeType.Line:
+			this.traverseLine( node, defaultParent );
+			break;
+		
+		case AvNodeType.PanelIntersection:
+			this.traversePanelIntersection( node, defaultParent );
+			break;
+		
+		case AvNodeType.ParentTransform:
+			this.traverseParentTransform( node, defaultParent );
+			break;
+		
+		case AvNodeType.HeadFacingTransform:
+			this.traverseHeadFacingTransform( node, defaultParent );
+			break;
+		
+		case AvNodeType.RoomMember:
+			this.traverseRoomMember( node, defaultParent );
+			break;
+		
+		case AvNodeType.Child:
+			this.traverseChild( node, defaultParent );
+			break;
+
+		case AvNodeType.InterfaceEntity:
+			this.traverseInterfaceEntity( node, defaultParent );
+			break;
 			
-			case AvNodeType.Line:
-				this.traverseLine( node, defaultParent );
-				break;
-			
-			case AvNodeType.PanelIntersection:
-				this.traversePanelIntersection( node, defaultParent );
-				break;
-			
-			case AvNodeType.ParentTransform:
-				this.traverseParentTransform( node, defaultParent );
-				break;
-			
-			case AvNodeType.HeadFacingTransform:
-				this.traverseHeadFacingTransform( node, defaultParent );
-				break;
-			
-			case AvNodeType.RoomMember:
-				this.traverseRoomMember( node, defaultParent );
-				break;
-			
-			case AvNodeType.Child:
-				this.traverseChild( node, defaultParent );
-				break;
-
-			case AvNodeType.InterfaceEntity:
-				this.traverseInterfaceEntity( node, defaultParent );
-				break;
-				
-			default:
-				throw "Invalid node type";
-			}
+		default:
+			throw "Invalid node type";
 		}
 
 		if( !this.m_currentNodeByType[ node.type ] )
@@ -998,6 +997,7 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 
 		nodeData.lastFlags = node.flags;
 		nodeData.lastNode = node;
+		nodeData.lastVisible = this.m_currentVisibility;
 		
 		let thisNodeTransform = this.getTransform( node.globalId );
 		if ( thisNodeTransform.needsUpdate() )
@@ -1223,6 +1223,7 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 				}
 			}
 
+			let showModel = this.m_currentVisibility;
 			this.updateTransform( node.globalId, defaultParent, mat4.identity,
 				( universeFromNode: mat4 ) =>
 			{
@@ -1232,7 +1233,10 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 					universeFromNode = new mat4( universeFromNode.all() ).multiply( scaledNodeFromModel );
 				}
 				nodeData.modelInstance.setUniverseFromModelTransform( universeFromNode.all() );
-				this.m_renderList.push( nodeData.modelInstance );
+				if( showModel )
+				{
+					this.m_renderList.push( nodeData.modelInstance );
+				}
 			} );
 		}
 	}
@@ -1273,22 +1277,26 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 			}
 
 			let hand = this.m_currentHand;
+			let showModel = this.m_currentVisibility;
 			this.updateTransform( node.globalId, defaultParent, mat4.identity,
 				( universeFromNode: mat4 ) =>
 			{
 				nodeData.modelInstance.setUniverseFromModelTransform( universeFromNode.all() );
-				this.m_renderList.push( nodeData.modelInstance );
-
-				if ( node.propInteractive )
+				if( showModel )
 				{
-					let panelNormal = universeFromNode.multiplyVec4( new vec4( [ 0, 1, 0, 0 ] ) );
-					let zScale = panelNormal.length();
-					let nodeFromUniverse = new mat4( universeFromNode.all() ).inverse();
-					Av().renderer.addActivePanel(
-						node.globalId,
-						nodeFromUniverse.all(),
-						zScale, 
-						hand );
+					this.m_renderList.push( nodeData.modelInstance );
+
+					if ( node.propInteractive )
+					{
+						let panelNormal = universeFromNode.multiplyVec4( new vec4( [ 0, 1, 0, 0 ] ) );
+						let zScale = panelNormal.length();
+						let nodeFromUniverse = new mat4( universeFromNode.all() ).inverse();
+						Av().renderer.addActivePanel(
+							node.globalId,
+							nodeFromUniverse.all(),
+							zScale, 
+							hand );
+					}
 				}
 			} );
 		}
