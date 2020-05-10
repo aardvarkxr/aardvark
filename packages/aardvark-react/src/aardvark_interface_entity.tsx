@@ -1,4 +1,4 @@
-import { AvNodeTransform, AvNodeType, EndpointAddr, endpointAddrsMatch, InterfaceLockResult, MessageType, MsgInterfaceLock, MsgInterfaceLockResponse, MsgInterfaceUnlock, MsgInterfaceUnlockResponse, AvVolume, ENodeFlags, MsgInterfaceSendEvent } from '@aardvarkxr/aardvark-shared';
+import { AvNodeTransform, AvNodeType, EndpointAddr, endpointAddrsMatch, InterfaceLockResult, MessageType, MsgInterfaceLock, MsgInterfaceLockResponse, MsgInterfaceUnlock, MsgInterfaceUnlockResponse, AvVolume, ENodeFlags, MsgInterfaceSendEvent, InitialInterfaceLock } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 import { AvGadget } from './aardvark_gadget';
@@ -242,6 +242,21 @@ interface AvInterfaceEntityProps extends AvBaseNodeProps
 
 	/** The volume to use when matching this entity with other interface entities. */
 	volume: AvVolume;
+
+	/** A list of interface names and receivers that Aardvark should force this entity to 
+	 * have an interface with when it is created. Each of these initial interfaces must be
+	 * included in this entity's transmitter list. Both the receiver and and transmitter will
+	 * receive InterfaceStarted events with the new interface. This new active interface starts
+	 * locked, so the transmitter will need to unlock it if it wants to return its transmitter to
+	 * a floating state.
+	 * 
+	 * If the endpoint address specified an initial lock does not exist, the active interface will receive 
+	 * an InterfaceEnded event. This non-functional interface will still be locked, and the transmitter
+	 * on this active interface will not start any new interfaces until it calls unlock.
+	 * 
+	 * @default []
+	 */
+	interfaceLocks?: InitialInterfaceLock[];
 }
 
 /** Defines one participant in the interface system */
@@ -273,6 +288,25 @@ export class AvInterfaceEntity extends AvBaseNode< AvInterfaceEntityProps, {} >
 		node.propParentAddr = this.props.parent;
 		node.propPriority = this.props.priority;
 		
+		for( let interfaceLock of ( this.props.interfaceLocks ?? [] ) )
+		{
+			let foundIt = false;
+			for( let transmitter of this.props.transmits ?? [] )
+			{
+				if( interfaceLock.iface == transmitter.iface )
+				{
+					foundIt = true;
+					break;
+				}				
+			}
+			if( !foundIt )
+			{
+				throw new Error( `Entity included an initial interface ${ interfaceLock.iface } but does not `
+					+ `transmit that interface` );
+			}
+		}
+		node.propInterfaceLocks = this.props.interfaceLocks;
+
 		if( this.props.wantsTransforms )
 		{
 			node.flags |= ENodeFlags.NotifyOnTransformChange;

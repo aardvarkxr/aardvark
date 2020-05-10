@@ -1,5 +1,5 @@
 import { CMonitorEndpoint, DegreesToRadians, EulerAnglesToQuaternion, QuaternionToEulerAngles, RadiansToDegrees } from '@aardvarkxr/aardvark-react';
-import { AardvarkManifest, AvGrabEvent, AvGrabEventType, AvNode, AvNodeTransform, AvNodeType, AvQuaternion, AvVector, EndpointAddr, endpointAddrToString, EndpointType, ENodeFlags, Envelope, MessageType, MinimalPose, MsgGrabEvent, MsgLostEndpoint, MsgNewEndpoint, MsgOverrideTransform, MsgPokerProximity, MsgResourceLoadFailed, MsgUpdateSceneGraph, AvVolume, EVolumeType } from '@aardvarkxr/aardvark-shared';
+import { AardvarkManifest, AvGrabEvent, AvGrabEventType, AvNode, AvNodeTransform, AvNodeType, AvQuaternion, AvVector, EndpointAddr, endpointAddrToString, EndpointType, ENodeFlags, Envelope, MessageType, MinimalPose, MsgGrabEvent, MsgLostEndpoint, MsgNewEndpoint, MsgOverrideTransform, MsgPokerProximity, MsgResourceLoadFailed, MsgUpdateSceneGraph, AvVolume, EVolumeType, InitialInterfaceLock } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import { action, computed, observable, ObservableMap } from 'mobx';
 import { observer } from 'mobx-react';
@@ -705,6 +705,21 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 		}
 	}
 
+	public renderInitialInterfaceLocks( interfaceLocks: InitialInterfaceLock[] ): JSX.Element
+	{
+		if( !interfaceLocks || !interfaceLocks.length )
+		{
+			return null;
+		}
+
+		return <div className="AvNodeProperty">Interface Locks: 
+				{ interfaceLocks.map( ( value ) => (
+					<div> { value.iface } -> { endpointAddrToString( value.receiver ) } 
+						{ value.transmitterFromReceiver ? "| has transform" : "" }
+					</div> ) ) }
+			</div>;
+	}
+
 	public renderNode( node: AvNode ): JSX.Element
 	{
 		if( !node )
@@ -756,6 +771,7 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 				&& <div className="AvNodeProperty">Transmits: { node.propTransmits.join( ", " ) }</div> }
 			{ node.propReceives && node.propReceives.length > 0
 				&& <div className="AvNodeProperty">Receives: { node.propReceives.join( ", " ) }</div> }
+			{ this.renderInitialInterfaceLocks( node.propInterfaceLocks ) }
 			{ node.propParentAddr 
 				&& <div className="AvNodeProperty">Parent: { endpointAddrToString( node.propParentAddr ) }</div> }
 			{ node.propChildAddr 

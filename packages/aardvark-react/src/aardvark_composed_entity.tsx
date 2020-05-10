@@ -1,4 +1,4 @@
-import { AvVolume, EndpointAddr, EndpointType } from '@aardvarkxr/aardvark-shared';
+import { AvVolume, EndpointAddr, EndpointType, InitialInterfaceLock } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import { AvInterfaceEntity, InterfaceProp } from './aardvark_interface_entity';
@@ -8,6 +8,7 @@ export interface EntityComponent
 {
 	readonly transmits: InterfaceProp[];
 	readonly receives: InterfaceProp[];
+	readonly interfaceLocks: InitialInterfaceLock[];
 	readonly parent: EndpointAddr;
 	readonly wantsTransforms: boolean;
 	onUpdate( callback: () => void ): void;
@@ -81,6 +82,7 @@ export class AvComposedEntity extends React.Component< AvComposedEntityProps, {}
 		let receives: InterfaceProp[] = [];
 		let wantsTransforms = false;
 		let parent: EndpointAddr;
+		let interfaceLocks: InitialInterfaceLock[] = [];
 		for( let comp of this.props.components )
 		{
 			transmits = transmits.concat( comp.transmits );
@@ -90,11 +92,17 @@ export class AvComposedEntity extends React.Component< AvComposedEntityProps, {}
 			{
 				parent = comp.parent;
 			}
+
+			let compLocks = comp.interfaceLocks;
+			if( compLocks )
+			{
+				interfaceLocks = interfaceLocks.concat( compLocks );
+			}
 		}
 
 		return <AvInterfaceEntity transmits={transmits} receives={ receives } wantsTransforms={ wantsTransforms }
 					parent={ parent } volume={ this.props.volume } ref={ this.refEntity } 
-					priority={ this.props.priority }>
+					priority={ this.props.priority } interfaceLocks={ interfaceLocks }>
 					{ this.props.children }
 					{ this.props.components.map( ( value: EntityComponent ) => value.render() ) }
 				</AvInterfaceEntity>;

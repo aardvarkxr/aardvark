@@ -69,6 +69,12 @@ interface StandardGrabbableProps
 	 * @default none
 	*/
 	onEndGrab?: () => void;
+
+	/** Allows the grabbable to be automatically added to a container when it is first created.
+	 * 
+	 * @default none
+	 */
+	initialParent?: EndpointAddr;
 }
 
 
@@ -80,12 +86,14 @@ interface StandardGrabbableState
 /** A grabbable that shows a model for its handle and highlights automatically. */
 export class AvStandardGrabbable extends React.Component< StandardGrabbableProps, StandardGrabbableState >
 {
-	private moveableComponent = new MoveableComponent( this.onMoveableUpdate );
+	private moveableComponent: MoveableComponent;
 
 	constructor( props: any )
 	{
 		super( props );
 
+		this.moveableComponent = new MoveableComponent( this.onMoveableUpdate, this.props.initialParent );
+		
 		this.state = 
 		{ 
 			highlight: HighlightType.None

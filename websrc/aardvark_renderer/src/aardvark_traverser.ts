@@ -658,24 +658,34 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 				continue;
 			}
 
+			let volumes: TransformedVolume[] = [];
 			if( !universeFromEntity.getOriginPath() )
 			{
-				console.log( "Refusing to process interface entity because it has no origin path",
-					endpointAddrToString( entityNode.globalId ) );
-				continue;
-			}
-
-			// compute the transform to universe for each volume
-			let volumes: TransformedVolume[] = [];
-			for( let volume of entityNode.propVolumes ?? [] )
-			{
-				volumes.push( 
+				// if this entity doesn't have an origin path, forbid anything
+				// from intersecting with it. It will still be able to participate in
+				// existing locks or initial locks
+				volumes.push(
 					{
-						...volume,
-						universeFromVolume: mat4.product( universeFromEntity.getUniverseFromNode(), 
-							nodeTransformToMat4( volume.nodeFromVolume ?? {} ), new mat4() ),
+						type: EVolumeType.Empty,
+						universeFromVolume: mat4.identity,
 					} );
 			}
+			else
+			{
+				// compute the transform to universe for each volume
+				for( let volume of entityNode.propVolumes ?? [] )
+				{
+					volumes.push( 
+						{
+							...volume,
+							universeFromVolume: mat4.product( universeFromEntity.getUniverseFromNode(), 
+								nodeTransformToMat4( volume.nodeFromVolume ?? {} ), new mat4() ),
+						} );
+				}
+			}
+
+
+			let initialLocks = entityNode.propInterfaceLocks ?? [];
 
 			entities.push(
 				{ 
@@ -687,8 +697,9 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 					wantsTransforms: 0 != ( entityNode.flags & ENodeFlags.NotifyOnTransformChange ),
 					priority: entityNode.propPriority ?? 0,
 					volumes,
+					initialLocks,
 				}
-			)
+			);
 		}
 
 		this.m_interfaceProcessor.processFrame( entities );

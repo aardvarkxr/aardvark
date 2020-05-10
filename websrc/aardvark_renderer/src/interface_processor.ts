@@ -1,3 +1,4 @@
+import { nodeTransformToMat4 } from '@aardvarkxr/aardvark-react';
 import { EndpointAddr, endpointAddrsMatch, endpointAddrToString, InitialInterfaceLock, InterfaceLockResult } from '@aardvarkxr/aardvark-shared';
 import { mat4 } from '@tlaukkan/tsm';
 import { TransformedVolume, volumesIntersect } from './volume_intersection';
@@ -123,7 +124,9 @@ export class CInterfaceProcessor
 			for( let initialLock of transmitter.initialLocks )
 			{
 				let receiver = entityMap.find( initialLock.receiver );
-				let transmitterFromReceiver = this.computeEntityTransform( transmitter, receiver );
+				let transmitterFromReceiver = initialLock.transmitterFromReceiver ?
+					nodeTransformToMat4( initialLock.transmitterFromReceiver ) :
+					this.computeEntityTransform( transmitter, receiver );
 				this.callbacks.interfaceStarted( transmitter.epa, initialLock.receiver, initialLock.iface, 
 					transmitterFromReceiver );
 				

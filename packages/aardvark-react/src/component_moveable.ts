@@ -1,7 +1,7 @@
-import { EndpointAddr } from './../../aardvark-shared/src/aardvark_protocol';
-import { EntityComponent } from './aardvark_composed_entity';
-import { InterfaceProp, ActiveInterface } from './aardvark_interface_entity';
+import { InitialInterfaceLock, EndpointAddr, endpointAddrsMatch } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
+import { EntityComponent } from './aardvark_composed_entity';
+import { ActiveInterface, InterfaceProp } from './aardvark_interface_entity';
 
 export enum MoveableComponentState
 {
@@ -20,10 +20,13 @@ export class MoveableComponent implements EntityComponent
 	private activeContainer: ActiveInterface = null;
 	private grabber: EndpointAddr = null;
 	private wasEverDropped: boolean = false;
+	private initialParent: EndpointAddr;
+	private droppedIntoInitialParent = false;
 
-	constructor( callback: () => void )
+	constructor( callback: () => void, initialParent?: EndpointAddr )
 	{
 		this.ownerCallback = callback;
+		this.initialParent = initialParent;
 	}
 
 	private updateListener()
@@ -76,17 +79,25 @@ export class MoveableComponent implements EntityComponent
 					break;
 
 				case "DropYourself":
-					await this.activeContainer?.lock();
-					this.activeContainer?.sendEvent( { state: "Resting" } );
-
-					this.wasEverDropped = true;
-					this.grabber = null;
-					this.updateListener();
+					this.dropIntoContainer( true );
 					break;
 			}
 		} );
 
 		this.activeGrab = activeGrab;
+		this.updateListener();
+	}
+
+	private async dropIntoContainer( requestLock: boolean )
+	{
+		if( requestLock )
+		{
+			await this.activeContainer?.lock();
+		}
+		this.activeContainer?.sendEvent( { state: "Resting" } );
+
+		this.wasEverDropped = true;
+		this.grabber = null;
 		this.updateListener();
 	}
 
@@ -101,6 +112,14 @@ export class MoveableComponent implements EntityComponent
 
 		this.activeContainer = activeContainer;
 		this.updateListener();
+
+		if( this.initialParent && !this.droppedIntoInitialParent 
+			&& endpointAddrsMatch( this.initialParent, activeContainer.peer ) )
+		{
+			// don't need to lock because the initial lock took care of that for us
+			this.dropIntoContainer( false ); 
+			this.droppedIntoInitialParent = true;
+		}
 	}
 
 	public get transmits(): InterfaceProp[]
@@ -131,6 +150,21 @@ export class MoveableComponent implements EntityComponent
 			// otherwise, we have no parent and should obey whatever
 			// the scene graph provides as our transform
 			return null;
+		}
+	}
+
+	public get interfaceLocks(): InitialInterfaceLock[]
+	{
+		if( this.initialParent )
+		{
+			return ( 
+				[ 
+					{ 
+						iface: "aardvark-container@1",
+						receiver: this.initialParent,
+						transmitterFromReceiver: {},
+					}
+				] );
 		}
 	}
 	

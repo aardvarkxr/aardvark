@@ -5,12 +5,14 @@ import { HighlightType, GrabResponse, AvGrabbable } from './aardvark_grabbable';
 import { AvTransform } from './aardvark_transform';
 import { AvSphereHandle } from './aardvark_handles';
 import { AvModel } from './aardvark_model';
-import { EndpointAddr, AvGrabEvent, AardvarkManifest, endpointAddrIsEmpty, AvVector, g_builtinModelError, endpointAddrToString, EVolumeType, Av } from '@aardvarkxr/aardvark-shared';
+import { EndpointAddr, AvGrabEvent, AardvarkManifest, endpointAddrIsEmpty, AvVector, g_builtinModelError, endpointAddrToString, EVolumeType, Av, InitialInterfaceLock } from '@aardvarkxr/aardvark-shared';
 import { AvGadget } from './aardvark_gadget';
 import isUrl from 'is-url';
 import { MoveableComponentState, MoveableComponent } from './component_moveable';
 import { SimpleContainerComponent } from './component_simple_container';
-import { AvComposedEntity } from './aardvark_composed_entity';
+import { AvComposedEntity, EntityComponent } from './aardvark_composed_entity';
+import { ActiveInterface, InterfaceProp } from './aardvark_interface_entity';
+import { AvEntityChild } from './aardvark_entity_child';
 
 
 interface AvGadgetSeedProps extends AvBaseNodeProps
@@ -44,13 +46,94 @@ interface AvGadgetSeedState
 	manifest?: AardvarkManifest;
 }
 
+
+export class GadgetSeedContainerComponent implements EntityComponent
+{
+	private contentsEpa: EndpointAddr;
+	private contentsRested = false;
+	private entityCallback: () => void = null;
+	private activeContainer: ActiveInterface = null;
+
+	constructor()
+	{
+	}
+
+	private updateListener()
+	{
+		this.entityCallback?.();
+	}
+
+	@bind
+	private onContainerStart( activeContainer: ActiveInterface )
+	{
+		this.contentsEpa = activeContainer.peer;
+
+		activeContainer.onEvent( 
+			( event: any ) =>
+			{
+				this.contentsRested = event.state == "Resting";
+				this.updateListener();
+			}
+		)
+
+		activeContainer.onEnded( 
+			() =>
+			{
+				this.contentsRested = false;
+				this.contentsEpa = null;
+				this.updateListener();
+			} );
+	}
+
+	public get transmits(): InterfaceProp[]
+	{
+		return [];
+	}
+
+	public get receives(): InterfaceProp[]
+	{
+		return [ { iface: "aardvark-container@1", processor: this.onContainerStart } ];
+	}
+
+	public get parent(): EndpointAddr
+	{
+		return null;
+	}
+	
+	public get wantsTransforms()
+	{
+		return false;
+	}
+
+
+	public get interfaceLocks(): InitialInterfaceLock[] { return []; }
+	
+	public onUpdate( callback: () => void ): void
+	{
+		this.entityCallback = callback;
+	}
+
+
+	public render(): JSX.Element
+	{
+		if( this.contentsEpa && this.contentsRested )
+		{
+			return <AvEntityChild child={ this.contentsEpa }/>
+		}
+		else
+		{
+			return null;
+		}
+	}
+}
+
 /** A grabbable control that causes the grabber to grab a new
  * instance of a gadget instead of the control itself. 
  */
 export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSeedState >
 {
 	private moveableComponent = new MoveableComponent( this.onMoveableUpdate );
-	private containerComponent = new SimpleContainerComponent();
+	private containerComponent = new GadgetSeedContainerComponent();
 	private refContainer = React.createRef<AvComposedEntity>();
 
 	constructor( props:any )
@@ -185,7 +268,6 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 				break;
 		}
 
-		// TODO: Make the container only accept gadgets spawned by this component somehow
 		return (
 			<AvComposedEntity components={ [ this.moveableComponent ] } 
 				volume={ { type: EVolumeType.Sphere, radius: radius } } >
@@ -195,8 +277,7 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 					</AvTransform>
 				}
 				<AvComposedEntity components={ [ this.containerComponent ] }
-					ref={ this.refContainer } volume={ { type: EVolumeType.Sphere, radius: 0.001 } } 
-					priority={ -99999999 }/>
+					ref={ this.refContainer } volume={ { type: EVolumeType.Empty } } />
 			</AvComposedEntity> );
 	}
 

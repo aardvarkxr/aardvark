@@ -125,6 +125,7 @@ export class AvGadget
 	private m_mainHandleComponent: IAvBaseNode = null;
 	private m_userInfo: LocalUserInfo = null;
 	private m_userInfoListeners: (()=>void)[] = [];
+	private m_initialParent: EndpointAddr = null;
 
 	m_grabEventProcessors: {[nodeId:number]: AvGrabEventProcessor } = {};
 	m_pokerProcessors: {[nodeId:number]: AvPokerHandler } = {};
@@ -155,6 +156,7 @@ export class AvGadget
 		this.m_remoteUniversePath = params[ "remoteUniversePath" ];
 		this.m_ownerUuid = params[ "ownerUuid" ];
 		this.m_remotePersistenceUuid = params[ "remotePersistenceUuid" ];
+		this.m_initialParent = stringToEndpointAddr( params[ "initialHook" ] );
 
 		if( params[ "epToNotify"] )
 		{
@@ -242,6 +244,12 @@ export class AvGadget
 		}
 	}
 
+	/** The initial parent requested by whomever started this gadget. */
+	public get initialParent()
+	{
+		return this.m_initialParent;
+	}
+	
 	/** Loads a gadget manifest by gadget URI.
 	 * 
 	 * @returns a promise that will resolve to the specified gadget's manifest

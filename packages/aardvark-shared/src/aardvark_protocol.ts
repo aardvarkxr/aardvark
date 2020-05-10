@@ -921,6 +921,7 @@ export interface InitialInterfaceLock
 {
 	iface: string;
 	receiver: EndpointAddr;
+	transmitterFromReceiver?: AvNodeTransform;
 }
 
 export interface AvNode

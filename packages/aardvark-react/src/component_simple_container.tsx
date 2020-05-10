@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { EndpointAddr, AvNodeTransform, endpointAddrToString } from '../../aardvark-shared/src/aardvark_protocol';
+import { EndpointAddr, AvNodeTransform, endpointAddrToString, InitialInterfaceLock } from '../../aardvark-shared/src/aardvark_protocol';
 import { EntityComponent } from './aardvark_composed_entity';
 import { InterfaceProp, ActiveInterface } from './aardvark_interface_entity';
 import bind from 'bind-decorator';
@@ -82,6 +82,8 @@ export class SimpleContainerComponent implements EntityComponent
 	}
 
 
+	public get interfaceLocks(): InitialInterfaceLock[] { return []; }
+	
 	public onUpdate( callback: () => void ): void
 	{
 		this.entityCallback = callback;
