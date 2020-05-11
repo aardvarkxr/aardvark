@@ -2,7 +2,7 @@ import * as React from 'react';
 import { AvTransform } from './aardvark_transform';
 import bind from 'bind-decorator';
 import { AvModel } from './aardvark_model';
-import { EndpointAddr, EVolumeType } from '@aardvarkxr/aardvark-shared';
+import { EndpointAddr, EVolumeType, AvVolume } from '@aardvarkxr/aardvark-shared';
 import { HighlightType, AvGrabbable, HookInteraction } from './aardvark_grabbable';
 import { AvModelBoxHandle } from './aardvark_handles';
 import { MoveableComponent, MoveableComponentState } from './component_moveable';
@@ -176,16 +176,24 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 			scale *= this.props.modelScale;
 		}
 
+		let volume: AvVolume =
+		{
+			type: EVolumeType.ModelBox, 
+			uri: this.props.modelUri, 
+			nodeFromVolume:
+			{ 
+				scale: { x: scale, y: scale, z: scale }
+			},
+		}
+
 		return (
-			<AvComposedEntity components={ [ this.moveableComponent ] }
-				volume={ {type: EVolumeType.ModelBox, uri: this.props.modelUri } }>
-					<AvTransform uniformScale={ scale }>
-						<AvModel uri={ this.props.modelUri} color={ this.props.modelColor }/>
-						<AvModelBoxHandle uri={ this.props.modelUri } />
-					</AvTransform>
-					{ this.props.children && 
-						<AvTransform visible={ showChildren }>{ this.props.children }</AvTransform> }
-				</AvComposedEntity> );
+			<AvComposedEntity components={ [ this.moveableComponent ] }	volume={ volume }>
+				<AvTransform uniformScale={ scale }>
+					<AvModel uri={ this.props.modelUri} color={ this.props.modelColor }/>
+				</AvTransform>
+				{ this.props.children && 
+					<AvTransform visible={ showChildren }>{ this.props.children }</AvTransform> }
+			</AvComposedEntity> );
 	}
 }
 
