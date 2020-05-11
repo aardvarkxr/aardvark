@@ -152,6 +152,7 @@ export class MoveableComponent implements EntityComponent
 				case ContainerRequestType.RedropComplete:
 				{
 					activeContainer.unlock();
+					this.wasEverDropped = false;
 					this.updateListener();
 				}
 				break;
