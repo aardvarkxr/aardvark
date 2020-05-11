@@ -2,7 +2,7 @@ import * as React from 'react';
 import  * as ReactDOM from 'react-dom';
 import bind from 'bind-decorator';
 import { AvGadget,AvOrigin, AvTransform, AvGrabber, AvModel, AvPoker, AvPanelIntersection,
-	AvLine,	AvStandardBoxHook, InterfaceEntityProcessor, ActiveInterface, AvInterfaceEntity, AvEntityChild, SimpleContainerComponent, AvComposedEntity } 
+	AvLine,	AvStandardBoxHook, InterfaceEntityProcessor, ActiveInterface, AvInterfaceEntity, AvEntityChild, SimpleContainerComponent, AvComposedEntity, GrabRequest, GrabRequestType } 
 	from '@aardvarkxr/aardvark-react';
 import { Av, EndpointAddr, EHand, GrabberHighlight, g_builtinModelSphere, EAction, g_builtinModelHead,
 	g_builtinModelHandRight, g_builtinModelHandLeft, Permission, EVolumeType, AvNodeTransform, endpointAddrToString, endpointAddrsMatch } from '@aardvarkxr/aardvark-shared'
@@ -21,6 +21,7 @@ interface DefaultHandState
 	grabberFromGrabbable?: AvNodeTransform;
 	grabButtonDown: boolean;
 	lostGrab: boolean;
+	waitingForDropComplete: boolean;
 }
 
 
@@ -40,6 +41,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 			activeInterface: null,
 			grabButtonDown: false,
 			lostGrab: false,
+			waitingForDropComplete: false,
 		};
 
 		this.m_actionListenerHandle = AvGadget.instance().listenForActionStateWithComponent( this.props.hand, 
@@ -70,29 +72,42 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 				this.setState( { grabButtonDown: true } );
 				// A was pressed
 				await activeInterface.lock();
-				activeInterface.sendEvent( { type: "SetGrabber" } );
+				activeInterface.sendEvent( { type: GrabRequestType.SetGrabber } as GrabRequest );
 				this.setState( { grabberFromGrabbable: activeInterface.selfFromPeer } );
 			},
-			() =>
+			async () =>
 			{
 				// A was released
 				if( !this.state.lostGrab )
 				{
-					activeInterface.sendEvent( { type: "DropYourself" } );
+					// we need to wait here to make sure the moveable on the other 
+					// end has a good transform relative to its new container when 
+					// we unlock below.
+					await activeInterface.sendEvent( { type: GrabRequestType.DropYourself } as GrabRequest );
+					this.setState( { waitingForDropComplete: true } );
 				}
 				else
 				{
 					AvGadget.instance().unlistenForActionState( listenHandle );
 					this.setState( { activeInterface: null } );	
+					activeInterface.unlock();	
+					this.setState( { grabberFromGrabbable: null, grabButtonDown: false, lostGrab: false } );
 				}
-				activeInterface.unlock();	
-				this.setState( { grabberFromGrabbable: null, grabButtonDown: false, lostGrab: false } );
 			} );
 
 		activeInterface.onEvent( 
-			( event: object ) =>
+			( event: GrabRequest ) =>
 			{
-
+				switch( event.type )
+				{
+					case GrabRequestType.DropComplete:
+					{
+						activeInterface.unlock();	
+						this.setState( { grabberFromGrabbable: null, grabButtonDown: false, lostGrab: false, 
+							waitingForDropComplete: false } );	
+					}
+					break;
+				}
 			} );
 
 		activeInterface.onEnded( () =>

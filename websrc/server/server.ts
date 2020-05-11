@@ -1394,6 +1394,12 @@ class CEndpoint
 		this.registerForwardHandlerWithReply( MessageType.InterfaceUnlock, 
 			MessageType.InterfaceUnlockResponse,
 			EndpointType.Renderer );
+		this.registerForwardHandlerWithReply( MessageType.InterfaceRelock, 
+			MessageType.InterfaceRelockResponse,
+			EndpointType.Renderer );
+		this.registerForwardHandlerWithReply( MessageType.InterfaceSendEvent, 
+			MessageType.InterfaceSendEventResponse,
+			EndpointType.Renderer );
 
 		this.registerEnvelopeHandler( MessageType.GetInstalledGadgets, this.onGetInstalledGadgets );
 		this.registerEnvelopeHandler( MessageType.DestroyGadget, this.onDestroyGadget );

@@ -1,4 +1,4 @@
-import { InitialInterfaceLock, EndpointAddr, endpointAddrsMatch } from '@aardvarkxr/aardvark-shared';
+import { InitialInterfaceLock, EndpointAddr, endpointAddrsMatch, InterfaceLockResult, endpointAddrToString } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import { EntityComponent } from './aardvark_composed_entity';
 import { ActiveInterface, InterfaceProp } from './aardvark_interface_entity';
@@ -9,6 +9,31 @@ export enum MoveableComponentState
 	InContainer,
 	GrabberNearby,
 	Grabbed,
+}
+
+export enum ContainerRequestType
+{
+	Redrop = "redrop",
+	RedropComplete = "redrop_complete",
+}
+
+export interface ContainerRequest
+{
+	type: ContainerRequestType;
+	newContainer?: EndpointAddr;
+	moveableToReplace?: EndpointAddr;
+}
+
+export enum GrabRequestType
+{
+	DropYourself = "drop_yourself",
+	DropComplete = "drop_complete",
+	SetGrabber = "set_grabber",
+}
+
+export interface GrabRequest
+{
+	type: GrabRequestType;
 }
 
 export class MoveableComponent implements EntityComponent
@@ -22,6 +47,7 @@ export class MoveableComponent implements EntityComponent
 	private wasEverDropped: boolean = false;
 	private initialParent: EndpointAddr;
 	private droppedIntoInitialParent = false;
+	private waitingForRedrop:EndpointAddr = null;
 
 	constructor( callback: () => void, initialParent?: EndpointAddr )
 	{
@@ -64,12 +90,12 @@ export class MoveableComponent implements EntityComponent
 			this.updateListener();
 		} );
 
-		activeGrab.onEvent( async ( event: any ) =>
+		activeGrab.onEvent( async ( event: GrabRequest ) =>
 		{
 			console.log( "Event received", event );
 			switch( event.type )
 			{
-				case "SetGrabber":
+				case GrabRequestType.SetGrabber:
 					this.grabber = this.activeGrab.peer;
 
 					this.activeContainer?.sendEvent( { state: "Moving" } );
@@ -78,8 +104,9 @@ export class MoveableComponent implements EntityComponent
 					this.updateListener();
 					break;
 
-				case "DropYourself":
-					this.dropIntoContainer( true );
+				case GrabRequestType.DropYourself:
+					await this.dropIntoContainer( true );
+					this.activeGrab.sendEvent( { type: GrabRequestType.DropComplete } as GrabRequest );
 					break;
 			}
 		} );
@@ -88,13 +115,13 @@ export class MoveableComponent implements EntityComponent
 		this.updateListener();
 	}
 
-	private async dropIntoContainer( requestLock: boolean )
+	private async dropIntoContainer( requestLock: boolean, moveableToReplace?: EndpointAddr )
 	{
 		if( requestLock )
 		{
 			await this.activeContainer?.lock();
 		}
-		this.activeContainer?.sendEvent( { state: "Resting" } );
+		await this.activeContainer?.sendEvent( { state: "Resting", moveableToReplace } );
 
 		this.wasEverDropped = true;
 		this.grabber = null;
@@ -110,6 +137,27 @@ export class MoveableComponent implements EntityComponent
 			this.updateListener();
 		} );
 
+		activeContainer.onEvent( ( event: ContainerRequest ) =>
+		{
+			switch( event.type )
+			{
+				case ContainerRequestType.Redrop:
+				{
+					console.log( `Redrop request to replace ${ endpointAddrToString( event.moveableToReplace )}` );
+					this.waitingForRedrop = event.moveableToReplace;
+					activeContainer.relock( event.newContainer );
+				}
+				break;
+
+				case ContainerRequestType.RedropComplete:
+				{
+					activeContainer.unlock();
+					this.updateListener();
+				}
+				break;
+			}
+		} );
+
 		this.activeContainer = activeContainer;
 		this.updateListener();
 
@@ -119,6 +167,13 @@ export class MoveableComponent implements EntityComponent
 			// don't need to lock because the initial lock took care of that for us
 			this.dropIntoContainer( false ); 
 			this.droppedIntoInitialParent = true;
+		}
+
+		if( this.waitingForRedrop )
+		{
+			console.log( `got new container ${ endpointAddrToString( activeContainer.peer ) } while waiting for redrop` );
+			this.dropIntoContainer( false, this.waitingForRedrop );
+			this.waitingForRedrop = null;
 		}
 	}
 

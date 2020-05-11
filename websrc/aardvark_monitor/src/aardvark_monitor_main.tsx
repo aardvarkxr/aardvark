@@ -700,6 +700,9 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 			case EVolumeType.Infinite:
 				return <div className="AvNodeProperty">volume: infinite</div>;
 
+			case EVolumeType.Empty:
+				return <div className="AvNodeProperty">volume: empty</div>;
+
 			default:
 				return <div className="AvNodeProperty">volume: Unknown/invalid</div>;
 		}

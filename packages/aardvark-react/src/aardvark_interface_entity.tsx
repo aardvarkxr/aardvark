@@ -1,4 +1,4 @@
-import { AvNodeTransform, AvNodeType, EndpointAddr, endpointAddrsMatch, InterfaceLockResult, MessageType, MsgInterfaceLock, MsgInterfaceLockResponse, MsgInterfaceUnlock, MsgInterfaceUnlockResponse, AvVolume, ENodeFlags, MsgInterfaceSendEvent, InitialInterfaceLock } from '@aardvarkxr/aardvark-shared';
+import { AvNodeTransform, AvNodeType, EndpointAddr, endpointAddrsMatch, InterfaceLockResult, MessageType, MsgInterfaceLock, MsgInterfaceLockResponse, MsgInterfaceUnlock, MsgInterfaceUnlockResponse, AvVolume, ENodeFlags, MsgInterfaceSendEvent, InitialInterfaceLock, MsgInterfaceRelockResponse, MsgInterfaceRelock, MsgInterfaceSendEventResponse } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 import { AvGadget } from './aardvark_gadget';
@@ -20,7 +20,8 @@ export interface ActiveInterface
 	readonly selfFromPeer: AvNodeTransform;
 	lock():Promise<InterfaceLockResult>;
 	unlock():Promise<InterfaceLockResult>;
-	sendEvent( event: object ):void;
+	relock( newReceiver: EndpointAddr ):Promise<InterfaceLockResult>;
+	sendEvent( event: object ):Promise<void>;
 	onEnded( endedCallback:() => void ): void;
 	onEvent( eventCallback:( event: object ) => void ): void;
 	onTransformUpdated( transformCallback:( entityFromPeer: AvNodeTransform ) => void ): void;
@@ -80,6 +81,23 @@ class CActiveInterface implements ActiveInterface
 		} );
 	}
 
+	public relock( newReceiver: EndpointAddr ): Promise<InterfaceLockResult>
+	{
+		return new Promise<InterfaceLockResult>( async (resolve, reject ) =>
+		{
+			let [ msgResponse ] = await AvGadget.instance().sendMessageAndWaitForResponse<MsgInterfaceRelockResponse>(
+				MessageType.InterfaceRelock, 
+				{
+					transmitter: this.transmitter,
+					oldReceiver: this.receiver,
+					newReceiver,
+					iface: this.iface
+				} as MsgInterfaceRelock,
+				MessageType.InterfaceRelockResponse );
+			resolve( msgResponse.result )
+		} );
+	}
+
 	public get self(): EndpointAddr
 	{
 		return this.role == InterfaceRole.Transmitter ? this.transmitter : this.receiver;
@@ -112,15 +130,21 @@ class CActiveInterface implements ActiveInterface
 		}
 	}
 
-	sendEvent( event: object ):void
+	sendEvent( event: object ): Promise<void>
 	{
-		AvGadget.instance().sendMessage(MessageType.InterfaceSendEvent, 
-			{
-				destination: this.peer,
-				peer: this.self,
-				iface: this.iface,
-				event,
-			} as MsgInterfaceSendEvent );
+		return new Promise<void>( async (resolve, reject ) =>
+		{
+			let [ msgResponse ] = await AvGadget.instance().sendMessageAndWaitForResponse<MsgInterfaceSendEventResponse>(
+				MessageType.InterfaceSendEvent, 
+				{
+					destination: this.peer,
+					peer: this.self,
+					iface: this.iface,
+					event
+				} as MsgInterfaceSendEvent,
+				MessageType.InterfaceSendEventResponse );
+			resolve();
+		} );
 	}
 
 	onEnded( endedCallback:() => void ): void

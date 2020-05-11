@@ -39,7 +39,6 @@ export enum MessageType
 	SignRequest = 314,
 	SignRequestResponse = 315,
 	InterfaceEvent = 316,
-	SetParent = 317,
 
 	// System messages
 	GetInstalledGadgets = 400,
@@ -66,6 +65,9 @@ export enum MessageType
 	InterfaceLockResponse = 706,
 	InterfaceUnlock = 707,
 	InterfaceUnlockResponse = 708,
+	InterfaceRelock = 709,
+	InterfaceRelockResponse = 710,
+	InterfaceSendEventResponse = 711,
 }
 
 export enum WebSocketCloseCodes
@@ -654,6 +656,8 @@ export enum InterfaceLockResult
 	NotLocked = 2,
 	InterfaceNotFound = 3,
 	InterfaceNameMismatch = 4,
+	InterfaceReceiverMismatch = 5,
+	NewReceiverNotFound = 6,
 }
 
 export interface MsgInterfaceLockResponse
@@ -673,6 +677,19 @@ export interface MsgInterfaceUnlockResponse
 	result: InterfaceLockResult;
 }
 
+export interface MsgInterfaceRelock
+{
+	transmitter: EndpointAddr;
+	oldReceiver: EndpointAddr;
+	newReceiver: EndpointAddr;
+	iface: string;
+}
+
+export interface MsgInterfaceRelockResponse
+{
+	result: InterfaceLockResult;
+}
+
 export interface MsgInterfaceTransformUpdated
 {
 	destination: EndpointAddr;
@@ -687,6 +704,10 @@ export interface MsgInterfaceSendEvent
 	peer: EndpointAddr;
 	iface: string;
 	event: object;
+}
+
+export interface MsgInterfaceSendEventResponse
+{
 }
 
 export interface MsgInterfaceReceiveEvent

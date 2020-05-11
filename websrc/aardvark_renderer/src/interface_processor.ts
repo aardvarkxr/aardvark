@@ -178,6 +178,8 @@ export class CInterfaceProcessor
 			{
 				// console.log( "receiver no longer exists or lost iface", receiver );
 				this.callbacks.interfaceEnded(iip.transmitter, iip.receiver, iip.iface );
+				console.log( `interface end (no receiver/iface) ${ endpointAddrToString( transmitter.epa ) } `
+					+` to ${ endpointAddrToString( iip.receiver ) } for ${ iip.iface }` );
 				if( iip.locked )
 				{
 					//console.log( "adding lost lock to list for " + endpointAddrToString( iip.transmitter ) );
@@ -192,7 +194,8 @@ export class CInterfaceProcessor
 			{
 				if ( !entitiesIntersect( transmitter, receiver ) )
 				{
-					// console.log( "entities no longer intersect");
+					console.log( `interface end (no intersect) ${ endpointAddrToString( transmitter.epa ) } `
+						+` to ${ endpointAddrToString( receiver.epa ) } for ${ iip.iface }` );
 					this.callbacks.interfaceEnded( iip.transmitter, iip.receiver, iip.iface,
 						this.computeEntityTransform( transmitter, receiver ) );
 					continue;
@@ -288,6 +291,9 @@ export class CInterfaceProcessor
 					}
 				}
 
+				console.log( `interface started ${ endpointAddrToString( transmitter.epa ) } `
+					+` to ${ endpointAddrToString( bestReceiver.epa ) } for ${ bestIface }` );
+
 				// we found a transmitter and receiver that are touching and share an interface.
 				this.callbacks.interfaceStarted( transmitter.epa, bestReceiver.epa, bestIface,
 					this.computeEntityTransform( transmitter, bestReceiver ) );
@@ -367,8 +373,11 @@ export class CInterfaceProcessor
 				let destination = this.lastEntityMap?.find( destEpa );
 				let peer = this.lastEntityMap?.find( peerEpa );
 
-				this.callbacks.interfaceEvent( destEpa, peerEpa, iface, event,
-					this.computeEntityTransform( destination, peer ) );
+				let destinationFromPeer = this.computeEntityTransform( destination, peer );
+				console.log( `Reflecting interface event from ${ endpointAddrToString( peerEpa ) } `
+					+` to ${ endpointAddrToString( destEpa ) } for ${ iface }`, event, destinationFromPeer );
+
+				this.callbacks.interfaceEvent( destEpa, peerEpa, iface, event, destinationFromPeer );
 
 				// we should only have one iip for this transmitter
 				break;
@@ -414,6 +423,9 @@ export class CInterfaceProcessor
 			return InterfaceLockResult.InterfaceNameMismatch;
 		}
 
+		console.log( `Locking interface ${ endpointAddrToString( transmitter ) } `
+			+` to ${ endpointAddrToString( receiver ) } for ${ iface }` );
+
 		iip.locked = true;
 		return InterfaceLockResult.Success;
 	}
@@ -452,9 +464,61 @@ export class CInterfaceProcessor
 			return InterfaceLockResult.InterfaceNameMismatch;
 		}
 
+		if( !endpointAddrsMatch( iip.receiver, receiver ) )
+		{
+			return InterfaceLockResult.InterfaceReceiverMismatch;
+		}
+
+		console.log( `Unlocking interface ${ endpointAddrToString( transmitter ) } `
+			+` to ${ endpointAddrToString( receiver ) } for ${ iface }` );
+
 		iip.locked = false;
 		return InterfaceLockResult.Success;
 		
+	}
+
+	public relockInterface( transmitterEpa: EndpointAddr, oldReceiverEpa: EndpointAddr, 
+		newReceiverEpa: EndpointAddr, iface: string ): InterfaceLockResult
+	{
+		let iip = this.findIip( transmitterEpa );
+		if( !iip )
+		{
+			return InterfaceLockResult.InterfaceNotFound;
+		}
+
+		if( !iip.locked )
+		{
+			return InterfaceLockResult.NotLocked;
+		}
+
+		if( iip.iface != iface )
+		{
+			return InterfaceLockResult.InterfaceNameMismatch;
+		}
+
+		if( !endpointAddrsMatch( iip.receiver, oldReceiverEpa ) )
+		{
+			return InterfaceLockResult.InterfaceReceiverMismatch;
+		}
+
+		let newReceiver = this.lastEntityMap.find( newReceiverEpa );
+		if( !newReceiver )
+		{
+			return InterfaceLockResult.NewReceiverNotFound;			
+		}
+
+		let transmitter = this.lastEntityMap.find( transmitterEpa )
+		let oldReceiver = this.lastEntityMap.find( oldReceiverEpa )
+		let transmitterFromOldReceiver = this.computeEntityTransform( transmitter, oldReceiver );
+		let transmitterFromNewReceiver = this.computeEntityTransform( transmitter, newReceiver );
+
+		this.callbacks.interfaceEnded( transmitterEpa, oldReceiverEpa, iface, transmitterFromOldReceiver );
+		this.callbacks.interfaceStarted( transmitterEpa, newReceiverEpa, iface, transmitterFromNewReceiver );
+
+		iip.receiver = newReceiverEpa;
+		iip.receiverWantsTransforms = newReceiver.wantsTransforms;
+
+		return InterfaceLockResult.Success;
 	}
 
 }

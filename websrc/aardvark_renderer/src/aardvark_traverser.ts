@@ -1,7 +1,7 @@
 import { EndpointAddrMap } from './endpoint_addr_map';
 import { TransformedVolume } from './volume_intersection';
 import { computeUniverseFromLine, minIgnoringNulls, nodeTransformFromMat4, nodeTransformToMat4, scaleAxisToFit, scaleMat, translateMat, vec3MultiplyAndAdd, CRendererEndpoint } from '@aardvarkxr/aardvark-react';
-import { Av, AvActionState, AvConstraint, AvGrabEvent, AvGrabEventType, AvModelInstance, AvNode, AvNodeTransform, AvNodeType, AvRendererConfig, EAction, EHand, emptyActionState, EndpointAddr, endpointAddrIsEmpty, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, EVolumeType, filterActionsForGadget, getActionFromState, g_builtinModelCylinder, g_builtinModelError, g_builtinModelPanel, g_builtinModelPanelInverted, LocalUserInfo, MessageType, MinimalPose, MsgAttachGadgetToHook, MsgDestroyGadget, MsgDetachGadgetFromHook, MsgGrabEvent, MsgInterfaceEnded, MsgInterfaceLock, MsgInterfaceSendEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgInterfaceUnlock, MsgLostEndpoint, MsgNodeHaptic, MsgResourceLoadFailed, MsgUpdateActionState, MsgUpdatePose, MsgUpdateSceneGraph, MsgUserInfo, parseEndpointFieldUri, MsgInterfaceReceiveEvent, MsgInterfaceLockResponse, MsgInterfaceUnlockResponse } from '@aardvarkxr/aardvark-shared';
+import { Av, AvActionState, AvConstraint, AvGrabEvent, AvGrabEventType, AvModelInstance, AvNode, AvNodeTransform, AvNodeType, AvRendererConfig, EAction, EHand, emptyActionState, EndpointAddr, endpointAddrIsEmpty, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, EVolumeType, filterActionsForGadget, getActionFromState, g_builtinModelCylinder, g_builtinModelError, g_builtinModelPanel, g_builtinModelPanelInverted, LocalUserInfo, MessageType, MinimalPose, MsgAttachGadgetToHook, MsgDestroyGadget, MsgDetachGadgetFromHook, MsgGrabEvent, MsgInterfaceEnded, MsgInterfaceLock, MsgInterfaceSendEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgInterfaceUnlock, MsgLostEndpoint, MsgNodeHaptic, MsgResourceLoadFailed, MsgUpdateActionState, MsgUpdatePose, MsgUpdateSceneGraph, MsgUserInfo, parseEndpointFieldUri, MsgInterfaceReceiveEvent, MsgInterfaceLockResponse, MsgInterfaceUnlockResponse, MsgInterfaceRelock, MsgInterfaceRelockResponse, MsgInterfaceSendEventResponse } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3, vec4 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
 import { CGrabStateProcessor } from './grab_state_processor';
@@ -242,6 +242,7 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 	private m_grabsInProgress: string[] = [];
 	private m_interfaceProcessor = new CInterfaceProcessor( this );
 	private m_interfaceEntities: AvNode[] = [];
+	private m_entityParentTransforms = new EndpointAddrMap<PendingTransform >();
 
 	constructor()
 	{
@@ -258,7 +259,8 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 		this.m_endpoint.registerHandler( MessageType.InterfaceSendEvent, this.onInterfaceSendEvent );
 		this.m_endpoint.registerHandler( MessageType.InterfaceLock, this.onInterfaceLock );
 		this.m_endpoint.registerHandler( MessageType.InterfaceUnlock, this.onInterfaceUnlock );
-		}
+		this.m_endpoint.registerHandler( MessageType.InterfaceRelock, this.onInterfaceRelock );
+	}
 
 	@bind onEndpointOpen(settings: AvRendererConfig)
 	{
@@ -315,9 +317,14 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 	}
 
 	@bind
-	onInterfaceSendEvent( m: MsgInterfaceSendEvent )
+	onInterfaceSendEvent( m: MsgInterfaceSendEvent, env: Envelope )
 	{
 		this.m_interfaceProcessor.interfaceEvent(m.destination, m.peer, m.iface, m.event );
+		let response: MsgInterfaceSendEventResponse =
+		{
+		};
+		this.m_endpoint.sendReply(MessageType.InterfaceSendEventResponse, response, env, 
+			{ type: EndpointType.Renderer } );
 	}
 
 	@bind
@@ -341,6 +348,18 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 			result,
 		};
 		this.m_endpoint.sendReply(MessageType.InterfaceUnlockResponse, response, env, 
+			{ type: EndpointType.Renderer } );
+	}
+	
+	@bind
+	onInterfaceRelock( m: MsgInterfaceRelock, env: Envelope )
+	{
+		let result = this.m_interfaceProcessor.relockInterface(m.transmitter, m.oldReceiver, m.newReceiver, m.iface );
+		let response: MsgInterfaceRelockResponse =
+		{
+			result,
+		};
+		this.m_endpoint.sendReply(MessageType.InterfaceRelockResponse, response, env, 
 			{ type: EndpointType.Renderer } );
 	}
 	
@@ -454,6 +473,7 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 		this.m_universeFromNodeTransforms = {};
 		this.m_renderList = [];
 		this.m_interfaceEntities = [];
+		this.m_entityParentTransforms = new EndpointAddrMap<PendingTransform >();
 
 		this.clearHooksInUse();
 		this.m_frameNumber++;
@@ -1735,8 +1755,6 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 		}
 	}
 	
-	private m_entityParentTransforms = new EndpointAddrMap<PendingTransform >();
-
 	traverseChild( node: AvNode, defaultParent: PendingTransform )
 	{
 		if( node.propChildAddr )

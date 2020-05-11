@@ -1,18 +1,31 @@
 import * as React from 'react';
-import { EndpointAddr, AvNodeTransform, endpointAddrToString, InitialInterfaceLock } from '../../aardvark-shared/src/aardvark_protocol';
+import { EndpointAddr, AvNodeTransform, endpointAddrToString, InitialInterfaceLock, endpointAddrsMatch } from '../../aardvark-shared/src/aardvark_protocol';
 import { EntityComponent } from './aardvark_composed_entity';
 import { InterfaceProp, ActiveInterface } from './aardvark_interface_entity';
 import bind from 'bind-decorator';
 import { AvTransform } from './aardvark_transform';
 import { AvEntityChild } from './aardvark_entity_child';
+import { ContainerRequestType, ContainerRequest } from './component_moveable';
+
+export enum ContainerItemState
+{
+	Moving = "Moving",
+	Resting = "Resting",
+}
 
 interface ContainerItem
 {
 	epa: EndpointAddr;
 	containerFromEntity: AvNodeTransform;
-	state: "Moving" | "Resting";
+	state: ContainerItemState;
+	iface: ActiveInterface;
 }
 
+export interface ContainerItemStateEvent
+{
+	state: ContainerItemState;
+	moveableToReplace?: EndpointAddr;
+}
 
 export class SimpleContainerComponent implements EntityComponent
 {
@@ -36,15 +49,36 @@ export class SimpleContainerComponent implements EntityComponent
 		{
 			epa: activeContainer.peer,
 			containerFromEntity: activeContainer.selfFromPeer,
-			state: "Moving",
+			state: ContainerItemState.Moving,
+			iface: activeContainer,
 		};
 		this.contents.push( myItem );
 
 		activeContainer.onEvent( 
-			( event: any ) =>
+			( event: ContainerItemStateEvent ) =>
 			{
 				myItem.state = event.state;
 				myItem.containerFromEntity = activeContainer.selfFromPeer;
+
+				if( event.moveableToReplace )
+				{
+					console.log( `trying to send redrop complete to ${ endpointAddrToString( event.moveableToReplace ) }` );
+					let item = this.contents.find(( item ) => endpointAddrsMatch(item.epa, event.moveableToReplace ) );
+					if( item )
+					{
+						console.log( `found item for ${ endpointAddrToString( event.moveableToReplace ) }` );
+						myItem.containerFromEntity = item.containerFromEntity;
+						item.iface.sendEvent( 
+							{ 
+								type: ContainerRequestType.RedropComplete, 
+								replacement: myItem.epa 
+							} as ContainerRequest );
+					}
+					else
+					{
+						console.log( "didn't find matching item" );
+					}
+				}
 				this.updateListener();
 			}
 		)
