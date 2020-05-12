@@ -13,6 +13,7 @@ export enum InterfaceRole
 
 export interface ActiveInterface
 {
+	readonly self: EndpointAddr;
 	readonly peer: EndpointAddr;
 	readonly interface: string;
 	readonly role: InterfaceRole;

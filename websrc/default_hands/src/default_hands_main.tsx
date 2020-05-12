@@ -66,6 +66,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 	@bind
 	private onGrabStart( activeInterface: ActiveInterface )
 	{
+		AvGadget.instance().sendHapticEvent(activeInterface.self, 0.7, 1, 0 );
 		let listenHandle = AvGadget.instance().listenForActionState( EAction.A, this.props.hand, 
 			async () =>
 			{
@@ -120,6 +121,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 			{
 				AvGadget.instance().unlistenForActionState( listenHandle );
 				this.setState( { activeInterface: null } );	
+				AvGadget.instance().sendHapticEvent(activeInterface.self, 0.3, 1, 0 );
 			}
 		} );
 
