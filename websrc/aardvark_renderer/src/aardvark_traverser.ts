@@ -216,6 +216,23 @@ interface RemoteUniverse
 	remoteFromOrigin: { [originPath: string] : PendingTransform };
 }
 
+function handFromOriginPath( originPath: string )
+{
+	if ( originPath == "/user/hand/left" )
+	{
+		return EHand.Left;
+	}
+	else if ( originPath == "/user/hand/right" )
+	{
+		return EHand.Right;
+	}
+	else
+	{
+		return EHand.Invalid;
+	}
+}
+
+
 export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 {
 	private m_inFrameTraversal = false;
@@ -1060,7 +1077,7 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 				let originTransform = this.getRemoteOriginTransform( this.m_currentRoot.remoteUniverse, 
 					origin );
 				let transform = this.updateTransform( node.globalId, originTransform, null, null );
-				transform.setOriginPath( this.m_currentRoot + origin );
+				transform.setOriginPath( this.m_currentRoot.remoteUniverse + origin );
 			}
 			else
 			{
@@ -1069,22 +1086,11 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 				{
 					let transform = this.updateTransform( node.globalId, null, 
 						new mat4( parentFromOriginArray ), null );
-					transform.setOriginPath( this.m_currentRoot + origin );
+					transform.setOriginPath( origin );
 				}
 			}
 
-			if ( origin == "/user/hand/left" )
-			{
-				this.m_currentHand = EHand.Left;
-			}
-			else if ( origin == "/user/hand/right" )
-			{
-				this.m_currentHand = EHand.Right;
-			}
-			else
-			{
-				this.m_currentHand = EHand.Invalid;
-			}
+			this.m_currentHand = handFromOriginPath( origin );
 		}
 		else if( origin != null )
 		{
@@ -2056,10 +2062,11 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 	@bind
 	public onNodeHaptic( m: MsgNodeHaptic  )
 	{
-		let hapticHand = this.m_handDeviceForNode[ endpointAddrToString( m.nodeId ) ];
-		if( hapticHand )
+		let transform = this.getTransform( m.nodeId );
+		let hand = handFromOriginPath( transform?.getOriginPath() );
+		if( hand != EHand.Invalid )
 		{
-			Av().renderer.sendHapticEventForHand( hapticHand, m.amplitude, m.frequency, m.duration );
+			Av().renderer.sendHapticEventForHand( hand, m.amplitude, m.frequency, m.duration );
 		}
 	}
 
