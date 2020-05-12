@@ -379,19 +379,14 @@ export class AvGadget
 	@bind
 	private async onInterfaceStarted( m: MsgInterfaceStarted, env: Envelope )
 	{
-		let transmitProcessor = this.getInterfaceEntityProcessor( m.transmitter );
-		if( transmitProcessor )
+		console.log( `Received interface start for ${ interfaceStringFromMsg( m ) }` );
+		let processor = this.getInterfaceEntityProcessor( env.target );
+		if( processor )
 		{
-			transmitProcessor.started(m.transmitter, m.receiver, m.iface, m.transmitterFromReceiver );
+			processor.started(m.transmitter, m.receiver, m.iface, m.transmitterFromReceiver );
 		}
 
-		let receiveProcessor = this.getInterfaceEntityProcessor( m.receiver );
-		if( receiveProcessor )
-		{
-			receiveProcessor.started(m.transmitter, m.receiver, m.iface, m.transmitterFromReceiver );
-		}
-
-		if( !transmitProcessor && !receiveProcessor )
+		if( !processor )
 		{
 			console.log( `Received interface start for ${ interfaceStringFromMsg( m ) },`
 				+ ` which doesn't have a processor` );
@@ -401,19 +396,13 @@ export class AvGadget
 	@bind
 	private async onInterfaceEnded( m: MsgInterfaceEnded, env: Envelope )
 	{
-		let transmitProcessor = this.getInterfaceEntityProcessor( m.transmitter );
-		if( transmitProcessor )
+		let processor = this.getInterfaceEntityProcessor( env.target );
+		if( processor )
 		{
-			transmitProcessor.ended(m.transmitter, m.receiver, m.iface, m.transmitterFromReceiver );
+			processor.ended(m.transmitter, m.receiver, m.iface, m.transmitterFromReceiver );
 		}
 
-		let receiveProcessor = this.getInterfaceEntityProcessor( m.receiver );
-		if( receiveProcessor )
-		{
-			receiveProcessor.ended(m.transmitter, m.receiver, m.iface, m.transmitterFromReceiver );
-		}
-
-		if( !transmitProcessor && !receiveProcessor )
+		if( !processor )
 		{
 			console.log( `Received interface start for ${ interfaceStringFromMsg( m ) },`
 				+ ` which doesn't have a processor` );
