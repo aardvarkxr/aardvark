@@ -1,5 +1,5 @@
-import { AvGadget, AvStandardGrabbable, AvPrimitive, AvLine, PrimitiveYOrigin, PrimitiveZOrigin, PrimitiveType, AvTransform, AvGrabbable, AvModelBoxHandle, AvHook, HookHighlight, HookInteraction, HighlightType, DropStyle } from '@aardvarkxr/aardvark-react';
-import { g_builtinModelBox, AvNodeTransform, g_builtinModelCylinder, EndpointAddr, endpointAddrToString, endpointAddrsMatch, AvVector } from '@aardvarkxr/aardvark-shared';
+import { AvGadget, AvStandardGrabbable, AvPrimitive, AvLine, PrimitiveYOrigin, PrimitiveZOrigin, PrimitiveType, AvTransform, AvGrabbable, AvModelBoxHandle, AvHook, HookHighlight, HookInteraction, HighlightType, DropStyle, AvInterfaceEntity, ActiveInterface, MoveableComponent, AvComposedEntity } from '@aardvarkxr/aardvark-react';
+import { g_builtinModelBox, AvNodeTransform, g_builtinModelCylinder, EndpointAddr, endpointAddrToString, endpointAddrsMatch, AvVector, EVolumeType, AvVolume } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
@@ -85,38 +85,39 @@ interface PaintBucketProps
 
 function PaintBucket( props: PaintBucketProps )
 {
-	const [ touched, setTouched ] = React.useState( false );
-	const [ nodeId, setNodeId ] = React.useState<EndpointAddr>( null );
+	const [ touched, setTouched ] = React.useState( 0 );
 
-	let updateHighlight = ( highlightType: HookHighlight, grabbableEpa: EndpointAddr )=>
+	let onNewColorPicker = ( newPicker: ActiveInterface ) =>
 	{
-		if( highlightType == HookHighlight.InRange )
+		setTouched( touched + 1 );
+		newPicker.onEnded( () => { setTouched( touched - 1 ) } );
+
+		let ie: IEColorPicker =
 		{
-			setTouched( true );
-
-			let ie: IEColorPicker =
-			{
-				color: props.color
-			}
-
-			AvGadget.instance().sendInterfaceEvent( nodeId.nodeId, grabbableEpa, "color-picker@1", ie );
+			color: props.color
 		}
-		else
+
+		newPicker.sendEvent( ie );
+	}
+
+	const k_volume = 
+	{ 
+		type: EVolumeType.AABB, 
+		aabb:
 		{
-			setTouched( false );
+			xMin: -0.035, xMax: 0.035,
+			zMin: -0.035, zMax: 0.035,
+			yMin: 0, yMax: 0.1,
 		}
 	};
 
 	return <>
 			<AvPrimitive type={ PrimitiveType.Cylinder } height={0.1} width={0.07} depth={0.07} 
 				originY={ PrimitiveYOrigin.Bottom } color={ props.color }/>
-			{ touched && <AvPrimitive type={ PrimitiveType.Cylinder } height={0.005} width={0.075} depth={0.075} 
+			{ touched > 0 && <AvPrimitive type={ PrimitiveType.Cylinder } height={0.005} width={0.075} depth={0.075} 
 				originY={ PrimitiveYOrigin.Bottom } color={ "yellow" } />}
-			<AvHook updateHighlight={ updateHighlight } xMin={ -0.035 } xMax={0.035 }
-				zMin={ -0.035 } zMax={0.035 } yMin={0} yMax={0.1} dropIconUri=""
-				interfaces={ { "color-picker@1": null } }
-				onIdAssigned={ setNodeId }
-				/>
+			<AvInterfaceEntity receives={ [ { iface: "color-picker@1", processor: onNewColorPicker } ]}
+				volume={ k_volume } />
 		</>
 }
 
@@ -130,51 +131,58 @@ interface MarkerProps
 function Marker( props: MarkerProps )
 {
 	const [ color, setColor ] = React.useState( props.initialColor );
-	const [ nodeId, setNodeId ] = React.useState<EndpointAddr>( null );
+	const [ moveable, setMoveable ] = React.useState( new MoveableComponent( () => {} ) );
 
-	let onColorPicker = ( sender: EndpointAddr, colorPicker: IEColorPicker ) =>
+	let onColorPicker = ( activeColorPicker: ActiveInterface ) =>
 	{
-		console.log( `Setting color to ${ colorPicker.color } from ${ endpointAddrToString( sender ) }` );
-		setColor( colorPicker.color );
-	};
-
-	let onSurfaceDrawing = ( sender: EndpointAddr, colorPicker: IESurfaceDrawing ) =>
-	{
-	};
-
-	let onUpdateHighlight =  ( highlightType: HighlightType, handleAddr: EndpointAddr, tethered: boolean,
-		interfaceName: string, nearbyHook: EndpointAddr ) =>
-	{
-		if( highlightType == HighlightType.InHookRange && interfaceName == "surface-drawing@1" )
+		activeColorPicker.onEvent( (colorPicker: IEColorPicker ) =>
 		{
-			AvGadget.instance().sendInterfaceEvent( nodeId.nodeId, nearbyHook, interfaceName, 
-				{ color, thickness: props.thickness } as IESurfaceDrawing );
-		}	
-	}
+			console.log( `Setting color to ${ colorPicker.color } from ${ endpointAddrToString( activeColorPicker.peer ) }` );
+			setColor( colorPicker.color );
+		});
+	};
+
+	let onSurfaceDrawing = ( activeSurface: ActiveInterface ) =>
+	{
+		console.log( "Sending surface-drawing event to board");
+		activeSurface.sendEvent( { color, thickness: props.thickness } as IESurfaceDrawing );
+	};
 
 	const markerRadius = 0.015;
 	const markerTipRadius = 0.003;
 
-	return <AvGrabbable preserveDropTransform={ true } onIdAssigned={ setNodeId }
-		initialTransform={ { position: { x: props.initialXOffset, y: 0.005, z: 0 } } }
-		showGrabIndicator={ false } hookInteraction={ HookInteraction.HighlightOnly }
-		persistentName={`${props.initialColor }_marker`} 
-		updateHighlight={ onUpdateHighlight }
-		interfaces={ 
-			{
-				"color-picker@1": onColorPicker, 
-				"surface-drawing@1": onSurfaceDrawing,
-			} }	>
-			<AvTransform scaleX={markerRadius} scaleY={ 0.06 } scaleZ={ markerRadius } translateY={ 0.03 }>
-				<AvModelBoxHandle uri={ g_builtinModelCylinder } />
-			</AvTransform>
+	const k_grabVolume =
+	{
+		type: EVolumeType.AABB,
+		aabb: 
+		{
+			xMin: -markerRadius, xMax: markerRadius,
+			zMin: -markerRadius, zMax: markerRadius,
+			yMin: 0, yMax: 0.06,	
+		}
+	} as AvVolume;
+
+	const k_tipVolume =
+	{
+		type: EVolumeType.Sphere,
+		radius: markerTipRadius,
+	} as AvVolume;
+
+	return <AvTransform translateX={ props.initialXOffset } translateY={ 0.005 }>
+		<AvComposedEntity components={ [ moveable ]} volume={ k_grabVolume }>
 			<AvTransform translateY={ markerTipRadius } >
 				<AvPrimitive type={PrimitiveType.Cylinder} originY={ PrimitiveYOrigin.Bottom }
-					width={markerRadius} depth={markerRadius} height={0.065 } color={ color } />
+					radius={ markerRadius } height={0.065 } color={ color } />
 			</AvTransform>
 			<AvPrimitive type={PrimitiveType.Sphere} width={ props.thickness } height={ props.thickness } 
 				depth={ props.thickness } color={props.initialColor }/>
-		</AvGrabbable>
+			<AvInterfaceEntity transmits={
+				[
+					{ iface: "color-picker@1", processor: onColorPicker },
+					{ iface: "surface-drawing@1", processor: onSurfaceDrawing },
+				] } volume={ k_tipVolume }/>
+			</AvComposedEntity>
+		</AvTransform>;
 }
 
 interface SurfaceProps
@@ -224,99 +232,117 @@ function StrokeLines( props: StrokeLineProps )
 	return <div key={ strokeId }>{ transforms } </div>;
 }
 
-
-function Surface( props: SurfaceProps )
+interface SurfaceState
 {
-	const [ nodeId, setNodeId ] = React.useState<EndpointAddr>( null );
-	const [ contacts, setContacts ] = React.useState<SurfaceContactDetailsMap>({});
+	strokesInProgress: Stroke[];
+}
 
-	let onSurfaceDrawing = ( markerId: EndpointAddr, surfaceDrawingEvent: IESurfaceDrawing ) =>
+class Surface extends React.Component<SurfaceProps, SurfaceState>
+{
+	constructor( props: any )
 	{
-		let markerAddrString = endpointAddrToString( markerId );
-		console.log( `contact from ${ markerAddrString } started`)
-		let newMap = { ...contacts };
-		newMap[ markerAddrString ] =
-		{
-			id: nextStrokeId++,
-			color: surfaceDrawingEvent.color,
-			thickness: surfaceDrawingEvent.thickness,
-			points:[],
-		}
-		setContacts( newMap );
+		super( props );
 
-		AvGadget.instance().sendHapticEvent( markerId, 1, 1, 0)
-	};
+		this.state = { strokesInProgress: [] };
+	}
 
-	let updateHighlight = ( highlightType: HookHighlight, markerEpa: EndpointAddr )=>
+	@bind
+	private onSurfaceDrawing( activeContact: ActiveInterface )
 	{
-		if( highlightType != HookHighlight.InRange )
+		let stroke: Stroke;
+
+		activeContact.onEvent( ( surfaceDrawingEvent: IESurfaceDrawing ) =>
 		{
-			console.log( `contact from ${ endpointAddrToString( markerEpa ) } ended`)
-			let newMap = { ...contacts };
-			let markerAddrString = endpointAddrToString( markerEpa );
-			if( newMap[ markerAddrString ] )
+			let markerAddrString = endpointAddrToString( activeContact.peer );
+			console.log( `contact from ${ markerAddrString } started`)
+			stroke =
 			{
-				let newStroke = newMap[ markerAddrString ];
-				if( newStroke.points.length > 0 )
-				{
-					props.addStroke( newStroke );
-				}
-				delete newMap[ endpointAddrToString( markerEpa ) ];
-				setContacts( newMap );	
-				AvGadget.instance().sendHapticEvent( markerEpa, 0.7, 1, 0)
+				id: nextStrokeId++,
+				color: surfaceDrawingEvent.color,
+				thickness: surfaceDrawingEvent.thickness,
+				points:[],
 			}
-		}
-	};
+	
+			AvGadget.instance().sendHapticEvent( activeContact.peer, 1, 1, 0)
 
-	let onTransformUpdated = ( grabbableId: EndpointAddr, hookFromGrabbable: AvNodeTransform ) =>
-	{
-		if( !hookFromGrabbable.position )
-			return;
-
-		let markerAddrString = endpointAddrToString( grabbableId );		
-		let contact = contacts[ markerAddrString ];
-		if( !contact )
-			return;
-
-		let newPoint = vec2FromAvTransformPosition( hookFromGrabbable );
-		if( contact.points.length > 0 )
+			this.setState( { strokesInProgress: [ ...this.state.strokesInProgress, stroke ] } );
+		} );
+	
+		activeContact.onEnded( ()=>
 		{
-			let n1Point = contact.points[ contact.points.length - 1 ];
-			let diffN1 = vec2.difference( newPoint, n1Point, new vec2() );
-			let distN1 = diffN1.length();
-			if( distN1 < 0.005 )
+			console.log( `contact from ${ endpointAddrToString( activeContact.peer ) } ended`)
+			if( stroke && stroke.points.length > 0 )
 			{
-				// require that the marker move at least 5mm to add a point
+				this.props.addStroke( stroke );
+			}
+
+			if( stroke )
+			{
+				let newStrokes = [ ...this.state.strokesInProgress ];
+				let i = newStrokes.indexOf( stroke );
+				newStrokes.splice( i, 1 );
+				this.setState( { strokesInProgress: newStrokes } );
+			}
+
+			AvGadget.instance().sendHapticEvent( activeContact.peer, 0.7, 1, 0)
+		} );
+	
+		activeContact.onTransformUpdated( ( surfaceFromMarker: AvNodeTransform ) =>
+		{
+			if( !stroke )
 				return;
+
+			let newPoint = vec2FromAvTransformPosition( surfaceFromMarker );
+			if( stroke.points.length > 0 )
+			{
+				let n1Point = stroke.points[ stroke.points.length - 1 ];
+				let diffN1 = vec2.difference( newPoint, n1Point, new vec2() );
+				let distN1 = diffN1.length();
+				if( distN1 < 0.005 )
+				{
+					// require that the marker move at least 5mm to add a point
+					return;
+				}
+			}
+
+			stroke.points.push( newPoint );
+
+			this.forceUpdate();
+		} );
+	}
+
+	render()
+	{
+		let strokeLines: JSX.Element[] = [];
+		for( let markerStroke of this.state.strokesInProgress )
+		{
+			if( markerStroke.color && markerStroke.points.length > 0 )
+			{
+				strokeLines.push( <StrokeLines stroke={ markerStroke } />)
 			}
 		}
-
-		let newMap = { ...contacts };
-		newMap[ markerAddrString ].points.push( newPoint );
-		setContacts( newMap );
-	}
-
-	let strokeLines: JSX.Element[] = [];
-	for( let markerId in contacts )
-	{
-		let markerStroke = contacts[ markerId ];
-		if( markerStroke.color && markerStroke.points.length > 0 )
+	
+		const k_boardVolume =
 		{
-			strokeLines.push( <StrokeLines stroke={ markerStroke } />)
-		}
+			type: EVolumeType.AABB,
+			aabb:
+			{
+				xMin: -0.5, xMax: 0.5,
+				yMin: 0, yMax: 1.0,
+				zMin: -0.03, zMax: 0.01,	
+			}
+		} as AvVolume;
+	
+		return <>
+			<AvInterfaceEntity receives={ [ { iface: "surface-drawing@1", processor: this.onSurfaceDrawing } ] }
+				volume={ k_boardVolume } wantsTransforms={ true }/>
+			<AvPrimitive type={ PrimitiveType.Cube } originY={ PrimitiveYOrigin.Bottom }
+				originZ={ PrimitiveZOrigin.Forward }
+				height={ 0.75 } width={ 1.0 } depth={ 0.005 }/>
+			{ strokeLines }
+			</>
+	
 	}
-
-	return <>
-		<AvHook xMin={ -0.5 } xMax={0.5 }
-			zMin={ -0.03 } zMax={ 0.01 } yMin={ 0 } yMax={ 0.75 } dropIconUri=""
-			interfaces={ { "surface-drawing@1": onSurfaceDrawing } }
-			onIdAssigned={ setNodeId } updateHighlight={ updateHighlight }
-			onTransformUpdated={ onTransformUpdated }/>
-		<AvPrimitive type={ PrimitiveType.Cube } originY={ PrimitiveYOrigin.Bottom }
-			originZ={ PrimitiveZOrigin.Forward }
-			height={ 0.75 } width={ 1.0 } depth={ 0.005 }/>
-		{ strokeLines }
-		</>
 }
 
 interface WhiteboardState
