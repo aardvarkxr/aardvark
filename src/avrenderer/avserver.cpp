@@ -64,7 +64,8 @@ bool StartServer( HINSTANCE hInstance )
 			if ( n == 0 )
 				return;
 
-			LOG( INFO ) << "Server: " << std::string( bytes, n - 1 );
+			//std::string sMessage( bytes, n - 1 );
+			//LOG( INFO ) << "Server: " << sMessage;
 		};
 	}
 
