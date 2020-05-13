@@ -1,7 +1,7 @@
 import * as React from 'react';
 import  * as ReactDOM from 'react-dom';
 import bind from 'bind-decorator';
-import { AvGadget,AvOrigin, AvTransform, AvGrabber, AvModel, AvPoker, AvPanelIntersection,
+import { PanelRequestType, PanelRequest, AvGadget,AvOrigin, AvTransform, AvGrabber, AvModel, AvPoker, AvPanelIntersection,
 	AvLine,	AvStandardBoxHook, InterfaceEntityProcessor, ActiveInterface, AvInterfaceEntity, AvEntityChild, SimpleContainerComponent, AvComposedEntity, GrabRequest, GrabRequestType, PrimitiveType, AvPrimitive } 
 	from '@aardvarkxr/aardvark-react';
 import { Av, EndpointAddr, EHand, GrabberHighlight, g_builtinModelSphere, EAction, g_builtinModelHead,
@@ -129,6 +129,35 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 		this.setState( { activeInterface } );
 	}
 
+	@bind
+	private onPanelStart( activeInterface: ActiveInterface )
+	{
+		AvGadget.instance().sendHapticEvent( activeInterface.self, 0.7, 1, 0 );
+		
+		let listenHandle = AvGadget.instance().listenForActionState( EAction.A, this.props.hand, 
+			async () =>
+			{
+				// Grab was pressed
+				await activeInterface.lock();
+				activeInterface.sendEvent( { type: PanelRequestType.Down } as PanelRequest );
+			},
+			async () =>
+			{
+				// Grab was released
+				activeInterface.sendEvent( { type: PanelRequestType.Up } as PanelRequest );
+				activeInterface.unlock();	
+			} );
+
+		activeInterface.onEnded( () =>
+		{
+			AvGadget.instance().unlistenForActionState( listenHandle );
+			this.setState( { activeInterface: null } );	
+			AvGadget.instance().sendHapticEvent(activeInterface.self, 0.3, 1, 0 );
+		} );
+
+		this.setState( { activeInterface } );
+	}
+
 	public render()
 	{
 		let modelColor = "#222288FF";
@@ -188,6 +217,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 					priority={ 100 }/> */}
 				<AvInterfaceEntity transmits={
 					[ 
+						{ iface: "aardvark-panel@1", processor: this.onPanelStart },
 						{ iface: "aardvark-grab@1", processor: this.onGrabStart },
 					] }
 					volume={ k_grabberVolume } >

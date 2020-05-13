@@ -1,14 +1,10 @@
-import * as React from 'react';
-import  * as ReactDOM from 'react-dom';
-
-import bind from 'bind-decorator';
-
-import { AvGadget, AvTransform, AvPanel, AvGrabbable, HighlightType, GrabResponse, AvSphereHandle, HookInteraction } from '@aardvarkxr/aardvark-react';
-import { EndpointAddr, AvGrabEvent, EAction, EHand } from '@aardvarkxr/aardvark-shared';
-import { ACModel, ACView } from 'common/croquet_utils';
+import { AvGadget, AvGrabbable, AvPanel, AvStandardGrabbable, AvTransform, GrabResponse, HighlightType } from '@aardvarkxr/aardvark-react';
+import { AvGrabEvent, EAction, EHand, g_builtinModelBox } from '@aardvarkxr/aardvark-shared';
 import { CroquetSession, startSession } from '@croquet/croquet';
-
-
+import bind from 'bind-decorator';
+import { ACModel, ACView } from 'common/croquet_utils';
+import * as React from 'react';
+import * as ReactDOM from 'react-dom';
 
 
 class Counter extends ACModel 
@@ -193,8 +189,8 @@ class TestPanel extends React.Component< {}, TestPanelState >
 			<div className="FullPage Remote">
 				<div>
 					<AvGrabbable >
-						<AvTransform uniformScale={ 0.1 }>
-							<AvPanel interactive={false} />
+						<AvTransform translateY={ 0.05 } >
+							<AvPanel interactive={false} widthInMeters={ 0.1 }/>
 						</AvTransform>
 					</AvGrabbable>
 				</div>
@@ -206,41 +202,17 @@ class TestPanel extends React.Component< {}, TestPanelState >
 
 	public renderLocal()
 	{
-		let sDivClasses:string;
-		let scale = 0.1;
-		switch( this.state.grabbableHighlight )
-		{
-			case HighlightType.None:
-				sDivClasses = "FullPage NoGrabHighlight";
-				break;
-
-			case HighlightType.InRange:
-				sDivClasses = "FullPage InRangeHighlight";
-				break;
-
-			case HighlightType.Grabbed:
-				sDivClasses = "FullPage GrabbedHighlight";
-				break;
-
-			case HighlightType.InHookRange:
-				sDivClasses = "FullPage GrabbedHighlight";
-				//scale = 0.05;
-				break;
-		
-		}
+		let sDivClasses:string = "FullPage";
 
 		return (
 			<div className={ sDivClasses } >
 				<div>
-					<AvGrabbable updateHighlight={ this.onHighlightGrabbable }
-						onGrabRequest={ this.onGrabRequest }
-						hookInteraction={ HookInteraction.HighlightAndDrop }>
-						<AvSphereHandle radius={0.1} />
-						
-						<AvTransform uniformScale={ scale }>
-							<AvPanel interactive={true}/>
+					<AvStandardGrabbable modelUri={ g_builtinModelBox } modelScale={ 0.03 } 
+						modelColor="lightblue" initialParent={ AvGadget.instance().initialParent }>
+						<AvTransform translateY={ 0.08 } >
+							<AvPanel interactive={true} widthInMeters={ 0.1 }/>
 						</AvTransform>
-					</AvGrabbable>
+					</AvStandardGrabbable>
 				</div>
 				<div className="Label">Count: { this.state.count }</div>
 				<div className="Label">This gadget is owned by me</div>

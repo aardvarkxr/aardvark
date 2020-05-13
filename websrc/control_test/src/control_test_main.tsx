@@ -69,7 +69,7 @@ class ControlTest extends React.Component< {}, ControlTestState >
 					</AvTransform>
 					<AvSphereHandle radius={0.2} />
 
-					<AvPanel interactive={ false } >
+					<AvPanel interactive={ false } widthInMeters={ 1.0 } >
 						<div className="ControlList">
 							<div className="SliderContainer">
 								<div className="SliderLabel">{ this.state.sliderValue.toFixed( 2 ) }</div>

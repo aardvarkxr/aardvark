@@ -65,12 +65,10 @@ class SimpleSocial extends React.Component< {}, SimpleSocialState >
 	public renderPanel()
 	{
 		return <AvTransform rotateX={ 45 } translateZ={ -0.01 }>
-				<AvTransform scaleX={ 0.125 } scaleZ={ 0.0625 }>
-					<AvTransform translateZ={ -0.5 }>
-						<AvPanel interactive={ true }>
-							{ this.renderPanelContents() }
-						</AvPanel>
-					</AvTransform>
+				<AvTransform translateZ={ -0.5 }>
+					<AvPanel interactive={ true } widthInMeters={ 0.125 }>
+						{ this.renderPanelContents() }
+					</AvPanel>
 				</AvTransform>
 			</AvTransform>;
 	}

@@ -1086,6 +1086,7 @@ export function filterActionsForGadget( actionState: AvActionState ): AvActionSt
 		a: actionState.a,
 		b: actionState.b,
 		squeeze: actionState.squeeze,
+		grab: actionState.grab,
 	};
 }
 
