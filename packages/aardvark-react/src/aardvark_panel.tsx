@@ -141,8 +141,8 @@ export class AvPanel extends React.Component< AvPanelProps, AvPanelState >
 		{
 			type: eventType,
 			pokerEpa,
-			x: ( eventLocWorld.x / this.width + 0.5 ) * window.innerWidth,
-			y: ( 1.0 - ( eventLocWorld.y / this.height + 0.5 ) ) * window.innerHeight,
+			x: eventLocWorld.x / this.width + 0.5,
+			y: 1.0 - ( eventLocWorld.y / this.height + 0.5 ),
 		};
 
 		if( eventType != PanelMouseEventType.Move )
