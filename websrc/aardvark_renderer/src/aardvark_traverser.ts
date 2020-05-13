@@ -1226,6 +1226,19 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 				nodeData.modelInstance.setBaseColor( 
 					[ node.propColor.r, node.propColor.g, node.propColor.b, alpha ] );
 			}
+			try
+			{
+				if( node.propSharedTexture )
+				{
+					nodeData.modelInstance.setOverrideTexture( node.propSharedTexture );
+				}
+			}
+			catch( e )
+			{
+				// just eat these and don't add the panel. Sometimes we find out about a panel 
+				// before we find out about its texture
+				return;
+			}
 
 			let internalScale = 1;
 			if( node.propScaleToFit )

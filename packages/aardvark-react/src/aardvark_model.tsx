@@ -1,6 +1,8 @@
+import bind from 'bind-decorator';
 import * as Color from 'color';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
-import { AvNodeType, AvColor, AvVector } from '@aardvarkxr/aardvark-shared';
+import { AvNodeType, AvColor, AvVector, AvSharedTextureInfo, Av } from '@aardvarkxr/aardvark-shared';
+import { AvGadget } from './aardvark_gadget';
 
 interface AvModelProps extends AvBaseNodeProps
 {
@@ -24,16 +26,44 @@ interface AvModelProps extends AvBaseNodeProps
 	 * @default No scaling
 	 */
 	scaleToFit?: AvVector;
+
+	/** Tells Aardvark to use the texture of this gadget's browser to 
+	 * replace the texture supplied by the model itself.
+	 * 
+	 * @default false
+	 */
+	useBrowserTexture?: boolean;
 }
 
 /** Causes a GLTF model to be drawn at the specified location in the transform hierarchy. */
 export class AvModel extends AvBaseNode< AvModelProps, {} >
 {
+	private m_sharedTextureInfo: AvSharedTextureInfo = null;
+
+	constructor( props: any )
+	{
+		super( props );
+
+		if( this.props.useBrowserTexture )
+		{
+			Av().subscribeToBrowserTexture( this.onUpdateBrowserTexture );
+		}
+	}
+
+	@bind 
+	private onUpdateBrowserTexture( info: AvSharedTextureInfo )
+	{
+		this.m_sharedTextureInfo = info;
+		AvGadget.instance().markDirty();
+	}
+
 	public buildNode()
 	{
 		let node = this.createNodeObject( AvNodeType.Model, this.m_nodeId );
+		
 		node.propModelUri = this.props.uri;
 		node.propScaleToFit = this.props.scaleToFit;
+
 		let color: AvColor;
 		if( typeof this.props.color === "string" )
 		{
@@ -50,6 +80,12 @@ export class AvModel extends AvBaseNode< AvModelProps, {} >
 			color = this.props.color
 		}
 		node.propColor = color;
+
+		if( this.props.useBrowserTexture )
+		{
+			node.propSharedTexture = this.m_sharedTextureInfo;
+		}
+
 		return node;
 	}
 }
