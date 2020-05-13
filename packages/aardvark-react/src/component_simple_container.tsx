@@ -5,7 +5,7 @@ import { InterfaceProp, ActiveInterface } from './aardvark_interface_entity';
 import bind from 'bind-decorator';
 import { AvTransform } from './aardvark_transform';
 import { AvEntityChild } from './aardvark_entity_child';
-import { ContainerRequestType, ContainerRequest } from './component_moveable';
+import { ContainerRequestType, ContainerRequest, MoveableComponent } from './component_moveable';
 
 export enum ContainerItemState
 {
@@ -58,7 +58,14 @@ export class SimpleContainerComponent implements EntityComponent
 			( event: ContainerItemStateEvent ) =>
 			{
 				myItem.state = event.state;
-				myItem.containerFromEntity = activeContainer.selfFromPeer;
+				if( event.state == ContainerItemState.Resting && activeContainer.params )
+				{
+					myItem.containerFromEntity = activeContainer.params as AvNodeTransform;
+				}
+				else
+				{
+					myItem.containerFromEntity = activeContainer.selfFromPeer;
+				}
 
 				if( event.moveableToReplace )
 				{
@@ -102,7 +109,7 @@ export class SimpleContainerComponent implements EntityComponent
 
 	public get receives(): InterfaceProp[]
 	{
-		return [ { iface: "aardvark-container@1", processor: this.onContainerStart } ];
+		return [ { iface: MoveableComponent.containerInterface, processor: this.onContainerStart } ];
 	}
 
 	public get parent(): EndpointAddr

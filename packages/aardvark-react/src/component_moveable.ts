@@ -1,3 +1,4 @@
+import { AvGadget } from './aardvark_gadget';
 import { InitialInterfaceLock, EndpointAddr, endpointAddrsMatch, InterfaceLockResult, endpointAddrToString } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import { EntityComponent } from './aardvark_composed_entity';
@@ -38,6 +39,9 @@ export interface GrabRequest
 
 export class MoveableComponent implements EntityComponent
 {
+	public static get containerInterface() { return "aardvark-container@1"; }
+	public static get grabInterface() { return "aardvark-grab@1"; }
+
 	private entityCallback: () => void = null;
 	private ownerCallback: () => void = null;
 
@@ -45,14 +49,20 @@ export class MoveableComponent implements EntityComponent
 	private activeContainer: ActiveInterface = null;
 	private grabber: EndpointAddr = null;
 	private wasEverDropped: boolean = false;
-	private initialParent: EndpointAddr;
-	private droppedIntoInitialParent = false;
+	private droppedIntoInitialParent: boolean = false;
+	private initialInterface:InitialInterfaceLock = null;
 	private waitingForRedrop:EndpointAddr = null;
 
-	constructor( callback: () => void, initialParent?: EndpointAddr )
+	constructor( callback: () => void, useInitialParent?: boolean )
 	{
 		this.ownerCallback = callback;
-		this.initialParent = initialParent;
+		if( useInitialParent )
+		{
+			this.initialInterface = AvGadget.instance().initialInterfaces.find( ( ii: InitialInterfaceLock ) =>
+			{
+				return ii.iface == MoveableComponent.containerInterface;
+			} );
+		}
 	}
 
 	private updateListener()
@@ -162,8 +172,8 @@ export class MoveableComponent implements EntityComponent
 		this.activeContainer = activeContainer;
 		this.updateListener();
 
-		if( this.initialParent && !this.droppedIntoInitialParent 
-			&& endpointAddrsMatch( this.initialParent, activeContainer.peer ) )
+		if( this.initialInterface && !this.droppedIntoInitialParent 
+			&& endpointAddrsMatch( this.initialInterface.receiver, activeContainer.peer ) )
 		{
 			// don't need to lock because the initial lock took care of that for us
 			this.dropIntoContainer( false ); 
@@ -180,7 +190,7 @@ export class MoveableComponent implements EntityComponent
 
 	public get transmits(): InterfaceProp[]
 	{
-		return [ { iface: "aardvark-container@1", processor: this.onContainerStart } ];
+		return [ { iface: MoveableComponent.containerInterface, processor: this.onContainerStart } ];
 	}
 
 	public get receives(): InterfaceProp[]
@@ -211,15 +221,11 @@ export class MoveableComponent implements EntityComponent
 
 	public get interfaceLocks(): InitialInterfaceLock[]
 	{
-		if( this.initialParent )
+		if( this.initialInterface )
 		{
 			return ( 
 				[ 
-					{ 
-						iface: "aardvark-container@1",
-						receiver: this.initialParent,
-						transmitterFromReceiver: {},
-					}
+					this.initialInterface
 				] );
 		}
 	}

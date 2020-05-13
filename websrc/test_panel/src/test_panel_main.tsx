@@ -208,7 +208,7 @@ class TestPanel extends React.Component< {}, TestPanelState >
 			<div className={ sDivClasses } >
 				<div>
 					<AvStandardGrabbable modelUri={ g_builtinModelBox } modelScale={ 0.03 } 
-						modelColor="lightblue" initialParent={ AvGadget.instance().initialParent }>
+						modelColor="lightblue">
 						<AvTransform translateY={ 0.08 } >
 							<AvPanel interactive={true} widthInMeters={ 0.1 }/>
 						</AvTransform>

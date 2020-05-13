@@ -632,6 +632,7 @@ export interface MsgInterfaceStarted
 	receiver: EndpointAddr;
 	iface: string;
 	transmitterFromReceiver: AvNodeTransform;
+	params?: object; // This will only be set for initial interface locks
 }
 
 export interface MsgInterfaceEnded
@@ -942,7 +943,7 @@ export interface InitialInterfaceLock
 {
 	iface: string;
 	receiver: EndpointAddr;
-	transmitterFromReceiver?: AvNodeTransform;
+	params?: object;
 }
 
 export interface AvNode

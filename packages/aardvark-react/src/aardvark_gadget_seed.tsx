@@ -96,7 +96,7 @@ export class GadgetSeedContainerComponent implements EntityComponent
 
 	public get receives(): InterfaceProp[]
 	{
-		return [ { iface: "aardvark-container@1", processor: this.onContainerStart } ];
+		return [ { iface: MoveableComponent.containerInterface, processor: this.onContainerStart } ];
 	}
 
 	public get parent(): EndpointAddr
@@ -218,7 +218,12 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 	private async startGadget()
 	{
 		let res = await AvGadget.instance().startGadget( this.props.uri, 
-			endpointAddrToString( this.refContainer.current.globalId ) );
+			[
+				{ 
+					iface: MoveableComponent.containerInterface,
+					receiver: this.refContainer.current.globalId,
+				}
+			] );
 
 		if( !res.success )
 		{

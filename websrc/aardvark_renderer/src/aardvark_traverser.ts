@@ -381,7 +381,7 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 	}
 	
 	interfaceStarted( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string,
-		transmitterFromReceiver: mat4 ):void
+		transmitterFromReceiver: mat4, params?: object ):void
 	{
 		this.m_endpoint.sendMessage( MessageType.InterfaceStarted, 
 			{
@@ -389,6 +389,7 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 				receiver,
 				iface,
 				transmitterFromReceiver: nodeTransformFromMat4( transmitterFromReceiver ),
+				params,
 			} as MsgInterfaceStarted );
 	}
 

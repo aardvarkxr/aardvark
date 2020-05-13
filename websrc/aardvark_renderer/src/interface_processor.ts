@@ -6,7 +6,7 @@ import { TransformedVolume, volumesIntersect } from './volume_intersection';
 export interface InterfaceProcessorCallbacks
 {
 	interfaceStarted( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string,
-		transmitterFromReceiver: mat4 ):void;
+		transmitterFromReceiver: mat4, params?: object ):void;
 	interfaceEnded( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string,
 		transmitterFromReceiver?: mat4 ):void;
 	interfaceTransformUpdated( destination: EndpointAddr, peer: EndpointAddr, iface: string, destinationFromPeer: mat4 ): void;
@@ -124,11 +124,9 @@ export class CInterfaceProcessor
 			for( let initialLock of transmitter.initialLocks )
 			{
 				let receiver = entityMap.find( initialLock.receiver );
-				let transmitterFromReceiver = initialLock.transmitterFromReceiver ?
-					nodeTransformToMat4( initialLock.transmitterFromReceiver ) :
-					this.computeEntityTransform( transmitter, receiver );
+				let transmitterFromReceiver = this.computeEntityTransform( transmitter, receiver );
 				this.callbacks.interfaceStarted( transmitter.epa, initialLock.receiver, initialLock.iface, 
-					transmitterFromReceiver );
+					transmitterFromReceiver, initialLock.params );
 				
 				let iip: InterfaceInProgress =
 				{

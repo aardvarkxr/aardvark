@@ -72,9 +72,9 @@ interface StandardGrabbableProps
 
 	/** Allows the grabbable to be automatically added to a container when it is first created.
 	 * 
-	 * @default none
+	 * @default true
 	 */
-	initialParent?: EndpointAddr;
+	useInitialParent?: boolean;
 }
 
 
@@ -92,7 +92,7 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 	{
 		super( props );
 
-		this.moveableComponent = new MoveableComponent( this.onMoveableUpdate, this.props.initialParent );
+		this.moveableComponent = new MoveableComponent( this.onMoveableUpdate, this.props.useInitialParent ?? true );
 
 		this.state = 
 		{ 

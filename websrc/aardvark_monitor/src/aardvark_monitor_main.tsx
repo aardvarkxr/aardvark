@@ -718,7 +718,7 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 		return <div className="AvNodeProperty">Interface Locks: 
 				{ interfaceLocks.map( ( value ) => (
 					<div> { value.iface } -> { endpointAddrToString( value.receiver ) } 
-						{ value.transmitterFromReceiver ? "| has transform" : "" }
+						{ value.params ? JSON.stringify( value.params ) : "" }
 					</div> ) ) }
 			</div>;
 	}

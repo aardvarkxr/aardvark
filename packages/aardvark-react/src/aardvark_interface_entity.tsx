@@ -19,6 +19,7 @@ export interface ActiveInterface
 	readonly role: InterfaceRole;
 	readonly transmitterFromReceiver: AvNodeTransform;
 	readonly selfFromPeer: AvNodeTransform;
+	readonly params: object;
 	lock():Promise<InterfaceLockResult>;
 	unlock():Promise<InterfaceLockResult>;
 	relock( newReceiver: EndpointAddr ):Promise<InterfaceLockResult>;
@@ -39,9 +40,10 @@ class CActiveInterface implements ActiveInterface
 	private eventCallback:( event: object ) => void;
 	private transformCallback:( entityFromPeer: AvNodeTransform ) => void;
 	private lastTransmitterFromReceiver: AvNodeTransform;
+	public params: object;
 
 	constructor( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string, 
-		transmitterFromReceiver: AvNodeTransform, role: InterfaceRole )
+		transmitterFromReceiver: AvNodeTransform, role: InterfaceRole, params?: object )
 	{
 		this.transmitter = transmitter;
 		this.receiver = receiver;
@@ -384,13 +386,13 @@ export class AvInterfaceEntity extends AvBaseNode< AvInterfaceEntityProps, {} >
 
 	@bind
 	private onInterfaceStarted( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string,
-		transmitterFromReceiver: AvNodeTransform  ): void
+		transmitterFromReceiver: AvNodeTransform, params?: object  ): void
 	{
 		let [ processor, role ] = this.getProcessor( transmitter, receiver, iface );
 		if( processor )
 		{
 			let newInterface = new CActiveInterface( transmitter, receiver, iface, transmitterFromReceiver, 
-				role );
+				role, params );
 			this.activeInterfaces.push( newInterface );
 			processor( newInterface );
 		}

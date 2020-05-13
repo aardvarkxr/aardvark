@@ -23,6 +23,7 @@ import { Av, AvActionState, EAction, getActionFromState,
 	MsgInterfaceReceiveEvent,
 	MsgInterfaceTransformUpdated,
 	MsgInterfaceEnded,
+	InitialInterfaceLock,
 } from '@aardvarkxr/aardvark-shared';
 import { IAvBaseNode } from './aardvark_base_node';
 import bind from 'bind-decorator';
@@ -44,7 +45,7 @@ const equal = require( 'fast-deep-equal' );
 export interface AvInterfaceEntityProcessor
 {
 	started( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string, 
-		transmitterFromReceiver: AvNodeTransform ): void;
+		transmitterFromReceiver: AvNodeTransform, params?: object ): void;
 	ended( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string, 
 		transmitterFromReceiver: AvNodeTransform ): void;
 	event( destination: EndpointAddr, peer: EndpointAddr, iface: string, data: object, 
@@ -125,7 +126,7 @@ export class AvGadget
 	private m_mainHandleComponent: IAvBaseNode = null;
 	private m_userInfo: LocalUserInfo = null;
 	private m_userInfoListeners: (()=>void)[] = [];
-	private m_initialParent: EndpointAddr = null;
+	private m_initialInterfaces: InitialInterfaceLock[] = [];
 
 	m_grabEventProcessors: {[nodeId:number]: AvGrabEventProcessor } = {};
 	m_pokerProcessors: {[nodeId:number]: AvPokerHandler } = {};
@@ -156,7 +157,20 @@ export class AvGadget
 		this.m_remoteUniversePath = params[ "remoteUniversePath" ];
 		this.m_ownerUuid = params[ "ownerUuid" ];
 		this.m_remotePersistenceUuid = params[ "remotePersistenceUuid" ];
-		this.m_initialParent = stringToEndpointAddr( params[ "initialHook" ] );
+
+		try
+		{
+			console.log( "initialHook", params[ "initialHook" ] );
+			if( params[ "initialHook" ] )
+			{
+				this.m_initialInterfaces = JSON.parse( atob( params[ "initialHook" ] ) );
+				console.log( "initialInterfaces", this.m_initialInterfaces );
+			}
+		}
+		catch( e )
+		{
+			console.log( `failed to parse initial interfaces ${ e }` );
+		}
 
 		if( params[ "epToNotify"] )
 		{
@@ -245,9 +259,9 @@ export class AvGadget
 	}
 
 	/** The initial parent requested by whomever started this gadget. */
-	public get initialParent()
+	public get initialInterfaces()
 	{
-		return this.m_initialParent;
+		return this.m_initialInterfaces;
 	}
 	
 	/** Loads a gadget manifest by gadget URI.
@@ -383,7 +397,7 @@ export class AvGadget
 		let processor = this.getInterfaceEntityProcessor( env.target );
 		if( processor )
 		{
-			processor.started(m.transmitter, m.receiver, m.iface, m.transmitterFromReceiver );
+			processor.started(m.transmitter, m.receiver, m.iface, m.transmitterFromReceiver, m.params );
 		}
 
 		if( !processor )
@@ -778,7 +792,7 @@ export class AvGadget
 		this.m_endpoint.sendMessage( MessageType.NodeHaptic, msg );
 	}
 
-	public startGadget( uri: string, initialHook: string, remoteUniversePath?: string,
+	public startGadget( uri: string, initialInterfaces: InitialInterfaceLock[], remoteUniversePath?: string,
 		persistenceUuid?: string, ownerUuid?: string, remotePersistenceUuid?: string ) : 
 		Promise<AvStartGadgetResult>
 	{
@@ -787,6 +801,8 @@ export class AvGadget
 			let notifyNodeId = this.m_nextNodeId++;
 			this.m_startGadgetPromises[ notifyNodeId ] = [ resolve, reject ];
 
+			let initialHook = btoa( JSON.stringify( initialInterfaces ) );
+			
 			let epToNotify: EndpointAddr = 
 			{
 				type: EndpointType.Node,
