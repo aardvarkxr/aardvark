@@ -68,7 +68,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 	private onGrabStart( activeInterface: ActiveInterface )
 	{
 		AvGadget.instance().sendHapticEvent(activeInterface.self, 0.7, 1, 0 );
-		let listenHandle = AvGadget.instance().listenForActionState( EAction.A, this.props.hand, 
+		let listenHandle = AvGadget.instance().listenForActionState( EAction.Grab, this.props.hand, 
 			async () =>
 			{
 				this.setState( { grabButtonDown: true } );
@@ -134,7 +134,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 	{
 		AvGadget.instance().sendHapticEvent( activeInterface.self, 0.7, 1, 0 );
 		
-		let listenHandle = AvGadget.instance().listenForActionState( EAction.A, this.props.hand, 
+		let listenHandle = AvGadget.instance().listenForActionState( EAction.Grab, this.props.hand, 
 			async () =>
 			{
 				// Grab was pressed
