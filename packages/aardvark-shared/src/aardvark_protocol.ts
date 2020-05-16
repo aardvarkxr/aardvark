@@ -714,7 +714,7 @@ export enum AvNodeType
 	Grabber = 8,
 	Hook = 9,
 	Line = 10,
-	PanelIntersection = 11,
+	//PanelIntersection = 11,
 	ParentTransform = 12,
 	HeadFacingTransform = 13,
 	RemoteUniverse = 14,

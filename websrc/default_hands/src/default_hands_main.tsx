@@ -1,11 +1,8 @@
-import * as React from 'react';
-import  * as ReactDOM from 'react-dom';
+import { ActiveInterface, AvComposedEntity, AvEntityChild, AvGadget, AvInterfaceEntity, AvOrigin, AvPrimitive, AvTransform, GrabRequest, GrabRequestType, PanelRequest, PanelRequestType, PrimitiveType, SimpleContainerComponent } from '@aardvarkxr/aardvark-react';
+import { AvNodeTransform, AvVolume, EAction, EHand, EndpointAddr, EVolumeType, GrabberHighlight, g_builtinModelHandLeft, g_builtinModelHandRight } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
-import { PanelRequestType, PanelRequest, AvGadget,AvOrigin, AvTransform, AvGrabber, AvModel, AvPoker, AvPanelIntersection,
-	AvLine,	AvStandardBoxHook, InterfaceEntityProcessor, ActiveInterface, AvInterfaceEntity, AvEntityChild, SimpleContainerComponent, AvComposedEntity, GrabRequest, GrabRequestType, PrimitiveType, AvPrimitive } 
-	from '@aardvarkxr/aardvark-react';
-import { Av, EndpointAddr, EHand, GrabberHighlight, g_builtinModelSphere, EAction, g_builtinModelHead,
-	g_builtinModelHandRight, g_builtinModelHandLeft, Permission, EVolumeType, AvNodeTransform, endpointAddrToString, endpointAddrsMatch, AvVolume } from '@aardvarkxr/aardvark-shared'
+import * as React from 'react';
+import * as ReactDOM from 'react-dom';
 
 interface DefaultHandProps
 {
@@ -15,8 +12,6 @@ interface DefaultHandProps
 interface DefaultHandState
 {
 	grabberHighlight: GrabberHighlight;
-	pokerHighlight: boolean;
-	currentPanel: EndpointAddr;
 	activeInterface: ActiveInterface;
 	grabberFromGrabbable?: AvNodeTransform;
 	grabButtonDown: boolean;
@@ -37,8 +32,6 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 		this.state = 
 		{ 
 			grabberHighlight: GrabberHighlight.None,
-			pokerHighlight: false,
-			currentPanel: null,
 			activeInterface: null,
 			grabButtonDown: false,
 			lostGrab: false,
@@ -52,11 +45,6 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 	@bind updateGrabberHighlight( newHighlight: GrabberHighlight )
 	{
 		this.setState( { grabberHighlight: newHighlight } );
-	}
-
-	@bind updatePokerHighlight( newHighlight: boolean, newPanel: EndpointAddr )
-	{
-		this.setState( { pokerHighlight: newHighlight, currentPanel: newPanel } );
 	}
 
 	componentWillUnmount()
@@ -163,12 +151,6 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 		let modelColor = "#222288FF";
 		let highlightColor = "#FF0000FF";
 		if( this.state.activeInterface )
-		{
-			modelColor = highlightColor;
-		}
-
-		// poker highlight takes priority
-		if( this.state.pokerHighlight )
 		{
 			modelColor = highlightColor;
 		}

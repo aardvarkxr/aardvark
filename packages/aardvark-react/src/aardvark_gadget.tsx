@@ -1,4 +1,4 @@
-import { AardvarkManifest, AuthedRequest, Av, AvActionState, AvGrabEvent, AvGrabEventProcessor, AvInterfaceEventProcessor, AvNode, AvNodeTransform, AvNodeType, AvPanelHandler, AvPanelMouseEvent, AvPanelMouseEventType, AvStartGadgetResult, EAction, EHand, EndpointAddr, endpointAddrToString, EndpointType, ENodeFlags, Envelope, GadgetRoom, GadgetRoomCallbacks, GadgetRoomEnvelope, getActionFromState, InitialInterfaceLock, interfaceStringFromMsg, LocalUserInfo, MessageType, MsgCreateRoom, MsgCreateRoomResponse, MsgDestroyRoomResponse, MsgGadgetStarted, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgGrabEvent, MsgInterfaceEnded, MsgInterfaceEvent, MsgInterfaceReceiveEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgMasterStartGadget, MsgMouseEvent, MsgNodeHaptic, MsgPokerProximity, MsgResourceLoadFailed, MsgRoomMessageReceived, MsgRoomMessageReceivedResponse, MsgSaveSettings, MsgSendRoomMessage, MsgSignRequest, MsgSignRequestResponse, MsgUpdateActionState, MsgUpdateSceneGraph, MsgUserInfo, PokerProximity, stringToEndpointAddr } from '@aardvarkxr/aardvark-shared';
+import { AardvarkManifest, AuthedRequest, Av, AvActionState, AvGrabEvent, AvGrabEventProcessor, AvInterfaceEventProcessor, AvNode, AvNodeTransform, AvNodeType, AvStartGadgetResult, EAction, EHand, EndpointAddr, endpointAddrToString, EndpointType, ENodeFlags, Envelope, GadgetRoom, GadgetRoomCallbacks, GadgetRoomEnvelope, getActionFromState, InitialInterfaceLock, interfaceStringFromMsg, LocalUserInfo, MessageType, MsgCreateRoom, MsgCreateRoomResponse, MsgDestroyRoomResponse, MsgGadgetStarted, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgGrabEvent, MsgInterfaceEnded, MsgInterfaceEvent, MsgInterfaceReceiveEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgMasterStartGadget, MsgNodeHaptic, MsgResourceLoadFailed, MsgRoomMessageReceived, MsgRoomMessageReceivedResponse, MsgSaveSettings, MsgSendRoomMessage, MsgSignRequest, MsgSignRequestResponse, MsgUpdateActionState, MsgUpdateSceneGraph, MsgUserInfo, stringToEndpointAddr } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import { IAvBaseNode } from './aardvark_base_node';
@@ -17,11 +17,6 @@ export interface AvInterfaceEntityProcessor
 		destinationFromPeer: AvNodeTransform ): void;
 	transformUpdated( destination: EndpointAddr, peer: EndpointAddr, iface: string, 
 		destinationFromPeer: AvNodeTransform ): void;
-}
-
-export interface AvPokerHandler
-{
-	( isPressed: boolean, proximity: PokerProximity[] ): void;
 }
 
 
@@ -94,8 +89,6 @@ export class AvGadget
 	private m_initialInterfaces: InitialInterfaceLock[] = [];
 
 	m_grabEventProcessors: {[nodeId:number]: AvGrabEventProcessor } = {};
-	m_pokerProcessors: {[nodeId:number]: AvPokerHandler } = {};
-	m_panelProcessors: {[nodeId:number]: AvPanelHandler } = {};
 	m_interfaceEventProcessors: {[nodeId: number]: AvInterfaceEventProcessor } = {}
 	m_interfaceEntityProcessors = new Map<number, AvInterfaceEntityProcessor>();
 	m_startGadgetPromises: {[nodeId:number]: 
@@ -165,8 +158,6 @@ export class AvGadget
 
 		this.m_endpoint.registerHandler( MessageType.GrabEvent, this.onGrabEvent );
 		this.m_endpoint.registerHandler( MessageType.GadgetStarted, this.onGadgetStarted );
-		this.m_endpoint.registerHandler( MessageType.PokerProximity, this.onPokerProximity );
-		this.m_endpoint.registerHandler( MessageType.MouseEvent, this.onMouseEvent );
 		this.m_endpoint.registerHandler( MessageType.MasterStartGadget, this.onMasterStartGadget );
 		this.m_endpoint.registerHandler( MessageType.UpdateActionState, this.onUpdateActionState );
 		this.m_endpoint.registerHandler( MessageType.ResourceLoadFailed, this.onResourceLoadFailed );
@@ -289,18 +280,6 @@ export class AvGadget
 			node.m_nodeId = undefined;
 		}
 
-		this.markDirty();
-	}
-
-	public setPanelHandler( nodeId: number, handler: AvPanelHandler )
-	{
-		this.m_panelProcessors[ nodeId ] = handler;
-		this.markDirty();
-	}
-
-	public setPokerHandler( nodeId: number, handler: AvPokerHandler )
-	{
-		this.m_pokerProcessors[ nodeId ] = handler;
 		this.markDirty();
 	}
 
@@ -478,44 +457,6 @@ export class AvGadget
 		else
 		{
 			processor( m.interface, env.sender, m.data );
-		}
-	}
-
-	@bind private onPokerProximity( m: MsgPokerProximity, env: Envelope )
-	{
-		let processor = this.m_pokerProcessors[ env.target.nodeId ];
-		if( processor )
-		{
-			processor( m.actionState.grab, m.panels );
-		}
-	}
-
-	public sendMouseEvent( pokerId: EndpointAddr, panelId: EndpointAddr, 
-		eventType:AvPanelMouseEventType, x: number, y: number )
-	{
-		let evt: AvPanelMouseEvent = 
-		{
-			type: eventType,
-			panelId,
-			pokerId,
-			x,
-			y,
-		};
-
-		let msg: MsgMouseEvent =
-		{
-			event: evt,
-		}
-
-		this.m_endpoint.sendMessage( MessageType.MouseEvent, msg );
-	}
-
-	@bind private onMouseEvent( m: MsgMouseEvent, env: Envelope  )
-	{
-		let processor = this.m_panelProcessors[ env.target.nodeId ];
-		if( processor )
-		{
-			processor( m.event );
 		}
 	}
 

@@ -1,5 +1,5 @@
 import { CMonitorEndpoint, DegreesToRadians, EulerAnglesToQuaternion, QuaternionToEulerAngles, RadiansToDegrees } from '@aardvarkxr/aardvark-react';
-import { AardvarkManifest, AvGrabEvent, AvGrabEventType, AvNode, AvNodeTransform, AvNodeType, AvQuaternion, AvVector, EndpointAddr, endpointAddrToString, EndpointType, ENodeFlags, Envelope, MessageType, MinimalPose, MsgGrabEvent, MsgLostEndpoint, MsgNewEndpoint, MsgOverrideTransform, MsgPokerProximity, MsgResourceLoadFailed, MsgUpdateSceneGraph, AvVolume, EVolumeType, InitialInterfaceLock } from '@aardvarkxr/aardvark-shared';
+import { AardvarkManifest, AvGrabEvent, AvGrabEventType, AvNode, AvNodeTransform, AvNodeType, AvQuaternion, AvVector, EndpointAddr, endpointAddrToString, EndpointType, ENodeFlags, Envelope, MessageType, MinimalPose, MsgGrabEvent, MsgLostEndpoint, MsgNewEndpoint, MsgOverrideTransform, MsgResourceLoadFailed, MsgUpdateSceneGraph, AvVolume, EVolumeType, InitialInterfaceLock } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import { action, computed, observable, ObservableMap } from 'mobx';
 import { observer } from 'mobx-react';
@@ -39,7 +39,6 @@ class CMonitorStore
 		this.m_connection.registerHandler( MessageType.LostEndpoint, this.onLostEndpoint );
 		this.m_connection.registerHandler( MessageType.UpdateSceneGraph, this.onUpdateSceneGraph );
 		this.m_connection.registerHandler( MessageType.GrabEvent, this.onGrabEvent );
-		this.m_connection.registerHandler( MessageType.PokerProximity, this.onPokerProximity );
 		this.m_connection.registerHandler( MessageType.ResourceLoadFailed, this.onResourceLoadFailed );
 	}
 
@@ -164,11 +163,6 @@ class CMonitorStore
 	@bind @action onResourceLoadFailed( message: MsgResourceLoadFailed )
 	{
 		this.m_events.push( message );
-	}
-
-	@bind @action onPokerProximity(  message: MsgPokerProximity )
-	{
-		// nothing here yet
 	}
 
 	@computed get recentGrabEvents()
