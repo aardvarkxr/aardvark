@@ -33,5 +33,7 @@ export * from './component_networked_gadget';
 export * from './component_remote_gadget';
 export * from './component_simple_container';
 export * from './gadget_endpoint';
+export * from './network_universe';
 export * from './renderer_endpoint';
+export * from './remote_universe';
 export * from './math_utils';
