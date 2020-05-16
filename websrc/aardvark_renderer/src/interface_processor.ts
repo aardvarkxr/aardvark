@@ -240,10 +240,13 @@ export class CInterfaceProcessor
 					continue;
 				}
 
-				if( transmitter.originPath == receiver.originPath )
+				if( transmitter.originPath == receiver.originPath && transmitter.originPath != "/space/stage" )
 				{
 					// right hand can't interface with stuff that's also 
 					// on the right hand, etc.
+
+					// This rule does not apply to entities that originate on the stage because they aren't
+					// moving around the way that hands and the head are.
 					continue;
 				}
 
