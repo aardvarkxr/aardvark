@@ -10,6 +10,7 @@ import { AvComposedEntity, EntityComponent } from './aardvark_composed_entity';
 import { NetworkedGadgetComponent } from './component_networked_gadget';
 import { RemoteGadgetComponent } from './component_remote_gadget';
 import { AvGadget } from './aardvark_gadget';
+const equal = require( 'fast-deep-equal' );
 
 export enum ShowGrabbableChildren
 {
@@ -197,6 +198,14 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 	{
 		this.networkedComponent?.sendEventToAllRemotes( event, reliable );
 		this.remoteComponent?.sendEventToMaster( event, reliable );
+	}
+
+	componentDidUpdate( prevProps: StandardGrabbableProps )
+	{
+		if( !equal( this.props.remoteInterfaceLocks, prevProps.remoteInterfaceLocks ) )
+		{
+			this.networkedComponent?.setInitialInterfaceLocks( this.props.remoteInterfaceLocks );
+		}
 	}
 
 	public render()

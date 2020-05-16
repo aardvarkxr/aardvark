@@ -92,24 +92,35 @@ export class NetworkUniverse extends React.Component< NetworkUniverseProps, {} >
 					let universeFromGadget = minimalPoseFromTransform( activeNetworkedGadget.selfFromPeer );
 					let remoteGadgetId = NetworkUniverse.nextRemoteGadgetId++;
 
-					gadgetInfo =
+					if( gadgetInfo )
 					{
-						remoteGadgetId,
-						iface: activeNetworkedGadget,
-						remoteLocks: setInfo.locks,
-						url: setInfo.url,
-					};
-					this.networkedGadgets.set( remoteGadgetId, gadgetInfo );
-
-					let createEvent: NetworkUniverseEvent =
+						// we already know the startup info for this gadget. This just
+						// updates us so the init info for any new remote universes will
+						// have the new state
+						gadgetInfo.remoteLocks = setInfo.locks;
+						gadgetInfo.url = setInfo.url;
+					}
+					else
 					{
-						type: NetworkUniverseEventType.CreateRemoteGadget,
-						remoteGadgetId, 
-						gadgetUrl: setInfo.url, 
-						remoteInterfaceLocks: setInfo.locks, 
-						universeFromGadget 
-					};
-					this.props.onNetworkEvent( createEvent, true );
+						gadgetInfo =
+						{
+							remoteGadgetId,
+							iface: activeNetworkedGadget,
+							remoteLocks: setInfo.locks,
+							url: setInfo.url,
+						};
+						this.networkedGadgets.set( remoteGadgetId, gadgetInfo );
+	
+						let createEvent: NetworkUniverseEvent =
+						{
+							type: NetworkUniverseEventType.CreateRemoteGadget,
+							remoteGadgetId, 
+							gadgetUrl: setInfo.url, 
+							remoteInterfaceLocks: setInfo.locks, 
+							universeFromGadget 
+						};
+						this.props.onNetworkEvent( createEvent, true );	
+					}
 				}
 				break;
 

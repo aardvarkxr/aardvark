@@ -53,18 +53,29 @@ export class NetworkedGadgetComponent implements EntityComponent
 		this.entityCallback?.();
 	}
 
+	public setInitialInterfaceLocks( remoteInterfaceLocks: InitialInterfaceLock[] )
+	{
+		this.remoteGadgetInitalLocks = remoteInterfaceLocks;
+		this.sendSetGadgetInfo();
+	}
+
+	private sendSetGadgetInfo()
+	{
+		// tell the other end how we want to be started on the remote end
+		let req: NGESetGadgetInfo =
+		{
+			type: NetworkGadgetEventType.SetGadgetInfo,
+			locks: this.remoteGadgetInitalLocks,
+			url: AvGadget.instance().url,
+		};
+		this.networkProvider?.sendEvent( req );
+	}
+
 	@bind
 	private onNetworkedGadgetStart( networkProvider: ActiveInterface )
 	{
-		// tell the other end how we want to be started on the remote end
-		networkProvider.sendEvent(
-			{
-				type: NetworkGadgetEventType.SetGadgetInfo,
-				locks: this.remoteGadgetInitalLocks,
-				url: AvGadget.instance().url,
-			} as NGESetGadgetInfo	);
-
 		this.networkProvider = networkProvider;
+		this.sendSetGadgetInfo();
 
 		networkProvider.onEnded( ()=>
 			{
