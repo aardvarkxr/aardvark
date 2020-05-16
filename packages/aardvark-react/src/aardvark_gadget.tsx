@@ -1,47 +1,12 @@
-import * as React from 'react';
-
-import { Av, AvActionState, EAction, getActionFromState, 
-	MsgUserInfo, Envelope, LocalUserInfo, 
-	AvStartGadgetResult,
-	AuthedRequest,
-	MsgSignRequest,
-	MsgSignRequestResponse,
-	AvNodeTransform,
-	GadgetRoomCallbacks,
-	GadgetRoom,
-	MsgCreateRoom,
-	MsgCreateRoomResponse,
-	GadgetRoomEnvelope,
-	MsgRoomMessageReceived,
-	MsgDestroyRoomResponse,
-	MsgSendRoomMessage,
-	MsgRoomMessageReceivedResponse,
-	MsgInterfaceEvent,
-	AvInterfaceEventProcessor,
-	MsgInterfaceStarted,
-	interfaceStringFromMsg,
-	MsgInterfaceReceiveEvent,
-	MsgInterfaceTransformUpdated,
-	MsgInterfaceEnded,
-	InitialInterfaceLock,
-} from '@aardvarkxr/aardvark-shared';
-import { IAvBaseNode } from './aardvark_base_node';
+import { AardvarkManifest, AuthedRequest, Av, AvActionState, AvGrabEvent, AvGrabEventProcessor, AvInterfaceEventProcessor, AvNode, AvNodeTransform, AvNodeType, AvPanelHandler, AvPanelMouseEvent, AvPanelMouseEventType, AvStartGadgetResult, EAction, EHand, EndpointAddr, endpointAddrToString, EndpointType, ENodeFlags, Envelope, GadgetRoom, GadgetRoomCallbacks, GadgetRoomEnvelope, getActionFromState, InitialInterfaceLock, interfaceStringFromMsg, LocalUserInfo, MessageType, MsgCreateRoom, MsgCreateRoomResponse, MsgDestroyRoomResponse, MsgGadgetStarted, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgGrabEvent, MsgInterfaceEnded, MsgInterfaceEvent, MsgInterfaceReceiveEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgMasterStartGadget, MsgMouseEvent, MsgNodeHaptic, MsgPokerProximity, MsgResourceLoadFailed, MsgRoomMessageReceived, MsgRoomMessageReceivedResponse, MsgSaveSettings, MsgSendRoomMessage, MsgSignRequest, MsgSignRequestResponse, MsgUpdateActionState, MsgUpdateSceneGraph, MsgUserInfo, PokerProximity, stringToEndpointAddr } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
+import * as React from 'react';
+import { IAvBaseNode } from './aardvark_base_node';
+import { AsyncMessageHandler, MessageHandler } from './aardvark_endpoint';
+import { RemoteGadgetComponent } from './component_remote_gadget';
 import { CGadgetEndpoint } from './gadget_endpoint';
-import { MessageType, MsgUpdateSceneGraph, EndpointAddr, 
-	MsgGrabEvent, stringToEndpointAddr, MsgGadgetStarted, 
-	EndpointType, endpointAddrToString, MsgPokerProximity, 
-	MsgMouseEvent, MsgNodeHaptic, MsgMasterStartGadget, 
-	MsgSaveSettings, MsgUpdateActionState, AardvarkManifest, AvPanelHandler, 
-	PokerProximity, AvPanelMouseEventType, AvGrabEventProcessor, 
-	AvGrabEvent, AvNode, AvNodeType, AvPanelMouseEvent, ENodeFlags, 
-	EHand, MsgResourceLoadFailed,
-	MsgGetInstalledGadgets,
-	MsgGetInstalledGadgetsResponse} from '@aardvarkxr/aardvark-shared';
-import { MessageHandler, AsyncMessageHandler } from './aardvark_endpoint';
-import { InterfaceEntityProcessor } from './aardvark_interface_entity';
-const equal = require( 'fast-deep-equal' );
 
+const equal = require( 'fast-deep-equal' );
 export interface AvInterfaceEntityProcessor
 {
 	started( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string, 
@@ -263,13 +228,20 @@ export class AvGadget
 	{
 		return this.m_actualGadgetUri;
 	}
-	
+
 	/** The initial parent requested by whomever started this gadget. */
 	public get initialInterfaces()
 	{
 		return this.m_initialInterfaces;
 	}
 	
+	/** Returns a specific initial interface lock if it exists. */
+	public findInitialInterface( intefaceName: string ): InitialInterfaceLock
+	{
+		return this.m_initialInterfaces.find( ( lock )=> lock.iface == intefaceName );
+	}
+
+
 	/** Loads a gadget manifest by gadget URI.
 	 * 
 	 * @returns a promise that will resolve to the specified gadget's manifest
@@ -841,7 +813,7 @@ export class AvGadget
 
 	public get isRemote() : boolean
 	{
-		return !!this.m_ownerUuid;
+		return !!this.findInitialInterface( RemoteGadgetComponent.interfaceName );
 	}
 
 	/** Persists the gadget's settings. These weill be passed to the gadget 

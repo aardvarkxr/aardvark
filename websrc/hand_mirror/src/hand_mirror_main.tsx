@@ -120,7 +120,7 @@ export class NetworkUniverse extends React.Component< NetworkUniverseProps, {} >
 					{
 						let netEvent: NetworkUniverseEvent =
 						{
-							type: NetworkUniverseEventType.SendMasterGadgetEvent,
+							type: NetworkUniverseEventType.BroadcastRemoteGadgetEvent,
 							remoteGadgetId: gadgetInfo.remoteGadgetId, 
 							event: sendEvent.event,
 						};
@@ -174,9 +174,9 @@ export class NetworkUniverse extends React.Component< NetworkUniverseProps, {} >
 	{
 		let gadgetInfo = this.networkedGadgets.get( remoteGadgetId );
 
-		let sendEvent: RGESendEvent =
+		let sendEvent: NGESendEvent =
 		{
-			type: RemoteGadgetEventType.SendEventToMaster,
+			type: NetworkGadgetEventType.ReceiveEventFromRemote,
 			event,
 		};
 	
@@ -276,6 +276,7 @@ export class RemoteUniverse extends React.Component< RemoteUniverseProps, {} >
 					this.props.onRemoteEvent( 
 						{ 
 							type: NetworkUniverseEventType.SendMasterGadgetEvent, 
+							remoteGadgetId: gadgetInfo.remoteGadgetId,
 							event: sendEvent.event 
 						} as NetworkUniverseEvent, sendEvent.reliable );
 				}

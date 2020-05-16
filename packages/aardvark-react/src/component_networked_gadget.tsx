@@ -13,7 +13,6 @@ export enum NetworkGadgetEventType
 {
 	SetGadgetInfo = "set_gadget_info",
 	SendEventToAllRemotes = "send_event_to_remotes",
-	SendEventToMaster = "send_event_to_master",
 	ReceiveEventFromRemote = "receive_event_from_remote",
 }
 
@@ -31,7 +30,7 @@ export interface NGESetGadgetInfo extends NetworkGadgetEvent
 export interface NGESendEvent extends NetworkGadgetEvent
 {
 	event: object;
-	reliable: boolean;
+	reliable?: boolean;
 }
 
 export class NetworkedGadgetComponent implements EntityComponent
