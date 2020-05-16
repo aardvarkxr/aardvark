@@ -50,6 +50,7 @@ class CActiveInterface implements ActiveInterface
 		this.iface = iface;
 		this.lastTransmitterFromReceiver = transmitterFromReceiver;
 		this.role = role;
+		this.params = params;
 	}
 
 	public lock(): Promise<InterfaceLockResult>
