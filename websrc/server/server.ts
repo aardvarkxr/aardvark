@@ -1447,6 +1447,7 @@ class CEndpoint
 				pendingResponse.resolve( [ env.payloadUnpacked, env ] );
 				delete this.m_pendingResponses[ env.type ][ env.replyTo ];
 			}
+			return true;
 		}
 		else
 		{
