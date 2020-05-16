@@ -505,7 +505,6 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 
 		this.updateInput();
 		this.updateGrabberIntersections();
-		this.updatePokerProximity();
 		this.updateInterfaceProcessor();
 
 		for( let gadgetId of this.m_dirtyGadgetActions )
@@ -660,16 +659,6 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 			}
 
 			nodeData.grabberProcessor.onGrabberIntersections( state );
-		}
-	}
-
-	private updatePokerProximity()
-	{
-		let proximities = Av().renderer.updatePokerProximity();
-		for( let proximity of proximities )
-		{
-			proximity.actionState = this.m_actionState[ proximity.hand ];
-			this.m_endpoint.sendMessage( MessageType.PokerProximity, proximity );
 		}
 	}
 
@@ -963,10 +952,6 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 
 		case AvNodeType.Panel:
 			this.traversePanel( node, defaultParent );
-			break;
-
-		case AvNodeType.Poker:
-			this.traversePoker( node, defaultParent );
 			break;
 
 		case AvNodeType.Grabbable:
@@ -1315,42 +1300,11 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 				if( showModel )
 				{
 					this.m_renderList.push( nodeData.modelInstance );
-
-					if ( node.propInteractive )
-					{
-						let panelNormal = universeFromNode.multiplyVec4( new vec4( [ 0, 1, 0, 0 ] ) );
-						let zScale = panelNormal.length();
-						let nodeFromUniverse = new mat4( universeFromNode.all() ).inverse();
-						Av().renderer.addActivePanel(
-							node.globalId,
-							nodeFromUniverse.all(),
-							zScale, 
-							hand );
-					}
 				}
 			} );
 		}
 	}
 
-	traversePoker( node: AvNode, defaultParent: PendingTransform )
-	{
-		let hand = this.m_currentHand;
-		this.updateTransform( node.globalId, defaultParent, null,
-			( universeFromNode: mat4 ) =>
-		{
-			if( node.flags & ENodeFlags.Remote )
-			{
-				// Remote pokers will do any poking on the
-				// remote side. It's up to the gadget they're poking to
-				// figure out what to do about that.
-				return;
-			}
-			
-			let pokerInUniverse = universeFromNode.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) );
-			Av().renderer.addActivePoker( node.globalId, [ pokerInUniverse.x, pokerInUniverse.y, pokerInUniverse.z ], hand );
-		} );
-	}
-	
 	traverseGrabbable( node: AvNode, defaultParent: PendingTransform )
 	{
 		let nodeData = this.getNodeData( node );

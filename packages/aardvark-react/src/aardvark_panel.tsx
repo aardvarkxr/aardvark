@@ -1,25 +1,15 @@
-import * as React from 'react';
-import { Av, AvNodeTransform, AvNodeType, AvPanelHandler, AvPanelMouseEvent, AvPanelMouseEventType, AvSharedTextureInfo, EndpointAddr, EVolumeType, AvVolume, g_builtinModelPanel } from '@aardvarkxr/aardvark-shared';
+import { Av, AvNodeTransform, AvSharedTextureInfo, AvVolume, EndpointAddr, EVolumeType, g_builtinModelPanel, PanelMouseEventType } from '@aardvarkxr/aardvark-shared';
 import { vec2, vec4 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
-import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
+import * as React from 'react';
+import { AvBaseNodeProps } from './aardvark_base_node';
 import { AvGadget } from './aardvark_gadget';
 import { ActiveInterface, AvInterfaceEntity } from './aardvark_interface_entity';
-import { nodeTransformToMat4 } from './math_utils';
-import { AvTransform } from './aardvark_transform';
 import { AvModel } from './aardvark_model';
 import { AvPrimitive, PrimitiveType } from './aardvark_primitive';
+import { AvTransform } from './aardvark_transform';
+import { nodeTransformToMat4 } from './math_utils';
 
-
-export enum PanelMouseEventType
-{
-	Unknown = 0,
-	Down = 1,
-	Up = 2,
-	Enter = 3,
-	Leave = 4,
-	Move = 5,
-};
 
 export interface PanelMouseEvent
 {
@@ -180,7 +170,7 @@ export class AvPanel extends React.Component< AvPanelProps, AvPanelState >
 			AvGadget.instance().sendHapticEvent( event.pokerEpa, hapticAmplitude, 1, 0 );
 		}
 
-		Av().spoofMouseEvent( event.type as unknown as AvPanelMouseEventType, event.x, event.y );
+		Av().spoofMouseEvent( event.type, event.x, event.y );
 	}
 
 	private get width(): number

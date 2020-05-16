@@ -26,8 +26,8 @@ export enum MessageType
 	GrabEvent = 301,
 	GrabberState = 302,
 	GadgetStarted = 303,	
-	PokerProximity = 304,
-	MouseEvent = 305,
+	//PokerProximity = 304,
+	//MouseEvent = 305,
 	NodeHaptic = 306,
 	AttachGadgetToHook = 307,
 	DetachGadgetFromHook = 308,
@@ -335,19 +335,6 @@ export interface MsgGadgetStarted
 }
 
 
-export interface MsgPokerProximity
-{
-	pokerId: EndpointAddr;
-	hand: EHand;
-	actionState: AvActionState;
-	panels: PokerProximity[];
-}
-
-export interface MsgMouseEvent
-{
-	event: AvPanelMouseEvent;
-}
-
 export interface MsgNodeHaptic
 {
 	nodeId: EndpointAddr;
@@ -618,14 +605,6 @@ export interface MsgSendRoomMessage
 	message: GadgetRoomEnvelope;
 }
 
-export interface PokerProximity
-{
-	panelId: EndpointAddr;
-	x: number;
-	y: number;
-	distance: number;
-}
-
 export interface MsgInterfaceStarted
 {
 	transmitter: EndpointAddr;
@@ -729,7 +708,7 @@ export enum AvNodeType
 	Transform = 2,
 	Model = 3,
 	Panel = 4,
-	Poker = 5,
+	//Poker = 5,
 	Grabbable = 6,
 	Handle = 7,
 	Grabber = 8,
@@ -745,30 +724,6 @@ export enum AvNodeType
 	Child = 18,
 }
 
-
-export enum AvPanelMouseEventType
-{
-	Unknown = 0,
-	Down = 1,
-	Up = 2,
-	Enter = 3,
-	Leave = 4,
-	Move = 5,
-};
-
-export interface AvPanelMouseEvent
-{
-	type: AvPanelMouseEventType;
-	panelId: EndpointAddr;
-	pokerId: EndpointAddr;
-	x: number;
-	y: number;
-}
-
-export interface AvPanelHandler
-{
-	( event: AvPanelMouseEvent ): void;
-}
 
 export enum AvGrabEventType
 {

@@ -169,7 +169,6 @@ void CJavascriptRenderer::runFrame()
 	if ( m_jsTraverser )
 	{
 		// we'll use our local intersections and collisions for callbacks from JS
-		m_intersections.reset();
 		m_collisions.reset();
 
 		m_jsTraverser->ExecuteFunction( nullptr, CefV8ValueList{} );
@@ -492,41 +491,6 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 				out->SetValue( "hooks", hooks, V8_PROPERTY_ATTRIBUTE_NONE );
 			}
 			retval->SetValue( (int)unIndex, out );
-		}
-	} );
-
-
-	RegisterFunction( container, "updatePokerProximity", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
-	{
-		if ( arguments.size() != 0 )
-		{
-			exception = "Invalid arguments";
-			return;
-		}
-
-		std::vector<PokerState_t> res = m_intersections.updatePokerProximity();
-		retval = CefV8Value::CreateArray( (int)res.size() );
-		for ( size_t pokerIndex = 0; pokerIndex < res.size(); pokerIndex++ )
-		{
-			const PokerState_t & pokerState = res[pokerIndex];
-			CefRefPtr<CefV8Value> out = CefV8Value::CreateObject( nullptr, nullptr );
-			out->SetValue( "pokerId", endpointAddrToJs( pokerState.pokerId ), V8_PROPERTY_ATTRIBUTE_NONE );
-			out->SetValue( "hand", CefV8Value::CreateUInt( (uint32_t)pokerState.hand ), V8_PROPERTY_ATTRIBUTE_NONE );
-
-			CefRefPtr<CefV8Value> panels = CefV8Value::CreateArray( (int)pokerState.panels.size() );
-			for ( size_t panelIndex = 0; panelIndex < pokerState.panels.size(); panelIndex++ )
-			{
-				const aardvark::PokerProximity_t & inPanel = pokerState.panels[panelIndex];
-				CefRefPtr< CefV8Value > outPanel = CefV8Value::CreateObject( nullptr, nullptr );
-				outPanel->SetValue( "panelId", endpointAddrToJs( inPanel.panelId ), V8_PROPERTY_ATTRIBUTE_NONE );
-				outPanel->SetValue( "x", CefV8Value::CreateDouble( inPanel.x ), V8_PROPERTY_ATTRIBUTE_NONE );
-				outPanel->SetValue( "y", CefV8Value::CreateDouble( inPanel.y ), V8_PROPERTY_ATTRIBUTE_NONE );
-				outPanel->SetValue( "distance", CefV8Value::CreateDouble( inPanel.distance ), V8_PROPERTY_ATTRIBUTE_NONE );
-				panels->SetValue( (int)panelIndex, outPanel );
-			}
-			out->SetValue( "panels", panels, V8_PROPERTY_ATTRIBUTE_NONE );
-
-			retval->SetValue( (int)pokerIndex, out );
 		}
 	} );
 
@@ -858,83 +822,6 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 					std::move( modelInstance ), m_renderer );
 			retval = newModelInstance.object;
 		}
-	} );
-
-
-	RegisterFunction( container, "addActivePanel", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
-	{
-		if ( arguments.size() != 4 )
-		{
-			exception = "Invalid arguments";
-			return;
-		}
-
-		EndpointAddr_t panelId;
-		if ( !endpointAddrFromJs( arguments[0], &panelId ) )
-		{
-			exception = "argument must be the global panel ID";
-			return;
-		}
-
-		glm::mat4 panelFromUniverse;
-		if ( !mat4FromJavascript( arguments[1], &panelFromUniverse ) )
-		{
-			exception = "second argument must be an array of 16 numbers";
-			return;
-		}
-
-		if ( !arguments[2]->IsDouble() )
-		{
-			exception = "third argument must be a number";
-			return;
-		}
-
-		if ( !arguments[3]->IsDouble() )
-		{
-			exception = "fourth argument must be an int (and hand enum value)";
-			return;
-		}
-
-		m_intersections.addActivePanel( panelId, panelFromUniverse, 
-			arguments[2]->GetDoubleValue(), (EHand)arguments[3]->GetIntValue() );
-	} );
-
-	RegisterFunction( container, "addActivePoker", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
-	{
-		if ( arguments.size() != 3 )
-		{
-			exception = "Invalid arguments";
-			return;
-		}
-
-		EndpointAddr_t pokerId;
-		if ( !endpointAddrFromJs( arguments[0], &pokerId ) )
-		{
-			exception = "argument must be the global poker ID";
-			return;
-		}
-
-
-		if ( !arguments[1]->IsArray()
-			|| arguments[1]->GetArrayLength() != 3
-			|| !arguments[1]->GetValue( 0 )->IsDouble() )
-		{
-			exception = "second argument must be an array of 3 numbers";
-			return;
-		}
-		if ( !arguments[2]->IsInt() )
-		{
-			exception = "third argument must be an int (and hand enum)";
-			return;
-		}
-
-		glm::vec3 pokerInUniverse;
-		pokerInUniverse.x = arguments[1]->GetValue( 0 )->GetDoubleValue();
-		pokerInUniverse.y = arguments[1]->GetValue( 1 )->GetDoubleValue();
-		pokerInUniverse.z = arguments[1]->GetValue( 2 )->GetDoubleValue();
-
-		EHand hand = (EHand)arguments[2]->GetIntValue();
-		m_intersections.addActivePoker( pokerId, pokerInUniverse, hand );
 	} );
 
 

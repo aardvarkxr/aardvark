@@ -1,4 +1,4 @@
-import { AardvarkManifest, AABB as Aabb, AvPanelMouseEventType, AvSharedTextureInfo, EHand, EndpointAddr, MsgGrabberState, MsgPokerProximity, Permission } from './aardvark_protocol';
+import { AABB as Aabb, AardvarkManifest, AvSharedTextureInfo, EHand, EndpointAddr, MsgGrabberState, Permission } from './aardvark_protocol';
 
 export interface AvTraversalRenderer
 {
@@ -41,10 +41,6 @@ interface AvRenderer
 	registerHapticProcessor( hapticProcessor: AvHapticProcessor ) : void;
 	sendHapticEventForHand( hand: EHand, amplitude: number, frequency: number, duration: number ): void;
 
-	updatePokerProximity(): MsgPokerProximity[];
-	addActivePanel( panelGlobalId: EndpointAddr, nodeFromUniverse: number[], zScale: number, hand: EHand  ): void;
-	addActivePoker( pokerGlobalId: EndpointAddr, pokerInUniverse: number[], hand: EHand  ): void;
-	
 	updateGrabberIntersections(): MsgGrabberState[];
 	addGrabbableHandle_Sphere( grabbableGlobalId: EndpointAddr, 
 		handleGlobalId: EndpointAddr,
@@ -92,6 +88,16 @@ export interface GadgetParams
 	remotePersistenceUuid?: string;
 }
 
+export enum PanelMouseEventType
+{
+	Unknown = 0,
+	Down = 1,
+	Up = 2,
+	Enter = 3,
+	Leave = 4,
+	Move = 5,
+};
+
 
 export interface Aardvark
 {
@@ -99,7 +105,7 @@ export interface Aardvark
 
 	// requires scenegraph permissions
 	subscribeToBrowserTexture( callback: AvBrowserTextureCallback ): void;
-	spoofMouseEvent( type:AvPanelMouseEventType, x: number, y: number ): void;
+	spoofMouseEvent( type:PanelMouseEventType, x: number, y: number ): void;
 
 	// requires master permissions
 	startGadget( params: GadgetParams ): void;

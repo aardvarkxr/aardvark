@@ -19,8 +19,6 @@ add_executable(avrenderer
 	av_cef_javascript.h
 	collision_tester.cpp
 	collision_tester.h
-	intersection_tester.cpp
-	intersection_tester.h
 	iapplication.h
 	javascript_object.cpp
 	javascript_object.h
