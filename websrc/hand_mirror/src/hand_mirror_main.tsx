@@ -151,7 +151,7 @@ export class NetworkUniverse extends React.Component< NetworkUniverseProps, {} >
 				let universeFromGadget = minimalPoseFromTransform( entityFromPeer );
 				this.props.onNetworkEvent( 
 					{
-						type: NetworkUniverseEventType.DestroyRemoteGadget,
+						type: NetworkUniverseEventType.UpdateRemoteGadgetTransform,
 						remoteGadgetId: gadgetInfo.remoteGadgetId, 
 						universeFromGadget,
 					} as NetworkUniverseEvent, false );
@@ -208,7 +208,7 @@ export class NetworkUniverse extends React.Component< NetworkUniverseProps, {} >
 	render()
 	{
 		return <AvInterfaceEntity receives={ [ { iface: NetworkedGadgetComponent.interfaceName, processor: this.onNetworkInterface } ] }
-			volume={ infiniteVolume() }/>
+			volume={ infiniteVolume() } wantsTransforms={ true }/>
 	}
 }
 
