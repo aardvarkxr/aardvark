@@ -1,6 +1,6 @@
 import { EndpointAddrMap } from './endpoint_addr_map';
 import { TransformedVolume } from './volume_intersection';
-import { computeUniverseFromLine, minIgnoringNulls, nodeTransformFromMat4, nodeTransformToMat4, scaleAxisToFit, scaleMat, translateMat, vec3MultiplyAndAdd, CRendererEndpoint } from '@aardvarkxr/aardvark-react';
+import { computeUniverseFromLine, minIgnoringNulls, nodeTransformFromMat4, nodeTransformToMat4, scaleAxisToFit, scaleMat, translateMat, vec3MultiplyAndAdd, CRendererEndpoint, minimalToMat4Transform } from '@aardvarkxr/aardvark-react';
 import { Av, AvActionState, AvConstraint, AvGrabEvent, AvGrabEventType, AvModelInstance, AvNode, AvNodeTransform, AvNodeType, AvRendererConfig, EAction, EHand, emptyActionState, EndpointAddr, endpointAddrIsEmpty, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, EVolumeType, filterActionsForGadget, getActionFromState, g_builtinModelCylinder, g_builtinModelError, g_builtinModelPanel, g_builtinModelPanelInverted, LocalUserInfo, MessageType, MinimalPose, MsgAttachGadgetToHook, MsgDestroyGadget, MsgDetachGadgetFromHook, MsgGrabEvent, MsgInterfaceEnded, MsgInterfaceLock, MsgInterfaceSendEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgInterfaceUnlock, MsgLostEndpoint, MsgNodeHaptic, MsgResourceLoadFailed, MsgUpdateActionState, MsgUpdatePose, MsgUpdateSceneGraph, MsgUserInfo, parseEndpointFieldUri, MsgInterfaceReceiveEvent, MsgInterfaceLockResponse, MsgInterfaceUnlockResponse, MsgInterfaceRelock, MsgInterfaceRelockResponse, MsgInterfaceSendEventResponse } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3, vec4 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
@@ -171,16 +171,6 @@ class PendingTransform
 	}
 }
 
-
-function minimalToMat4Transform( minimal: MinimalPose ): mat4
-{
-	let transform: AvNodeTransform = 
-	{
-		position: { x: minimal[0], y: minimal[1], z: minimal[2] },
-		rotation: { w: minimal[3], x: minimal[4], y: minimal[5], z: minimal[6] }, 
-	};
-	return nodeTransformToMat4( transform );
-}
 
 enum AnchorState
 {

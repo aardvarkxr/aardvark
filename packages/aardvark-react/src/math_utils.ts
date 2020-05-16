@@ -1,3 +1,4 @@
+import { MinimalPose } from './../../aardvark-shared/src/aardvark_protocol';
 import { AvNodeTransform } from '@aardvarkxr/aardvark-shared';
 import { vec3, mat4, vec4, mat3, quat } from '@tlaukkan/tsm';
 
@@ -240,3 +241,23 @@ export function invertNodeTransform( from: AvNodeTransform ): AvNodeTransform
 	let fromMat = nodeTransformToMat4( from );
 	return nodeTransformFromMat4( fromMat.copy().inverse() );
 }
+
+export function minimalPoseFromTransform( from: AvNodeTransform ): MinimalPose
+{
+	let mat = nodeTransformToMat4( from );
+	let rot = mat.toMat3().toQuat();
+	let pos = mat.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) );
+	return [ pos.x, pos.y, pos.z, rot.w, rot.x, rot.y, rot.z ];
+}
+
+export function minimalToMat4Transform( minimal: MinimalPose ): mat4
+{
+	let transform: AvNodeTransform = 
+	{
+		position: { x: minimal[0], y: minimal[1], z: minimal[2] },
+		rotation: { w: minimal[3], x: minimal[4], y: minimal[5], z: minimal[6] }, 
+	};
+	return nodeTransformToMat4( transform );
+}
+
+

@@ -258,6 +258,12 @@ export class AvGadget
 		}
 	}
 
+	/** Returns the URL of the gadget. */
+	public get url()
+	{
+		return this.m_actualGadgetUri;
+	}
+	
 	/** The initial parent requested by whomever started this gadget. */
 	public get initialInterfaces()
 	{

@@ -410,7 +410,7 @@ class Whiteboard extends React.Component< {}, WhiteboardState >
 
 		return (
 			<AvStandardGrabbable modelUri={ g_builtinModelBox } modelScale={ 0.1 } 
-				modelColor="lightblue">
+				modelColor="lightblue" useInitialParent={ true } remoteInterfaceLocks={ [] }>
 				<AvTransform translateY={0.2}>
 					<AvTransform translateZ={ -0.005 }>
 						<AvPrimitive type={PrimitiveType.Cube} originZ={ PrimitiveZOrigin.Back }
