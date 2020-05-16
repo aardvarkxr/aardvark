@@ -832,7 +832,7 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 		{
 			if( typeof gadgetData.gadgetHook === "string" )
 			{
-				hookInfo = gadgetData.gadgetHook;
+				hookInfo = atob( gadgetData.gadgetHook );
 			}
 			else
 			{
