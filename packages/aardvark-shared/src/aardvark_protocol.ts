@@ -907,6 +907,15 @@ export interface AvVolume
 	aabb?: AABB;
 }
 
+export function emptyVolume(): AvVolume
+{
+	return { type: EVolumeType.Empty };
+}
+export function infiniteVolume(): AvVolume
+{
+	return { type: EVolumeType.Infinite };
+}
+
 export enum ENodeFlags
 {
 	Visible 					= 1 << 0,
