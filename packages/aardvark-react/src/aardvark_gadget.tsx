@@ -1,4 +1,4 @@
-import { AardvarkManifest, AuthedRequest, Av, AvActionState, AvGrabEvent, AvGrabEventProcessor, AvInterfaceEventProcessor, AvNode, AvNodeTransform, AvNodeType, AvStartGadgetResult, EAction, EHand, EndpointAddr, endpointAddrToString, EndpointType, ENodeFlags, Envelope, GadgetRoom, GadgetRoomCallbacks, GadgetRoomEnvelope, getActionFromState, InitialInterfaceLock, interfaceStringFromMsg, LocalUserInfo, MessageType, MsgCreateRoom, MsgCreateRoomResponse, MsgDestroyRoomResponse, MsgGadgetStarted, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgGrabEvent, MsgInterfaceEnded, MsgInterfaceEvent, MsgInterfaceReceiveEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgMasterStartGadget, MsgNodeHaptic, MsgResourceLoadFailed, MsgRoomMessageReceived, MsgRoomMessageReceivedResponse, MsgSaveSettings, MsgSendRoomMessage, MsgSignRequest, MsgSignRequestResponse, MsgUpdateActionState, MsgUpdateSceneGraph, MsgUserInfo, stringToEndpointAddr } from '@aardvarkxr/aardvark-shared';
+import { AardvarkManifest, AuthedRequest, Av, AvActionState, AvGrabEvent, AvGrabEventProcessor, AvInterfaceEventProcessor, AvNode, AvNodeTransform, AvNodeType, AvStartGadgetResult, EAction, EHand, EndpointAddr, endpointAddrToString, EndpointType, ENodeFlags, Envelope, getActionFromState, InitialInterfaceLock, interfaceStringFromMsg, LocalUserInfo, MessageType, MsgGadgetStarted, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgGrabEvent, MsgInterfaceEnded, MsgInterfaceEvent, MsgInterfaceReceiveEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgMasterStartGadget, MsgNodeHaptic, MsgResourceLoadFailed, MsgSaveSettings, MsgSignRequest, MsgSignRequestResponse, MsgUpdateActionState, MsgUpdateSceneGraph, MsgUserInfo, stringToEndpointAddr } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import { IAvBaseNode } from './aardvark_base_node';
@@ -53,11 +53,6 @@ interface ActionStateListener
 	falling?: () => void;
 }
 
-interface GadgetRoomDetails
-{
-	room: GadgetRoom;
-	callbacks: GadgetRoomCallbacks;
-}
 
 /** The singleton gadget object for the browser. */
 export class AvGadget
@@ -82,8 +77,6 @@ export class AvGadget
 	private m_firstSceneGraph: boolean = true;
 	private m_mainGrabbable: AvNode = null;
 	private m_mainHandle: AvNode = null;
-	private m_mainGrabbableComponent: IAvBaseNode = null;
-	private m_mainHandleComponent: IAvBaseNode = null;
 	private m_userInfo: LocalUserInfo = null;
 	private m_userInfoListeners: (()=>void)[] = [];
 	private m_initialInterfaces: InitialInterfaceLock[] = [];
@@ -94,7 +87,6 @@ export class AvGadget
 	m_startGadgetPromises: {[nodeId:number]: 
 		[ ( res: AvStartGadgetResult ) => void, ( reason: any ) => void ] } = {};
 	m_actionStateListeners: { [listenerId: number] : ActionStateListener } = {};
-	m_roomDetails: { [roomId: string] : GadgetRoomDetails } = {};
 
 	constructor()
 	{
@@ -162,7 +154,6 @@ export class AvGadget
 		this.m_endpoint.registerHandler( MessageType.UpdateActionState, this.onUpdateActionState );
 		this.m_endpoint.registerHandler( MessageType.ResourceLoadFailed, this.onResourceLoadFailed );
 		this.m_endpoint.registerHandler( MessageType.UserInfo, this.onUserInfo );
-		this.m_endpoint.registerHandler( MessageType.SendRoomMessage, this.onSendRoomMessage );
 		this.m_endpoint.registerAsyncHandler( MessageType.InterfaceEvent, this.onInterfaceEvent );
 		this.m_endpoint.registerAsyncHandler( MessageType.InterfaceStarted, this.onInterfaceStarted );
 		this.m_endpoint.registerAsyncHandler( MessageType.InterfaceEnded, this.onInterfaceEnded );
@@ -572,12 +563,10 @@ export class AvGadget
 						if( node.type == AvNodeType.Grabbable && !this.m_mainGrabbable )
 						{
 							this.m_mainGrabbable = node;
-							this.m_mainGrabbableComponent = reactNode;
 						}
 						if( node.type == AvNodeType.Handle && !this.m_mainHandle )
 						{
 							this.m_mainHandle = node;
-							this.m_mainHandleComponent = reactNode;
 						}
 
 						this.m_traversedNodes[nodeId] = reactNode;
@@ -874,78 +863,6 @@ export class AvGadget
 	public get localUserInfo() : LocalUserInfo
 	{
 		return this.m_userInfo;
-	}
-
-	/** Gadgets call this function to create a room. 
-	 * 
-	 * roomId - the ID to use for this room. This ID must be unique
-	 * 				within the gadget.
-	 */
-	public createRoom( roomId: string, callbacks: GadgetRoomCallbacks ): Promise<GadgetRoom>
-	{
-		console.log( `createRoom ${ roomId }` );
-		return new Promise<GadgetRoom>( async ( resolve, reject ) =>
-		{
-			let msgCreate: MsgCreateRoom =
-			{
-				roomId,
-			};
-			let [ resp ] = await this.m_endpoint.sendMessageAndWaitForResponse<MsgCreateRoomResponse>( 
-				MessageType.CreateRoom, msgCreate, MessageType.CreateRoomResponse );
-			if( resp.error )
-			{
-				throw new Error( resp.error );
-			}
-
-			let room: GadgetRoom =
-			{
-				onMessage: async ( message: GadgetRoomEnvelope ) =>
-				{
-					console.log( `room.onMessage ${ roomId }: ${ JSON.stringify( message ) }` );
-					if( !message )
-					{
-						throw new Error( "onMessage called with no message" );
-					}
-					let msgReceived: MsgRoomMessageReceived =
-					{
-						roomId,
-						message,
-					}
-					let [ resp ] = await this.m_endpoint
-						.sendMessageAndWaitForResponse<MsgRoomMessageReceivedResponse>(
-							MessageType.RoomMessageReceived, msgReceived, 
-							MessageType.RoomMessageReceivedResponse );
-					if( resp.error )
-					{
-						throw new Error( resp.error );
-					}
-				},
-
-				destroy: async (): Promise<void> =>
-				{
-					console.log( `room.destroy ${ roomId }` );
-					let [ resp ] =await this.m_endpoint
-						.sendMessageAndWaitForResponse<MsgDestroyRoomResponse>(
-						MessageType.DestroyRoom, { roomId }, MessageType.DestroyRoomResponse );
-					if( resp.error )
-					{
-						throw new Error( resp.error );
-					}
-					delete this.m_roomDetails[ roomId ];
-				}
-			};
-
-			let details = {	room, callbacks, };
-			this.m_roomDetails[ roomId ] = details;
-			resolve( room );
-		} );
-	}
-
-	@bind
-	public onSendRoomMessage( msg: MsgSendRoomMessage )
-	{
-		let details = this.m_roomDetails[ msg.roomId ];
-		details?.callbacks.sendMessage( msg.message );
 	}
 
 	/** Adds a handler for a raw Aardvark message. You probably don't need this. */

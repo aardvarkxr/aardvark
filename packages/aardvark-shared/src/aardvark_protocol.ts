@@ -46,14 +46,14 @@ export enum MessageType
 	InstallGadget = 402,
 
 	// gadget has "room" permissions
-	CreateRoom = 600,
-	CreateRoomResponse = 601,
-	DestroyRoom = 602,
-	DestroyRoomResponse = 603,
-	RoomMessageReceived = 604,
-	RoomMessageReceivedResponse = 605,
-	SendRoomMessage = 606,
-	UpdatePose = 607,
+	// CreateRoom = 600,
+	// CreateRoomResponse = 601,
+	// DestroyRoom = 602,
+	// DestroyRoomResponse = 603,
+	// RoomMessageReceived = 604,
+	// RoomMessageReceivedResponse = 605,
+	// SendRoomMessage = 606,
+	// UpdatePose = 607,
 
 	// Interfaces and interface entities
 	InterfaceStarted = 700,
@@ -432,177 +432,12 @@ export interface MsgSignRequestResponse
 // tx, ty, tz, rw, rx, ry, rz
 export type MinimalPose = [ number, number, number, number, number, number, number ];
 
-export interface MsgUpdatePose extends AuthedRequest
-{
-	userUuid: string;
-	originPath: string;
-	newPose: MinimalPose; 
-}
 
 export interface SharedGadget
 {
 	gadgetUri: string;
 	persistenceUuid: string;
 	hook?: string;
-}
-
-
-
-/** This enum defines reserved destination values that may be set on any
- * message being sent on a data WebRTC connection to an Aardvark room.
- * 
- * All member IDs that start with underscore are reserved and may not
- * be used as actual member IDs by the gadget's implementation.
- */
-export enum RoomMemberIdReserved
-{
-	Broadcast = "_broadcast",
-	Room = "_room,"
-}
-
-/** This enum defines the public message types that the gadget's
- * implementation of the room callback interface is expected to interact 
- * with. All other message types are reserved and should be passed along
- * without modification or processing by the gadget.
- */
-export enum RoomMessageType
-{
-	MemberJoined = "MemberJoined",
-	MemberLeft = "MemberLeft",
-}
-
-
-/** These flags affect room message routing and may be used by a gadget's
- * room implementation to adjust how they process room messages.
- */
-export enum RoomMessageRoutingFlag
-{
-	WillResend = 1 << 0,
-}
-
-
-/** Every message sent to a data WebRTC connection for an Aardvark
- * is a JSON object string with this format.
- * 
- * destination - The destination that this message should be routed to.
- * 				If this value is "_broadcast", the 
- * 				gadget must send a copy ofthe message to every member of the 
- * 				room.
- * source - The room member address of the original sender of this message.
- * 			The gadget must fill in the source field with the address of the 
- * 			message's sender to prevent Aardvark instances from forging this 
- * 			field. If a message is being sent by the gadget's room 
- * 			implementation, it must set this field to "_room";
- * 
- * All other fields on the message must be ignored when a message from an
- * Aardvark instance is being routed.
- */
-export interface GadgetRoomEnvelope
-{
-	type: RoomMessageType|string;
-	routingFlags?: RoomMessageRoutingFlag;
-	destination?: string | RoomMemberIdReserved;
-	source?: string | RoomMemberIdReserved;
-}
-
-
-/** This message must be broadcast by the gadget to every member when
- * a new member joins.
- * 
- * When a new member first joins the room, the gadget must send this
- * message for each member already in the room to allow
- * the newly joining member to build its own member list.
- * 
- * destination - must be "_broadcast" for the messages that identify a 
- * 				new member to the room or the member ID of the new
- * 				member for the messages that identify existing members
- * 				to the new member.
- * source - must be "_room"
- * memberId - An ID that is unique within the room that can be used to 
- * 		identify a member. This ID must remain valid for as long as the 
- * 		member is in the room. Member IDs are not guaranteed to be the
- * 		same from session to session, and are not expected to have any 
- * 		particular format. Aardvark will treat these IDs as opaque.
- */
-export interface RMMemberJoined extends GadgetRoomEnvelope
-{
-	memberId: string;
-}
-
-/** This message must be broadcast by the gadget to every member when
- * a new member joins.
- * 
- * destination - must be "_broadcast"
- * source - must be "_room"
- * memberId - must be a valid member id for the new member
- */
-export interface RMMemberLeft extends GadgetRoomEnvelope
-{
-	memberId: string;
-}
-
-/** This interface must be implemented by any gadget which wants to 
- * provide a room to Aardvark. It allows Aardvark to send messages
- * to its other instances.
- */
-export interface GadgetRoomCallbacks
-{
-	/** Called when a message arrives for Aardvark. */
-	sendMessage( message: GadgetRoomEnvelope ): void;
-}
-
-
-/** This interface is provided to the gadget on receipt of a room
- * creation request. The gadget can use this to deliver messages to
- * Aardvark from its other instances
- */
-export interface GadgetRoom
-{
-	/** Called when a message arrives for Aardvark. */
-	onMessage( message: GadgetRoomEnvelope ): void;
-
-	/** Called when  */
-	/** Tells Aardvark to destroy the room and any remote gadgets 
-	 * associated with it.
-	 */
-	destroy():Promise<void>;
-}
-
-export interface MsgCreateRoom
-{
-	roomId: string;
-}
-
-export interface MsgCreateRoomResponse
-{
-	error?: string;
-}
-
-export interface MsgDestroyRoom
-{
-	roomId: string;
-}
-
-export interface MsgDestroyRoomResponse
-{
-	error?: string;
-}
-
-export interface MsgRoomMessageReceived
-{
-	roomId: string;
-	message: GadgetRoomEnvelope;
-}
-
-export interface MsgRoomMessageReceivedResponse
-{
-	error?: string;
-}
-
-export interface MsgSendRoomMessage
-{
-	roomId: string;
-	message: GadgetRoomEnvelope;
 }
 
 export interface MsgInterfaceStarted
@@ -717,9 +552,9 @@ export enum AvNodeType
 	//PanelIntersection = 11,
 	ParentTransform = 12,
 	HeadFacingTransform = 13,
-	RemoteUniverse = 14,
-	RemoteOrigin = 15,
-	RoomMember = 16,
+	// RemoteUniverse = 14,
+	// RemoteOrigin = 15,
+	// RoomMember = 16,
 	InterfaceEntity = 17,
 	Child = 18,
 }
@@ -921,9 +756,6 @@ export interface AvNode
 
 	propOrigin?: string;
 	propUniverseName?: string;
-	propRoomId?: string;
-	propMemberId?: string;
-	propMemberOrigins?: { [ originPath: string ]: MinimalPose };
 	propTransform?: AvNodeTransform;
 	propModelUri?: string;
 	propVolume?: AvVolume;
@@ -988,7 +820,6 @@ export enum Permission
 {
 	Master = "master",
 	SceneGraph = "scenegraph",
-	Room = "room",
 }
 
 export interface AardvarkManifestExtension
@@ -997,8 +828,6 @@ export interface AardvarkManifestExtension
 	browserWidth: number;
 	browserHeight: number;
 	startAutomatically: boolean;
-	shareInRooms?: boolean; // defaults to true
-
 }
 
 export interface AardvarkManifest extends WebAppManifest
@@ -1079,24 +908,3 @@ export function gadgetDetailsToId( gadgetName: string, gadgetUri: string, gadget
 
 	return filteredName;
 }
-
-/** Gadgets are also responsible for providing transforms for all the members of
- * the room so that Aardvark knows where to render them relative to the local
- * user. That is accomplished through scene graph nodes:
- * 	<AvRoom roomId="myroom1234">
- * 		<AvTransform ...>
- * 			<AvRoomMember memberId="member0"/>
- * 		</AvTransform>
- * 		<AvTransform ...>
- * 			<AvRoomMember memberId="member1"/>
- * 		</AvTransform>
- * 		...
- * 	</AvRoom>
- * 
- * Any AvRoomMember for the local user's member ID is ignored. The local user 
- * does not have remote gadgets, and all their local gadgets will be drawn in 
- * the user's local coordinate system regardless of whether or not they are in
- * a room.
- */
-
-

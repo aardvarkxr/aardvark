@@ -1,11 +1,11 @@
-import { EndpointAddrMap } from './endpoint_addr_map';
-import { TransformedVolume } from './volume_intersection';
-import { computeUniverseFromLine, minIgnoringNulls, nodeTransformFromMat4, nodeTransformToMat4, scaleAxisToFit, scaleMat, translateMat, vec3MultiplyAndAdd, CRendererEndpoint, minimalToMat4Transform } from '@aardvarkxr/aardvark-react';
-import { Av, AvActionState, AvConstraint, AvGrabEvent, AvGrabEventType, AvModelInstance, AvNode, AvNodeTransform, AvNodeType, AvRendererConfig, EAction, EHand, emptyActionState, EndpointAddr, endpointAddrIsEmpty, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, EVolumeType, filterActionsForGadget, getActionFromState, g_builtinModelCylinder, g_builtinModelError, g_builtinModelPanel, g_builtinModelPanelInverted, LocalUserInfo, MessageType, MinimalPose, MsgAttachGadgetToHook, MsgDestroyGadget, MsgDetachGadgetFromHook, MsgGrabEvent, MsgInterfaceEnded, MsgInterfaceLock, MsgInterfaceSendEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgInterfaceUnlock, MsgLostEndpoint, MsgNodeHaptic, MsgResourceLoadFailed, MsgUpdateActionState, MsgUpdatePose, MsgUpdateSceneGraph, MsgUserInfo, parseEndpointFieldUri, MsgInterfaceReceiveEvent, MsgInterfaceLockResponse, MsgInterfaceUnlockResponse, MsgInterfaceRelock, MsgInterfaceRelockResponse, MsgInterfaceSendEventResponse } from '@aardvarkxr/aardvark-shared';
+import { computeUniverseFromLine, CRendererEndpoint, minIgnoringNulls, nodeTransformFromMat4, nodeTransformToMat4, scaleAxisToFit, scaleMat, translateMat, vec3MultiplyAndAdd } from '@aardvarkxr/aardvark-react';
+import { Av, AvActionState, AvConstraint, AvGrabEvent, AvGrabEventType, AvModelInstance, AvNode, AvNodeTransform, AvNodeType, AvRendererConfig, EAction, EHand, emptyActionState, EndpointAddr, endpointAddrIsEmpty, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, EVolumeType, filterActionsForGadget, getActionFromState, g_builtinModelCylinder, g_builtinModelError, g_builtinModelPanel, g_builtinModelPanelInverted, LocalUserInfo, MessageType, MsgAttachGadgetToHook, MsgDestroyGadget, MsgDetachGadgetFromHook, MsgGrabEvent, MsgInterfaceEnded, MsgInterfaceLock, MsgInterfaceLockResponse, MsgInterfaceReceiveEvent, MsgInterfaceRelock, MsgInterfaceRelockResponse, MsgInterfaceSendEvent, MsgInterfaceSendEventResponse, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgInterfaceUnlock, MsgInterfaceUnlockResponse, MsgLostEndpoint, MsgNodeHaptic, MsgResourceLoadFailed, MsgUpdateActionState, MsgUpdateSceneGraph, parseEndpointFieldUri } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3, vec4 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
+import { EndpointAddrMap } from './endpoint_addr_map';
 import { CGrabStateProcessor } from './grab_state_processor';
-import { CInterfaceProcessor, InterfaceProcessorCallbacks, InterfaceEntity } from './interface_processor';
+import { CInterfaceProcessor, InterfaceEntity, InterfaceProcessorCallbacks } from './interface_processor';
+import { TransformedVolume } from './volume_intersection';
 const equal = require( 'fast-deep-equal' );
 
 interface NodeData
@@ -261,7 +261,6 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 				this.grabEvent( m.event );
 			} );
 		this.m_endpoint.registerHandler( MessageType.NodeHaptic, this.onNodeHaptic );
-		this.m_endpoint.registerHandler( MessageType.UserInfo, this.onUserInfo );
 		this.m_endpoint.registerHandler( MessageType.LostEndpoint, this.onLostEndpoint );
 		this.m_endpoint.registerHandler( MessageType.InterfaceSendEvent, this.onInterfaceSendEvent );
 		this.m_endpoint.registerHandler( MessageType.InterfaceLock, this.onInterfaceLock );
@@ -273,42 +272,6 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 	{
 		Av().renderer.setRendererConfig(JSON.stringify(settings))
 	}
-
-	@bind
-	private onUserInfo( m: MsgUserInfo )
-	{
-		this.m_localUserInfo = m.info;
-
-		setInterval( () => 
-		{
-			this.sendPoseUpdate( "/user/head" );	
-			this.sendPoseUpdate( "/user/hand/right" );	
-			this.sendPoseUpdate( "/user/hand/left" );	
-		}, 125 );
-	}
-
-	@bind
-	private sendPoseUpdate( originPath: string )
-	{
-		let msgUpdatePose: MsgUpdatePose =
-		{
-			originPath,
-			userUuid: this.m_localUserInfo.userUuid,
-			newPose: null,
-		};
-
-		let stageFromOriginArray = Av().renderer.getUniverseFromOriginTransform( originPath );
-		if( stageFromOriginArray )
-		{
-			let stageFromOrigin = new mat4( stageFromOriginArray );
-			let rot = stageFromOrigin.toMat3().toQuat();
-			let pos = stageFromOrigin.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) );
-			msgUpdatePose.newPose = [ pos.x, pos.y, pos.z, rot.w, rot.x, rot.y, rot.z ];
-		}
-
-		this.m_endpoint.sendMessage( MessageType.UpdatePose, msgUpdatePose );
-	}
-
 
 	private forgetGadget( endpointId: number )
 	{
@@ -980,10 +943,6 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 		
 		case AvNodeType.HeadFacingTransform:
 			this.traverseHeadFacingTransform( node, defaultParent );
-			break;
-		
-		case AvNodeType.RoomMember:
-			this.traverseRoomMember( node, defaultParent );
 			break;
 		
 		case AvNodeType.Child:
@@ -1677,17 +1636,6 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 			} );
 	}
 
-	traverseRoomMember( node: AvNode, defaultParent: PendingTransform )
-	{
-		// update all the origin transforms for this remote universe that represents this room member
-		for( let remoteOriginPath in node.propMemberOrigins )
-		{
-			let remoteOriginTransform = this.getRemoteOriginTransform( node.propUniverseName, remoteOriginPath );
-			let originTransform = minimalToMat4Transform( node.propMemberOrigins[ remoteOriginPath ] );
-			remoteOriginTransform.update( [ defaultParent ], originTransform, null, null );
-		}
-	}
-	
 	traverseChild( node: AvNode, defaultParent: PendingTransform )
 	{
 		if( node.propChildAddr )

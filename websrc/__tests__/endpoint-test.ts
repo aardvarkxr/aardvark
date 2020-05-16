@@ -88,10 +88,10 @@ beforeEach( async() =>
 					}
 					break;
 
-				case MessageType.CreateRoom:
+				case MessageType.InterfaceLock:
 					{
-						sendMessage( MessageType.CreateRoomResponse, {} );
-						sendMessage( MessageType.SendRoomMessage, {} );
+						sendMessage( MessageType.InterfaceLockResponse, {} );
+						sendMessage( MessageType.InterfaceReceiveEvent, {} );
 					}
 					break;
 			}
@@ -175,7 +175,7 @@ describe( "CAardvarkEndpoint ", () =>
 		let phase = 1;
 		let done1 = new Promise( ( resolve, reject )=>
 		{
-			ep.registerAsyncHandler( MessageType.CreateRoomResponse, async ( msg: object ) =>
+			ep.registerAsyncHandler( MessageType.InterfaceLockResponse, async ( msg: object ) =>
 				{
 					phase++;
 					await new Promise( resolve => setTimeout( resolve, 500));
@@ -185,7 +185,7 @@ describe( "CAardvarkEndpoint ", () =>
 		} );
 		let done2 = new Promise( ( resolve, reject )=>
 		{
-			ep.registerHandler( MessageType.SendRoomMessage, ( msg: object ) =>
+			ep.registerHandler( MessageType.InterfaceReceiveEvent, ( msg: object ) =>
 			{
 				expect( phase ).toBe( 3 );
 				phase++;
@@ -193,7 +193,7 @@ describe( "CAardvarkEndpoint ", () =>
 			} );
 		});
 
-		ep.sendMessage( MessageType.CreateRoom, {} );
+		ep.sendMessage( MessageType.InterfaceLock, {} );
 		await Promise.all( [ done1, done2 ] );
 		expect( phase ).toBe( 4 );
 	} );

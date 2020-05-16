@@ -1,4 +1,4 @@
-import { AardvarkManifest, AardvarkPort, AuthedRequest, AvGrabEvent, AvGrabEventType, AvNode, AvNodeTransform, AvNodeType, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, EVolumeType, GadgetAuthedRequest, gadgetDetailsToId, GadgetRoomEnvelope, MessageType, MsgAttachGadgetToHook, MsgCreateRoom, MsgCreateRoomResponse, MsgDestroyGadget, MsgDestroyRoom, MsgDestroyRoomResponse, MsgDetachGadgetFromHook, MsgError, MsgGadgetStarted, MsgGeAardvarkManifestResponse, MsgGetAardvarkManifest, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgGrabberState, MsgGrabEvent, MsgInstallGadget, MsgInterfaceEnded, MsgInterfaceEvent, MsgInterfaceReceiveEvent, MsgInterfaceSendEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgLostEndpoint, MsgMasterStartGadget, MsgNewEndpoint, MsgNodeHaptic, MsgOverrideTransform, MsgResourceLoadFailed, MsgRoomMessageReceived, MsgRoomMessageReceivedResponse, MsgSaveSettings, MsgSendRoomMessage, MsgSetEndpointType, MsgSetEndpointTypeResponse, MsgSignRequest, MsgSignRequestResponse, MsgUpdateActionState, MsgUpdatePose, MsgUpdateSceneGraph, MsgUserInfo, parseEndpointFieldUri, parseEnvelope, Permission, SharedGadget, WebSocketCloseCodes } from '@aardvarkxr/aardvark-shared';
+import { AardvarkManifest, AardvarkPort, AuthedRequest, AvGrabEvent, AvGrabEventType, AvNode, AvNodeTransform, AvNodeType, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, EVolumeType, GadgetAuthedRequest, gadgetDetailsToId, MessageType, MsgAttachGadgetToHook, MsgDestroyGadget, MsgDetachGadgetFromHook, MsgError, MsgGadgetStarted, MsgGeAardvarkManifestResponse, MsgGetAardvarkManifest, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgGrabberState, MsgGrabEvent, MsgInstallGadget, MsgInterfaceEnded, MsgInterfaceEvent, MsgInterfaceReceiveEvent, MsgInterfaceSendEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgLostEndpoint, MsgMasterStartGadget, MsgNewEndpoint, MsgNodeHaptic, MsgOverrideTransform, MsgResourceLoadFailed, MsgSaveSettings, MsgSetEndpointType, MsgSetEndpointTypeResponse, MsgSignRequest, MsgSignRequestResponse, MsgUpdateActionState, MsgUpdateSceneGraph, MsgUserInfo, parseEndpointFieldUri, parseEnvelope, Permission, WebSocketCloseCodes } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import { buildPersistentHookPath, buildPersistentHookPathFromParts, HookPathParts, HookType, parsePersistentHookPath } from 'common/hook_utils';
 import * as express from 'express';
@@ -7,32 +7,10 @@ import isUrl from 'is-url';
 import * as path from 'path';
 import * as WebSocket from 'ws';
 import { persistence } from './persistence';
-import { addLocalGadget, createRoom, destroyLocalGadget, findMemberOrigins, onRoomMessage, Room, RoomMemberGadget, ServerRoomCallbacks, updateLocalGadgetHook, updateRoomPose } from './rooms';
 import { getJSONFromUri, g_localInstallPath, g_localInstallPathUri } from './serverutils';
 
 console.log( "Data directory is", g_localInstallPathUri );
 
-
-function computeRemoteGadgetId( remoteUserId: string, persistenceUuid: string )
-{
-	return `${ remoteUserId }_${ persistenceUuid }`.toLowerCase();
-}
-
-function computeRemoteUserId( roomGadgetPersistenceUuid: string, roomId: string, memberId: string )
-{
-	return `remote_${ roomGadgetPersistenceUuid }_${ roomId }_${ memberId }`.toLowerCase();
-}
-
-function computeRemoteIds( roomGadgetPersistenceUuid: string, roomId: string,
-	memberId: string, persistenceUuid: string ): [ string, string ]
-{
-	let remoteUserId = computeRemoteUserId( roomGadgetPersistenceUuid, roomId, memberId );
-	return (
-		[
-			remoteUserId,
-			computeRemoteGadgetId( remoteUserId, persistenceUuid ),
-		] );
-}
 
 interface PendingResponse
 {
@@ -459,80 +437,6 @@ class CDispatcher
 		}
 	}
 	
-	public forEachRoom( fn: ( room: Room ) => void )
-	{
-		for( let ep of this.getListForType( EndpointType.Gadget ) )
-		{
-			if( !ep.getGadgetData() )
-			{
-				continue;
-			}
-
-			for( let room of ep.getGadgetData().getRooms() )
-			{
-				fn( room );
-			}
-		}
-	}
-
-	public addRemoteGadget( roomGadgetPersistenceUuid: string, roomId: string,
-		memberId: string, gadgetInfo: SharedGadget ): Promise< number >
-	{
-		let [ remoteUserId, newGadgetPersistenceUuid ] = computeRemoteIds( roomGadgetPersistenceUuid,
-			roomId, memberId, gadgetInfo.persistenceUuid );
-
-		// parse the hook path lookig for gadget UUIDs to fix up
-		let hookToUse = gadgetInfo.hook;
-		let hookParts = parsePersistentHookPath( gadgetInfo.hook );
-		if( hookParts && hookParts.gadgetUuid )
-		{
-			hookParts.gadgetUuid = computeRemoteGadgetId( remoteUserId, hookParts.gadgetUuid );
-			hookToUse = buildPersistentHookPathFromParts( hookParts );
-		}
-
-		console.log( `server starting ${ newGadgetPersistenceUuid } on ${ hookToUse } `
-			+ `via ${ gadgetInfo.gadgetUri }` );
-		return this.tellMasterToStartGadget( gadgetInfo.gadgetUri, hookToUse, newGadgetPersistenceUuid, 
-			remoteUserId );
-	}
-
-	public destroyRemoteGadget( gadgetId: number )
-	{
-		let ep = this.getGadgetEndpoint( gadgetId );
-		if( !ep )
-		{
-			console.log( `Request to destroy remote gadget ${ gadgetId }, which does not exist` );
-			return;
-		}
-
-		ep.startDestroyGadget();
-	}
-
-	public updateRemoteGadgetHook( gadgetId: number, newHook: string )
-	{
-		let gadget = this.findGadgetById( gadgetId );
-		if( !gadget )
-		{
-			console.log( "updateRemoteGadgetHook for unknown gadget", gadgetId );
-			return;
-		}
-
-		
-		// parse the hook path lookig for gadget UUIDs to fix up
-		let hookToUse = newHook;
-		let hookParts = parsePersistentHookPath( newHook );
-		if( hookParts && hookParts.gadgetUuid )
-		{
-			hookParts.gadgetUuid = computeRemoteGadgetId( gadget.getRemoteUniversePath(),
-				hookParts.gadgetUuid );
-			hookToUse = buildPersistentHookPathFromParts( hookParts );
-		}
-		
-		// console.log( `REMOTE UPDATE gadget ${ gadget.getEndpointId() } hook path to ${ m.newHook }` );
-		gadget.clearGrabHook();
-		gadget.attachToHook( hookToUse );
-	}
-
 	public sendMessageToAllEndpointsOfType( ept: EndpointType, type: MessageType, m: object )
 	{
 		this.sendToAllEndpointsOfType( ept,
@@ -544,28 +448,6 @@ class CDispatcher
 		} );
 	}
 
-	public gatherSharedGadgets(): SharedGadget[]
-	{
-		let gadgets: SharedGadget[] = [];
-
-		for( let ep of this.getListForType( EndpointType.Gadget ) )
-		{
-			if( !ep.getGadgetData() || !ep.getGadgetData().getShareInRooms() )
-			{
-				continue;
-			}
-
-			let gadgetData = ep.getGadgetData();
-			gadgets.push(
-				{
-					persistenceUuid: gadgetData.getPersistenceUuid(),
-					gadgetUri: gadgetData.getUri(),
-					hook: gadgetData.getHookPathToShare(),
-				} );
-		}
-
-		return gadgets;
-	}
 }
 
 interface HookNodeData
@@ -597,12 +479,6 @@ function printableHook( hook : string | GadgetHookAddr ): string
 	}
 }
 
-interface RoomDetails
-{
-	room: Room;
-	callbacks: ServerRoomCallbacks;
-}
-
 class CGadgetData
 {
 	private m_gadgetUri: string;
@@ -621,7 +497,6 @@ class CGadgetData
 	private m_nodes: { [ nodeId: number ]: AvNode } = {}
 	private m_nodesByPersistentName: { [ persistentName: string ]: AvNode } = {}
 	private m_gadgetBeingDestroyed = false;
-	private m_roomDetails: { [ roomId: string ] : RoomDetails } = {};
 	private m_updateTimer: NodeJS.Timeout = null;
 
 
@@ -671,19 +546,6 @@ class CGadgetData
 
 	public onConnectionClosed()
 	{
-		for( let roomId in this.m_roomDetails )
-		{
-			// destroy all the remote gadgets
-			for( let member of this.m_roomDetails[ roomId ].room.members )
-			{
-				for( let gadget of member.gadgets )
-				{
-					this.m_dispatcher.destroyRemoteGadget( gadget.gadgetId );
-				}
-			}
-		}
-		this.m_roomDetails = {};
-
 		this.m_ep = null;
 	}
 
@@ -697,33 +559,8 @@ class CGadgetData
 	public getHookNodes() { return this.m_hookNodes; }
 	public getPersistenceUuid() { return this.m_persistenceUuid; }
 	public getRemoteUniversePath() { return this.m_remoteUniversePath; }
-	public getShareInRooms() 
-	{ 
-		return ( typeof this.m_manifest.aardvark?.shareInRooms == "boolean" ? 
-			this.m_manifest.aardvark?.shareInRooms : true )
-			&& !this.m_remoteUniversePath; 
-	}
 	public isMaster() { return this.m_persistenceUuid == "master"; }
 	public isBeingDestroyed() { return this.m_gadgetBeingDestroyed; }
-
-	public getRooms(): Room[] 
-	{ 
-		let res = [];
-		for( let roomDetails of Object.values( this.m_roomDetails ) )
-		{
-			res.push( roomDetails.room );
-		}
-		return res;
-	}
-
-	private getOriginsForRoomMember( roomId: string, memberId: string )
-	{
-		let room = this.m_roomDetails[roomId].room;
-		if( !room )
-			return null;
-
-		return findMemberOrigins( room, memberId );
-	}
 
 	public get debugName()
 	{
@@ -751,7 +588,6 @@ class CGadgetData
 	public clearGrabHook()
 	{
 		this.m_grabHook = null;
-		this.sendRoomHookUpdate();
 	}
 
 	public async attachToHook( hookPath: string )
@@ -793,158 +629,6 @@ class CGadgetData
 		{
 			// if we've already send a scene graph, send it again with the new hook
 			this.sendSceneGraphToRenderer();
-		}
-
-		this.sendRoomHookUpdate();
-	}
-
-	private sendRoomHookUpdate() 
-	{
-		if ( !this.getRemoteUniversePath() ) 
-		{
-			this.m_dispatcher.forEachRoom( ( room ) =>
-			{
-				updateLocalGadgetHook( room, this.getPersistenceUuid(), this.getHookPathToShare() );
-			} );
-
-			// console.log( 'Telling remote about hook change ' + msgUpdateHook.hook );
-		}
-	}
-
-	@bind
-	public onCreateRoom( env: Envelope, m: MsgCreateRoom )
-	{
-		console.log( `onCreateRoom ${ JSON.stringify( m ) }` );
-		let response: MsgCreateRoomResponse =
-		{
-		};
-
-		if( this.m_roomDetails[ m.roomId ] )
-		{
-			response.error = `Room "${ m.roomId }" already exists on this gadget`;
-		}
-		else
-		{
-			try
-			{
-				let callbacks: ServerRoomCallbacks =
-				{
-					sendMessage: ( message: GadgetRoomEnvelope ) => 
-					{
-						let msg: MsgSendRoomMessage = 
-						{
-							roomId: m.roomId,
-							message,
-						}
-						this.m_ep.sendMessage( MessageType.SendRoomMessage, msg );
-					},
-					getSharedGadgets: () => 
-					{ 
-						return this.m_dispatcher.gatherSharedGadgets();
-					},
-					addRemoteGadget: ( memberId: string, gadget: RoomMemberGadget ) => 
-					{
-						return this.m_dispatcher.addRemoteGadget( this.m_persistenceUuid, m.roomId,
-							memberId, gadget );
-					},
-					removeRemoteGadget: ( gadgetId: number ) => 
-					{
-						this.m_dispatcher.destroyRemoteGadget( gadgetId );
-					},
-					updateRemoteGadgetHook: ( gadgetId: number, 
-						newHook: string ) => 
-					{
-						this.m_dispatcher.updateRemoteGadgetHook( gadgetId, newHook );
-					},
-
-					updatePoses: () => 
-					{
-						this.scheduleSceneGraphRefresh();
-					},
-		
-				}
-				
-				let room = createRoom( m.roomId, callbacks );
-				this.m_roomDetails[ m.roomId ] = { room, callbacks };
-			}
-			catch( e )
-			{
-				response.error = `${ e }`;
-			}
-		}
-		this.m_ep.sendReply( MessageType.CreateRoomResponse, response, env );
-	}
-
-	@bind
-	public onDestroyRoom( env: Envelope, m: MsgDestroyRoom )
-	{
-		console.log( `onCreateRoom ${ JSON.stringify( m ) }` );
-		let response: MsgDestroyRoomResponse =
-		{
-		};
-
-		let room = this.m_roomDetails[ m.roomId ]?.room;
-		if( !room )
-		{
-			response.error = `Room ${ m.roomId } does not exist on this gadget`;
-		}
-		else
-		{
-			try
-			{
-				// destroy all the remote gadgets
-				for( let member of room.members )
-				{
-					for( let gadget of member.gadgets )
-					{
-						this.m_dispatcher.destroyRemoteGadget( gadget.gadgetId );
-					}
-				}
-
-				// discard the room
-				delete this.m_roomDetails[ m.roomId ];
-			}
-			catch( e )
-			{
-				response.error = `${ e }`;
-			}
-		}
-		this.m_ep.sendReply( MessageType.DestroyRoomResponse, response, env );
-	}
-
-	@bind
-	public onRoomMessageReceived( env: Envelope, m: MsgRoomMessageReceived )
-	{
-		console.log( `onRoomMessageReceived on ${ this.getName() }: ${ JSON.stringify( m ) }` );
-		let response: MsgRoomMessageReceivedResponse =
-		{
-		};
-
-		let room = this.m_roomDetails[ m.roomId ]?.room;
-		if( !room )
-		{
-			response.error = `Room ${ m.roomId } does not exist on this gadget`;
-		}
-		else
-		{
-			try
-			{
-				onRoomMessage( room, m.message );
-			}
-			catch( e )
-			{
-				response.error = `${ e }`;
-			}
-		}
-		this.m_ep.sendReply( MessageType.RoomMessageReceivedResponse, response, env );
-	}
-
-	public sendUpdatedPose( m: MsgUpdatePose )
-	{
-		for( let roomId in this.m_roomDetails )
-		{
-			let room = this.m_roomDetails[roomId].room;
-			updateRoomPose( room, m.originPath, m.newPose );
 		}
 	}
 
@@ -1154,13 +838,6 @@ class CGadgetData
 				{
 					node.propModelUri = this.m_gadgetUri + "/" + node.propModelUri;
 				}
-				break;
-
-			case AvNodeType.RoomMember:
-				console.log( "Updating poses on RoomMember" );
-				node.propMemberOrigins = this.getOriginsForRoomMember( node.propRoomId, node.propMemberId );
-				node.propUniverseName = computeRemoteUserId( this.getPersistenceUuid(),
-					node.propRoomId, node.propMemberId );
 				break;
 
 			default:
@@ -1397,8 +1074,6 @@ class CEndpoint
 		this.registerEnvelopeHandler( MessageType.DestroyGadget, this.onDestroyGadget );
 		this.registerEnvelopeHandler( MessageType.InstallGadget, this.onInstallGadget );
 		this.registerEnvelopeHandler( MessageType.SignRequest, this.onSignRequest );
-
-		this.registerEnvelopeHandler( MessageType.UpdatePose, this.onUpdatePose );
 	}
 
 	public getId() { return this.m_id; }
@@ -1627,11 +1302,6 @@ class CEndpoint
 			this.m_gadgetData = new CGadgetData( this, m.gadgetUri, m.initialHook, m.persistenceUuid,
 				m.remoteUniversePath, this.m_dispatcher );
 
-			this.registerEnvelopeHandler( MessageType.CreateRoom, this.m_gadgetData.onCreateRoom );
-			this.registerEnvelopeHandler( MessageType.DestroyRoom, this.m_gadgetData.onDestroyRoom );
-			this.registerEnvelopeHandler( MessageType.RoomMessageReceived, 
-				this.m_gadgetData.onRoomMessageReceived );
-		
 			// Don't reply to the SetEndpointType until we've inited the gadget.
 			// This loads the manifest for the gadget and has the chance to verify
 			// some stuff.
@@ -1653,22 +1323,9 @@ class CEndpoint
 				this.m_dispatcher.startAllGadgets();
 			}
 
-			// Tell any rooms this user is in about the new gadget
-			if( this.m_gadgetData.getShareInRooms() )
-			{
-				let localGadget: SharedGadget =
-				{
-					gadgetUri: this.getGadgetData().getUri(),
-					persistenceUuid: this.getGadgetData().getPersistenceUuid(),
-					hook: this.getGadgetData().getHookPathToShare(),
-				};
-
-				this.m_dispatcher.forEachRoom( ( room ) =>
-				{
-					addLocalGadget( room, localGadget );
-				} );
-			}
-		} else if (this.getType() == EndpointType.Renderer) {
+		} 
+		else if (this.getType() == EndpointType.Renderer) 
+		{
 			msgResponse.settings = persistence.getRendererSettings();
 		}
 
@@ -1889,16 +1546,6 @@ class CEndpoint
 		this.sendReply( MessageType.SignRequestResponse, msgRes, env );
 	}
 
-	@bind
-	private onUpdatePose( env: Envelope, m: MsgUpdatePose )
-	{
-		let gadgetEps = this.m_dispatcher.getListForType( EndpointType.Gadget );
-		for( let gadgetEp of gadgetEps )
-		{
-			gadgetEp?.m_gadgetData.sendUpdatedPose( m );
-		}
-	}
-
 	@bind private onDestroyGadget( env: Envelope, m: MsgDestroyGadget )
 	{
 		let ep = this.m_dispatcher.getGadgetEndpoint( m.gadgetId );
@@ -1915,11 +1562,6 @@ class CEndpoint
 	{
 		if( this.m_gadgetData )
 		{
-			this.m_dispatcher.forEachRoom( ( room ) =>
-			{
-				destroyLocalGadget( room, this.getGadgetData().getPersistenceUuid() );
-			} );
-
 			this.m_gadgetData.destroyResources();
 		}
 		this.m_ws.close( WebSocketCloseCodes.UserDestroyedGadget );
