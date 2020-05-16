@@ -1,9 +1,9 @@
-import { AvGadget, AvStandardGrabbable, AvPrimitive, AvLine, PrimitiveYOrigin, PrimitiveZOrigin, PrimitiveType, AvTransform, AvGrabbable, AvModelBoxHandle, AvHook, HookHighlight, HookInteraction, HighlightType, DropStyle, AvInterfaceEntity, ActiveInterface, MoveableComponent, AvComposedEntity } from '@aardvarkxr/aardvark-react';
-import { g_builtinModelBox, AvNodeTransform, g_builtinModelCylinder, EndpointAddr, endpointAddrToString, endpointAddrsMatch, AvVector, EVolumeType, AvVolume } from '@aardvarkxr/aardvark-shared';
+import { ActiveInterface, AvComposedEntity, AvGadget, AvInterfaceEntity, AvLine, AvPrimitive, AvStandardGrabbable, AvTransform, MoveableComponent, PrimitiveType, PrimitiveYOrigin, PrimitiveZOrigin } from '@aardvarkxr/aardvark-react';
+import { AvNodeTransform, AvVolume, endpointAddrToString, EVolumeType, g_builtinModelBox } from '@aardvarkxr/aardvark-shared';
+import { vec2 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
-import { vec2 } from '@tlaukkan/tsm';
 
 
 function vec2FromAvTransformPosition( transform: AvNodeTransform )
