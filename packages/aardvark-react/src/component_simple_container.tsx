@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { EndpointAddr, AvNodeTransform, endpointAddrToString, InitialInterfaceLock, endpointAddrsMatch } from '../../aardvark-shared/src/aardvark_protocol';
+import { EndpointAddr, AvNodeTransform, endpointAddrToString, InitialInterfaceLock, endpointAddrsMatch } from '@aardvarkxr/aardvark-shared';
 import { EntityComponent } from './aardvark_composed_entity';
 import { InterfaceProp, ActiveInterface } from './aardvark_interface_entity';
 import bind from 'bind-decorator';
