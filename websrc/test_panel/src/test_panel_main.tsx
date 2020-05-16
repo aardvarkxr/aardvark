@@ -51,12 +51,12 @@ class TestPanel extends React.Component< {}, TestPanelState >
 				AvGadget.instance().listenForActionStateWithComponent( EHand.Invalid, EAction.Detach, this ),
 			];
 
-			let params = AvGadget.instance().findInitialInterface( k_TestPanelInterface )?.params as TestSettings;
-			this.onSettingsReceived( params );			
+			AvGadget.instance().registerForSettings( this.onSettingsReceived );
 		}
 		else
 		{
-			AvGadget.instance().registerForSettings( this.onSettingsReceived );
+			let params = AvGadget.instance().findInitialInterface( k_TestPanelInterface )?.params as TestSettings;
+			this.onSettingsReceived( params );			
 		}
 	}
 
