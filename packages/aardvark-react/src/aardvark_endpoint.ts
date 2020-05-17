@@ -1,8 +1,5 @@
+import { AardvarkManifest, AardvarkPort, EndpointAddr, EndpointType, Envelope, MessageType, MsgGeAardvarkManifestResponse, MsgGetAardvarkManifest, MsgSetEndpointType, MsgSetEndpointTypeResponse, parseEnvelope, WebSocketCloseCodes } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
-import { AardvarkManifest, AvGrabEvent, EndpointType, MessageType, EndpointAddr,
-	Envelope, parseEnvelope, MsgSetEndpointType, MsgGetAardvarkManifest, 
-	MsgGeAardvarkManifestResponse, MsgGrabEvent, 
-	MsgSetEndpointTypeResponse, AardvarkPort, WebSocketCloseCodes } from '@aardvarkxr/aardvark-shared';
 
 export interface MessageHandler
 {
@@ -222,16 +219,6 @@ export class CAardvarkEndpoint
 			payload: JSON.stringify( msg ),
 		}
 		this.m_ws.send( JSON.stringify( env ) );
-	}
-
-	public sendGrabEvent( event: AvGrabEvent )
-	{
-		let msg: MsgGrabEvent =
-		{
-			event,
-		};
-
-		this.sendMessage( MessageType.GrabEvent, msg );
 	}
 
 	public getGadgetManifest( gadgetUri: string ): Promise<AardvarkManifest>

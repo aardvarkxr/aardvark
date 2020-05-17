@@ -1,9 +1,8 @@
-import { computeUniverseFromLine, CRendererEndpoint, minIgnoringNulls, nodeTransformFromMat4, nodeTransformToMat4, scaleAxisToFit, scaleMat, translateMat, vec3MultiplyAndAdd } from '@aardvarkxr/aardvark-react';
-import { Av, AvActionState, AvConstraint, AvGrabEvent, AvGrabEventType, AvModelInstance, AvNode, AvNodeTransform, AvNodeType, AvRendererConfig, EAction, EHand, emptyActionState, EndpointAddr, endpointAddrIsEmpty, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, EVolumeType, filterActionsForGadget, getActionFromState, g_builtinModelCylinder, g_builtinModelError, g_builtinModelPanel, g_builtinModelPanelInverted, LocalUserInfo, MessageType, MsgAttachGadgetToHook, MsgDestroyGadget, MsgDetachGadgetFromHook, MsgGrabEvent, MsgInterfaceEnded, MsgInterfaceLock, MsgInterfaceLockResponse, MsgInterfaceReceiveEvent, MsgInterfaceRelock, MsgInterfaceRelockResponse, MsgInterfaceSendEvent, MsgInterfaceSendEventResponse, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgInterfaceUnlock, MsgInterfaceUnlockResponse, MsgLostEndpoint, MsgNodeHaptic, MsgResourceLoadFailed, MsgUpdateActionState, MsgUpdateSceneGraph, parseEndpointFieldUri } from '@aardvarkxr/aardvark-shared';
+import { computeUniverseFromLine, CRendererEndpoint, minIgnoringNulls, nodeTransformFromMat4, nodeTransformToMat4, scaleAxisToFit, scaleMat, vec3MultiplyAndAdd } from '@aardvarkxr/aardvark-react';
+import { Av, AvActionState, AvConstraint, AvModelInstance, AvNode, AvNodeTransform, AvNodeType, AvRendererConfig, EHand, emptyActionState, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, EVolumeType, filterActionsForGadget, g_builtinModelCylinder, g_builtinModelError, g_builtinModelPanel, g_builtinModelPanelInverted, MessageType, MsgInterfaceEnded, MsgInterfaceLock, MsgInterfaceLockResponse, MsgInterfaceReceiveEvent, MsgInterfaceRelock, MsgInterfaceRelockResponse, MsgInterfaceSendEvent, MsgInterfaceSendEventResponse, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgInterfaceUnlock, MsgInterfaceUnlockResponse, MsgLostEndpoint, MsgNodeHaptic, MsgResourceLoadFailed, MsgUpdateActionState, MsgUpdateSceneGraph, parseEndpointFieldUri } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3, vec4 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
 import { EndpointAddrMap } from './endpoint_addr_map';
-import { CGrabStateProcessor } from './grab_state_processor';
 import { CInterfaceProcessor, InterfaceEntity, InterfaceProcessorCallbacks } from './interface_processor';
 import { TransformedVolume } from './volume_intersection';
 const equal = require( 'fast-deep-equal' );
@@ -13,7 +12,6 @@ interface NodeData
 	lastModelUri?: string;
 	lastFailedModelUri?: string;
 	modelInstance?: AvModelInstance;
-	grabberProcessor?: CGrabStateProcessor;
 	lastParentFromNode?: mat4;
 	constraint?: AvConstraint;
 	lastFlags?: ENodeFlags;
@@ -239,14 +237,10 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 	private m_nodeToNodeAnchors: { [ nodeGlobalId: string ]: NodeToNodeAnchor_t } = {};
 	private m_hooksInUse: EndpointAddr[] = [];
 	private m_endpoint: CRendererEndpoint = null;
-	private m_grabEventsToProcess: AvGrabEvent[] = [];
-	private m_grabEventTimer: number = -1;
 	private m_frameNumber: number = 1;
 	private m_actionState: { [ hand: number ] : AvActionState } = {};
 	private m_dirtyGadgetActions = new Set<number>();
-	private m_localUserInfo: LocalUserInfo;
 	private m_remoteUniverse: { [ universeUuid: string ]: RemoteUniverse } = {};
-	private m_grabsInProgress: string[] = [];
 	private m_interfaceProcessor = new CInterfaceProcessor( this );
 	private m_interfaceEntities: AvNode[] = [];
 	private m_entityParentTransforms = new EndpointAddrMap<PendingTransform >();
@@ -255,11 +249,6 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 	{
 		this.m_endpoint = new CRendererEndpoint( this.onEndpointOpen );
 		this.m_endpoint.registerHandler( MessageType.UpdateSceneGraph, this.onUpdateSceneGraph )
-		this.m_endpoint.registerHandler( MessageType.GrabEvent, 
-			( m: MsgGrabEvent ) =>
-			{
-				this.grabEvent( m.event );
-			} );
 		this.m_endpoint.registerHandler( MessageType.NodeHaptic, this.onNodeHaptic );
 		this.m_endpoint.registerHandler( MessageType.LostEndpoint, this.onLostEndpoint );
 		this.m_endpoint.registerHandler( MessageType.InterfaceSendEvent, this.onInterfaceSendEvent );
@@ -467,7 +456,6 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 		Av().renderer.renderList( this.m_renderList );
 
 		this.updateInput();
-		this.updateGrabberIntersections();
 		this.updateInterfaceProcessor();
 
 		for( let gadgetId of this.m_dirtyGadgetActions )
@@ -537,94 +525,6 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 		}
 	}
 
-	private updateGrabberIntersections()
-	{
-		//console.log( "updating grabber intersections" );
-		let states = Av().renderer.updateGrabberIntersections();
-		for( let state of states )
-		{
-			let nodeData = this.getNodeDataByEpa( state.grabberId );
-			if( !nodeData.grabberProcessor )
-			{
-				nodeData.grabberProcessor = new CGrabStateProcessor(
-					{
-						sendGrabEvent: ( event: AvGrabEvent ) => 
-						{ 
-							this.sendGrabEvent( event );
-						},
-						getActionState: ( hand: EHand, action: EAction ) =>
-						{
-							return getActionFromState( action, this.m_actionState[ hand ] );
-						},
-						getCurrentGrabber: this.getCurrentGrabber,
-						getUniverseFromNode: this.getLastUniverseFromNode,
-						grabberEpa: state.grabberId
-					} );
-			}
-
-			// figure out which handles are only here to detect proximity
-			for( let intersection of state.grabbables ?? [] )
-			{
-				let handleData = this.getNodeDataByEpa( intersection.handleId );
-				if( handleData && typeof handleData.lastFlags === "number" )
-				{
-					intersection.handleFlags = handleData.lastFlags;
-				}
-				else
-				{
-					intersection.handleFlags = 0;
-				}
-
-				let grabbableData = this.getNodeDataByEpa( intersection.grabbableId );
-				if( grabbableData && typeof grabbableData.lastFlags === "number" )
-				{
-					intersection.grabbableFlags = grabbableData.lastFlags;
-				}
-				else
-				{
-					intersection.grabbableFlags = 0;
-				}
-
-				intersection.interfaces = grabbableData?.lastNode.propInterfaces ?? [ "aardvark-gadget@1" ];
-
-				let grabbableIdStr = endpointAddrToString( intersection.grabbableId );
-				let anchor = this.m_nodeToNodeAnchors[ grabbableIdStr ];
-				if( anchor )
-				{
-					if( anchor.anchorToRestore )
-					{
-						// console.log( `Figuring out current hook for ${ grabbableIdStr } - anchorToRestore=${ endpointAddrToString( anchor.anchorToRestore.parentGlobalId ) }` );
-						intersection.currentHook = anchor.anchorToRestore.parentGlobalId;
-					}
-					else
-					{
-						let possibleHookData = this.getNodeDataByEpa( anchor.parentGlobalId );
-						if( possibleHookData.lastNode 
-							&& possibleHookData.lastNode.type == AvNodeType.Hook )
-						{
-							// console.log( `Figuring out current hook for ${ grabbableIdStr } - Using parent ${ endpointAddrToString( anchor.parentGlobalId ) }` );
-							intersection.currentHook = anchor.parentGlobalId;
-						}
-						// else
-						// {
-						// 	console.log( `Figuring out current hook for ${ grabbableIdStr } - No current hook` );
-						// }
-					}
-				}
-			}
-
-			// Include interfaces for all the hooks
-			for( let hook of state.hooks ?? [] )
-			{
-				let hookData = this.getNodeDataByEpa( hook.hookId );
-				hook.interfaces = hookData?.lastNode?.propInterfaces ?? [ "aardvark-gadget@1" ];
-				hook.hookFlags = hookData?.lastFlags ?? 0;
-			}
-
-			nodeData.grabberProcessor.onGrabberIntersections( state );
-		}
-	}
-
 	private updateInterfaceProcessor()
 	{
 		let entities: InterfaceEntity[] = [];
@@ -685,41 +585,6 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 		}
 
 		this.m_interfaceProcessor.processFrame( entities );
-	}
-
-	private sendGrabEvent( event: AvGrabEvent )
-	{
-		if( event.type == AvGrabEventType.EndGrab )
-		{
-			// if we're ending a grab with no hook for a tethered thing, put us back to the old hook
-			// and transform
-			let grabbableIdStr = endpointAddrToString( event.grabbableId );
-			let oldAnchor = this.m_nodeToNodeAnchors[ grabbableIdStr ];
-			if( oldAnchor && oldAnchor.anchorToRestore && !event.hookId )
-			{
-				event.hookId = oldAnchor.anchorToRestore.parentGlobalId;
-				event.hookFromGrabbable = 
-					nodeTransformFromMat4( oldAnchor.anchorToRestore.parentFromGrabbable );
-			}
-		}
-
-		this.m_grabEventsToProcess.push( event );
-		if( this.m_grabEventTimer == -1 )
-		{
-			this.m_grabEventTimer = window.setTimeout( () => 
-			{
-				let events = this.m_grabEventsToProcess;
-				this.m_grabEventsToProcess = [];
-				this.m_grabEventTimer = -1;
-				for( let event of events )
-				{
-					this.grabEvent( event );
-				}
-
-			})
-		}
-
-		this.m_endpoint.sendGrabEvent( event );
 	}
 
 	getNodeData( node: AvNode ): NodeData
@@ -794,31 +659,6 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 					flags: ENodeFlags.Visible,
 					globalId: { type: EndpointType.Node, endpointId: root.root.globalId.endpointId, nodeId: 0 },
 					children: [ root.root ],
-				}
-			}
-
-			if( root.hook )
-			{
-				let rootGrabbable;
-				if( root.root.type == AvNodeType.Grabbable 
-					&& root.root.id != 0 )
-				{
-					rootGrabbable = root.root;
-				}
-
-				let rootGrabInProgress = -1 != this.m_grabsInProgress.indexOf( 
-					endpointAddrToString( rootNode.globalId ) );
-				let grabbableGrabInProgress = rootGrabbable && -1 != this.m_grabsInProgress.indexOf(
-					endpointAddrToString( rootGrabbable.globalId ) );
-
-				if( !rootGrabInProgress && !grabbableGrabInProgress )
-				{
-					this.setHookOrigin( root.hook, rootNode, root.hookFromGadget );
-					if( rootGrabbable )
-					{
-						// grabbable nodes are what need their origin set
-						this.setHookOrigin( root.hook, root.root, root.hookFromGadget );
-					}
 				}
 			}
 
@@ -917,22 +757,6 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 			this.traversePanel( node, defaultParent );
 			break;
 
-		case AvNodeType.Grabbable:
-			this.traverseGrabbable( node, defaultParent );
-			break;
-
-		case AvNodeType.Handle:
-			this.traverseHandle( node, defaultParent );
-			break;
-
-		case AvNodeType.Grabber:
-			this.traverseGrabber( node, defaultParent );
-			break;
-
-		case AvNodeType.Hook:
-			this.traverseHook( node, defaultParent );
-			break;
-		
 		case AvNodeType.Line:
 			this.traverseLine( node, defaultParent );
 			break;
@@ -1260,321 +1084,9 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 		}
 	}
 
-	traverseGrabbable( node: AvNode, defaultParent: PendingTransform )
-	{
-		let nodeData = this.getNodeData( node );
-		let nodeIdStr = endpointAddrToString( node.globalId );
-		if( !this.m_nodeToNodeAnchors.hasOwnProperty( nodeIdStr ) )
-		{
-			if( nodeData.lastParentFromNode )
-			{
-				this.updateTransform( node.globalId, defaultParent, nodeData.lastParentFromNode, null );
-			}
-			else if( node.propTransform )
-			{
-				let parentFromNode = nodeTransformToMat4( node.propTransform );
-				this.updateTransform( node.globalId, defaultParent, parentFromNode, 
-					( universeFromNode: mat4 ) =>
-					{
-						this.preserveTransform( node, null, defaultParent, universeFromNode, parentFromNode );
-					} );
-			}
-		}
-		else
-		{
-			let parentInfo = this.m_nodeToNodeAnchors[ nodeIdStr ];
-
-			if( parentInfo.parentGlobalId )
-			{
-				let parentNodeData = this.getNodeDataByEpa( parentInfo.parentGlobalId );
-				if( parentNodeData.nodeType == AvNodeType.Grabber )
-				{
-					this.m_currentRoot.wasGadgetDraggedLastFrame = true;
-				}
-			}
-
-			let hand = this.m_handDeviceForNode[ endpointAddrToString( parentInfo.parentGlobalId ) ];
-			if( hand != undefined )
-			{
-				this.m_currentHand = hand;
-			}
-
-			if( parentInfo.parentGlobalId.type == EndpointType.Node )
-			{
-				this.addHookInUse( parentInfo.parentGlobalId );
-			}
-			let grabberTransform = this.getTransform( parentInfo.parentGlobalId );
-
-			let constraint = node.propConstraint;
-			if( parentInfo.handleGlobalId )
-			{
-				let handleNodeData = this.getNodeDataByEpa( parentInfo.handleGlobalId );
-				if( handleNodeData.constraint )
-				{
-					constraint = handleNodeData.constraint;
-				}
-			}
-
-			if( !constraint || !defaultParent )
-			{
-				// this is a simple grabbable that is transformed by its grabber directly
-				this.updateTransform( node.globalId, grabberTransform, 
-					parentInfo.parentFromGrabbable, 
-					( universeFromNode: mat4 ) =>
-					{
-						if( parentInfo.state == AnchorState.Grabbed )
-						{
-							this.preserveTransform( node, parentInfo.parentGlobalId, grabberTransform, 
-								universeFromNode );	
-						}
-					} );
-			}
-			else
-			{
-				// this is a constrained grabbable that combines its parent's pose, the
-				// constraints, and its grabber. We need a callback when it's time to compute
-				// the transform
-				this.updateTransformWithCompute( node.globalId,
-					[ defaultParent, grabberTransform],
-					mat4.identity, null,
-					( universeFromParents: mat4[], unused: mat4) =>
-					{
-						// grabbable - the grabbable node itself
-						// parent - the grabbable node's parent in the scene graph
-						// grabber - the grabber node
-						// grabbable origin - the origin of the grabbable for purposes of constraints.
-						//		This may be the same as the parent, but if there was any kind of
-						//		previous grabbing and dragging of the grabbable, this would include that
-						//		previous transform. 
-						let grabberFromGrabbable = parentInfo.parentFromGrabbable;
-						let grabPoint = grabberFromGrabbable.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) );
-						let universeFromGrabber = universeFromParents[1];
-						let universeFromParent = universeFromParents[0];
-						let universeFromGrabbableOrigin = universeFromParent;
-						let parentFromGrabbableOrigin = mat4.identity;
-						if( parentInfo.grabbableParentFromGrabbableOrigin )
-						{
-							universeFromGrabbableOrigin = mat4.product( universeFromParent, 
-								parentInfo.grabbableParentFromGrabbableOrigin, new mat4() );
-							parentFromGrabbableOrigin = parentInfo.grabbableParentFromGrabbableOrigin;
-						}
-						let grabbableOriginFromUniverse = universeFromGrabbableOrigin.copy().inverse();
-						
-						let grabberPositionInGrabbableOrigin = new vec3(
-							grabbableOriginFromUniverse.multiplyVec4( 
-								universeFromGrabber.multiplyVec4( grabPoint ) ).xyz );
-						
-						if( constraint.minX != undefined )
-						{
-							grabberPositionInGrabbableOrigin.x = Math.max( constraint.minX, 
-								grabberPositionInGrabbableOrigin.x );
-						}
-						if( constraint.maxX  != undefined )
-						{
-							grabberPositionInGrabbableOrigin.x = Math.min( constraint.maxX, 
-								grabberPositionInGrabbableOrigin.x );
-						}
-						if( constraint.minY != undefined )
-						{
-							grabberPositionInGrabbableOrigin.y = Math.max( constraint.minY, 
-								grabberPositionInGrabbableOrigin.y );
-						}
-						if( constraint.maxY != undefined )
-						{
-							grabberPositionInGrabbableOrigin.y = Math.min( constraint.maxY, 
-								grabberPositionInGrabbableOrigin.y );
-						}
-						if( constraint.minZ != undefined )
-						{
-							grabberPositionInGrabbableOrigin.z = Math.max( constraint.minZ, 
-								grabberPositionInGrabbableOrigin.z );
-						}
-						if( constraint.maxZ != undefined )
-						{
-							grabberPositionInGrabbableOrigin.z = Math.min( constraint.maxZ, 
-								grabberPositionInGrabbableOrigin.z );
-						}
-						let parentFromGrabbable = mat4.product( parentFromGrabbableOrigin, 
-							translateMat( grabberPositionInGrabbableOrigin ), new mat4() );
-						let universeFromNode = mat4.product( universeFromParent, parentFromGrabbable, new mat4() );
-						this.preserveTransform( node, parentInfo.parentGlobalId, defaultParent,
-							universeFromNode, parentFromGrabbable );
-						return universeFromNode;
-					} );
-			}
-		}
-	}
-
-	private preserveTransform( node: AvNode, grabberGlobalId: EndpointAddr, 
-		parent: PendingTransform, universeFromNode: mat4, parentFromNode?: mat4 )
-	{
-		if( 0 == ( node.flags & ( ENodeFlags.PreserveGrabTransform | ENodeFlags.NotifyOnTransformChange ) ) )
-			return;
-
-		if( !parentFromNode )
-		{
-			parentFromNode = universeFromNode;
-			if( parent )
-			{
-				let parentFromUniverse = parent.getUniverseFromNode().copy().inverse();
-				parentFromNode = mat4.product( parentFromUniverse, universeFromNode, new mat4() );
-			}	
-		}
-
-		if( node.flags & ENodeFlags.PreserveGrabTransform )
-		{
-			// console.log( `preserveTransform for ${ endpointAddrToString( node.globalId ) } `
-			// 	+ `setting lastParentFromNode` );
-			let nodeData = this.getNodeData( node );
-			nodeData.lastParentFromNode = parentFromNode;
-		}
-
-		if( node.flags & ENodeFlags.NotifyOnTransformChange )
-		{
-			this.sendGrabEvent( 
-				{
-					type: AvGrabEventType.TransformUpdated,
-					grabbableId: node.globalId,
-					grabberId: grabberGlobalId,
-					parentFromNode: nodeTransformFromMat4( parentFromNode ),
-					universeFromNode: nodeTransformFromMat4( universeFromNode ),
-				}
-			)
-		}
-	}
-
 	getCurrentNodeOfType( type: AvNodeType ): AvNode
 	{
 		return this.m_currentNodeByType[ type ]?.[ this.m_currentNodeByType[ type ].length - 1 ];
-	}
-
-	traverseHandle( node: AvNode, defaultParent: PendingTransform )
-	{
-		if ( !node.propVolume )
-		{
-			return;
-		}
-	
-		let nodeData = this.getNodeData( node );
-
-		if( node.propConstraint )
-		{
-			nodeData.constraint = node.propConstraint;
-		}
-
-		let grabbableGlobalId = this.getCurrentNodeOfType( AvNodeType.Grabbable )?.globalId;
-		let hand = this.m_currentHand;
-		this.updateTransform( node.globalId, defaultParent, null,
-			( universeFromNode: mat4 ) =>
-		{
-			if( node.flags & ENodeFlags.Remote )
-			{
-				// remote handles aren't active
-				return;
-			}
-
-			switch( node.propVolume.type )
-			{
-				case EVolumeType.Sphere:
-					Av().renderer.addGrabbableHandle_Sphere( grabbableGlobalId, node.globalId,
-						universeFromNode.all(), 
-						node.propVolume.radius, hand );
-					break;
-
-				case EVolumeType.ModelBox:
-					if( nodeData.lastFailedModelUri != node.propVolume.uri )
-					{
-						try
-						{
-							Av().renderer.addGrabbableHandle_ModelBox( grabbableGlobalId, node.globalId,
-								universeFromNode.all(), 
-								node.propVolume.uri, hand );
-						}
-						catch( e )
-						{
-							nodeData.lastFailedModelUri = node.propVolume.uri;
-							let m: MsgResourceLoadFailed =
-							{
-								nodeId: node.globalId,
-								resourceUri: node.propVolume.uri,
-								error: e.message,
-							};
-			
-							this.m_endpoint.sendMessage( MessageType.ResourceLoadFailed, m );
-						}
-					}
-					break;
-
-				default:
-					throw "unsupported volume type";
-			}
-		} );
-	}
-
-	traverseGrabber(node: AvNode, defaultParent: PendingTransform )
-	{
-		if ( !node.propVolume )
-		{
-			return;
-		}
-
-		let grabberGlobalId = node.globalId;
-		let grabberHand = this.m_currentHand;
-		this.updateTransform( node.globalId, defaultParent, null,
-			( universeFromNode: mat4 ) =>
-		{
-			if( node.flags & ENodeFlags.Remote )
-			{
-				// remote grabbers aren't active
-				return;
-			}
-
-			switch( node.propVolume.type )
-			{
-				case EVolumeType.Sphere:
-					Av().renderer.addGrabber_Sphere( grabberGlobalId, universeFromNode.all(), 
-						node.propVolume.radius, grabberHand );
-					break;
-				default:
-					throw "unsupported volume type";
-			}
-		} );
-	}
-
-	traverseHook( node: AvNode, defaultParent: PendingTransform )
-	{
-		if( !node.propVolume )
-		{
-			return;
-		}
-
-		let hookGlobalId = node.globalId;
-		let hand = this.m_currentHand;
-		this.updateTransform( node.globalId, defaultParent, null,
-			( universeFromNode: mat4 ) =>
-		{
-			if( this.isHookInUse( hookGlobalId ) )
-				return;
-
-			if( node.flags & ENodeFlags.Remote )
-			{
-				// remote hooks can't be dropped on
-				return;
-			}
-			
-			let outerVolumeScale = node.propOuterVolumeScale ? node.propOuterVolumeScale : 1.5;
-			switch( node.propVolume.type )
-			{
-				case EVolumeType.Sphere:
-					Av().renderer.addHook_Sphere( hookGlobalId, universeFromNode.all(), node.propVolume.radius, hand, outerVolumeScale );
-					break;
-				case EVolumeType.AABB:
-					Av().renderer.addHook_Aabb( hookGlobalId, universeFromNode.all(), node.propVolume.aabb, hand, outerVolumeScale );
-					break;
-				default:
-					throw "unsupported volume type";
-			}
-		} );
 	}
 
 	traverseLine( node: AvNode, defaultParent: PendingTransform )
@@ -1700,194 +1212,6 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 	}
 
 	
-	@bind
-	public grabEvent( grabEvent: AvGrabEvent )
-	{
-		let grabbableData = this.getNodeDataByEpa( grabEvent.grabbableId );
-		let grabbableFlags = grabbableData ? grabbableData.lastFlags : 0;
-		let grabberIdStr = endpointAddrToString( grabEvent.grabberId );
-		let grabbableIdStr = endpointAddrToString( grabEvent.grabbableId );
-		switch( grabEvent.type )
-		{
-			case AvGrabEventType.StartGrab:
-				console.log( "Traverser starting grab of " + grabEvent.grabbableId + " by " + grabEvent.grabberId );
-
-				if( !this.m_lastFrameUniverseFromNodeTransforms.hasOwnProperty( grabberIdStr ) )
-				{
-					throw "grabber wasn't rendered last frame";
-				}
-
-				let universeFromGrabber = this.m_lastFrameUniverseFromNodeTransforms[ grabberIdStr ];
-				let grabberFromGrabbable: mat4;
-				if( !this.m_lastFrameUniverseFromNodeTransforms.hasOwnProperty( grabbableIdStr  ) 
-					|| grabEvent.useIdentityTransform )
-				{
-					grabberFromGrabbable = mat4.identity;
-				}
-				else
-				{
-					let universeFromGrabbable = this.m_lastFrameUniverseFromNodeTransforms[ grabbableIdStr ];
-					let grabberFromUniverse = universeFromGrabber.copy().inverse();
-		
-					grabberFromGrabbable = grabberFromUniverse.multiply( universeFromGrabbable );
-				}
-
-				let anchorToRestore: NodeToNodeAnchor_t;
-				if( 0 == ( grabbableFlags & ENodeFlags.Tethered ) )
-				{
-					let oldAnchor = this.m_nodeToNodeAnchors[ grabbableIdStr ];
-					if( oldAnchor && oldAnchor.parentGlobalId.type == EndpointType.Node )
-					{
-						let msg: MsgDetachGadgetFromHook =
-						{
-							grabbableNodeId: grabEvent.grabbableId,
-							hookNodeId: oldAnchor.parentGlobalId,
-						}
-		
-						this.m_endpoint.sendMessage( MessageType.DetachGadgetFromHook, msg );
-					}	
-				}
-				else
-				{
-					anchorToRestore = this.m_nodeToNodeAnchors[ grabbableIdStr ];
-				}
-
-				let grabbableParentFromGrabbableOrigin: mat4;
-				if( grabbableData && grabbableData.lastParentFromNode )
-				{
-					grabbableParentFromGrabbableOrigin = grabbableData.lastParentFromNode;
-				}
-
-				this.m_nodeToNodeAnchors[ grabbableIdStr ] = 
-				{
-					state: AnchorState.Grabbed,
-					parentGlobalId: grabEvent.grabberId,
-					handleGlobalId: grabEvent.handleId,
-					parentFromGrabbable: grabberFromGrabbable,
-					grabbableParentFromGrabbableOrigin, 
-					anchorToRestore,
-				};
-				Av().renderer.startGrab( grabEvent.grabberId, grabEvent.grabbableId );
-				console.log( `telling collider about ${ endpointAddrToString( grabEvent.grabberId ) } `
-					+ `grabbing ${ endpointAddrToString( grabEvent.grabbableId ) }` );
-
-				let grabStartedEvent:AvGrabEvent = 
-				{
-					type: AvGrabEventType.GrabStarted,
-					grabberId: grabEvent.grabberId,
-					grabbableId: grabEvent.grabbableId,
-					grabberFromGrabbable: nodeTransformFromMat4( grabberFromGrabbable ),
-				};
-				this.sendGrabEvent( grabStartedEvent );
-
-				this.m_grabsInProgress.push( endpointAddrToString( grabEvent.grabbableId ) );
-				break;
-
-			case AvGrabEventType.EndGrab:
-			{
-				console.log( `Traverser ending grab of ${ endpointAddrToString( grabEvent.grabbableId ) }`
-					+ ` by ${ endpointAddrToString( grabEvent.grabberId ) }` );
-				Av().renderer.endGrab( grabEvent.grabberId, grabEvent.grabbableId );
-				if( !endpointAddrIsEmpty( grabEvent.hookId ) )
-				{
-					let anchor: NodeToNodeAnchor_t =
-					{
-						state: AnchorState.Hooked,
-						parentGlobalId: grabEvent.hookId,
-						parentFromGrabbable: null,
-					};
-
-					let msg: MsgAttachGadgetToHook =
-					{
-						grabbableNodeId: grabEvent.grabbableId,
-						hookNodeId: grabEvent.hookId,
-					}
-
-					// we're dropping onto a hook
-					let hookData = this.getNodeDataByEpa( grabEvent.hookId );
-					if( hookData.lastFlags & ENodeFlags.PreserveGrabTransform )
-					{
-						// this hook wants to retain the relative transform
-						anchor.parentFromGrabbable = nodeTransformToMat4( grabEvent.hookFromGrabbable );
-						msg.hookFromGrabbable = grabEvent.hookFromGrabbable;
-					}
-
-					let nodeData = this.getNodeDataByEpa( grabEvent.grabbableId, AvNodeType.Grabbable );
-					nodeData.lastParentFromNode = nodeTransformToMat4( grabEvent.hookFromGrabbable );
-					this.m_nodeToNodeAnchors[ grabbableIdStr ] = anchor;
-
-					this.m_endpoint.sendMessage( MessageType.AttachGadgetToHook, msg );
-				}
-				else if( ( grabbableFlags & ENodeFlags.PreserveGrabTransform ) == 0 )
-				{
-					let msg: MsgDestroyGadget =
-					{
-						gadgetId: grabEvent.grabbableId.endpointId,
-					}
-
-					this.m_endpoint.sendMessage( MessageType.DestroyGadget, msg );
-				}
-				else
-				{
-					// we're dropping into open space
-					delete this.m_nodeToNodeAnchors[ endpointAddrToString( grabEvent.grabbableId ) ];
-
-					// figure out our current transform relative to our non-grabbed parent in the scene
-					// graph
-					let grabbableData = this.getNodeDataByEpa( grabEvent.grabbableId );
-					let graphParentTransform = grabbableData.graphParent ? 
-						this.getTransform( grabbableData.graphParent ) : null;
-					let universeFromGraphParent = graphParentTransform?.getUniverseFromNode() ?? mat4.identity;
-					let universeFromGrabbable = this.getTransform( grabEvent.grabbableId ).getUniverseFromNode();
-					let graphParentFromUniverse = universeFromGraphParent.inverse();
-					let graphParentFromGrabbable = mat4.product( graphParentFromUniverse, universeFromGrabbable, 
-						new mat4 );
-
-					// remember our transform so we'll save that state and also so we'll draw
-					// in the right place next frame
-					this.preserveTransform( grabbableData.lastNode, null, null, 
-						universeFromGrabbable, graphParentFromGrabbable );
-
-					let msg: MsgAttachGadgetToHook =
-					{
-						grabbableNodeId: grabEvent.grabbableId,
-						hookNodeId: null,
-					}
-					this.m_endpoint.sendMessage( MessageType.AttachGadgetToHook, msg );
-				}
-
-
-				let nEntry = this.m_grabsInProgress.indexOf( endpointAddrToString( grabEvent.grabbableId ) );
-				if( nEntry != -1 )
-				{
-					this.m_grabsInProgress.splice( nEntry, 1 );
-				}
-			}
-			break;
-
-			case AvGrabEventType.Detach:
-			{
-				let oldAnchor = this.m_nodeToNodeAnchors[ grabbableIdStr ];
-				if( oldAnchor )
-				{
-					// forget the point to restore
-					oldAnchor.anchorToRestore = null;
-					// console.log( `Detaching ${ grabbableIdStr }` );
-				}
-			}
-			break;
-		}
-
-		if( grabEvent.grabberId )
-		{
-			let nodeData = this.getNodeDataByEpa( grabEvent.grabberId );
-			if( nodeData && nodeData.grabberProcessor )
-			{
-				nodeData.grabberProcessor.onGrabEvent( grabEvent );
-			}
-		}
-	}
-
 	getTransform( globalNodeId: EndpointAddr ): PendingTransform
 	{
 		let idStr = endpointAddrToString( globalNodeId );
@@ -1982,25 +1306,6 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 		else
 		{
 			return this.m_lastFrameUniverseFromNodeTransforms[ nodeGlobalId ];
-		}
-	}
-
-	@bind 
-	private getCurrentGrabber( grabbableAddr: EndpointAddr ): EndpointAddr
-	{
-		let grabbableIdStr = endpointAddrToString( grabbableAddr );
-		let parentInfo = this.m_nodeToNodeAnchors[ grabbableIdStr ];
-		if( !parentInfo )
-			return null;
-
-		let parentNodeData = this.getNodeDataByEpa( parentInfo.parentGlobalId );
-		if( parentNodeData && parentNodeData.nodeType == AvNodeType.Grabber )
-		{
-			return parentInfo.parentGlobalId;
-		}
-		else
-		{
-			return null;
 		}
 	}
 

@@ -1,4 +1,4 @@
-import { AardvarkManifest, AuthedRequest, Av, AvActionState, AvGrabEvent, AvGrabEventProcessor, AvInterfaceEventProcessor, AvNode, AvNodeTransform, AvNodeType, AvStartGadgetResult, EAction, EHand, EndpointAddr, endpointAddrToString, EndpointType, ENodeFlags, Envelope, getActionFromState, InitialInterfaceLock, interfaceStringFromMsg, LocalUserInfo, MessageType, MsgGadgetStarted, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgGrabEvent, MsgInterfaceEnded, MsgInterfaceEvent, MsgInterfaceReceiveEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgMasterStartGadget, MsgNodeHaptic, MsgResourceLoadFailed, MsgSaveSettings, MsgSignRequest, MsgSignRequestResponse, MsgUpdateActionState, MsgUpdateSceneGraph, MsgUserInfo, stringToEndpointAddr } from '@aardvarkxr/aardvark-shared';
+import { AardvarkManifest, AuthedRequest, Av, AvActionState, AvInterfaceEventProcessor, AvNode, AvNodeTransform, AvNodeType, AvStartGadgetResult, EAction, EHand, EndpointAddr, endpointAddrToString, EndpointType, ENodeFlags, Envelope, getActionFromState, InitialInterfaceLock, interfaceStringFromMsg, LocalUserInfo, MessageType, MsgGadgetStarted, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgInterfaceEnded, MsgInterfaceEvent, MsgInterfaceReceiveEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgMasterStartGadget, MsgNodeHaptic, MsgResourceLoadFailed, MsgSaveSettings, MsgSignRequest, MsgSignRequestResponse, MsgUpdateActionState, MsgUpdateSceneGraph, MsgUserInfo, stringToEndpointAddr } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import { IAvBaseNode } from './aardvark_base_node';
@@ -75,13 +75,10 @@ export class AvGadget
 	private m_remotePersistenceUuid: string;
 	private m_epToNotify: EndpointAddr = null;
 	private m_firstSceneGraph: boolean = true;
-	private m_mainGrabbable: AvNode = null;
-	private m_mainHandle: AvNode = null;
 	private m_userInfo: LocalUserInfo = null;
 	private m_userInfoListeners: (()=>void)[] = [];
 	private m_initialInterfaces: InitialInterfaceLock[] = [];
 
-	m_grabEventProcessors: {[nodeId:number]: AvGrabEventProcessor } = {};
 	m_interfaceEventProcessors: {[nodeId: number]: AvInterfaceEventProcessor } = {}
 	m_interfaceEntityProcessors = new Map<number, AvInterfaceEntityProcessor>();
 	m_startGadgetPromises: {[nodeId:number]: 
@@ -148,7 +145,6 @@ export class AvGadget
 			this.markDirty();
 		});
 
-		this.m_endpoint.registerHandler( MessageType.GrabEvent, this.onGrabEvent );
 		this.m_endpoint.registerHandler( MessageType.GadgetStarted, this.onGadgetStarted );
 		this.m_endpoint.registerHandler( MessageType.MasterStartGadget, this.onMasterStartGadget );
 		this.m_endpoint.registerHandler( MessageType.UpdateActionState, this.onUpdateActionState );
@@ -274,24 +270,9 @@ export class AvGadget
 		this.markDirty();
 	}
 
-	public setGrabEventProcessor( nodeId: number, processor: AvGrabEventProcessor )
-	{
-		this.m_grabEventProcessors[ nodeId ] = processor;
-		this.markDirty();
-	}
-
 	public getEndpointId() : number
 	{
 		return this.m_endpoint.getEndpointId();
-	}
-
-	@bind onGrabEvent( m: MsgGrabEvent, env: Envelope ):void
-	{
-		let processor = this.m_grabEventProcessors[ env.target.nodeId ];
-		if( processor )
-		{
-			processor( m.event );
-		}
 	}
 
 	@bind onGadgetStarted( m: MsgGadgetStarted, env: Envelope ):void
@@ -303,17 +284,10 @@ export class AvGadget
 				{
 					success: true,
 					startedGadgetEndpointId: m.startedGadgetEndpointId,
-					mainGrabbableGlobalId: m.mainGrabbableGlobalId,
-					mainHandleId: m.mainHandleGlobalId,
 				}
 			);
 			delete this.m_startGadgetPromises[ env.target.nodeId ];
 		}
-	}
-
-	public sendGrabEvent( event: AvGrabEvent )
-	{
-		this.m_endpoint.sendGrabEvent( event );
 	}
 
 	public setInterfaceEntityProcessor( nodeId: number, processor: AvInterfaceEntityProcessor )
@@ -560,15 +534,6 @@ export class AvGadget
 					if( reactNode )
 					{
 						node = reactNode.createNodeForNode();
-						if( node.type == AvNodeType.Grabbable && !this.m_mainGrabbable )
-						{
-							this.m_mainGrabbable = node;
-						}
-						if( node.type == AvNodeType.Handle && !this.m_mainHandle )
-						{
-							this.m_mainHandle = node;
-						}
-
 						this.m_traversedNodes[nodeId] = reactNode;
 					}
 				}
@@ -621,7 +586,6 @@ export class AvGadget
 			return;
 		}
 
-		this.m_mainGrabbable = null;
 		this.m_traversedNodes = {};
 		let rootNodes = this.traverseNode( document.body );
 
@@ -656,15 +620,6 @@ export class AvGadget
 				{
 					epToNotify: this.m_epToNotify,
 					startedGadgetEndpointId: this.m_endpoint.getEndpointId(),
-				}
-
-				if( this.m_mainGrabbable && this.m_mainHandle )
-				{
-					msgStarted.mainGrabbable = this.m_mainGrabbable.id;
-					msgStarted.mainHandle = this.m_mainHandle.id;
-
-					// this.m_mainHandleComponent.grabInProgress( this.m_epToNotify );
-					// this.m_mainGrabbableComponent.grabInProgress( this.m_epToNotify );
 				}
 
 				this.m_endpoint.sendMessage( MessageType.GadgetStarted, msgStarted );

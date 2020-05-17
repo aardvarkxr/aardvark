@@ -1,4 +1,4 @@
-import { AABB as Aabb, AardvarkManifest, AvSharedTextureInfo, EHand, EndpointAddr, MsgGrabberState, Permission } from './aardvark_protocol';
+import { AABB as Aabb, AardvarkManifest, AvSharedTextureInfo, EHand, EndpointAddr, Permission } from './aardvark_protocol';
 
 export interface AvTraversalRenderer
 {
@@ -41,20 +41,6 @@ interface AvRenderer
 	registerHapticProcessor( hapticProcessor: AvHapticProcessor ) : void;
 	sendHapticEventForHand( hand: EHand, amplitude: number, frequency: number, duration: number ): void;
 
-	updateGrabberIntersections(): MsgGrabberState[];
-	addGrabbableHandle_Sphere( grabbableGlobalId: EndpointAddr, 
-		handleGlobalId: EndpointAddr,
-		universeFromHandle: number[], radius: number, hand: EHand ): void;
-	addGrabbableHandle_ModelBox( grabbableGlobalId: EndpointAddr, 
-		handleGlobalId: EndpointAddr,
-		universeFromHandle: number[], uri: string, hand: EHand ): void;
-	addGrabber_Sphere( grabberGlobalId: EndpointAddr, universeFromGrabber: number[], radius: number, hand: EHand ): void;
-	addHook_Sphere( hookGlobalId: EndpointAddr, universeFromGrabber: number[], radius: number, hand: EHand, outerVolumeScale: number  ): void;
-	addHook_Aabb( hookGlobalId: EndpointAddr, universeFromGrabber: number[], aabb: Aabb, hand: EHand, outerVolumeScale: number  ): void;
-
-	startGrab( grabberGlobalId: EndpointAddr, grabbableGlobalId: EndpointAddr  ): void;
-	endGrab( grabberGlobalId: EndpointAddr, grabbableGlobalId: EndpointAddr  ): void;
-
 	getActionState( hand: EHand ): AvActionState;
 }
 
@@ -62,8 +48,6 @@ export interface AvStartGadgetResult
 {
 	success: boolean;
 	startedGadgetEndpointId: number;
-	mainGrabbableGlobalId: EndpointAddr;
-	mainHandleId: EndpointAddr;
 }
 
 export interface AvManifestCallback

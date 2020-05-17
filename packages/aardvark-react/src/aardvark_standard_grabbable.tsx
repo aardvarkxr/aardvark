@@ -1,16 +1,31 @@
-import * as React from 'react';
-import { AvTransform } from './aardvark_transform';
+import { AvVolume, emptyVolume, EVolumeType, infiniteVolume, InitialInterfaceLock } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
-import { AvModel } from './aardvark_model';
-import { EndpointAddr, EVolumeType, AvVolume, InitialInterfaceLock, infiniteVolume, emptyVolume } from '@aardvarkxr/aardvark-shared';
-import { HighlightType, AvGrabbable, HookInteraction } from './aardvark_grabbable';
-import { AvModelBoxHandle } from './aardvark_handles';
-import { MoveableComponent, MoveableComponentState } from './component_moveable';
+import * as React from 'react';
 import { AvComposedEntity, EntityComponent } from './aardvark_composed_entity';
+import { AvGadget } from './aardvark_gadget';
+import { AvModel } from './aardvark_model';
+import { AvTransform } from './aardvark_transform';
+import { MoveableComponent, MoveableComponentState } from './component_moveable';
 import { NetworkedGadgetComponent } from './component_networked_gadget';
 import { RemoteGadgetComponent } from './component_remote_gadget';
-import { AvGadget } from './aardvark_gadget';
 const equal = require( 'fast-deep-equal' );
+
+/** This enum defines the possible highlight states of an AvGrabbable. 
+*/
+export enum HighlightType
+{
+	/** Nothing interesting is going on with the grabbable. */
+	None = 0,
+
+	/** There is a grabber within grabbing range of the grabbable. */
+	InRange = 1,
+
+	/** There is a grabber actively grabbing the grabbable, and it isn't attached to anything. */
+	Grabbed = 2,
+
+	/** The grabbed grabbable is within drop range of a hook. */
+	InHookRange = 3,
+}
 
 export enum ShowGrabbableChildren
 {

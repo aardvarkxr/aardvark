@@ -1,18 +1,15 @@
+import { AardvarkManifest, AvVolume, EndpointAddr, endpointAddrToString, EVolumeType, g_builtinModelError, InitialInterfaceLock } from '@aardvarkxr/aardvark-shared';
+import bind from 'bind-decorator';
+import isUrl from 'is-url';
 import * as React from 'react';
 import { AvBaseNodeProps } from './aardvark_base_node';
-import bind from 'bind-decorator';
-import { HighlightType, GrabResponse, AvGrabbable } from './aardvark_grabbable';
-import { AvTransform } from './aardvark_transform';
-import { AvSphereHandle } from './aardvark_handles';
-import { AvModel } from './aardvark_model';
-import { EndpointAddr, AvGrabEvent, AardvarkManifest, endpointAddrIsEmpty, AvVector, g_builtinModelError, endpointAddrToString, EVolumeType, Av, InitialInterfaceLock, AvVolume } from '@aardvarkxr/aardvark-shared';
-import { AvGadget } from './aardvark_gadget';
-import isUrl from 'is-url';
-import { MoveableComponentState, MoveableComponent, ContainerRequest, ContainerRequestType } from './component_moveable';
-import { SimpleContainerComponent } from './component_simple_container';
 import { AvComposedEntity, EntityComponent } from './aardvark_composed_entity';
-import { ActiveInterface, InterfaceProp } from './aardvark_interface_entity';
 import { AvEntityChild } from './aardvark_entity_child';
+import { AvGadget } from './aardvark_gadget';
+import { ActiveInterface, InterfaceProp } from './aardvark_interface_entity';
+import { AvModel } from './aardvark_model';
+import { AvTransform } from './aardvark_transform';
+import { ContainerRequest, ContainerRequestType, MoveableComponent, MoveableComponentState } from './component_moveable';
 
 
 interface AvGadgetSeedProps extends AvBaseNodeProps

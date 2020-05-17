@@ -1,5 +1,5 @@
 import { CMonitorEndpoint, DegreesToRadians, EulerAnglesToQuaternion, QuaternionToEulerAngles, RadiansToDegrees } from '@aardvarkxr/aardvark-react';
-import { AardvarkManifest, AvGrabEvent, AvGrabEventType, AvNode, AvNodeTransform, AvNodeType, AvQuaternion, AvVector, EndpointAddr, endpointAddrToString, EndpointType, ENodeFlags, Envelope, MessageType, MinimalPose, MsgGrabEvent, MsgLostEndpoint, MsgNewEndpoint, MsgOverrideTransform, MsgResourceLoadFailed, MsgUpdateSceneGraph, AvVolume, EVolumeType, InitialInterfaceLock } from '@aardvarkxr/aardvark-shared';
+import { AardvarkManifest, AvNode, AvNodeTransform, AvNodeType, AvQuaternion, AvVector, AvVolume, EndpointAddr, endpointAddrToString, EndpointType, ENodeFlags, Envelope, EVolumeType, InitialInterfaceLock, MessageType, MsgLostEndpoint, MsgNewEndpoint, MsgOverrideTransform, MsgResourceLoadFailed, MsgUpdateSceneGraph } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import { action, computed, observable, ObservableMap } from 'mobx';
 import { observer } from 'mobx-react';
@@ -28,7 +28,7 @@ class CMonitorStore
 {
 	private m_connection: CMonitorEndpoint;
 	@observable m_endpoints: ObservableMap<number, EndpointData>;
-	m_events = observable.array< AvGrabEvent | MsgResourceLoadFailed >();
+	m_events = observable.array< MsgResourceLoadFailed >();
 
 	constructor()
 	{
@@ -38,7 +38,6 @@ class CMonitorStore
 		this.m_connection.registerHandler( MessageType.NewEndpoint, this.onNewEndpoint );
 		this.m_connection.registerHandler( MessageType.LostEndpoint, this.onLostEndpoint );
 		this.m_connection.registerHandler( MessageType.UpdateSceneGraph, this.onUpdateSceneGraph );
-		this.m_connection.registerHandler( MessageType.GrabEvent, this.onGrabEvent );
 		this.m_connection.registerHandler( MessageType.ResourceLoadFailed, this.onResourceLoadFailed );
 	}
 
@@ -153,11 +152,6 @@ class CMonitorStore
 	{
 		console.log( "Lost endpoint!", message );
 		this.m_endpoints.delete( message.endpointId );
-	}
-
-	@bind @action onGrabEvent( message: MsgGrabEvent )
-	{
-		this.m_events.push( message.event );
 	}
 
 	@bind @action onResourceLoadFailed( message: MsgResourceLoadFailed )
@@ -853,7 +847,7 @@ class RendererMonitor extends React.Component< RendererMonitorProps, RendererMon
 
 interface GrabEventProps
 {
-	event: AvGrabEvent | MsgResourceLoadFailed;
+	event: MsgResourceLoadFailed;
 }
 
 
@@ -875,28 +869,12 @@ class GrabEventMonitor extends React.Component< GrabEventProps, {} >
 
 	public render()
 	{
-		if( this.props.event.hasOwnProperty( "type" ) )
-		{
-			let evt = this.props.event as AvGrabEvent;
-			return ( <div className="GrabEvent">
-				{ AvGrabEventType[ evt.type ] }
-				<div className="GrabEventField">Sender: { evt.senderId }</div>
-				{ this.renderAddr( "Grabber", evt.grabberId ) }
-				{ this.renderAddr( "Grabbable", evt.grabbableId ) }
-				<div className="GrabEventField">Grabbable Flags: { evt.grabbableFlags }</div>
-				{ this.renderAddr( "Handle", evt.handleId ) }
-				{ this.renderAddr( "Hook", evt.hookId ) }
-			</div> );
-		}
-		else
-		{
-			let m = this.props.event as MsgResourceLoadFailed;
-			return ( <div className="ResourceLoadFailed">
-				<div className="NodeAddr">Node: { endpointAddrToString( m.nodeId ) }</div>
-				<div className="FailedUri">URI: { m.resourceUri } </div>
-				<div className="Error">{ m.error } </div>
-			</div> );
-		}
+		let m = this.props.event as MsgResourceLoadFailed;
+		return ( <div className="ResourceLoadFailed">
+			<div className="NodeAddr">Node: { endpointAddrToString( m.nodeId ) }</div>
+			<div className="FailedUri">URI: { m.resourceUri } </div>
+			<div className="Error">{ m.error } </div>
+		</div> );
 	}
 }
 

@@ -7,8 +7,6 @@ export * from './aardvark_entity_child';
 export * from './aardvark_gadget_seed';
 export * from './aardvark_gadget';
 export * from './aardvark_grab_button';
-export * from './aardvark_grabbable';
-export * from './aardvark_handles';
 export * from './aardvark_head_facing_transform';
 export * from './aardvark_line';
 export * from './aardvark_model';

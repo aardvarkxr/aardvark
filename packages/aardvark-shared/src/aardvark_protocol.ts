@@ -23,8 +23,8 @@ export enum MessageType
 
 	// Gadget messages
 	UpdateSceneGraph = 300,
-	GrabEvent = 301,
-	GrabberState = 302,
+	//GrabEvent = 301,
+	//GrabberState = 302,
 	GadgetStarted = 303,	
 	//PokerProximity = 304,
 	//MouseEvent = 305,
@@ -279,32 +279,6 @@ export interface MsgUpdateSceneGraph
 	remoteUniversePath?: string;
 }
 
-export enum EHookVolume
-{
-	Inner = 0,
-	Outer = 1,
-}
-
-export interface GrabberHookState
-{
-	hookId: EndpointAddr;
-	whichVolume: EHookVolume;
-	interfaces: string[];
-	hookFlags: number;
-}
-
-export interface MsgGrabberState
-{
-	grabberId: EndpointAddr;
-	hand: EHand;
-	grabbables?: AvGrabbableCollision[];
-	hooks?: GrabberHookState[];
-}
-
-export interface MsgGrabEvent
-{
-	event: AvGrabEvent;
-}
 
 export function parseEnvelope( envString: string, parsePayload: boolean = true ): Envelope
 {
@@ -328,10 +302,6 @@ export interface MsgGadgetStarted
 {
 	epToNotify: EndpointAddr;
 	startedGadgetEndpointId: number;
-	mainGrabbable?: number;
-	mainHandle?: number;
-	mainGrabbableGlobalId?: EndpointAddr;
-	mainHandleGlobalId?: EndpointAddr;
 }
 
 
@@ -544,10 +514,10 @@ export enum AvNodeType
 	Model = 3,
 	Panel = 4,
 	//Poker = 5,
-	Grabbable = 6,
-	Handle = 7,
-	Grabber = 8,
-	Hook = 9,
+	// Grabbable = 6,
+	// Handle = 7,
+	// Grabber = 8,
+	// Hook = 9,
 	Line = 10,
 	//PanelIntersection = 11,
 	ParentTransform = 12,
@@ -559,71 +529,6 @@ export enum AvNodeType
 	Child = 18,
 }
 
-
-export enum AvGrabEventType
-{
-	Unknown = 0,
-	EnterRange = 1,
-	LeaveRange = 2,
-	StartGrab = 3,
-	EndGrab = 4,
-	EnterHookRange = 5,
-	LeaveHookRange = 6,
-	RequestGrab = 7,
-	RequestGrabResponse = 8,
-	CancelGrab = 9,
-	GrabStarted = 10,
-	UpdateGrabberHighlight = 11,
-	TransformUpdated = 12,
-	Detach = 13,
-	HookTransformUpdated = 14,
-};
-
-export enum GrabberHighlight
-{
-	None = 0,
-	InRange = 1,
-	WaitingForConfirmation = 2,
-	WaitingForGrabToStart = 3,
-	Grabbed = 4,
-	NearHook = 5,
-	WaitingForReleaseAfterRejection = 6,
-}
-
-export interface AvGrabEvent
-{
-	type: AvGrabEventType;
-	senderId?: number;
-	grabbableId?: EndpointAddr;
-	grabbableFlags?: number;
-	handleId?: EndpointAddr;
-	grabberId?: EndpointAddr;
-	hookId?: EndpointAddr;
-	requestId?: number;
-	allowed?: boolean;
-	useIdentityTransform?: boolean;
-	highlight?: GrabberHighlight;
-	parentFromNode?: AvNodeTransform;
-	universeFromNode?: AvNodeTransform;
-	hookFromGrabbable?: AvNodeTransform;
-	grabberFromGrabbable?: AvNodeTransform;
-	interface?: string;
-}
-
-export interface AvGrabEventProcessor
-{
-	( event: AvGrabEvent ): void;
-}
-
-export interface AvGrabbableCollision
-{
-	grabbableId: EndpointAddr;
-	handleId: EndpointAddr;
-	handleFlags: number;
-	grabbableFlags: number;
-	currentHook?: EndpointAddr;
-	interfaces?: string[];
-}
 
 export interface AvInterfaceEventProcessor
 {

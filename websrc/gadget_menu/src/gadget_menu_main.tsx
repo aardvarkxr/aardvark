@@ -1,6 +1,5 @@
-import { AvGadget, AvGadgetSeed, AvGrabbable, AvModel, AvModelBoxHandle, AvPanel, AvPanelAnchor, AvTransform, HighlightType, HookInteraction, AvOrigin, AvPrimitive, PrimitiveType, AvInterfaceEntity, ActiveInterface, MoveableComponent, AvComposedEntity, MoveableComponentState, AvStandardGrabbable, ShowGrabbableChildren } from '@aardvarkxr/aardvark-react';
-import { EndpointAddr, g_builtinModelGear, EVolumeType, EAction } from '@aardvarkxr/aardvark-shared';
-import bind from 'bind-decorator';
+import { AvComposedEntity, AvGadget, AvGadgetSeed, AvOrigin, AvPrimitive, AvStandardGrabbable, AvTransform, MoveableComponent, MoveableComponentState, PrimitiveType, ShowGrabbableChildren } from '@aardvarkxr/aardvark-react';
+import { EVolumeType, g_builtinModelGear } from '@aardvarkxr/aardvark-shared';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 

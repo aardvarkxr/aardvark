@@ -1,4 +1,4 @@
-import { AardvarkManifest, AardvarkPort, AuthedRequest, AvGrabEvent, AvGrabEventType, AvNode, AvNodeTransform, AvNodeType, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, EVolumeType, GadgetAuthedRequest, gadgetDetailsToId, MessageType, MsgAttachGadgetToHook, MsgDestroyGadget, MsgDetachGadgetFromHook, MsgError, MsgGadgetStarted, MsgGeAardvarkManifestResponse, MsgGetAardvarkManifest, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgGrabberState, MsgGrabEvent, MsgInstallGadget, MsgInterfaceEnded, MsgInterfaceEvent, MsgInterfaceReceiveEvent, MsgInterfaceSendEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgLostEndpoint, MsgMasterStartGadget, MsgNewEndpoint, MsgNodeHaptic, MsgOverrideTransform, MsgResourceLoadFailed, MsgSaveSettings, MsgSetEndpointType, MsgSetEndpointTypeResponse, MsgSignRequest, MsgSignRequestResponse, MsgUpdateActionState, MsgUpdateSceneGraph, MsgUserInfo, parseEndpointFieldUri, parseEnvelope, Permission, WebSocketCloseCodes } from '@aardvarkxr/aardvark-shared';
+import { AardvarkManifest, AardvarkPort, AuthedRequest, AvNode, AvNodeTransform, AvNodeType, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, GadgetAuthedRequest, gadgetDetailsToId, MessageType, MsgAttachGadgetToHook, MsgDestroyGadget, MsgDetachGadgetFromHook, MsgError, MsgGadgetStarted, MsgGeAardvarkManifestResponse, MsgGetAardvarkManifest, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgInstallGadget, MsgInterfaceEnded, MsgInterfaceEvent, MsgInterfaceReceiveEvent, MsgInterfaceSendEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgLostEndpoint, MsgMasterStartGadget, MsgNewEndpoint, MsgNodeHaptic, MsgOverrideTransform, MsgResourceLoadFailed, MsgSaveSettings, MsgSetEndpointType, MsgSetEndpointTypeResponse, MsgSignRequest, MsgSignRequestResponse, MsgUpdateActionState, MsgUpdateSceneGraph, MsgUserInfo, parseEndpointFieldUri, parseEnvelope, Permission, WebSocketCloseCodes } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import { buildPersistentHookPath, buildPersistentHookPathFromParts, HookPathParts, HookType, parsePersistentHookPath } from 'common/hook_utils';
 import * as express from 'express';
@@ -487,8 +487,6 @@ class CGadgetData
 	private m_root: AvNode = null;
 	private m_hook: string | GadgetHookAddr = null;
 	private m_grabHook: string | GadgetHookAddr = null;
-	private m_mainGrabbable: EndpointAddr = null;
-	private m_mainHandle: EndpointAddr = null;
 	private m_persistenceUuid: string = null;
 	private m_remoteUniversePath: string = null;
 	private m_dispatcher: CDispatcher = null;
@@ -717,8 +715,6 @@ class CGadgetData
 		let firstUpdate = this.m_root == null;
 		this.m_root = root;
 		this.m_nodesByPersistentName = {};
-		this.m_mainGrabbable = null;
-		this.m_mainHandle = null;
 		this.m_nodes = {};
 		this.updateNode( this.m_root );
 
@@ -726,45 +722,6 @@ class CGadgetData
 
 		if( firstUpdate )
 		{
-			// make sure the hook knows this thing is on it and that this thing knows it's
-			// on the hook
-			if( this.m_hook && typeof this.m_hook !== "string" )
-			{
-				if( this.m_mainGrabbable == null )
-				{
-					console.log( `Gadget ${ this.m_ep.getId() } is on a hook but`
-						+ ` doesn't have a main grabbable` );
-					this.m_hook = null;
-				}
-				else
-				{
-					let event: AvGrabEvent =
-					{
-						type: AvGrabEventType.EndGrab,
-						hookId: this.m_hook.holderAddr,
-						grabbableId: this.m_mainGrabbable,
-						handleId: this.m_mainHandle,
-						hookFromGrabbable: this.m_hook.hookFromGadget,
-					};
-
-					let msg: MsgGrabEvent =
-					{
-						event,
-					}
-
-					let env: Envelope =
-					{
-						type: MessageType.GrabEvent,
-						sequenceNumber: this.m_dispatcher.nextSequenceNumber,
-						payloadUnpacked: msg,
-					}
-
-					this.m_dispatcher.forwardToEndpoint( this.m_hook.holderAddr, env );
-					this.m_dispatcher.forwardToEndpoint( this.m_mainGrabbable, env );
-					this.m_dispatcher.sendToAllEndpointsOfType( EndpointType.Monitor, env );
-				}
-			}
-
 			this.m_dispatcher.notifyGadgetWaiters( this.getPersistenceUuid() );
 		}
 	}
@@ -788,40 +745,6 @@ class CGadgetData
 
 		switch( node.type )
 		{
-			case AvNodeType.Grabbable:
-				if( !this.m_mainGrabbable )
-				{
-					this.m_mainGrabbable = 
-					{
-						endpointId: this.m_ep.getId(),
-						type: EndpointType.Node,
-						nodeId: node.id,
-					};
-				}
-				break;
-
-			case AvNodeType.Handle:
-				if( !this.m_mainHandle )
-				{
-					this.m_mainHandle = 
-					{
-						endpointId: this.m_ep.getId(),
-						type: EndpointType.Node,
-						nodeId: node.id,
-					};
-				}
-
-				switch( node.propVolume.type )
-				{
-					case EVolumeType.ModelBox:
-						if( !isUrl( node.propVolume.uri ) && !parseEndpointFieldUri( node.propVolume.uri ) )
-						{
-							node.propVolume.uri = this.m_gadgetUri + "/" + node.propVolume.uri;
-						}
-						break;
-				}
-				break;
-
 			case AvNodeType.Transform:
 				if( this.m_transformOverrides )
 				{
@@ -1009,11 +932,6 @@ class CEndpoint
 		this.registerEnvelopeHandler( MessageType.SetEndpointType, this.onSetEndpointType );
 		this.registerEnvelopeHandler( MessageType.GetAardvarkManifest, this.onGetGadgetManifest );
 		this.registerEnvelopeHandler( MessageType.UpdateSceneGraph, this.onUpdateSceneGraph );
-		this.registerForwardHandler( MessageType.GrabberState, ( m: MsgGrabberState ) =>
-		{
-			return [m.grabberId, EndpointType.Monitor ];
-		} );
-		this.registerEnvelopeHandler( MessageType.GrabEvent, this.onGrabEvent );
 		this.registerEnvelopeHandler( MessageType.GadgetStarted, this.onGadgetStarted );
 		this.registerForwardHandler( MessageType.NodeHaptic, ( m: MsgNodeHaptic ) =>
 		{
@@ -1343,77 +1261,9 @@ class CEndpoint
 			this.m_dispatcher.buildNewEndpointMessage( this ) );
 	}
 
-	@bind private onGrabEvent( env: Envelope, m: MsgGrabEvent )
-	{
-		if( m.event.grabberId )
-		{
-			this.m_dispatcher.forwardToEndpoint( m.event.grabberId, env );
-		}
-		if( m.event.grabbableId )
-		{
-			this.m_dispatcher.forwardToEndpoint( m.event.grabbableId, env );
-		}
-		if( m.event.handleId )
-		{
-			this.m_dispatcher.forwardToEndpoint( m.event.handleId, env );
-		}
-		if( m.event.hookId )
-		{
-			this.m_dispatcher.forwardToEndpoint( m.event.hookId, env );
-		}
-
-		let grabbableEp = this.m_dispatcher.getGadgetEndpoint( m.event.grabbableId?.endpointId );
-		switch( m.event.type )
-		{
-			case AvGrabEventType.StartGrab:
-				// start and end grab events also go to all hooks so they can highlight
-				this.m_dispatcher.forwardToHookNodes( env );
-
-				if( grabbableEp )
-				{
-					grabbableEp.setGrabHook( m.event.grabberId, m.event.grabberFromGrabbable );
-				}
-				break;
-
-			case AvGrabEventType.EndGrab:
-				// start and end grab events also go to all hooks so they can highlight
-				this.m_dispatcher.forwardToHookNodes( env );
-
-				if( grabbableEp )
-				{
-					grabbableEp.clearGrabHook();
-				}
-				break;
-
-		}
-
-		if( env.sender.type != EndpointType.Renderer )
-		{
-			this.m_dispatcher.sendToAllEndpointsOfType( EndpointType.Renderer, env );
-		}
-		this.m_dispatcher.sendToAllEndpointsOfType( EndpointType.Monitor, env );
-	}
 
 	@bind private onGadgetStarted( env:Envelope, m: MsgGadgetStarted )
 	{
-		if( m.mainGrabbable )
-		{
-			m.mainGrabbableGlobalId = 
-			{ 
-				type: EndpointType.Node, 
-				endpointId: this.m_id,
-				nodeId: m.mainGrabbable,
-			};
-		}
-		if( m.mainHandle )
-		{
-			m.mainHandleGlobalId = 
-			{ 
-				type: EndpointType.Node, 
-				endpointId: this.m_id,
-				nodeId: m.mainHandle,
-			};
-		}
 		m.startedGadgetEndpointId = this.m_id;
 
 		this.m_dispatcher.forwardToEndpoint( m.epToNotify, env );
@@ -1460,7 +1310,7 @@ class CEndpoint
 
 		let holderGadget = this.m_dispatcher.findGadgetById( hookId.endpointId );
 		let hookNode = holderGadget?.findNode( hookId.nodeId );
-		if( !hookNode || hookNode.type != AvNodeType.Hook )
+		if( !hookNode )
 		{
 			console.log( `can't attach ${ this.m_id } to `
 				+`${ endpointAddrToString( hookId ) } because it doesn't have a path` );

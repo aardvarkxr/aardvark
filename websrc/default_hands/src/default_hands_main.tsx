@@ -1,5 +1,5 @@
 import { ActiveInterface, AvComposedEntity, AvEntityChild, AvGadget, AvInterfaceEntity, AvOrigin, AvPrimitive, AvTransform, GrabRequest, GrabRequestType, PanelRequest, PanelRequestType, PrimitiveType, SimpleContainerComponent } from '@aardvarkxr/aardvark-react';
-import { AvNodeTransform, AvVolume, EAction, EHand, EndpointAddr, EVolumeType, GrabberHighlight, g_builtinModelHandLeft, g_builtinModelHandRight } from '@aardvarkxr/aardvark-shared';
+import { AvNodeTransform, AvVolume, EAction, EHand, EVolumeType, g_builtinModelHandLeft, g_builtinModelHandRight } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
@@ -11,7 +11,6 @@ interface DefaultHandProps
 
 interface DefaultHandState
 {
-	grabberHighlight: GrabberHighlight;
 	activeInterface: ActiveInterface;
 	grabberFromGrabbable?: AvNodeTransform;
 	grabButtonDown: boolean;
@@ -31,7 +30,6 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 
 		this.state = 
 		{ 
-			grabberHighlight: GrabberHighlight.None,
 			activeInterface: null,
 			grabButtonDown: false,
 			lostGrab: false,
@@ -40,11 +38,6 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 
 		this.actionListenerHandle = AvGadget.instance().listenForActionStateWithComponent( this.props.hand, 
 			EAction.B, this );
-	}
-
-	@bind updateGrabberHighlight( newHighlight: GrabberHighlight )
-	{
-		this.setState( { grabberHighlight: newHighlight } );
 	}
 
 	componentWillUnmount()
