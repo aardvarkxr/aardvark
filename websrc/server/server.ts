@@ -1,6 +1,6 @@
-import { AardvarkManifest, AardvarkPort, AuthedRequest, AvNode, AvNodeTransform, AvNodeType, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, GadgetAuthedRequest, gadgetDetailsToId, MessageType, MsgAttachGadgetToHook, MsgDestroyGadget, MsgDetachGadgetFromHook, MsgError, MsgGadgetStarted, MsgGeAardvarkManifestResponse, MsgGetAardvarkManifest, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgInstallGadget, MsgInterfaceEnded, MsgInterfaceEvent, MsgInterfaceReceiveEvent, MsgInterfaceSendEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgLostEndpoint, MsgMasterStartGadget, MsgNewEndpoint, MsgNodeHaptic, MsgOverrideTransform, MsgResourceLoadFailed, MsgSaveSettings, MsgSetEndpointType, MsgSetEndpointTypeResponse, MsgSignRequest, MsgSignRequestResponse, MsgUpdateActionState, MsgUpdateSceneGraph, MsgUserInfo, parseEndpointFieldUri, parseEnvelope, Permission, WebSocketCloseCodes } from '@aardvarkxr/aardvark-shared';
+import { AardvarkManifest, AardvarkPort, AuthedRequest, AvNode, AvNodeTransform, AvNodeType, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, GadgetAuthedRequest, gadgetDetailsToId, MessageType, MsgDestroyGadget, MsgError, MsgGadgetStarted, MsgGeAardvarkManifestResponse, MsgGetAardvarkManifest, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgInstallGadget, MsgInterfaceEnded, MsgInterfaceEvent, MsgInterfaceReceiveEvent, MsgInterfaceSendEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgLostEndpoint, MsgMasterStartGadget, MsgNewEndpoint, MsgNodeHaptic, MsgOverrideTransform, MsgResourceLoadFailed, MsgSaveSettings, MsgSetEndpointType, MsgSetEndpointTypeResponse, MsgSignRequest, MsgSignRequestResponse, MsgUpdateActionState, MsgUpdateSceneGraph, MsgUserInfo, parseEndpointFieldUri, parseEnvelope, Permission, WebSocketCloseCodes } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
-import { buildPersistentHookPath, buildPersistentHookPathFromParts, HookPathParts, HookType, parsePersistentHookPath } from 'common/hook_utils';
+import { buildPersistentHookPathFromParts, HookPathParts, HookType, parsePersistentHookPath } from 'common/hook_utils';
 import * as express from 'express';
 import * as http from 'http';
 import isUrl from 'is-url';
@@ -937,8 +937,6 @@ class CEndpoint
 		{
 			return [ EndpointType.Monitor, EndpointType.Renderer ];
 		} );
-		this.registerEnvelopeHandler( MessageType.AttachGadgetToHook, this.onAttachGadgetToHook );
-		this.registerEnvelopeHandler( MessageType.DetachGadgetFromHook, this.onDetachGadgetFromHook );
 		this.registerEnvelopeHandler( MessageType.SaveSettings, this.onSaveSettings );
 		this.registerForwardHandler( MessageType.UpdateActionState, (m:MsgUpdateActionState) =>
 		{
@@ -1267,74 +1265,6 @@ class CEndpoint
 		m.startedGadgetEndpointId = this.m_id;
 
 		this.m_dispatcher.forwardToEndpoint( m.epToNotify, env );
-	}
-
-	@bind private onAttachGadgetToHook( env: Envelope, m: MsgAttachGadgetToHook )
-	{
-		let gadget = this.m_dispatcher.getGadgetEndpoint( m.grabbableNodeId.endpointId );
-		gadget.attachToHook( m.hookNodeId, m.hookFromGrabbable );
-	}
-
-	@bind private onDetachGadgetFromHook( env: Envelope, m: MsgDetachGadgetFromHook )
-	{
-		let gadget = this.m_dispatcher.getGadgetEndpoint( m.grabbableNodeId.endpointId );
-		gadget.detachFromHook( m.hookNodeId );
-	}
-
-	private async setGrabHook( grabberId: EndpointAddr, grabberFromGrabbable: AvNodeTransform )
-	{
-		let grabberGadget = this.m_dispatcher.findGadgetById( grabberId.endpointId );
-		let grabberNode = grabberGadget?.findNode( grabberId.nodeId );
-		if( !grabberNode )
-		{
-			return;
-		}
-		
-		let hookPath = buildPersistentHookPath( grabberGadget.getPersistenceUuid(), 
-			grabberNode.persistentName, grabberFromGrabbable, HookType.Grab );
-		this.getGadgetData().attachToHook( hookPath );
-	}
-
-	private async clearGrabHook()
-	{
-		this.getGadgetData().clearGrabHook();
-	}
-
-	private async attachToHook( hookId: EndpointAddr, hookFromGrabbable: AvNodeTransform )
-	{
-		if( !hookId )
-		{
-			// we're just clearing the hook
-			return this.getGadgetData().attachToHook( null );
-		}
-
-		let holderGadget = this.m_dispatcher.findGadgetById( hookId.endpointId );
-		let hookNode = holderGadget?.findNode( hookId.nodeId );
-		if( !hookNode )
-		{
-			console.log( `can't attach ${ this.m_id } to `
-				+`${ endpointAddrToString( hookId ) } because it doesn't have a path` );
-			return;
-		}
-
-		let hookPath = buildPersistentHookPath( holderGadget.getPersistenceUuid(), hookNode.persistentName, 
-			hookFromGrabbable, HookType.Hook );
-
-		await this.getGadgetData().attachToHook( hookPath );
-
-		console.log( `UPDATING ${this.getGadgetData().getPersistenceUuid()} hook to ${ hookPath }` );
-		if( !this.getGadgetData().getRemoteUniversePath() )
-		{
-			persistence.setGadgetHookPath( this.m_gadgetData.getPersistenceUuid(), hookPath );
-		}
-	}
-
-	private detachFromHook( hookId: EndpointAddr )
-	{
-		if( !this.m_gadgetData.getRemoteUniversePath() )
-		{
-			persistence.setGadgetHook( this.m_gadgetData.getPersistenceUuid(), null, null );
-		}
 	}
 
 	@bind private onSaveSettings( env: Envelope, m: MsgSaveSettings )

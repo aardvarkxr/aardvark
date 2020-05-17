@@ -29,8 +29,8 @@ export enum MessageType
 	//PokerProximity = 304,
 	//MouseEvent = 305,
 	NodeHaptic = 306,
-	AttachGadgetToHook = 307,
-	DetachGadgetFromHook = 308,
+	// AttachGadgetToHook = 307,
+	// DetachGadgetFromHook = 308,
 	MasterStartGadget = 309, // tells master to start a gadget
 	SaveSettings = 310,
 	UpdateActionState = 311,
@@ -318,19 +318,6 @@ export interface MsgInterfaceEvent
 	destination: EndpointAddr;
 	interface: string;
 	data: object;
-}
-
-export interface MsgAttachGadgetToHook
-{
-	grabbableNodeId: EndpointAddr;
-	hookNodeId: EndpointAddr | null;
-	hookFromGrabbable?: AvNodeTransform;
-}
-
-export interface MsgDetachGadgetFromHook
-{
-	grabbableNodeId: EndpointAddr;
-	hookNodeId: EndpointAddr;
 }
 
 export interface MsgMasterStartGadget
