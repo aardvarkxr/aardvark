@@ -1,6 +1,5 @@
 import { AardvarkManifest, AardvarkState, AvNodeTransform, AvRendererConfig, readPersistentState, StoredGadget } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
-import { buildPersistentHookPath, HookType } from 'common/hook_utils';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -110,18 +109,6 @@ class CPersistenceManager
 		}
 	}
 
-	public getGadgetHookPath( uuid: string ): string
-	{
-		if( this.m_state.activeGadgets[ uuid ] )
-		{
-			return this.m_state.activeGadgets[ uuid ].hookPath;
-		}
-		else
-		{
-			return null;
-		}
-	}
-
 	public getGadgetSettings( uuid: string ): any
 	{
 		if( this.m_state.activeGadgets[ uuid ] )
@@ -137,23 +124,6 @@ class CPersistenceManager
 	public getRendererSettings(): AvRendererConfig
 	{
 		return this.m_state.rendererConfig;
-	}
-
-	public setGadgetHook( uuid: string, hook: string, hookFromGadget: AvNodeTransform )
-	{
-		let hookPath = buildPersistentHookPath( uuid, hook, hookFromGadget, HookType.Hook );
-		this.setGadgetHookPath( uuid, hookPath );
-	}
-
-	public setGadgetHookPath( uuid: string, hookPath: string )
-	{
-		if( !this.m_state.activeGadgets[ uuid ] )
-		{
-			throw "unknown persistence uuid";
-		}
-
-		this.m_state.activeGadgets[ uuid ].hookPath = hookPath;
-		this.markDirty();
 	}
 
 	public setGadgetSettings( uuid: string, settings: any )

@@ -1,6 +1,5 @@
 import { AardvarkManifest, AardvarkPort, AvNode, AvNodeTransform, AvNodeType, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, gadgetDetailsToId, MessageType, MsgDestroyGadget, MsgError, MsgGadgetStarted, MsgGeAardvarkManifestResponse, MsgGetAardvarkManifest, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgInstallGadget, MsgInterfaceEnded, MsgInterfaceEvent, MsgInterfaceReceiveEvent, MsgInterfaceSendEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgLostEndpoint, MsgNewEndpoint, MsgNodeHaptic, MsgOverrideTransform, MsgResourceLoadFailed, MsgSaveSettings, MsgSetEndpointType, MsgSetEndpointTypeResponse, MsgUpdateActionState, MsgUpdateSceneGraph, parseEndpointFieldUri, parseEnvelope, Permission, WebSocketCloseCodes } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
-import { buildPersistentHookPathFromParts, HookPathParts, HookType, parsePersistentHookPath } from 'common/hook_utils';
 import * as express from 'express';
 import * as http from 'http';
 import isUrl from 'is-url';
@@ -25,12 +24,10 @@ class CDispatcher
 	private m_monitors: CEndpoint[] = [];
 	private m_renderers: CEndpoint[] = [];
 	private m_gadgets: CEndpoint[] = [];
-	private m_gadgetsByUuid: { [ uuid: string ] : CEndpoint } = {};
 	private m_nextSequenceNumber = 1;
 	private m_gadgetsWithWaiters: { [ persistenceUuid: string ]: (( gadg: CGadgetData) => void)[] } = {};
 	private m_startGadgetPromises: {[nodeId:number]: 
 		[ ( gadgetEndpointId: number ) => void, ( reason: any ) => void ] } = {};
-	private m_notifyNodeId = 1;
 
 	constructor()
 	{
@@ -96,24 +93,6 @@ class CDispatcher
 				}
 			}
 		}
-
-		if( ep.getGadgetData() )
-		{
-			this.m_gadgetsByUuid[ ep.getGadgetData().getPersistenceUuid() ] = ep;
-		}
-	}
-
-	public sendToMaster( type: MessageType, m: object )
-	{
-		let ep = this.m_gadgetsByUuid[ "master" ];
-		if( ep )
-		{
-			ep.sendMessage( type, m );
-		}
-		else
-		{
-			console.log( "Tried to send message to master, but there is no master gadget endpoint" );
-		}
 	}
 
 	public removeEndpoint( ep: CEndpoint )
@@ -128,11 +107,6 @@ class CDispatcher
 			}
 		}
 		delete this.m_endpoints[ ep.getId() ];
-
-		if( ep.getGadgetData() )
-		{
-			delete this.m_gadgetsByUuid[ ep.getGadgetData().getPersistenceUuid() ];
-		}
 
 		let endpointsToStayAliveFor = this.getListForType( EndpointType.Gadget ).length
 			+ this.getListForType( EndpointType.Renderer ).length;
@@ -290,21 +264,6 @@ class CDispatcher
 		ep.sendMessage( env.type, env.payloadUnpacked, epa, env.sender );
 	}
 
-	public forwardToHookNodes( env: Envelope )
-	{
-		for( let gadget of this.m_gadgets )
-		{
-			let hookNodes = gadget.getGadgetData().getHookNodes();
-			if( !hookNodes )
-				continue;
-			
-			for( let hookData of hookNodes )
-			{
-				this.forwardToEndpoint( hookData.epa, env );
-			}
-		}
-	}
-
 	public getGadgetEndpoint( gadgetId: number ) : CEndpoint
 	{
 		if( gadgetId == undefined )
@@ -331,40 +290,6 @@ class CDispatcher
 		return null;
 	}
 
-	public findGadget( gadgetPersistenceUuid: string ): Promise<CGadgetData>
-	{
-		return new Promise( ( resolve, reject ) =>
-		{
-			let gadgetEp = this.m_gadgetsByUuid[ gadgetPersistenceUuid ];
-			if( gadgetEp )
-			{
-				resolve( gadgetEp.getGadgetData() );
-			}
-			else
-			{
-				if( !this.m_gadgetsWithWaiters[ gadgetPersistenceUuid ] )
-				{
-					this.m_gadgetsWithWaiters[ gadgetPersistenceUuid ] = [];
-				}
-				this.m_gadgetsWithWaiters[ gadgetPersistenceUuid ].push( resolve );
-			}
-		} );
-	}
-
-	public notifyGadgetWaiters( persistenceUuid: string )
-	{
-		let gadgetData = this.m_gadgetsByUuid[ persistenceUuid ]?.getGadgetData();
-		if( this.m_gadgetsWithWaiters[ persistenceUuid ] && gadgetData )
-		{
-			console.log( `Notifying anyone waiting on ${ persistenceUuid }` );
-			for( let waiter of this.m_gadgetsWithWaiters[ persistenceUuid ] )
-			{
-				waiter( gadgetData );
-			}
-			delete this.m_gadgetsWithWaiters[ persistenceUuid ];
-		}
-	}
-	
 	public sendMessageToAllEndpointsOfType( ept: EndpointType, type: MessageType, m: object )
 	{
 		this.sendToAllEndpointsOfType( ept,
@@ -378,34 +303,6 @@ class CDispatcher
 
 }
 
-interface HookNodeData
-{
-	epa: EndpointAddr;
-	persistentName: string;
-}
-
-interface GadgetHookAddr extends HookPathParts
-{
-	holderAddr: EndpointAddr;
-}
-
-
-function printableHook( hook : string | GadgetHookAddr ): string
-{
-	if( !hook )
-	{
-		return "<none>";
-	}
-
-	if( typeof hook == "string" )
-	{ 
-		return hook;
-	}
-	else
-	{
-		return `parts: ${ endpointAddrToString( hook.holderAddr ) } ${ hook.holderPersistentName }`;
-	}
-}
 
 class CGadgetData
 {
@@ -413,12 +310,9 @@ class CGadgetData
 	private m_ep: CEndpoint;
 	private m_manifest: AardvarkManifest = null;
 	private m_root: AvNode = null;
-	private m_hook: string | GadgetHookAddr = null;
-	private m_grabHook: string | GadgetHookAddr = null;
 	private m_persistenceUuid: string = null;
 	private m_remoteUniversePath: string = null;
 	private m_dispatcher: CDispatcher = null;
-	private m_hookNodes:HookNodeData[] = [];
 	private m_transformOverrides: { [ nodeId: number ]: AvNodeTransform } = {}
 	private m_nodes: { [ nodeId: number ]: AvNode } = {}
 	private m_nodesByPersistentName: { [ persistentName: string ]: AvNode } = {}
@@ -455,14 +349,10 @@ class CGadgetData
 
 	public getEndpointId() { return this.m_ep.getId(); }
 	public getUri() { return this.m_gadgetUri; }
-	public getId() { return gadgetDetailsToId( this.getName(), this.getUri(), this.getPersistenceUuid() ); }
+	public getId() { return gadgetDetailsToId( this.getName(), this.getUri(), "" ); }
 	public getClassId() { return gadgetDetailsToId( this.getName(), this.getUri() ); }
 	public getName() { return this.m_manifest.name; }
 	public getRoot() { return this.m_root; }
-	public getHook() { return this.m_hook; }
-	public getHookNodes() { return this.m_hookNodes; }
-	public getPersistenceUuid() { return this.m_persistenceUuid; }
-	public getRemoteUniversePath() { return this.m_remoteUniversePath; }
 	public isBeingDestroyed() { return this.m_gadgetBeingDestroyed; }
 
 	public get debugName()
@@ -480,94 +370,9 @@ class CGadgetData
 		this.m_ep.sendMessage( type, msg, target, sender );
 	}
 
-	public clearGrabHook()
-	{
-		this.m_grabHook = null;
-	}
-
-	public async attachToHook( hookPath: string )
-	{
-		// console.log( `Attaching ${ this.debugName } (${ this.m_gadgetUri }) to ${ hookPath }` );
-
-		let hookParts = parsePersistentHookPath( hookPath );
-		if( hookParts )
-		{
-			let holderGadgetData = await this.m_dispatcher.findGadget( hookParts.gadgetUuid );
-			if( !holderGadgetData )
-			{
-				console.log( `Expected to find hook ${ hookPath } for ${ this.m_ep.getId() }. Attach failed` );
-				return;
-			}
-
-			let holderNode = holderGadgetData.findNodeByPersistentName( hookParts.holderPersistentName );
-			if( !holderNode )
-			{
-				console.log( `Could not find node ${ hookParts.holderPersistentName } from hook ${ hookPath } for ${ this.m_ep.getId() }. Attach failed` );
-				return;
-			}
-
-			let holderAddr: EndpointAddr = 
-			{ 
-				type: EndpointType.Node, 
-				endpointId: holderGadgetData.getEndpointId(),
-				nodeId: holderNode.id,
-			}
-		
-			this.setHook( { ...hookParts, holderAddr }, hookParts.type );
-		}
-		else
-		{
-			this.setHook( hookPath, HookType.Hook );
-		}
-
-		if( this.m_root )
-		{
-			// if we've already send a scene graph, send it again with the new hook
-			this.sendSceneGraphToRenderer();
-		}
-	}
-
-	private setHook( hook: string | GadgetHookAddr, type: HookType )
-	{
-		switch( type )
-		{
-			case HookType.Grab:
-				this.m_grabHook = hook;
-				break;
-
-			case HookType.Hook:
-				console.log( `Setting hook for ${ this.getEndpointId() } to ${ printableHook( hook ) }` );
-				this.m_hook = hook;
-				break;
-		}
-	}
-
-	public getHookPathToShare(): string
-	{
-		let hookToStringify = this.m_grabHook ?? this.m_hook;
-		if( typeof hookToStringify == "string" )
-		{
-			return hookToStringify;
-		}
-		else if( hookToStringify )
-		{
-			let hookParts = hookToStringify as HookPathParts;
-			return buildPersistentHookPathFromParts( hookParts );
-		}
-		else
-		{
-			return undefined;
-		}
-	}
-
 	public findNode( nodeId: number )
 	{
 		return this.m_nodes[ nodeId ];
-	}
-
-	public findNodeByPersistentName( persistentName: string )
-	{
-		return this.m_nodesByPersistentName[ persistentName ];
 	}
 
 	public verifyPermission( permissionName: Permission )
@@ -581,25 +386,6 @@ class CGadgetData
 		{
 			throw new Error( `Verify permission ${ permissionName } on gadget ${ this.m_gadgetUri } FAILED` );
 		}
-
-		if( permissionName != "scenegraph" && this.getRemoteUniversePath() )
-		{
-			throw new Error( `Verify permission ${ permissionName } on remote gadget ${ this.m_gadgetUri } FAILED.`
-				+ ` remote gadgets only have at most the scenegraph permission` );
-		}
-	}
-
-	public getHookNodeByPersistentName( hookPersistentName: string )
-	{
-		for( let hook of this.m_hookNodes )
-		{
-			if( hook.persistentName == hookPersistentName )
-			{
-				return hook.epa;
-			}
-		}
-
-		return null;
 	}
 
 	public updateSceneGraph( root: AvNode ) 
@@ -616,11 +402,6 @@ class CGadgetData
 		this.updateNode( this.m_root );
 
 		this.sendSceneGraphToRenderer();
-
-		if( firstUpdate )
-		{
-			this.m_dispatcher.notifyGadgetWaiters( this.getPersistenceUuid() );
-		}
 	}
 
 	private updateNode( node: AvNode )
@@ -632,12 +413,6 @@ class CGadgetData
 		if( node.persistentName )
 		{
 			this.m_nodesByPersistentName[ node.persistentName ] = node;
-		}
-
-		// mark all the remote nodes
-		if( this.getRemoteUniversePath() )
-		{
-			node.flags |= ENodeFlags.Remote;
 		}
 
 		switch( node.type )
@@ -729,39 +504,7 @@ class CGadgetData
 		let msg: MsgUpdateSceneGraph = 
 		{
 			root: this.getRoot(),
-			remoteUniversePath: this.getRemoteUniversePath(),
 		};
-
-		let hookToSend: string | GadgetHookAddr;
-		if( this.getRemoteUniversePath() )
-		{
-			if( this.m_grabHook )
-			{
-				console.log( "Overriding hook with grabHook" );
-			}
-			hookToSend = this.m_grabHook ?? this.m_hook;
-			// console.log( "REMOTE scene graph update for " + this.getEndpointId() );
-		}
-		else
-		{
-			// never send the grab hook for local gadgets
-			hookToSend = this.m_hook;
-		}
-
-		if( hookToSend )
-		{
-			if( typeof hookToSend === "string" )
-			{
-				msg.hook = hookToSend;
-				// console.log( `Sending ${ hookToSend } for gadget ${ this.getEndpointId() }` );
-			}
-			else
-			{
-				msg.hook = hookToSend.holderAddr;
-				msg.hookFromGadget = hookToSend.hookFromGadget;
-				// console.log( `Sending ${ endpointAddrToString( hookToSend.holderAddr )	}+xform for gadget ${ this.getEndpointId() }` );
-			}	
-		}
 
 		return (
 		{
@@ -1134,11 +877,6 @@ class CEndpoint
 
 	@bind private onSaveSettings( env: Envelope, m: MsgSaveSettings )
 	{
-		if( this.m_gadgetData && !this.m_gadgetData.isBeingDestroyed() 
-			&& !this.m_gadgetData.getRemoteUniversePath() )
-		{
-			persistence.setGadgetSettings( this.m_gadgetData.getPersistenceUuid(), m.settings );
-		}
 	}
 
 	@bind private onOverrideTransform( env: Envelope, m: MsgOverrideTransform )
