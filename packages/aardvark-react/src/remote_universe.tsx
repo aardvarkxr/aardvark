@@ -1,8 +1,12 @@
-import { ActiveInterface, AvEntityChild, AvGadget, AvInterfaceEntity, AvTransform, RemoteGadgetComponent, RemoteGadgetEvent, RemoteGadgetEventType, RGESendEvent } from '@aardvarkxr/aardvark-react';
 import { emptyVolume, InitialInterfaceLock, MinimalPose } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import { NetworkUniverseEvent, NetworkUniverseEventType, UniverseInitInfo } from './network_universe';
+import { ActiveInterface, AvInterfaceEntity } from './aardvark_interface_entity';
+import { RemoteGadgetEvent, RemoteGadgetEventType, RGESendEvent, RemoteGadgetComponent } from './component_remote_gadget';
+import { AvTransform } from './aardvark_transform';
+import { AvEntityChild } from './aardvark_entity_child';
+import { AvGadget } from './aardvark_gadget';
 
 interface RemoteUniverseProps
 {

@@ -42,6 +42,8 @@ and limitations under the License.
 
 /*! https://mths.be/regenerate v1.3.3 by @mathias | MIT license */
 
+/*! safe-buffer. MIT License. Feross Aboukhadijeh <https://feross.org/opensource> */
+
 /**
  * A better abstraction over CSS.
  *
