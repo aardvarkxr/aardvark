@@ -1,3 +1,4 @@
+import { MinimalPose } from './../../aardvark-shared/src/aardvark_protocol';
 import { AvNodeTransform } from '@aardvarkxr/aardvark-shared';
 import { vec3, mat4, vec4, mat3, quat } from '@tlaukkan/tsm';
 
@@ -19,6 +20,24 @@ export function scaleMat( s: vec3)
 	return m;
 }
 
+function quatFromAxisAngleDegrees( axis: vec3, deg?: number ): quat
+{
+	if( !deg )
+		return new quat( quat.identity.xyzw );
+
+	return quat.fromAxisAngle( axis, deg * Math.PI / 180 );
+}
+
+export function rotationMatFromEulerDegrees( r: vec3 )
+{
+	let qx = quatFromAxisAngleDegrees( vec3.right, r.x );
+	let qy = quatFromAxisAngleDegrees( vec3.up, r.y );
+	let qz = quatFromAxisAngleDegrees( vec3.forward, r.z );
+
+	let q = qx.multiply( qy ).multiply( qz );
+	return q.toMat4();
+}
+
 export function getRowFromMat( m: mat4, n: number ) : vec3 
 {
 	let row = m.row( n );
@@ -27,6 +46,11 @@ export function getRowFromMat( m: mat4, n: number ) : vec3
 
 export function nodeTransformFromMat4( m: mat4 ) : AvNodeTransform
 {
+	if( !m )
+	{
+		return undefined;
+	}
+
 	let transform: AvNodeTransform = {};
 	let pos = m.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) );
 	if( pos.x != 0 || pos.y != 0 || pos.z != 0 )
@@ -208,4 +232,32 @@ export function lerpAvTransforms( xf0: AvNodeTransform, xf1: AvNodeTransform, t:
 
 	return result;
 }
+
+export function invertNodeTransform( from: AvNodeTransform ): AvNodeTransform
+{
+	if( !from )
+		return from;
+
+	let fromMat = nodeTransformToMat4( from );
+	return nodeTransformFromMat4( fromMat.copy().inverse() );
+}
+
+export function minimalPoseFromTransform( from: AvNodeTransform ): MinimalPose
+{
+	let mat = nodeTransformToMat4( from );
+	let rot = mat.toMat3().toQuat();
+	let pos = mat.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) );
+	return [ pos.x, pos.y, pos.z, rot.w, rot.x, rot.y, rot.z ];
+}
+
+export function minimalToMat4Transform( minimal: MinimalPose ): mat4
+{
+	let transform: AvNodeTransform = 
+	{
+		position: { x: minimal[0], y: minimal[1], z: minimal[2] },
+		rotation: { w: minimal[3], x: minimal[4], y: minimal[5], z: minimal[6] }, 
+	};
+	return nodeTransformToMat4( transform );
+}
+
 

@@ -60,27 +60,22 @@ namespace aardvark
 	{
 		j = nlohmann::json {
 			{ "uri", params.uri },
-			{ "initialHook", params.initialHook },
-			{ "persistenceUuid", params.persistenceUuid },
+			{ "initialInterfaces", params.initialInterfaces },
 			{ "epToNotify", params.epToNotify },
-			{ "remoteUniversePath", params.remoteUniversePath },
-			{ "ownerUuid", params.ownerUuid },
-			{ "remotePersistenceUuid", params.remotePersistenceUuid },
 		};
 	}
 
 	void from_json( const nlohmann::json& j, GadgetParams_t& params )
 	{
 		j.at( "uri" ).get_to( params.uri );
-		j.at( "persistenceUuid" ).get_to( params.persistenceUuid);
 		try
 		{
-			j.at( "initialHook" ).get_to( params.initialHook );
+			j.at( "initialInterfaces" ).get_to( params.initialInterfaces );
 		}
 		catch ( nlohmann::json::exception & e )
 		{
 			(void)e;
-			params.initialHook.clear();
+			params.initialInterfaces.clear();
 		}
 		try
 		{
@@ -90,26 +85,6 @@ namespace aardvark
 		{
 			(void)e;
 			params.epToNotify.type = EEndpointType::Unknown;
-		}
-		try
-		{
-			j.at( "remoteUniversePath" ).get_to( params.remoteUniversePath );
-		}
-		catch ( nlohmann::json::exception & e )
-		{
-			(void)e;
-			params.remoteUniversePath.clear();
-		}
-		try
-		{
-			j.at( "ownerUuid" ).get_to( params.ownerUuid );
-			j.at( "remotePersistenceUuid" ).get_to( params.remotePersistenceUuid );
-		}
-		catch ( nlohmann::json::exception & e )
-		{
-			(void)e;
-			params.ownerUuid.clear();
-			params.remotePersistenceUuid.clear();
 		}
 	}
 

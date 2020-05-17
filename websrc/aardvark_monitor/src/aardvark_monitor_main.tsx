@@ -1,5 +1,5 @@
 import { CMonitorEndpoint, DegreesToRadians, EulerAnglesToQuaternion, QuaternionToEulerAngles, RadiansToDegrees } from '@aardvarkxr/aardvark-react';
-import { AardvarkManifest, AvGrabEvent, AvGrabEventType, AvNode, AvNodeTransform, AvNodeType, AvQuaternion, AvVector, EndpointAddr, endpointAddrToString, EndpointType, ENodeFlags, Envelope, MessageType, MinimalPose, MsgGrabEvent, MsgLostEndpoint, MsgNewEndpoint, MsgOverrideTransform, MsgPokerProximity, MsgResourceLoadFailed, MsgUpdateSceneGraph, AvVolume, EVolumeType } from '@aardvarkxr/aardvark-shared';
+import { AardvarkManifest, AvNode, AvNodeTransform, AvNodeType, AvQuaternion, AvVector, AvVolume, EndpointAddr, endpointAddrToString, EndpointType, ENodeFlags, Envelope, EVolumeType, InitialInterfaceLock, MessageType, MsgLostEndpoint, MsgNewEndpoint, MsgOverrideTransform, MsgResourceLoadFailed, MsgUpdateSceneGraph } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import { action, computed, observable, ObservableMap } from 'mobx';
 import { observer } from 'mobx-react';
@@ -28,7 +28,7 @@ class CMonitorStore
 {
 	private m_connection: CMonitorEndpoint;
 	@observable m_endpoints: ObservableMap<number, EndpointData>;
-	m_events = observable.array< AvGrabEvent | MsgResourceLoadFailed >();
+	m_events = observable.array< MsgResourceLoadFailed >();
 
 	constructor()
 	{
@@ -38,8 +38,6 @@ class CMonitorStore
 		this.m_connection.registerHandler( MessageType.NewEndpoint, this.onNewEndpoint );
 		this.m_connection.registerHandler( MessageType.LostEndpoint, this.onLostEndpoint );
 		this.m_connection.registerHandler( MessageType.UpdateSceneGraph, this.onUpdateSceneGraph );
-		this.m_connection.registerHandler( MessageType.GrabEvent, this.onGrabEvent );
-		this.m_connection.registerHandler( MessageType.PokerProximity, this.onPokerProximity );
 		this.m_connection.registerHandler( MessageType.ResourceLoadFailed, this.onResourceLoadFailed );
 	}
 
@@ -156,19 +154,9 @@ class CMonitorStore
 		this.m_endpoints.delete( message.endpointId );
 	}
 
-	@bind @action onGrabEvent( message: MsgGrabEvent )
-	{
-		this.m_events.push( message.event );
-	}
-
 	@bind @action onResourceLoadFailed( message: MsgResourceLoadFailed )
 	{
 		this.m_events.push( message );
-	}
-
-	@bind @action onPokerProximity(  message: MsgPokerProximity )
-	{
-		// nothing here yet
 	}
 
 	@computed get recentGrabEvents()
@@ -655,32 +643,6 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 		return <div>Flags: { flagNames.join( ' ' ) } </div>;
 	}
 
-	public renderMemberOrigins( memberOrigins: { [originPath: string ]: MinimalPose } )
-	{
-		let origins: JSX.Element[] = [];
-		for( let originPath in memberOrigins )
-		{
-			let pose = memberOrigins[ originPath ];
-			origins.push( 
-				<div className="RoomMemberPose" key={ originPath }>
-					<div>{ originPath }</div>
-					{
-						pose ? <>
-							<div>{ pose[0].toFixed(2) }, { pose[1].toFixed(2) }, { pose[2].toFixed(2) }</div>
-							<div>{ pose[3].toFixed(2) }, { pose[4].toFixed(2) }, { pose[5].toFixed(2) }, { pose[6].toFixed(2) }</div>
-						</>
-						: <div>None</div>
-					}
-				
-			</div> );
-		}
-
-		return <div className="AvNodeProperty">
-			origins: { origins }
-		</div>;
-	
-	}
-
 	public renderVolume( volume: AvVolume ): JSX.Element
 	{
 		if( !volume )
@@ -697,9 +659,30 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 			case EVolumeType.ModelBox:
 				return <div className="AvNodeProperty">volume: model box={ volume.uri }</div>;
 
+			case EVolumeType.Infinite:
+				return <div className="AvNodeProperty">volume: infinite</div>;
+
+			case EVolumeType.Empty:
+				return <div className="AvNodeProperty">volume: empty</div>;
+
 			default:
 				return <div className="AvNodeProperty">volume: Unknown/invalid</div>;
 		}
+	}
+
+	public renderInitialInterfaceLocks( interfaceLocks: InitialInterfaceLock[] ): JSX.Element
+	{
+		if( !interfaceLocks || !interfaceLocks.length )
+		{
+			return null;
+		}
+
+		return <div className="AvNodeProperty">Interface Locks: 
+				{ interfaceLocks.map( ( value ) => (
+					<div> { value.iface } -> { endpointAddrToString( value.receiver ) } 
+						{ value.params ? JSON.stringify( value.params ) : "" }
+					</div> ) ) }
+			</div>;
 	}
 
 	public renderNode( node: AvNode ): JSX.Element
@@ -724,10 +707,7 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 				{ this.renderFlags( node.flags ) } 
 			</div>
 			{ node.propUniverseName && <div className="AvNodeProperty">remote: {node.propUniverseName }</div> }
-			{ node.propRoomId && <div className="AvNodeProperty">roomId: {node.propRoomId }</div> }
-			{ node.propMemberId && <div className="AvNodeProperty">remote: {node.propMemberId }</div> }
 			{ node.propOrigin && <div className="AvNodeProperty">origin: {node.propOrigin }</div> }
-			{ node.propMemberOrigins && this.renderMemberOrigins( node.propMemberOrigins ) }
 			{ node.propModelUri && <div className="AvNodeProperty">model: {node.propModelUri }</div> }
 			{ node.propColor && <div className="AvNodeProperty">Color: 
 				{ node.propColor.r.toFixed( 2 ) },
@@ -736,6 +716,8 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 				{ node.propColor.r != undefined && ( ", " + node.propColor.a ) }
 				</div> }
 			{ this.renderVolume( node.propVolume ) }
+			{ node.propVolumes &&
+				node.propVolumes.map( ( volume ) => this.renderVolume( volume ) ) }
 			{ node.propInteractive && <div className="AvNodeProperty">Interactive</div> }
 			{ node.propConstraint && <div className="AvNodeProperty">Constraint: 
 				[ { node.propConstraint.minX }, {node.propConstraint.maxX } ]
@@ -747,6 +729,15 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 				nodeId={ { type: EndpointType.Node, endpointId: this.props.gadgetId, nodeId: node.id } } /> }
 			{ node.propInterfaces 
 				&& <div className="AvNodeProperty">Interfaces: { node.propInterfaces.join( ", " ) }</div> }
+			{ node.propTransmits && node.propTransmits.length > 0
+				&& <div className="AvNodeProperty">Transmits: { node.propTransmits.join( ", " ) }</div> }
+			{ node.propReceives && node.propReceives.length > 0
+				&& <div className="AvNodeProperty">Receives: { node.propReceives.join( ", " ) }</div> }
+			{ this.renderInitialInterfaceLocks( node.propInterfaceLocks ) }
+			{ node.propParentAddr 
+				&& <div className="AvNodeProperty">Parent: { endpointAddrToString( node.propParentAddr ) }</div> }
+			{ node.propChildAddr 
+				&& <div className="AvNodeProperty">Child: { endpointAddrToString( node.propChildAddr ) }</div> }
 			{ childElements }
 		</div>
 	}
@@ -800,7 +791,7 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 		{
 			if( typeof gadgetData.gadgetHook === "string" )
 			{
-				hookInfo = gadgetData.gadgetHook;
+				hookInfo = atob( gadgetData.gadgetHook );
 			}
 			else
 			{
@@ -856,7 +847,7 @@ class RendererMonitor extends React.Component< RendererMonitorProps, RendererMon
 
 interface GrabEventProps
 {
-	event: AvGrabEvent | MsgResourceLoadFailed;
+	event: MsgResourceLoadFailed;
 }
 
 
@@ -878,28 +869,12 @@ class GrabEventMonitor extends React.Component< GrabEventProps, {} >
 
 	public render()
 	{
-		if( this.props.event.hasOwnProperty( "type" ) )
-		{
-			let evt = this.props.event as AvGrabEvent;
-			return ( <div className="GrabEvent">
-				{ AvGrabEventType[ evt.type ] }
-				<div className="GrabEventField">Sender: { evt.senderId }</div>
-				{ this.renderAddr( "Grabber", evt.grabberId ) }
-				{ this.renderAddr( "Grabbable", evt.grabbableId ) }
-				<div className="GrabEventField">Grabbable Flags: { evt.grabbableFlags }</div>
-				{ this.renderAddr( "Handle", evt.handleId ) }
-				{ this.renderAddr( "Hook", evt.hookId ) }
-			</div> );
-		}
-		else
-		{
-			let m = this.props.event as MsgResourceLoadFailed;
-			return ( <div className="ResourceLoadFailed">
-				<div className="NodeAddr">Node: { endpointAddrToString( m.nodeId ) }</div>
-				<div className="FailedUri">URI: { m.resourceUri } </div>
-				<div className="Error">{ m.error } </div>
-			</div> );
-		}
+		let m = this.props.event as MsgResourceLoadFailed;
+		return ( <div className="ResourceLoadFailed">
+			<div className="NodeAddr">Node: { endpointAddrToString( m.nodeId ) }</div>
+			<div className="FailedUri">URI: { m.resourceUri } </div>
+			<div className="Error">{ m.error } </div>
+		</div> );
 	}
 }
 

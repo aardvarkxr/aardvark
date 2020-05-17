@@ -1,15 +1,14 @@
-import * as React from 'react';
-import  * as ReactDOM from 'react-dom';
-
+import { AvGrabButton, AvPanel, AvPanelAnchor, AvStandardGrabbable, AvTransform, AvModel } from '@aardvarkxr/aardvark-react';
+import { g_builtinModelAardvark, g_builtinModelPlus } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
-import { AvTransform, AvSlider, AvGrabbable, AvSphereHandle, AvModel, AvPanel, AvPanelAnchor, AvTransformControl, QuaternionToEulerAngles, RadiansToDegrees } from '@aardvarkxr/aardvark-react';
-import { AvNodeTransform, g_builtinModelAardvark, g_builtinModelGear  } from '@aardvarkxr/aardvark-shared';
+import * as React from 'react';
+import * as ReactDOM from 'react-dom';
+
 
 
 interface ControlTestState
 {
-	sliderValue: number;
-	transformValue: AvNodeTransform;
+	buttonClicked: boolean;
 }
 
 
@@ -20,82 +19,50 @@ class ControlTest extends React.Component< {}, ControlTestState >
 		super( props );
 		this.state = 
 		{ 
-			sliderValue: 0,
-			transformValue: 
-			{
-			},
+			buttonClicked: false,
 		};
 	}
 
-	@bind onSetSlider( newValue: number[] )
+	@bind 
+	private onButtonClicked()
 	{
-		this.setState( { sliderValue: newValue[0] } );
+		this.setState( { buttonClicked: true } );
 	}
 
-	@bind onSetTransform( newValue: AvNodeTransform )
+	@bind 
+	private onButtonReleased()
 	{
-		this.setState( { transformValue: newValue } );
-	}
-
-	private renderTransformLabel()
-	{
-		if( !this.state.transformValue )
-			return null;
-
-		let tx = this.state.transformValue.position ? this.state.transformValue.position.x : 0;
-		let ty = this.state.transformValue.position ? this.state.transformValue.position.y : 0;
-		let tz = this.state.transformValue.position ? this.state.transformValue.position.z : 0;
-		let sx = this.state.transformValue.scale ? this.state.transformValue.scale.x : 1;
-		let sy = this.state.transformValue.scale ? this.state.transformValue.scale.y : 1;
-		let sz = this.state.transformValue.scale ? this.state.transformValue.scale.z : 1;
-		let r = QuaternionToEulerAngles( this.state.transformValue.rotation );
-
-		return <div className="TranslateLabel">
-
-				<div>[ { tx.toFixed( 3 ) }, { ty.toFixed( 3 ) }, { tz.toFixed( 3 ) } ]</div>
-				<div>[ { sx.toFixed( 2 ) }, { sy.toFixed( 2 ) }, { sz.toFixed( 2 ) } ]</div>
-				<div>[ { RadiansToDegrees( r.yaw ).toFixed( 0 ) }, 
-					{ RadiansToDegrees( r.pitch ).toFixed( 0 ) }, { RadiansToDegrees( r.roll ).toFixed( 0 ) } ]</div>
-			</div>;
+		this.setState( { buttonClicked: false } );
 	}
 
 	public render()
 	{
 		return (
 			<div className="FullPage" >
-				<AvGrabbable preserveDropTransform={true}>
-					<AvTransform uniformScale={2}>
-						<AvModel uri={ g_builtinModelAardvark }/>
+				<AvStandardGrabbable modelUri={ g_builtinModelAardvark }
+					modelColor="lightblue" useInitialParent={ true } remoteInterfaceLocks={ [] } >
+
+					<AvTransform translateY={ 0.12 }>
+						<AvPanel interactive={ false } widthInMeters={ 0.2 } >
+							<div className="ControlList">
+								<div className="ButtonContainer">
+									<div className="ButtonLabel">{ this.state.buttonClicked ? "CLICKED" : "not clicked" }</div>
+									<div className="ButtonControl">
+										<AvPanelAnchor>
+											<AvGrabButton onClick={ this.onButtonClicked } onRelease={ this.onButtonReleased }
+												radius={ 0.05 } >
+												<AvTransform uniformScale={ 5 } rotateZ={ 90 } rotateY={ 90 } >
+													<AvModel uri={ g_builtinModelPlus }/>
+												</AvTransform>
+											</AvGrabButton>
+										</AvPanelAnchor>
+									</div>
+								</div>
+
+							</div>
+						</AvPanel>
 					</AvTransform>
-					<AvSphereHandle radius={0.2} />
-
-					<AvPanel interactive={ false } >
-						<div className="ControlList">
-							<div className="SliderContainer">
-								<div className="SliderLabel">{ this.state.sliderValue.toFixed( 2 ) }</div>
-								<div className="SliderControl">
-									<AvPanelAnchor>
-										<AvSlider rangeX={ 0.7 } onSetValue={ this.onSetSlider }
-											modelUri={ g_builtinModelGear }/>
-									</AvPanelAnchor>
-								</div>
-							</div>
-
-							<div className="TranslateContainer">
-								{ this.renderTransformLabel() }
-								<div className="TranslateControl">
-									<AvPanelAnchor>
-										<AvTransformControl onSetValue={ this.onSetTransform }
-											translate= { true } 
-											rotate= { true } 
-											scale= { true } 
-											general= { true } />
-									</AvPanelAnchor>
-								</div>
-							</div>
-						</div>
-					</AvPanel>
-				</AvGrabbable>
+				</AvStandardGrabbable>
 			</div>
 		)
 	}

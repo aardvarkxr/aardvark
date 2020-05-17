@@ -38,7 +38,6 @@ public:
 	void sendBrowserMessage( CefRefPtr< CefProcessMessage > msg );
 
 	bool hasPermission( const std::string & permission );
-	const std::string getInitialHook() const { return m_params.initialHook; }
 	void requestStartGadget( const aardvark::GadgetParams_t & params );
 	void requestUri( const std::string & uri, std::function<void( CUriRequestHandler::Result_t & result ) > callback );
 	void requestTextureInfo();

@@ -1,6 +1,5 @@
-import { AvGadget, AvGadgetSeed, AvGrabbable, AvModel, AvModelBoxHandle, AvPanel, AvPanelAnchor, AvTransform, HighlightType, HookInteraction } from '@aardvarkxr/aardvark-react';
-import { EndpointAddr, g_builtinModelGear } from '@aardvarkxr/aardvark-shared';
-import bind from 'bind-decorator';
+import { AvComposedEntity, AvGadget, AvGadgetSeed, AvOrigin, AvPrimitive, AvStandardGrabbable, AvTransform, MoveableComponent, MoveableComponentState, PrimitiveType, ShowGrabbableChildren } from '@aardvarkxr/aardvark-react';
+import { EVolumeType, g_builtinModelGear } from '@aardvarkxr/aardvark-shared';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 
@@ -8,18 +7,18 @@ import * as ReactDOM from 'react-dom';
 
 interface ControlPanelState
 {
-	highlight: HighlightType;
 	installedGadgets?: string[];
 }
 
 class ControlPanel extends React.Component< {}, ControlPanelState >
 {
+	private ballMoveable = new MoveableComponent( () => { this.forceUpdate(); } );
+
 	constructor( props: any )
 	{
 		super( props );
 		this.state = 
 		{ 
-			highlight: HighlightType.None,
 		};
 
 		AvGadget.instance().getInstalledGadgets()
@@ -27,12 +26,6 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		{
 			this.setState( { installedGadgets } );
 		} );
-	}
-
-	@bind onUpdateHighlight( highlight: HighlightType, handleAddr: EndpointAddr, tethered: boolean )
-	{
-		console.log( `Highlight state is ${ HighlightType[ highlight ] }` );
-		this.setState( { highlight } );
 	}
 
 	private renderGadgetSeedList()
@@ -43,53 +36,55 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		}
 		else
 		{
+			const k_cellWidth = 0.06;
+			let rowCount = Math.ceil( this.state.installedGadgets.length / 3 );
+			let top = rowCount * -k_cellWidth;
 			let seeds: JSX.Element[] = [];
-			for( let gadget of this.state.installedGadgets )
+			for( let gadgetIndex = 0; gadgetIndex < this.state.installedGadgets.length; gadgetIndex++ )
 			{
+				let gadget = this.state.installedGadgets[ gadgetIndex ];
+				let col = gadgetIndex % 3;
+				let row = Math.floor( gadgetIndex / 3 );
+
 				seeds.push( 
-					<div className="GadgetSeed">
-						<AvPanelAnchor>
-							<AvGadgetSeed key="gadget" uri={ gadget } 
-								radius={ 0.1 }/>
-						</AvPanelAnchor>
-					</div> );
+					<AvTransform translateZ = { top + row * k_cellWidth } 
+						translateX = { ( col - 1 ) * k_cellWidth } 
+						key={ gadget } >
+						<AvGadgetSeed key="gadget" uri={ gadget } radius={ 0.025 }/>
+					</AvTransform>);
 			}
-			return <div className="GadgetSeedContainer">{ seeds }</div>;
+			return <>{ seeds }</>;
 		}
 	}
 
 	public renderPanel()
 	{
-		if( this.state.highlight != HighlightType.Grabbed )
-			return null;
-
 		return <AvTransform rotateX={ 45 } translateZ={ -0.1 }>
-				<AvTransform uniformScale={0.25}>
-					<AvTransform translateZ={ -0.55 }>
-						<AvPanel interactive={false}>
-							<div className="FullPage" >
-								<h1>This is the control panel</h1>
-								{ this.renderGadgetSeedList() }
-							</div>;
-						</AvPanel>
-					</AvTransform>
-				</AvTransform>
+					{ this.renderGadgetSeedList() }
 			</AvTransform>;
 	}
 
 	public render()
 	{
 		return (
-			<AvGrabbable updateHighlight={ this.onUpdateHighlight } preserveDropTransform={ true }
-				grabWithIdentityTransform={ true }
-				hookInteraction={ HookInteraction.HighlightAndDrop }> 
-				<AvTransform uniformScale={ this.state.highlight == HighlightType.InRange ? 1.1 : 1.0 } >
-					<AvModel uri={ g_builtinModelGear } />
-					<AvModelBoxHandle uri={ g_builtinModelGear }/>
+			<AvOrigin path="/space/stage">
+				<AvTransform translateY={ 1 }>
+					<AvStandardGrabbable modelUri={ g_builtinModelGear } 
+						showChildren={ ShowGrabbableChildren.OnlyWhenGrabbed } >
+						{ this.renderPanel() }
+					</AvStandardGrabbable>
 				</AvTransform>
 
-				{ this.renderPanel() }
-			</AvGrabbable>	);
+				<AvTransform translateY={ 1 }  translateZ={ 0.5 }>
+					<AvComposedEntity components={ [this.ballMoveable ] } 
+						volume={ { type: EVolumeType.Sphere, radius: 0.1} }>
+						<AvPrimitive type={ PrimitiveType.Sphere } radius={0.1}
+							color={ ( this.ballMoveable.state == MoveableComponentState.GrabberNearby
+									|| this.ballMoveable.state == MoveableComponentState.Grabbed )
+									? "yellow" : "turquoise" } />
+					</AvComposedEntity>
+				</AvTransform>
+			</AvOrigin> );
 	}
 }
 

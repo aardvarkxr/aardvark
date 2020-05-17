@@ -1,11 +1,10 @@
-import { AardvarkState, StoredGadget, readPersistentState, AardvarkManifest, AvNodeTransform, LocalUserInfo, signRequest, AuthedRequest, AvRendererConfig } from '@aardvarkxr/aardvark-shared';
-import { v4 as uuid } from 'uuid';
+import { AardvarkManifest, AardvarkState, AvNodeTransform, AvRendererConfig, readPersistentState, StoredGadget } from '@aardvarkxr/aardvark-shared';
+import bind from 'bind-decorator';
+import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import * as fs from 'fs';
+import { v4 as uuid } from 'uuid';
 import { getJSONFromUri } from './serverutils';
-import { buildPersistentHookPath, HookType } from 'common/hook_utils';
-import bind from 'bind-decorator';
 
 
 const g_alwaysInstalledGadgets =
@@ -29,8 +28,6 @@ class CPersistenceManager
 	private m_writeTimer: NodeJS.Timeout = null;
 	private m_pendingFileReload: NodeJS.Timeout = null;
 	private m_lastWriteTime: number = 0;
-	private m_localUserInfo: LocalUserInfo = null;
-	private m_privateKey: string = null;
 
 	constructor()
 	{
@@ -112,18 +109,6 @@ class CPersistenceManager
 		}
 	}
 
-	public getGadgetHookPath( uuid: string ): string
-	{
-		if( this.m_state.activeGadgets[ uuid ] )
-		{
-			return this.m_state.activeGadgets[ uuid ].hookPath;
-		}
-		else
-		{
-			return null;
-		}
-	}
-
 	public getGadgetSettings( uuid: string ): any
 	{
 		if( this.m_state.activeGadgets[ uuid ] )
@@ -139,23 +124,6 @@ class CPersistenceManager
 	public getRendererSettings(): AvRendererConfig
 	{
 		return this.m_state.rendererConfig;
-	}
-
-	public setGadgetHook( uuid: string, hook: string, hookFromGadget: AvNodeTransform )
-	{
-		let hookPath = buildPersistentHookPath( uuid, hook, hookFromGadget, HookType.Hook );
-		this.setGadgetHookPath( uuid, hookPath );
-	}
-
-	public setGadgetHookPath( uuid: string, hookPath: string )
-	{
-		if( !this.m_state.activeGadgets[ uuid ] )
-		{
-			throw "unknown persistence uuid";
-		}
-
-		this.m_state.activeGadgets[ uuid ].hookPath = hookPath;
-		this.markDirty();
 	}
 
 	public setGadgetSettings( uuid: string, settings: any )
@@ -227,17 +195,6 @@ class CPersistenceManager
 				console.log( `Unable to read gadget manifest for ${ installedGadget } when reading state` );
 			}
 		}
-
-		// create our local user info
-		let key = "PUB" + this.m_state.localUserUuid;
-		let userInfo: LocalUserInfo =
-		{
-			userUuid: this.m_state.localUserUuid,
-			userDisplayName: this.m_state.localUserDisplayName,
-			userPublicKey: key,
-		}
-		this.m_localUserInfo = signRequest( userInfo, key );
-		this.m_privateKey = key;
 	}
 
 
@@ -288,16 +245,6 @@ class CPersistenceManager
 		return this.m_state.installedGadgets.includes( gadgetUri )
 			|| g_alwaysInstalledGadgets.includes( gadgetUri )
 			|| g_builtinGadgets.includes( gadgetUri )
-	}
-
-	public get localUserInfo() : LocalUserInfo
-	{
-		return this.m_localUserInfo;
-	}
-
-	public signRequest( req: AuthedRequest ): AuthedRequest
-	{
-		return signRequest( req, this.m_privateKey );
 	}
 }
 

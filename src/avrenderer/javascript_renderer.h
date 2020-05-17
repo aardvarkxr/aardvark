@@ -2,8 +2,6 @@
 
 #include "javascript_object.h"
 #include "aardvark/irenderer.h"
-#include "intersection_tester.h"
-#include "collision_tester.h"
 
 class CAardvarkRenderProcessHandler;
 class CJavascriptRenderer;
@@ -42,8 +40,6 @@ protected:
 
 	CefRefPtr< CefV8Value > m_jsTraverser;
 	CefRefPtr< CefV8Value > m_jsHapticProcessor;
-	CIntersectionTester m_intersections;
-	CCollisionTester m_collisions;
 
 	CAardvarkRenderProcessHandler *m_handler = nullptr;
 	bool m_quitting = false;

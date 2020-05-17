@@ -1,6 +1,5 @@
 import { WebAppManifest } from './web_app_manifest';
 import { AvActionState } from './aardvark';
-import { AuthedRequest, GadgetAuthedRequest } from './auth';
 
 export const AardvarkPort = 23842;
 
@@ -13,7 +12,7 @@ export enum MessageType
 	Error = 102,
 	GetAardvarkManifest = 103,
 	GetAardvarkManifestResponse = 104,
-	UserInfo = 105,
+	//UserInfo = 105,
 
 	// Monitor messages
 	// these are send to monitors to give them meta context
@@ -23,21 +22,21 @@ export enum MessageType
 
 	// Gadget messages
 	UpdateSceneGraph = 300,
-	GrabEvent = 301,
-	GrabberState = 302,
+	//GrabEvent = 301,
+	//GrabberState = 302,
 	GadgetStarted = 303,	
-	PokerProximity = 304,
-	MouseEvent = 305,
+	//PokerProximity = 304,
+	//MouseEvent = 305,
 	NodeHaptic = 306,
-	AttachGadgetToHook = 307,
-	DetachGadgetFromHook = 308,
-	MasterStartGadget = 309, // tells master to start a gadget
+	// AttachGadgetToHook = 307,
+	// DetachGadgetFromHook = 308,
+	//MasterStartGadget = 309, // tells master to start a gadget
 	SaveSettings = 310,
 	UpdateActionState = 311,
 	DestroyGadget = 312,
 	ResourceLoadFailed = 313,
-	SignRequest = 314,
-	SignRequestResponse = 315,
+	// SignRequest = 314,
+	// SignRequestResponse = 315,
 	InterfaceEvent = 316,
 
 	// System messages
@@ -46,14 +45,28 @@ export enum MessageType
 	InstallGadget = 402,
 
 	// gadget has "room" permissions
-	CreateRoom = 600,
-	CreateRoomResponse = 601,
-	DestroyRoom = 602,
-	DestroyRoomResponse = 603,
-	RoomMessageReceived = 604,
-	RoomMessageReceivedResponse = 605,
-	SendRoomMessage = 606,
-	UpdatePose = 607,
+	// CreateRoom = 600,
+	// CreateRoomResponse = 601,
+	// DestroyRoom = 602,
+	// DestroyRoomResponse = 603,
+	// RoomMessageReceived = 604,
+	// RoomMessageReceivedResponse = 605,
+	// SendRoomMessage = 606,
+	// UpdatePose = 607,
+
+	// Interfaces and interface entities
+	InterfaceStarted = 700,
+	InterfaceEnded = 701,
+	InterfaceTransformUpdated = 702,
+	InterfaceSendEvent = 703,
+	InterfaceReceiveEvent = 704,
+	InterfaceLock = 705,
+	InterfaceLockResponse = 706,
+	InterfaceUnlock = 707,
+	InterfaceUnlockResponse = 708,
+	InterfaceRelock = 709,
+	InterfaceRelockResponse = 710,
+	InterfaceSendEventResponse = 711,
 }
 
 export enum WebSocketCloseCodes
@@ -207,29 +220,12 @@ export interface MsgSetEndpointType
 {
 	newEndpointType: EndpointType;
 	gadgetUri?: string;
-	initialHook?: string;
-	persistenceUuid?: string;
-	remoteUniversePath?: string;
-	ownerUuid?: string;
 }
 
 export interface MsgSetEndpointTypeResponse
 {
 	endpointId: number;
 	settings?: any;
-	persistenceUuid?: string;
-}
-
-export interface LocalUserInfo extends AuthedRequest
-{
-	userUuid: string;
-	userDisplayName: string;
-	userPublicKey: string;
-}
-
-export interface MsgUserInfo
-{
-	info: LocalUserInfo;
 }
 
 export interface MsgNewEndpoint
@@ -265,32 +261,6 @@ export interface MsgUpdateSceneGraph
 	remoteUniversePath?: string;
 }
 
-export enum EHookVolume
-{
-	Inner = 0,
-	Outer = 1,
-}
-
-export interface GrabberHookState
-{
-	hookId: EndpointAddr;
-	whichVolume: EHookVolume;
-	interfaces: string[];
-	hookFlags: number;
-}
-
-export interface MsgGrabberState
-{
-	grabberId: EndpointAddr;
-	hand: EHand;
-	grabbables?: AvGrabbableCollision[];
-	hooks?: GrabberHookState[];
-}
-
-export interface MsgGrabEvent
-{
-	event: AvGrabEvent;
-}
 
 export function parseEnvelope( envString: string, parsePayload: boolean = true ): Envelope
 {
@@ -314,25 +284,8 @@ export interface MsgGadgetStarted
 {
 	epToNotify: EndpointAddr;
 	startedGadgetEndpointId: number;
-	mainGrabbable?: number;
-	mainHandle?: number;
-	mainGrabbableGlobalId?: EndpointAddr;
-	mainHandleGlobalId?: EndpointAddr;
 }
 
-
-export interface MsgPokerProximity
-{
-	pokerId: EndpointAddr;
-	hand: EHand;
-	actionState: AvActionState;
-	panels: PokerProximity[];
-}
-
-export interface MsgMouseEvent
-{
-	event: AvPanelMouseEvent;
-}
 
 export interface MsgNodeHaptic
 {
@@ -347,29 +300,6 @@ export interface MsgInterfaceEvent
 	destination: EndpointAddr;
 	interface: string;
 	data: object;
-}
-
-export interface MsgAttachGadgetToHook
-{
-	grabbableNodeId: EndpointAddr;
-	hookNodeId: EndpointAddr | null;
-	hookFromGrabbable?: AvNodeTransform;
-}
-
-export interface MsgDetachGadgetFromHook
-{
-	grabbableNodeId: EndpointAddr;
-	hookNodeId: EndpointAddr;
-}
-
-export interface MsgMasterStartGadget
-{
-	uri: string;
-	initialHook: string;
-	persistenceUuid: string;
-	remoteUserId?: string;
-	epToNotify?: EndpointAddr;
-	remotePersistenceUuid?: string;
 }
 
 export interface MsgSaveSettings
@@ -418,198 +348,102 @@ export interface MsgResourceLoadFailed
 	error: string;
 }
 
-export interface MsgSignRequest
-{
-	request: AuthedRequest;
-}
-
-export interface MsgSignRequestResponse
-{
-	request: GadgetAuthedRequest;
-}
-
 // tx, ty, tz, rw, rx, ry, rz
 export type MinimalPose = [ number, number, number, number, number, number, number ];
 
-export interface MsgUpdatePose extends AuthedRequest
+
+export interface MsgInterfaceStarted
 {
-	userUuid: string;
-	originPath: string;
-	newPose: MinimalPose; 
+	transmitter: EndpointAddr;
+	receiver: EndpointAddr;
+	iface: string;
+	transmitterFromReceiver: AvNodeTransform;
+	params?: object; // This will only be set for initial interface locks
 }
 
-export interface SharedGadget
+export interface MsgInterfaceEnded
 {
-	gadgetUri: string;
-	persistenceUuid: string;
-	hook?: string;
+	transmitter: EndpointAddr;
+	receiver: EndpointAddr;
+	iface: string;
+	transmitterFromReceiver?: AvNodeTransform;
 }
 
-
-
-/** This enum defines reserved destination values that may be set on any
- * message being sent on a data WebRTC connection to an Aardvark room.
- * 
- * All member IDs that start with underscore are reserved and may not
- * be used as actual member IDs by the gadget's implementation.
- */
-export enum RoomMemberIdReserved
+export interface MsgInterfaceLock
 {
-	Broadcast = "_broadcast",
-	Room = "_room,"
+	transmitter: EndpointAddr;
+	receiver: EndpointAddr;
+	iface: string;
 }
 
-/** This enum defines the public message types that the gadget's
- * implementation of the room callback interface is expected to interact 
- * with. All other message types are reserved and should be passed along
- * without modification or processing by the gadget.
- */
-export enum RoomMessageType
+export enum InterfaceLockResult
 {
-	MemberJoined = "MemberJoined",
-	MemberLeft = "MemberLeft",
+	Success = 0,
+	AlreadyLocked = 1,
+	NotLocked = 2,
+	InterfaceNotFound = 3,
+	InterfaceNameMismatch = 4,
+	InterfaceReceiverMismatch = 5,
+	NewReceiverNotFound = 6,
 }
 
-
-/** These flags affect room message routing and may be used by a gadget's
- * room implementation to adjust how they process room messages.
- */
-export enum RoomMessageRoutingFlag
+export interface MsgInterfaceLockResponse
 {
-	WillResend = 1 << 0,
+	result: InterfaceLockResult;
 }
 
-
-/** Every message sent to a data WebRTC connection for an Aardvark
- * is a JSON object string with this format.
- * 
- * destination - The destination that this message should be routed to.
- * 				If this value is "_broadcast", the 
- * 				gadget must send a copy ofthe message to every member of the 
- * 				room.
- * source - The room member address of the original sender of this message.
- * 			The gadget must fill in the source field with the address of the 
- * 			message's sender to prevent Aardvark instances from forging this 
- * 			field. If a message is being sent by the gadget's room 
- * 			implementation, it must set this field to "_room";
- * 
- * All other fields on the message must be ignored when a message from an
- * Aardvark instance is being routed.
- */
-export interface GadgetRoomEnvelope
+export interface MsgInterfaceUnlock
 {
-	type: RoomMessageType|string;
-	routingFlags?: RoomMessageRoutingFlag;
-	destination?: string | RoomMemberIdReserved;
-	source?: string | RoomMemberIdReserved;
+	transmitter: EndpointAddr;
+	receiver: EndpointAddr;
+	iface: string;
 }
 
-
-/** This message must be broadcast by the gadget to every member when
- * a new member joins.
- * 
- * When a new member first joins the room, the gadget must send this
- * message for each member already in the room to allow
- * the newly joining member to build its own member list.
- * 
- * destination - must be "_broadcast" for the messages that identify a 
- * 				new member to the room or the member ID of the new
- * 				member for the messages that identify existing members
- * 				to the new member.
- * source - must be "_room"
- * memberId - An ID that is unique within the room that can be used to 
- * 		identify a member. This ID must remain valid for as long as the 
- * 		member is in the room. Member IDs are not guaranteed to be the
- * 		same from session to session, and are not expected to have any 
- * 		particular format. Aardvark will treat these IDs as opaque.
- */
-export interface RMMemberJoined extends GadgetRoomEnvelope
+export interface MsgInterfaceUnlockResponse
 {
-	memberId: string;
+	result: InterfaceLockResult;
 }
 
-/** This message must be broadcast by the gadget to every member when
- * a new member joins.
- * 
- * destination - must be "_broadcast"
- * source - must be "_room"
- * memberId - must be a valid member id for the new member
- */
-export interface RMMemberLeft extends GadgetRoomEnvelope
+export interface MsgInterfaceRelock
 {
-	memberId: string;
+	transmitter: EndpointAddr;
+	oldReceiver: EndpointAddr;
+	newReceiver: EndpointAddr;
+	iface: string;
 }
 
-/** This interface must be implemented by any gadget which wants to 
- * provide a room to Aardvark. It allows Aardvark to send messages
- * to its other instances.
- */
-export interface GadgetRoomCallbacks
+export interface MsgInterfaceRelockResponse
 {
-	/** Called when a message arrives for Aardvark. */
-	sendMessage( message: GadgetRoomEnvelope ): void;
+	result: InterfaceLockResult;
 }
 
-
-/** This interface is provided to the gadget on receipt of a room
- * creation request. The gadget can use this to deliver messages to
- * Aardvark from its other instances
- */
-export interface GadgetRoom
+export interface MsgInterfaceTransformUpdated
 {
-	/** Called when a message arrives for Aardvark. */
-	onMessage( message: GadgetRoomEnvelope ): void;
-
-	/** Called when  */
-	/** Tells Aardvark to destroy the room and any remote gadgets 
-	 * associated with it.
-	 */
-	destroy():Promise<void>;
+	destination: EndpointAddr;
+	peer: EndpointAddr;
+	iface: string;
+	destinationFromPeer: AvNodeTransform;
 }
 
-export interface MsgCreateRoom
+export interface MsgInterfaceSendEvent
 {
-	roomId: string;
+	destination: EndpointAddr;
+	peer: EndpointAddr;
+	iface: string;
+	event: object;
 }
 
-export interface MsgCreateRoomResponse
+export interface MsgInterfaceSendEventResponse
 {
-	error?: string;
 }
 
-export interface MsgDestroyRoom
+export interface MsgInterfaceReceiveEvent
 {
-	roomId: string;
-}
-
-export interface MsgDestroyRoomResponse
-{
-	error?: string;
-}
-
-export interface MsgRoomMessageReceived
-{
-	roomId: string;
-	message: GadgetRoomEnvelope;
-}
-
-export interface MsgRoomMessageReceivedResponse
-{
-	error?: string;
-}
-
-export interface MsgSendRoomMessage
-{
-	roomId: string;
-	message: GadgetRoomEnvelope;
-}
-
-export interface PokerProximity
-{
-	panelId: EndpointAddr;
-	x: number;
-	y: number;
-	distance: number;
+	destination: EndpointAddr;
+	peer: EndpointAddr;
+	iface: string;
+	event: object;
+	destinationFromPeer: AvNodeTransform;
 }
 
 export enum AvNodeType
@@ -621,113 +455,38 @@ export enum AvNodeType
 	Transform = 2,
 	Model = 3,
 	Panel = 4,
-	Poker = 5,
-	Grabbable = 6,
-	Handle = 7,
-	Grabber = 8,
-	Hook = 9,
+	//Poker = 5,
+	// Grabbable = 6,
+	// Handle = 7,
+	// Grabber = 8,
+	// Hook = 9,
 	Line = 10,
-	PanelIntersection = 11,
+	//PanelIntersection = 11,
 	ParentTransform = 12,
 	HeadFacingTransform = 13,
-	RemoteUniverse = 14,
-	RemoteOrigin = 15,
-	RoomMember = 16,
+	// RemoteUniverse = 14,
+	// RemoteOrigin = 15,
+	// RoomMember = 16,
+	InterfaceEntity = 17,
+	Child = 18,
 }
 
-
-export enum AvPanelMouseEventType
-{
-	Unknown = 0,
-	Down = 1,
-	Up = 2,
-	Enter = 3,
-	Leave = 4,
-	Move = 5,
-};
-
-export interface AvPanelMouseEvent
-{
-	type: AvPanelMouseEventType;
-	panelId: EndpointAddr;
-	pokerId: EndpointAddr;
-	x: number;
-	y: number;
-}
-
-export interface AvPanelHandler
-{
-	( event: AvPanelMouseEvent ): void;
-}
-
-export enum AvGrabEventType
-{
-	Unknown = 0,
-	EnterRange = 1,
-	LeaveRange = 2,
-	StartGrab = 3,
-	EndGrab = 4,
-	EnterHookRange = 5,
-	LeaveHookRange = 6,
-	RequestGrab = 7,
-	RequestGrabResponse = 8,
-	CancelGrab = 9,
-	GrabStarted = 10,
-	UpdateGrabberHighlight = 11,
-	TransformUpdated = 12,
-	Detach = 13,
-	HookTransformUpdated = 14,
-};
-
-export enum GrabberHighlight
-{
-	None = 0,
-	InRange = 1,
-	WaitingForConfirmation = 2,
-	WaitingForGrabToStart = 3,
-	Grabbed = 4,
-	NearHook = 5,
-	WaitingForReleaseAfterRejection = 6,
-}
-
-export interface AvGrabEvent
-{
-	type: AvGrabEventType;
-	senderId?: number;
-	grabbableId?: EndpointAddr;
-	grabbableFlags?: number;
-	handleId?: EndpointAddr;
-	grabberId?: EndpointAddr;
-	hookId?: EndpointAddr;
-	requestId?: number;
-	allowed?: boolean;
-	useIdentityTransform?: boolean;
-	highlight?: GrabberHighlight;
-	parentFromNode?: AvNodeTransform;
-	universeFromNode?: AvNodeTransform;
-	hookFromGrabbable?: AvNodeTransform;
-	grabberFromGrabbable?: AvNodeTransform;
-	interface?: string;
-}
-
-export interface AvGrabEventProcessor
-{
-	( event: AvGrabEvent ): void;
-}
-
-export interface AvGrabbableCollision
-{
-	grabbableId: EndpointAddr;
-	handleId: EndpointAddr;
-	handleFlags: number;
-	grabbableFlags: number;
-	currentHook?: EndpointAddr;
-	interfaces?: string[];
-}
 
 export interface AvInterfaceEventProcessor
 {
 	( iface: string, sender: EndpointAddr, data: object ): void;
+}
+
+export function interfaceToString( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string )
+{
+	return endpointAddrToString( transmitter ) + "->" + endpointAddrToString( receiver ) 
+		+ "(" + iface + ")";
+}
+
+export function interfaceStringFromMsg( m: { transmitter: EndpointAddr, receiver: EndpointAddr, 
+	iface: string } )
+{
+	return interfaceToString(m.transmitter, m.receiver, m.iface );
 }
 
 
@@ -760,6 +519,8 @@ export enum EVolumeType
 	Sphere = 0,
 	ModelBox = 1,
 	AABB = 1,
+	Infinite = 3,
+	Empty = 4,
 };
 
 
@@ -776,10 +537,20 @@ export interface AABB
 export interface AvVolume
 {
 	type: EVolumeType;
-
+	nodeFromVolume?: AvNodeTransform;
+	
 	radius?: number;
 	uri?: string;
 	aabb?: AABB;
+}
+
+export function emptyVolume(): AvVolume
+{
+	return { type: EVolumeType.Empty };
+}
+export function infiniteVolume(): AvVolume
+{
+	return { type: EVolumeType.Infinite };
 }
 
 export enum ENodeFlags
@@ -814,6 +585,13 @@ export interface AvColor
 	a?: number;
 }
 
+export interface InitialInterfaceLock
+{
+	iface: string;
+	receiver: EndpointAddr;
+	params?: object;
+}
+
 export interface AvNode
 {
 	type: AvNodeType;
@@ -825,13 +603,12 @@ export interface AvNode
 
 	propOrigin?: string;
 	propUniverseName?: string;
-	propRoomId?: string;
-	propMemberId?: string;
-	propMemberOrigins?: { [ originPath: string ]: MinimalPose };
 	propTransform?: AvNodeTransform;
 	propModelUri?: string;
 	propVolume?: AvVolume;
 	propOuterVolumeScale?: number;
+	propVolumes?: AvVolume[];
+	propPriority?: number;
 	propParentAddr?: EndpointAddr;
 	propInteractive?: boolean;
 	propCustomNodeType?: string;
@@ -844,6 +621,10 @@ export interface AvNode
 	propEndGap?: number;
 	propScaleToFit?: AvVector;
 	propInterfaces?: string[];
+	propTransmits?: string[];
+	propReceives?: string[];
+	propInterfaceLocks?: InitialInterfaceLock[];
+	propChildAddr?: EndpointAddr;
 }
 
 export enum EHand
@@ -886,7 +667,6 @@ export enum Permission
 {
 	Master = "master",
 	SceneGraph = "scenegraph",
-	Room = "room",
 }
 
 export interface AardvarkManifestExtension
@@ -895,8 +675,6 @@ export interface AardvarkManifestExtension
 	browserWidth: number;
 	browserHeight: number;
 	startAutomatically: boolean;
-	shareInRooms?: boolean; // defaults to true
-
 }
 
 export interface AardvarkManifest extends WebAppManifest
@@ -949,6 +727,7 @@ export function filterActionsForGadget( actionState: AvActionState ): AvActionSt
 		a: actionState.a,
 		b: actionState.b,
 		squeeze: actionState.squeeze,
+		grab: actionState.grab,
 	};
 }
 
@@ -976,26 +755,3 @@ export function gadgetDetailsToId( gadgetName: string, gadgetUri: string, gadget
 
 	return filteredName;
 }
-
-
-
-/** Gadgets are also responsible for providing transforms for all the members of
- * the room so that Aardvark knows where to render them relative to the local
- * user. That is accomplished through scene graph nodes:
- * 	<AvRoom roomId="myroom1234">
- * 		<AvTransform ...>
- * 			<AvRoomMember memberId="member0"/>
- * 		</AvTransform>
- * 		<AvTransform ...>
- * 			<AvRoomMember memberId="member1"/>
- * 		</AvTransform>
- * 		...
- * 	</AvRoom>
- * 
- * Any AvRoomMember for the local user's member ID is ignored. The local user 
- * does not have remote gadgets, and all their local gadgets will be drawn in 
- * the user's local coordinate system regardless of whether or not they are in
- * a room.
- */
-
-

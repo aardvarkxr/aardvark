@@ -303,12 +303,6 @@ void CAardvarkRenderProcessHandler::InitAardvarkForContext( PerContextInfo_t &co
 
 bool CAardvarkRenderProcessHandler::hasPermission( const std::string & permission )
 {
-	if ( !this->m_params.remoteUniversePath.empty() && permission != "scenegraph" )
-	{
-		// remote apps can only scenegraph
-		return false;
-	}
-
 	if ( m_gadgetManifest )
 	{
 		return m_gadgetManifest->m_aardvark.m_permissions.find( permission ) != m_gadgetManifest->m_aardvark.m_permissions.end();

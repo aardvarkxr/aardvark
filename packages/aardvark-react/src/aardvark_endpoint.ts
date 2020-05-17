@@ -1,8 +1,5 @@
+import { AardvarkManifest, AardvarkPort, EndpointAddr, EndpointType, Envelope, MessageType, MsgGeAardvarkManifestResponse, MsgGetAardvarkManifest, MsgSetEndpointType, MsgSetEndpointTypeResponse, parseEnvelope, WebSocketCloseCodes } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
-import { AardvarkManifest, AvGrabEvent, EndpointType, MessageType, EndpointAddr,
-	Envelope, parseEnvelope, MsgSetEndpointType, MsgGetAardvarkManifest, 
-	MsgGeAardvarkManifestResponse, MsgGrabEvent, 
-	MsgSetEndpointTypeResponse, AardvarkPort, WebSocketCloseCodes } from '@aardvarkxr/aardvark-shared';
 
 export interface MessageHandler
 {
@@ -16,7 +13,7 @@ export interface AsyncMessageHandler
 
 export interface OpenHandler
 {
-	( settings: any, persistenceUuid?: string ):void;
+	( settings: any ):void;
 }
 
 
@@ -166,7 +163,7 @@ export class CAardvarkEndpoint
 		this.m_endpointId = m.endpointId;
 		if( this.m_handshakeComplete )
 		{
-			this.m_handshakeComplete( m.settings, m.persistenceUuid );
+			this.m_handshakeComplete( m.settings );
 		}
 
 		// send all the messages that were queued while we were waiting to connect
@@ -210,14 +207,18 @@ export class CAardvarkEndpoint
 		return env.sequenceNumber;
 	}
 
-	public sendGrabEvent( event: AvGrabEvent )
+	public sendReply( type: MessageType, msg: any, replyTo: Envelope, sender:EndpointAddr = undefined  )
 	{
-		let msg: MsgGrabEvent =
+		let env: Envelope =
 		{
-			event,
-		};
-
-		this.sendMessage( MessageType.GrabEvent, msg );
+			type,
+			sequenceNumber: this.m_nextSequenceNumber++,
+			sender: sender ? sender : { type: EndpointType.Hub, endpointId: 0 },
+			target: replyTo.sender,
+			replyTo: replyTo.sequenceNumber,
+			payload: JSON.stringify( msg ),
+		}
+		this.m_ws.send( JSON.stringify( env ) );
 	}
 
 	public getGadgetManifest( gadgetUri: string ): Promise<AardvarkManifest>

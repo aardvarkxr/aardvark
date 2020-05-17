@@ -1,10 +1,31 @@
-import * as React from 'react';
-import { AvTransform } from './aardvark_transform';
+import { AvVolume, emptyVolume, EVolumeType, infiniteVolume, InitialInterfaceLock } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
+import * as React from 'react';
+import { AvComposedEntity, EntityComponent } from './aardvark_composed_entity';
+import { AvGadget } from './aardvark_gadget';
 import { AvModel } from './aardvark_model';
-import { EndpointAddr } from '@aardvarkxr/aardvark-shared';
-import { HighlightType, AvGrabbable, HookInteraction } from './aardvark_grabbable';
-import { AvModelBoxHandle } from './aardvark_handles';
+import { AvTransform } from './aardvark_transform';
+import { MoveableComponent, MoveableComponentState } from './component_moveable';
+import { NetworkedGadgetComponent } from './component_networked_gadget';
+import { RemoteGadgetComponent } from './component_remote_gadget';
+const equal = require( 'fast-deep-equal' );
+
+/** This enum defines the possible highlight states of an AvGrabbable. 
+*/
+export enum HighlightType
+{
+	/** Nothing interesting is going on with the grabbable. */
+	None = 0,
+
+	/** There is a grabber within grabbing range of the grabbable. */
+	InRange = 1,
+
+	/** There is a grabber actively grabbing the grabbable, and it isn't attached to anything. */
+	Grabbed = 2,
+
+	/** The grabbed grabbable is within drop range of a hook. */
+	InHookRange = 3,
+}
 
 export enum ShowGrabbableChildren
 {
@@ -38,13 +59,6 @@ interface StandardGrabbableProps
 	/** The model to use for the grab handle of this grabbable. */
 	modelUri: string;
 
-	/** Causes the grabbable to always use an identity transform when it is 
-	 * grabbed.
-	 * 
-	 * @default false
-	 */
-	grabWithIdentityTransform?: boolean;
-
 	/** Tells the standard grabbable when to show its children. 
 	 * 
 	 * @default ShowGrabbableChildren.Always
@@ -75,11 +89,28 @@ interface StandardGrabbableProps
 	*/
 	onEndGrab?: () => void;
 
-	/** Controls where this grabbable can be dropped.
+	/** Allows the grabbable to be automatically added to a container when it is first created.
 	 * 
-	 * @default DropOnHooks
+	 * @default true
 	 */
-	dropStyle?: DropStyle;
+	useInitialParent?: boolean;
+
+	/** If this property is defined, the gadget will be shared with remote users that are in the 
+	 * same room as the owner. Any remote instance of this gadget will be started with provided
+	 * initial interface locks.
+	 * 
+	 * @default none
+	 */
+	remoteInterfaceLocks?: InitialInterfaceLock[];
+
+	/** If remoteInterfaceLocks is provided, the callback provided with this property is called
+	 * whenever a message comes in from a remote instance of this gadget. If this gadget is
+	 * the master, any events received from this callback will be from a remote gadget. If this
+	 * gadget is remote, any events received from this callback will be from the master.
+	 * 
+	 * @default none
+	 */
+	remoteGadgetCallback?: ( event: object ) => void;
 }
 
 
@@ -91,9 +122,31 @@ interface StandardGrabbableState
 /** A grabbable that shows a model for its handle and highlights automatically. */
 export class AvStandardGrabbable extends React.Component< StandardGrabbableProps, StandardGrabbableState >
 {
+	private moveableComponent: MoveableComponent;
+	private networkedComponent: NetworkedGadgetComponent;
+	private remoteComponent: RemoteGadgetComponent;
+
 	constructor( props: any )
 	{
 		super( props );
+
+		let remoteLock = AvGadget.instance().initialInterfaces.find( ( value ) => 
+			value.iface == RemoteGadgetComponent.interfaceName );
+		if( remoteLock )
+		{
+			// this gadget is remote
+			this.remoteComponent = new RemoteGadgetComponent( this.props.remoteGadgetCallback );
+		}
+		else
+		{
+			this.moveableComponent = new MoveableComponent( this.onMoveableUpdate, this.props.useInitialParent ?? true );
+
+			if( this.props.remoteInterfaceLocks )
+			{
+				// this gadget is master, or will be if the user enters a room
+				this.networkedComponent = new NetworkedGadgetComponent( this.props.remoteInterfaceLocks, this.props.remoteGadgetCallback );
+			}
+		} 
 
 		this.state = 
 		{ 
@@ -101,8 +154,27 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 		};
 	}
 
-	@bind onUpdateHighlight( highlight: HighlightType, handleAddr: EndpointAddr, tethered: boolean )
+	@bind
+	private async onMoveableUpdate()
 	{
+		let highlight: HighlightType;
+		switch( this.moveableComponent.state )
+		{
+			default:
+			case MoveableComponentState.Idle:
+			case MoveableComponentState.InContainer:
+				highlight = HighlightType.None;
+				break;
+
+			case MoveableComponentState.GrabberNearby:
+				highlight = HighlightType.InRange;
+				break;
+
+			case MoveableComponentState.Grabbed:
+				highlight = HighlightType.Grabbed;
+				break;
+		}
+
 		this.setState( ( oldState: StandardGrabbableState ) =>
 		{
 			if( oldState.highlight == HighlightType.InRange || oldState.highlight == HighlightType.None )
@@ -123,6 +195,32 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 			}
 			return { ...oldState, highlight };
 		} );
+	}
+
+	public get isGrabbed()
+	{
+		return this.state.highlight == HighlightType.Grabbed 
+			|| this.state.highlight == HighlightType.InHookRange;
+	}
+
+	/** Sends an event to another instance of this gadget. If this gadget is
+	 * the master, the event is sent to all remote instances. If this gadget 
+	 * is remote, the event is sent to the master. If this gadget is not networked,
+	 * or if it is networked, but the user is not currently in a room, the 
+	 * event is discarded.
+	 */
+	public sendRemoteEvent( event: object, reliable: boolean )
+	{
+		this.networkedComponent?.sendEventToAllRemotes( event, reliable );
+		this.remoteComponent?.sendEventToMaster( event, reliable );
+	}
+
+	componentDidUpdate( prevProps: StandardGrabbableProps )
+	{
+		if( !equal( this.props.remoteInterfaceLocks, prevProps.remoteInterfaceLocks ) )
+		{
+			this.networkedComponent?.setInitialInterfaceLocks( this.props.remoteInterfaceLocks );
+		}
 	}
 
 	public render()
@@ -152,33 +250,28 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 			scale *= this.props.modelScale;
 		}
 
-		let hookInteraction: HookInteraction;
-		let preserveDropTransform: boolean;
-		switch( this.props.dropStyle ?? DropStyle.DropOnHooks )
-		{
-			case DropStyle.DropOnHooks:
-				hookInteraction = HookInteraction.HighlightAndDrop;
-				preserveDropTransform = false;
-				break;
+		let volume: AvVolume = this.remoteComponent ? emptyVolume() :
+			{
+				type: EVolumeType.ModelBox, 
+				uri: this.props.modelUri, 
+				nodeFromVolume:
+				{ 
+					scale: { x: scale, y: scale, z: scale }
+				},
+			};
 
-			case DropStyle.DropInTheWorld:
-				hookInteraction = HookInteraction.None;
-				preserveDropTransform = true;
-				break;
-		}
+		let components: EntityComponent[] = [ this.remoteComponent ?? this.moveableComponent ];
 
 		return (
-			<AvGrabbable updateHighlight={ this.onUpdateHighlight } 
-				preserveDropTransform={ preserveDropTransform }
-				grabWithIdentityTransform={ this.props.grabWithIdentityTransform } 
-				hookInteraction={ hookInteraction }>
+			<AvComposedEntity components={ components }	volume={ volume }>
+				{ this.networkedComponent 
+					&& <AvComposedEntity components={ [ this.networkedComponent ] } volume={ infiniteVolume() } /> }
 				<AvTransform uniformScale={ scale }>
 					<AvModel uri={ this.props.modelUri} color={ this.props.modelColor }/>
-					<AvModelBoxHandle uri={ this.props.modelUri } />
 				</AvTransform>
-
-				{ showChildren && this.props.children }
-			</AvGrabbable> );
+				{ this.props.children && 
+					<AvTransform visible={ showChildren }>{ this.props.children }</AvTransform> }
+			</AvComposedEntity> );
 	}
 }
 

@@ -1,13 +1,15 @@
+import { AardvarkManifest, AvVolume, EndpointAddr, endpointAddrToString, EVolumeType, g_builtinModelError, InitialInterfaceLock } from '@aardvarkxr/aardvark-shared';
+import bind from 'bind-decorator';
+import isUrl from 'is-url';
 import * as React from 'react';
 import { AvBaseNodeProps } from './aardvark_base_node';
-import bind from 'bind-decorator';
-import { HighlightType, GrabResponse, AvGrabbable } from './aardvark_grabbable';
-import { AvTransform } from './aardvark_transform';
-import { AvSphereHandle } from './aardvark_handles';
-import { AvModel } from './aardvark_model';
-import { EndpointAddr, AvGrabEvent, AardvarkManifest, endpointAddrIsEmpty, AvVector, g_builtinModelError } from '@aardvarkxr/aardvark-shared';
+import { AvComposedEntity, EntityComponent } from './aardvark_composed_entity';
+import { AvEntityChild } from './aardvark_entity_child';
 import { AvGadget } from './aardvark_gadget';
-import isUrl from 'is-url';
+import { ActiveInterface, InterfaceProp } from './aardvark_interface_entity';
+import { AvModel } from './aardvark_model';
+import { AvTransform } from './aardvark_transform';
+import { ContainerRequest, ContainerRequestType, MoveableComponent, MoveableComponentState } from './component_moveable';
 
 
 interface AvGadgetSeedProps extends AvBaseNodeProps
@@ -27,9 +29,108 @@ interface AvGadgetSeedProps extends AvBaseNodeProps
 	radius?: number;
 }
 
+enum GadgetSeedPhase
+{
+	Idle,
+	GrabberNearby,
+	WaitingForGadgetStart,
+	WaitingForDrop,
+	WaitingForRedropToFinish,
+}
+
 interface AvGadgetSeedState
 {
-	grabbableHighlight: HighlightType;
+	phase: GadgetSeedPhase;
+	manifest?: AardvarkManifest;
+}
+
+
+export class GadgetSeedContainerComponent implements EntityComponent
+{
+	private contentsEpa: EndpointAddr;
+	private contentsRested = false;
+	private entityCallback: () => void = null;
+	private activeContainer: ActiveInterface = null;
+
+	constructor()
+	{
+	}
+
+	private updateListener()
+	{
+		this.entityCallback?.();
+	}
+
+	@bind
+	private onContainerStart( activeContainer: ActiveInterface )
+	{
+		this.contentsEpa = activeContainer.peer;
+
+		activeContainer.onEvent( 
+			( event: any ) =>
+			{
+				this.contentsRested = event.state == "Resting";
+				this.updateListener();
+			}
+		)
+
+		activeContainer.onEnded( 
+			() =>
+			{
+				this.contentsRested = false;
+				this.contentsEpa = null;
+				this.activeContainer = null;
+				this.updateListener();
+			} );
+
+		this.activeContainer = activeContainer;
+	}
+
+	public get transmits(): InterfaceProp[]
+	{
+		return [];
+	}
+
+	public get receives(): InterfaceProp[]
+	{
+		return [ { iface: MoveableComponent.containerInterface, processor: this.onContainerStart } ];
+	}
+
+	public get parent(): EndpointAddr
+	{
+		return null;
+	}
+	
+	public get wantsTransforms()
+	{
+		return false;
+	}
+
+	public get interfaceLocks(): InitialInterfaceLock[] { return []; }
+
+	public redrop( newContainer: EndpointAddr, moveableToReplace: EndpointAddr )
+	{
+		this.activeContainer?.sendEvent( 
+			{ type: ContainerRequestType.Redrop, newContainer, moveableToReplace } as ContainerRequest );
+	}
+
+	public onUpdate( callback: () => void ): void
+	{
+		this.entityCallback = callback;
+	}
+
+
+	public render(): JSX.Element
+	{
+		if( this.contentsEpa && this.contentsRested )
+		{
+			return <AvEntityChild child={ this.contentsEpa } key={ endpointAddrToString( this.contentsEpa ) }/>
+		}
+		else
+		{
+			return null;
+		}
+	}
 }
 
 /** A grabbable control that causes the grabber to grab a new
@@ -37,56 +138,97 @@ interface AvGadgetSeedState
  */
 export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSeedState >
 {
-	private m_manifest: AardvarkManifest = null;
+	private moveableComponent = new MoveableComponent( this.onMoveableUpdate );
+	private containerComponent = new GadgetSeedContainerComponent();
+	private refContainer = React.createRef<AvComposedEntity>();
+	private refSeed = React.createRef<AvComposedEntity>();
 
 	constructor( props:any )
 	{
 		super( props );
 
-		this.state = { grabbableHighlight: HighlightType.None };
+		this.state = { phase: GadgetSeedPhase.Idle };
 
 		AvGadget.instance().loadManifest( this.props.uri )
 		.then( ( manifest: AardvarkManifest ) =>
 		{
-			this.m_manifest = manifest;
-			this.forceUpdate();
+			this.setState( { manifest } );
 		})
 	}
 
-	@bind 
-	public async onGrabRequest( grabRequest: AvGrabEvent ): Promise< GrabResponse >
+	@bind
+	private async onMoveableUpdate()
 	{
-		let res = await AvGadget.instance().startGadget( this.props.uri, "" );
+		switch( this.state.phase )
+		{
+			case GadgetSeedPhase.Idle:
+				if( this.moveableComponent.state == MoveableComponentState.GrabberNearby)
+				{
+					this.setState( { phase: GadgetSeedPhase.GrabberNearby } );
+				}
+				break;
+
+			case GadgetSeedPhase.GrabberNearby:
+				switch( this.moveableComponent.state )
+				{
+					case MoveableComponentState.Grabbed:
+						this.setState( { phase: GadgetSeedPhase.WaitingForGadgetStart } );
+						this.startGadget();
+						break;
+
+					case MoveableComponentState.Idle:
+						this.setState( { phase: GadgetSeedPhase.Idle } );
+						break;
+
+					case MoveableComponentState.GrabberNearby:
+						// do nothing. We're already in the right state
+						break;
+
+					case MoveableComponentState.InContainer: 
+						// This means we missed the grab and were already dropped?
+						break;
+				}
+				break;
+
+			case GadgetSeedPhase.WaitingForGadgetStart:
+				// in this state we're mostly going to ignore moveable state changes.
+				// Our next internal state change will be driven by the gadget starting
+				break;
+
+			case GadgetSeedPhase.WaitingForDrop:
+				if( this.moveableComponent.state == MoveableComponentState.InContainer )
+				{
+					this.containerComponent.redrop( this.moveableComponent.parent, this.refSeed.current?.globalId );
+					this.setState( { phase: GadgetSeedPhase.WaitingForRedropToFinish } );
+				}
+				break;
+
+			case GadgetSeedPhase.WaitingForRedropToFinish:
+				if( this.moveableComponent.state == MoveableComponentState.Idle )
+				{
+					this.setState( { phase: GadgetSeedPhase.Idle } );
+				}
+				break;
+		}
+	}
+
+	private async startGadget()
+	{
+		let res = await AvGadget.instance().startGadget( this.props.uri, 
+			[
+				{ 
+					iface: MoveableComponent.containerInterface,
+					receiver: this.refContainer.current.globalId,
+				}
+			] );
 
 		if( !res.success )
 		{
 			throw new Error( "startGadget failed" );
 		}
 
-		if( endpointAddrIsEmpty( res.mainGrabbableGlobalId ) )
-		{
-			// If the gadget started, but there's no main grabbable,
-			// we want to reject the grab so that the seed itself doesn't end
-			// up being grabbed. The gadget has started, so the user got what 
-			// they wanted.
-			let response: GrabResponse =
-			{
-				allowed: false,
-			};
-			return response;
-		}
-		else
-		{
-			// Otherwise, start the grab with the newly created grabbable in the 
-			// newly started gadget
-			let response: GrabResponse =
-			{
-				allowed: true,
-				proxyGrabbableGlobalId: res.mainGrabbableGlobalId,
-				proxyHandleGlobalId: res.mainHandleId,
-			};
-			return response;
-		}
+		// we should have a gadget in our container by now? Maybe?
+		this.setState( { phase: GadgetSeedPhase.WaitingForDrop } );
 	}
 
 	@bind public onGadgetStarted( success: boolean, mainGrabbableId: string ) 
@@ -94,17 +236,12 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 		console.log( "main grabbable id was "+ mainGrabbableId );
 	}
 	
-	@bind public onHighlightGrabbable( highlight: HighlightType )
-	{
-		this.setState( { grabbableHighlight: highlight } );
-	}
-
 	private findIconOfType( mimeType: string )
 	{
-		if( !this.m_manifest.icons )
+		if( !this.state.manifest.icons )
 			return null;
 
-		for( let icon of this.m_manifest.icons )
+		for( let icon of this.state.manifest.icons )
 		{
 			if( icon.type.toLowerCase() == mimeType.toLowerCase() )
 			{
@@ -131,15 +268,15 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 
 	public render()
 	{
-		if( !this.m_manifest )
+		if( !this.state.manifest )
 			return null;
 
 		let radius = this.props.radius ? this.props.radius : 0.1;
 
 		let scale:number;
-		switch( this.state.grabbableHighlight )
+		switch( this.state.phase )
 		{
-			case HighlightType.None:
+			case GadgetSeedPhase.Idle:
 				scale = 1.0;
 				break;
 
@@ -147,16 +284,31 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 				scale = 1.25;
 				break;
 		}
+
+		let volume: AvVolume;
+		if( this.state.phase == GadgetSeedPhase.WaitingForRedropToFinish )
+		{
+			// we want to not match against the container we're telling our child to redrop into
+			volume = { type: EVolumeType.Empty };
+		}
+		else
+		{
+			volume = { type: EVolumeType.Sphere, radius: radius };
+		}
+
+		let drawIcon = this.state.phase != GadgetSeedPhase.WaitingForDrop 
+			&& this.state.phase != GadgetSeedPhase.WaitingForRedropToFinish;
 		return (
-			<AvGrabbable updateHighlight={ this.onHighlightGrabbable }
-				onGrabRequest={ this.onGrabRequest }>
-				<AvSphereHandle radius={ radius } />
-				
-				<AvTransform uniformScale={ scale }>
-					{ this.renderGadgetIcon( radius ) }
-				</AvTransform>
-			</AvGrabbable>
-		);
+			<AvComposedEntity components={ [ this.moveableComponent ] } ref={ this.refSeed }
+				volume={ volume } >
+				{ drawIcon &&
+					<AvTransform uniformScale={ scale }>
+						{ this.renderGadgetIcon( radius ) }
+					</AvTransform>
+				}
+				<AvComposedEntity components={ [ this.containerComponent ] }
+					ref={ this.refContainer } volume={ { type: EVolumeType.Empty } } />
+			</AvComposedEntity> );
 	}
 
 

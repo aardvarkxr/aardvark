@@ -1,52 +1,24 @@
-import * as React from 'react';
-
-import { Av, AvActionState, EAction, getActionFromState, 
-	MsgUserInfo, Envelope, LocalUserInfo, 
-	AvStartGadgetResult,
-	AuthedRequest,
-	MsgSignRequest,
-	MsgSignRequestResponse,
-	AvNodeTransform,
-	GadgetRoomCallbacks,
-	GadgetRoom,
-	MsgCreateRoom,
-	MsgCreateRoomResponse,
-	GadgetRoomEnvelope,
-	MsgRoomMessageReceived,
-	MsgDestroyRoomResponse,
-	MsgSendRoomMessage,
-	MsgRoomMessageReceivedResponse,
-	MsgInterfaceEvent,
-	AvInterfaceEventProcessor,
-} from '@aardvarkxr/aardvark-shared';
-import { IAvBaseNode } from './aardvark_base_node';
+import { AardvarkManifest, Av, AvActionState, AvInterfaceEventProcessor, AvNode, AvNodeTransform, AvNodeType, AvStartGadgetResult, EAction, EHand, EndpointAddr, endpointAddrToString, EndpointType, ENodeFlags, Envelope, getActionFromState, InitialInterfaceLock, interfaceStringFromMsg, MessageType, MsgGadgetStarted, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgInterfaceEnded, MsgInterfaceEvent, MsgInterfaceReceiveEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgNodeHaptic, MsgResourceLoadFailed, MsgSaveSettings, MsgUpdateActionState, MsgUpdateSceneGraph, stringToEndpointAddr } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
+import * as React from 'react';
+import { IAvBaseNode } from './aardvark_base_node';
+import { AsyncMessageHandler, MessageHandler } from './aardvark_endpoint';
+import { RemoteGadgetComponent } from './component_remote_gadget';
 import { CGadgetEndpoint } from './gadget_endpoint';
-import { MessageType, MsgUpdateSceneGraph, EndpointAddr, 
-	MsgGrabEvent, stringToEndpointAddr, MsgGadgetStarted, 
-	EndpointType, endpointAddrToString, MsgPokerProximity, 
-	MsgMouseEvent, MsgNodeHaptic, MsgMasterStartGadget, 
-	MsgSaveSettings, MsgUpdateActionState, AardvarkManifest, AvPanelHandler, 
-	PokerProximity, AvPanelMouseEventType, AvGrabEventProcessor, 
-	AvGrabEvent, AvNode, AvNodeType, AvPanelMouseEvent, ENodeFlags, 
-	EHand, MsgResourceLoadFailed,
-	MsgGetInstalledGadgets,
-	MsgGetInstalledGadgetsResponse} from '@aardvarkxr/aardvark-shared';
-import { MessageHandler, AsyncMessageHandler } from './aardvark_endpoint';
+
 const equal = require( 'fast-deep-equal' );
-
-
-export interface AvPokerHandler
+export interface AvInterfaceEntityProcessor
 {
-	( isPressed: boolean, proximity: PokerProximity[] ): void;
+	started( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string, 
+		transmitterFromReceiver: AvNodeTransform, params?: object ): void;
+	ended( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string, 
+		transmitterFromReceiver: AvNodeTransform ): void;
+	event( destination: EndpointAddr, peer: EndpointAddr, iface: string, data: object, 
+		destinationFromPeer: AvNodeTransform ): void;
+	transformUpdated( destination: EndpointAddr, peer: EndpointAddr, iface: string, 
+		destinationFromPeer: AvNodeTransform ): void;
 }
 
-
-interface AvGadgetProps
-{
-	gadgetUri?: string;
-	onSettingsReceived?: ( settings: any ) => void;
-}
 
 function parseURL(url: string) 
 {
@@ -75,11 +47,6 @@ interface ActionStateListener
 	falling?: () => void;
 }
 
-interface GadgetRoomDetails
-{
-	room: GadgetRoom;
-	callbacks: GadgetRoomCallbacks;
-}
 
 /** The singleton gadget object for the browser. */
 export class AvGadget
@@ -96,27 +63,15 @@ export class AvGadget
 	m_manifest: AardvarkManifest = null;
 	m_actualGadgetUri: string = null;
 	m_actionState: { [hand:number]: AvActionState } = {};
-	private m_persistenceUuid: string;
-	private m_remoteUniversePath: string;
-	private m_ownerUuid: string;
-	private m_remotePersistenceUuid: string;
 	private m_epToNotify: EndpointAddr = null;
 	private m_firstSceneGraph: boolean = true;
-	private m_mainGrabbable: AvNode = null;
-	private m_mainHandle: AvNode = null;
-	private m_mainGrabbableComponent: IAvBaseNode = null;
-	private m_mainHandleComponent: IAvBaseNode = null;
-	private m_userInfo: LocalUserInfo = null;
-	private m_userInfoListeners: (()=>void)[] = [];
+	private m_initialInterfaces: InitialInterfaceLock[] = [];
 
-	m_grabEventProcessors: {[nodeId:number]: AvGrabEventProcessor } = {};
-	m_pokerProcessors: {[nodeId:number]: AvPokerHandler } = {};
-	m_panelProcessors: {[nodeId:number]: AvPanelHandler } = {};
 	m_interfaceEventProcessors: {[nodeId: number]: AvInterfaceEventProcessor } = {}
+	m_interfaceEntityProcessors = new Map<number, AvInterfaceEntityProcessor>();
 	m_startGadgetPromises: {[nodeId:number]: 
 		[ ( res: AvStartGadgetResult ) => void, ( reason: any ) => void ] } = {};
 	m_actionStateListeners: { [listenerId: number] : ActionStateListener } = {};
-	m_roomDetails: { [roomId: string] : GadgetRoomDetails } = {};
 
 	constructor()
 	{
@@ -133,10 +88,19 @@ export class AvGadget
 		}
 
 		let params = parseURL( window.location.href );
-		this.m_persistenceUuid = params[ "persistenceUuid" ];
-		this.m_remoteUniversePath = params[ "remoteUniversePath" ];
-		this.m_ownerUuid = params[ "ownerUuid" ];
-		this.m_remotePersistenceUuid = params[ "remotePersistenceUuid" ];
+
+		try
+		{
+			if( params[ "initialInterfaces" ] )
+			{
+				this.m_initialInterfaces = JSON.parse( atob( params[ "initialInterfaces" ] ) );
+				console.log( "initialInterfaces", this.m_initialInterfaces );
+			}
+		}
+		catch( e )
+		{
+			console.log( `failed to parse initial interfaces ${ e }` );
+		}
 
 		if( params[ "epToNotify"] )
 		{
@@ -144,18 +108,10 @@ export class AvGadget
 			console.log( "This gadget wants to notify " + endpointAddrToString(this.m_epToNotify ) );
 		}
 
-		if( this.m_remoteUniversePath )
-		{
-			console.log( "This gadget is remote from " + this.m_remoteUniversePath );
-		}
-
-		this.m_endpoint = new CGadgetEndpoint( this.m_actualGadgetUri, 
-			params["initialHook"], this.m_persistenceUuid, this.m_remoteUniversePath,
-			this.m_ownerUuid,
-			this.onEndpointOpen );
+		this.m_endpoint = new CGadgetEndpoint( this.m_actualGadgetUri, this.onEndpointOpen );
 	}
 
-	@bind public onEndpointOpen( settings: any, persistenceUuid: string )
+	@bind public onEndpointOpen( settings: any )
 	{
 		this.m_endpoint.getGadgetManifest( this.m_actualGadgetUri )
 		.then( ( manifest: AardvarkManifest ) =>
@@ -164,27 +120,20 @@ export class AvGadget
 			this.markDirty();
 		});
 
-		this.m_endpoint.registerHandler( MessageType.GrabEvent, this.onGrabEvent );
 		this.m_endpoint.registerHandler( MessageType.GadgetStarted, this.onGadgetStarted );
-		this.m_endpoint.registerHandler( MessageType.PokerProximity, this.onPokerProximity );
-		this.m_endpoint.registerHandler( MessageType.MouseEvent, this.onMouseEvent );
-		this.m_endpoint.registerHandler( MessageType.MasterStartGadget, this.onMasterStartGadget );
 		this.m_endpoint.registerHandler( MessageType.UpdateActionState, this.onUpdateActionState );
 		this.m_endpoint.registerHandler( MessageType.ResourceLoadFailed, this.onResourceLoadFailed );
-		this.m_endpoint.registerHandler( MessageType.UserInfo, this.onUserInfo );
-		this.m_endpoint.registerHandler( MessageType.SendRoomMessage, this.onSendRoomMessage );
 		this.m_endpoint.registerAsyncHandler( MessageType.InterfaceEvent, this.onInterfaceEvent );
+		this.m_endpoint.registerAsyncHandler( MessageType.InterfaceStarted, this.onInterfaceStarted );
+		this.m_endpoint.registerAsyncHandler( MessageType.InterfaceEnded, this.onInterfaceEnded );
+		this.m_endpoint.registerAsyncHandler( MessageType.InterfaceReceiveEvent, 
+			this.onInterfaceReceivedEvent );
+		this.m_endpoint.registerAsyncHandler( MessageType.InterfaceTransformUpdated, 
+			this.onInterfaceTransformUpdated );
+
 		if( this.m_onSettingsReceived )
 		{
 			this.m_onSettingsReceived( settings );
-		}
-
-		if( persistenceUuid != this.m_persistenceUuid )
-		{
-			history.pushState( 
-				{ gadgetUri: this.m_actualGadgetUri, persistenceUuid },
-				"", 
-				this.m_actualGadgetUri + "/index.html?persistenceUuid=" + persistenceUuid );
 		}
 	}
 
@@ -216,6 +165,25 @@ export class AvGadget
 			return this.m_actualGadgetUri;
 		}
 	}
+
+	/** Returns the URL of the gadget. */
+	public get url()
+	{
+		return this.m_actualGadgetUri;
+	}
+
+	/** The initial parent requested by whomever started this gadget. */
+	public get initialInterfaces()
+	{
+		return this.m_initialInterfaces;
+	}
+	
+	/** Returns a specific initial interface lock if it exists. */
+	public findInitialInterface( intefaceName: string ): InitialInterfaceLock
+	{
+		return this.m_initialInterfaces.find( ( lock )=> lock.iface == intefaceName );
+	}
+
 
 	/** Loads a gadget manifest by gadget URI.
 	 * 
@@ -267,36 +235,9 @@ export class AvGadget
 		this.markDirty();
 	}
 
-	public setPanelHandler( nodeId: number, handler: AvPanelHandler )
-	{
-		this.m_panelProcessors[ nodeId ] = handler;
-		this.markDirty();
-	}
-
-	public setPokerHandler( nodeId: number, handler: AvPokerHandler )
-	{
-		this.m_pokerProcessors[ nodeId ] = handler;
-		this.markDirty();
-	}
-
-	public setGrabEventProcessor( nodeId: number, processor: AvGrabEventProcessor )
-	{
-		this.m_grabEventProcessors[ nodeId ] = processor;
-		this.markDirty();
-	}
-
 	public getEndpointId() : number
 	{
 		return this.m_endpoint.getEndpointId();
-	}
-
-	@bind onGrabEvent( m: MsgGrabEvent, env: Envelope ):void
-	{
-		let processor = this.m_grabEventProcessors[ env.target.nodeId ];
-		if( processor )
-		{
-			processor( m.event );
-		}
 	}
 
 	@bind onGadgetStarted( m: MsgGadgetStarted, env: Envelope ):void
@@ -308,17 +249,97 @@ export class AvGadget
 				{
 					success: true,
 					startedGadgetEndpointId: m.startedGadgetEndpointId,
-					mainGrabbableGlobalId: m.mainGrabbableGlobalId,
-					mainHandleId: m.mainHandleGlobalId,
 				}
 			);
 			delete this.m_startGadgetPromises[ env.target.nodeId ];
 		}
 	}
 
-	public sendGrabEvent( event: AvGrabEvent )
+	public setInterfaceEntityProcessor( nodeId: number, processor: AvInterfaceEntityProcessor )
 	{
-		this.m_endpoint.sendGrabEvent( event );
+		this.m_interfaceEntityProcessors.set( nodeId, processor );
+		this.markDirty();
+	}
+
+	public clearInterfaceEntityProcessor( nodeId: number )
+	{
+		this.m_interfaceEntityProcessors.delete( nodeId );
+		this.markDirty();
+	}
+
+	private getInterfaceEntityProcessor( epa: EndpointAddr ): AvInterfaceEntityProcessor
+	{
+		if( epa.endpointId != this.m_endpoint.getEndpointId() )
+		{
+			return null;
+		}
+
+		return this.m_interfaceEntityProcessors.get( epa.nodeId );
+	}
+
+	@bind
+	private async onInterfaceStarted( m: MsgInterfaceStarted, env: Envelope )
+	{
+		console.log( `Received interface start for ${ interfaceStringFromMsg( m ) }` );
+		let processor = this.getInterfaceEntityProcessor( env.target );
+		if( processor )
+		{
+			processor.started(m.transmitter, m.receiver, m.iface, m.transmitterFromReceiver, m.params );
+		}
+
+		if( !processor )
+		{
+			console.log( `Received interface start for ${ interfaceStringFromMsg( m ) },`
+				+ ` which doesn't have a processor` );
+		}
+	}
+
+	@bind
+	private async onInterfaceEnded( m: MsgInterfaceEnded, env: Envelope )
+	{
+		let processor = this.getInterfaceEntityProcessor( env.target );
+		if( processor )
+		{
+			processor.ended(m.transmitter, m.receiver, m.iface, m.transmitterFromReceiver );
+		}
+
+		if( !processor )
+		{
+			console.log( `Received interface start for ${ interfaceStringFromMsg( m ) },`
+				+ ` which doesn't have a processor` );
+		}
+	}
+
+	@bind
+	private async onInterfaceReceivedEvent( m: MsgInterfaceReceiveEvent, env: Envelope )
+	{
+		let processor = this.getInterfaceEntityProcessor( m.destination );
+		if( processor )
+		{
+			processor.event(m.destination, m.peer, m.iface, m.event, m.destinationFromPeer );
+		}
+
+		if( !processor )
+		{
+			console.log( `Received interface event for ${ endpointAddrToString( m.destination ) },`
+				+ ` which doesn't have a processor` );
+		}
+	}
+
+	@bind
+	private async onInterfaceTransformUpdated( m: MsgInterfaceTransformUpdated, env: Envelope )
+	{
+		let processor = this.getInterfaceEntityProcessor( m.destination );
+		if( processor )
+		{
+			processor.transformUpdated( m.destination, m.peer, m.iface, m.destinationFromPeer );
+		}
+
+		if( !processor )
+		{
+			console.log( `Received interface transformUpdated for ${ endpointAddrToString( m.destination ) },`
+				+ ` which doesn't have a processor` );
+		}
 	}
 
 	public setInterfaceEventProcessor( nodeId: number, processor: AvInterfaceEventProcessor )
@@ -367,57 +388,6 @@ export class AvGadget
 		{
 			processor( m.interface, env.sender, m.data );
 		}
-	}
-
-	@bind private onPokerProximity( m: MsgPokerProximity, env: Envelope )
-	{
-		let processor = this.m_pokerProcessors[ env.target.nodeId ];
-		if( processor )
-		{
-			processor( m.actionState.grab, m.panels );
-		}
-	}
-
-	public sendMouseEvent( pokerId: EndpointAddr, panelId: EndpointAddr, 
-		eventType:AvPanelMouseEventType, x: number, y: number )
-	{
-		let evt: AvPanelMouseEvent = 
-		{
-			type: eventType,
-			panelId,
-			pokerId,
-			x,
-			y,
-		};
-
-		let msg: MsgMouseEvent =
-		{
-			event: evt,
-		}
-
-		this.m_endpoint.sendMessage( MessageType.MouseEvent, msg );
-	}
-
-	@bind private onMouseEvent( m: MsgMouseEvent, env: Envelope  )
-	{
-		let processor = this.m_panelProcessors[ env.target.nodeId ];
-		if( processor )
-		{
-			processor( m.event );
-		}
-	}
-
-	@bind private onMasterStartGadget( m: MsgMasterStartGadget )
-	{
-		Av().startGadget( 
-			{
-				uri: m.uri, 
-				initialHook: m.initialHook, 
-				persistenceUuid: m.persistenceUuid,
-				remoteUniversePath: m.remoteUserId,
-				epToNotify: m.epToNotify,
-				remotePersistenceUuid: m.remotePersistenceUuid,
-			} );
 	}
 
 	@bind private onResourceLoadFailed( m: MsgResourceLoadFailed )
@@ -516,17 +486,6 @@ export class AvGadget
 					if( reactNode )
 					{
 						node = reactNode.createNodeForNode();
-						if( node.type == AvNodeType.Grabbable && !this.m_mainGrabbable )
-						{
-							this.m_mainGrabbable = node;
-							this.m_mainGrabbableComponent = reactNode;
-						}
-						if( node.type == AvNodeType.Handle && !this.m_mainHandle )
-						{
-							this.m_mainHandle = node;
-							this.m_mainHandleComponent = reactNode;
-						}
-
 						this.m_traversedNodes[nodeId] = reactNode;
 					}
 				}
@@ -579,7 +538,6 @@ export class AvGadget
 			return;
 		}
 
-		this.m_mainGrabbable = null;
 		this.m_traversedNodes = {};
 		let rootNodes = this.traverseNode( document.body );
 
@@ -616,15 +574,6 @@ export class AvGadget
 					startedGadgetEndpointId: this.m_endpoint.getEndpointId(),
 				}
 
-				if( this.m_mainGrabbable && this.m_mainHandle )
-				{
-					msgStarted.mainGrabbable = this.m_mainGrabbable.id;
-					msgStarted.mainHandle = this.m_mainHandle.id;
-
-					// this.m_mainHandleComponent.grabInProgress( this.m_epToNotify );
-					// this.m_mainGrabbableComponent.grabInProgress( this.m_epToNotify );
-				}
-
 				this.m_endpoint.sendMessage( MessageType.GadgetStarted, msgStarted );
 			}
 		}
@@ -658,8 +607,7 @@ export class AvGadget
 		this.m_endpoint.sendMessage( MessageType.NodeHaptic, msg );
 	}
 
-	public startGadget( uri: string, initialHook: string, remoteUniversePath?: string,
-		persistenceUuid?: string, ownerUuid?: string, remotePersistenceUuid?: string ) : 
+	public startGadget( uri: string, initialInterfaces: InitialInterfaceLock[] ) : 
 		Promise<AvStartGadgetResult>
 	{
 		return new Promise( ( resolve, reject ) =>
@@ -667,6 +615,8 @@ export class AvGadget
 			let notifyNodeId = this.m_nextNodeId++;
 			this.m_startGadgetPromises[ notifyNodeId ] = [ resolve, reject ];
 
+			let initialInterfacesEncoded = btoa( JSON.stringify( initialInterfaces ) );
+			
 			let epToNotify: EndpointAddr = 
 			{
 				type: EndpointType.Node,
@@ -675,31 +625,16 @@ export class AvGadget
 			}
 			Av().startGadget( 
 				{
-					uri, initialHook, 
-					persistenceUuid: persistenceUuid ?? "", 
+					uri, 
+					initialInterfaces: initialInterfacesEncoded, 
 					epToNotify, 
-					remoteUniversePath,
-					ownerUuid,
-					remotePersistenceUuid,
 				} );
 		} );
 	} 
 
-	public get globallyUniqueId(): string 
-	{
-		if( this.m_ownerUuid && this.m_remotePersistenceUuid )
-		{
-			return this.m_remotePersistenceUuid + this.m_ownerUuid;
-		}
-		else
-		{
-			return this.m_persistenceUuid + this.localUserInfo.userUuid;
-		}
-	}
-
 	public get isRemote() : boolean
 	{
-		return !!this.m_ownerUuid;
+		return !!this.findInitialInterface( RemoteGadgetComponent.interfaceName );
 	}
 
 	/** Persists the gadget's settings. These weill be passed to the gadget 
@@ -759,140 +694,6 @@ export class AvGadget
 		}
 	}
 
-	@bind
-	private onUserInfo( msg: MsgUserInfo )
-	{
-		this.m_userInfo = msg.info;
-		if( this.m_userInfoListeners )
-		{
-			for( let listener of this.m_userInfoListeners )
-			{
-				listener();
-			}
-		}
-	}
-
-	/** Adds a listener for user info updates */
-	public addUserInfoListener( fn: ()=>void ) 
-	{
-		this.m_userInfoListeners.push( fn );
-		if( this.m_userInfo )
-		{
-			fn();
-		}
-	}
-
-	/** Returns a promise that will be fulfilled when the 
-	 * local user info becomes available.
-	 */
-	public getLocalUserInfo(): Promise< LocalUserInfo >
-	{
-		if( this.m_userInfo )
-		{
-			return Promise.resolve( this.m_userInfo );
-		}
-	
-		return new Promise( (resolve, reject ) =>
-		{
-			let fn = () =>
-			{
-				resolve( this.localUserInfo );
-				global.setTimeout( () => { this.removeUserInfoListener( fn ); }, 1 );
-			};
-
-			this.addUserInfoListener( fn );
-		} );
-	}
-
-
-	/** Removes a listener for user info updates */
-	public removeUserInfoListener( fn: ()=>void ) 
-	{
-		let i = this.m_userInfoListeners.findIndex( fn );
-		if( i != -1 )
-		{
-			this.m_userInfoListeners.splice( i, 1 );
-		}
-	}
-
-	/** Returns the local user's uuid. */
-	public get localUserInfo() : LocalUserInfo
-	{
-		return this.m_userInfo;
-	}
-
-	/** Gadgets call this function to create a room. 
-	 * 
-	 * roomId - the ID to use for this room. This ID must be unique
-	 * 				within the gadget.
-	 */
-	public createRoom( roomId: string, callbacks: GadgetRoomCallbacks ): Promise<GadgetRoom>
-	{
-		console.log( `createRoom ${ roomId }` );
-		return new Promise<GadgetRoom>( async ( resolve, reject ) =>
-		{
-			let msgCreate: MsgCreateRoom =
-			{
-				roomId,
-			};
-			let [ resp ] = await this.m_endpoint.sendMessageAndWaitForResponse<MsgCreateRoomResponse>( 
-				MessageType.CreateRoom, msgCreate, MessageType.CreateRoomResponse );
-			if( resp.error )
-			{
-				throw new Error( resp.error );
-			}
-
-			let room: GadgetRoom =
-			{
-				onMessage: async ( message: GadgetRoomEnvelope ) =>
-				{
-					console.log( `room.onMessage ${ roomId }: ${ JSON.stringify( message ) }` );
-					if( !message )
-					{
-						throw new Error( "onMessage called with no message" );
-					}
-					let msgReceived: MsgRoomMessageReceived =
-					{
-						roomId,
-						message,
-					}
-					let [ resp ] = await this.m_endpoint
-						.sendMessageAndWaitForResponse<MsgRoomMessageReceivedResponse>(
-							MessageType.RoomMessageReceived, msgReceived, 
-							MessageType.RoomMessageReceivedResponse );
-					if( resp.error )
-					{
-						throw new Error( resp.error );
-					}
-				},
-
-				destroy: async (): Promise<void> =>
-				{
-					console.log( `room.destroy ${ roomId }` );
-					let [ resp ] =await this.m_endpoint
-						.sendMessageAndWaitForResponse<MsgDestroyRoomResponse>(
-						MessageType.DestroyRoom, { roomId }, MessageType.DestroyRoomResponse );
-					if( resp.error )
-					{
-						throw new Error( resp.error );
-					}
-					delete this.m_roomDetails[ roomId ];
-				}
-			};
-
-			let details = {	room, callbacks, };
-			this.m_roomDetails[ roomId ] = details;
-			resolve( room );
-		} );
-	}
-
-	@bind
-	public onSendRoomMessage( msg: MsgSendRoomMessage )
-	{
-		let details = this.m_roomDetails[ msg.roomId ];
-		details?.callbacks.sendMessage( msg.message );
-	}
-
 	/** Adds a handler for a raw Aardvark message. You probably don't need this. */
 	public registerMessageHandler( type: MessageType, handler: MessageHandler )
 	{
@@ -911,13 +712,14 @@ export class AvGadget
 		this.m_endpoint.sendMessage( type, message, sendingNode );
 	}
 
-	/** Sends a request to the server to be authenticated. */
-	public async signRequest( request: AuthedRequest )
+	/** Sends a message and returns a promise that resolves when the response to that message
+	 * arrives.
+	 */
+	public sendMessageAndWaitForResponse<T>( type: MessageType, msg: any, responseType: MessageType ):
+		Promise< [ T, Envelope ] >
 	{
-		let msgReq: MsgSignRequest = { request };
-		let [ msgRes ] = await this.m_endpoint.sendMessageAndWaitForResponse<MsgSignRequestResponse>( 
-			MessageType.SignRequest, msgReq, MessageType.SignRequestResponse );
-		return msgRes.request;
+		return this.m_endpoint.sendMessageAndWaitForResponse<T>( type, msg, responseType );
 	}
+
 }
 

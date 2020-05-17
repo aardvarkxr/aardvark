@@ -1,8 +1,9 @@
 import * as React from 'react';
 
-import { AvNodeType, AvQuaternion } from '@aardvarkxr/aardvark-shared';
+import { AvNodeType, AvQuaternion, AvNodeTransform, MinimalPose } from '@aardvarkxr/aardvark-shared';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 import { quat, vec3 } from '@tlaukkan/tsm';
+import { minimalPoseFromTransform, nodeTransformFromMat4, minimalToMat4Transform } from './math_utils';
 
 interface AvTransformProps extends AvBaseNodeProps
 {
@@ -79,6 +80,14 @@ interface AvTransformProps extends AvBaseNodeProps
 	 * @default none
 	 */
 	rotation?: AvQuaternion;
+
+	/** Applies an already-constructed AvNodeTransform to the transform.
+	 * If this prop is set, all other properties will replace the matching
+	 * components of this transform.
+	 * 
+	 * @default none
+	 */
+	transform?: AvNodeTransform | MinimalPose;
 }
 
 function quatFromAxisAngleDegrees( axis: vec3, deg?: number ): quat
@@ -96,7 +105,21 @@ export class AvTransform extends AvBaseNode< AvTransformProps, {} >
 	{
 		let node = this.createNodeObject( AvNodeType.Transform, this.m_nodeId );
 
-		node.propTransform = {};
+		if( Array.isArray( this.props.transform ) )
+		{
+			let seedTransform = nodeTransformFromMat4( 
+				minimalToMat4Transform( this.props.transform as MinimalPose ) );
+			node.propTransform = { ...seedTransform };
+		}
+		else if( this.props.transform )
+		{
+			node.propTransform = { ...this.props.transform };
+		}
+		else
+		{
+			node.propTransform = {};
+		}
+
 		if( this.props.uniformScale != null )
 		{
 			node.propTransform.scale = 

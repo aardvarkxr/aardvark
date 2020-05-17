@@ -1,92 +1,63 @@
-import { AvGadget, AvRoomMember, AvStandardGrabbable, AvTransform, ShowGrabbableChildren } from '@aardvarkxr/aardvark-react';
-import { GadgetRoom, GadgetRoomCallbacks, GadgetRoomEnvelope, g_builtinModelHandMirror, RMMemberJoined, RoomMemberIdReserved, RoomMessageType } from '@aardvarkxr/aardvark-shared';
+import { AvOrigin, AvStandardGrabbable, AvTransform, NetworkUniverse, RemoteUniverse } from '@aardvarkxr/aardvark-react';
+import { g_builtinModelHandMirror } from '@aardvarkxr/aardvark-shared';
+import bind from 'bind-decorator';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 
 
-class MirrorImpl implements GadgetRoomCallbacks
+interface HandMirrorState
 {
-	public room: GadgetRoom = null;
-	public cancelThisRoom = false;
-	
-	public sendMessage( message: GadgetRoomEnvelope )
-	{
-		if( !this.room )
-			return;
-
-		// pretend all messages are from an illusionary user called "reflection"
-		// since there's really only one user.
-		message.source = "reflection";
-
-		// For mirrors, just jam these message back down the pipe with the right
-		// routing information
-		switch( message.destination )
-		{
-			case "reflection":
-				message.destination = "user";
-				break;
-		}
-
-		this.room.onMessage( message );
-	}
+	grabbed: boolean;
+	networkUniverse?: NetworkUniverse;
 }
 
-function HandMirror()
+class HandMirror extends React.Component< {}, HandMirrorState >
 {
-	const [ mirror, setMirror ] = React.useState<MirrorImpl>( null );
-	const [ updateCount, setUpdateCount ] = React.useState( 0 );
+	private remoteUniverse = React.createRef<RemoteUniverse>();
 
-	let onGrabStart = () =>
+	constructor( props: any )
 	{
-		let newMirror = new MirrorImpl;
-		setMirror( newMirror );
-		AvGadget.instance().createRoom( "mirror", newMirror )
-		.then( ( room: GadgetRoom ) =>
-		{
-			if( newMirror.cancelThisRoom )
-			{
-				room.destroy();
-			}
+		super( props );
 
-			newMirror.room = room;
-			setUpdateCount( updateCount + 1 );
-
-			let msg: RMMemberJoined =
-			{
-				type: RoomMessageType.MemberJoined,
-				destination: "user",
-				source: RoomMemberIdReserved.Room,
-				memberId: "reflection",
-			}
-			room.onMessage( msg );
-		} );	
+		this.state = { grabbed: false };
 	}
 
-	let onGrabEnd = () =>
+	@bind
+	private onNetworkEvent( event: object, reliable: boolean )
 	{
-		if( mirror )
-		{
-			if( mirror.room )
-			{
-				mirror.room.destroy();
-			}
-			else
-			{
-				mirror.cancelThisRoom = true;
-			}
-			setMirror( null );
-		}
+		this.remoteUniverse.current?.networkEvent( event );
 	}
 
-	return <AvStandardGrabbable modelUri={ g_builtinModelHandMirror } 
-				showChildren= { ShowGrabbableChildren.OnlyWhenGrabbed }
-				onGrab={ onGrabStart } onEndGrab={ onGrabEnd }>
-					{ mirror && mirror.room && 
-						<AvTransform rotateY={ 180 } uniformScale={ 0.1 }>
-							<AvRoomMember roomId="mirror" memberId="reflection"/>
-						</AvTransform>
-					}
-			</AvStandardGrabbable>;
+	@bind
+	private onRemoteEvent( event: object, reliable: boolean )
+	{
+		this.state.networkUniverse?.remoteEvent( event );
+	}
+
+	@bind
+	private onNetworkUniverseRef( networkUniverse: NetworkUniverse )
+	{
+		this.setState( { networkUniverse } );
+	}
+
+	public render()
+	{
+		return <AvStandardGrabbable modelUri={ g_builtinModelHandMirror } 
+				onGrab={ () => { this.setState( { grabbed: true} );} } 
+				onEndGrab={ () => { this.setState( { grabbed: false } );} } >
+				<AvOrigin path="/space/stage">
+					{ this.state.grabbed && 
+						<NetworkUniverse ref={ this.onNetworkUniverseRef }
+						onNetworkEvent={this.onNetworkEvent } /> }
+					<AvTransform translateX={ 0.1 }>
+						{ this.state.networkUniverse &&
+							<RemoteUniverse ref={ this.remoteUniverse }
+								onRemoteEvent={ this.onRemoteEvent } 
+								initInfo={ this.state.networkUniverse.initInfo } /> }
+					</AvTransform>
+				</AvOrigin>
+			</AvStandardGrabbable>
+	}
 }
 
 

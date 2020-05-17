@@ -12,7 +12,6 @@
 	{
 		"browserWidth": 16,
 		"browserHeight": 16,
-		"permissions" : [ "scenegraph", "room" ],
-		"shareInRooms": false
+		"permissions" : [ "scenegraph", "master" ]
 	}
 }
