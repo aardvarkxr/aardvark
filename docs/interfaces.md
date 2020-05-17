@@ -53,21 +53,109 @@ ActiveInterface defines the following methods and properties:
 * `onEvent( callback )` - The transmitter or receiver can call this function to register a callback. The callback will be invoked when the peer entity calls `sendEvent()`. If the receiving side does not register a callback, any event sent with `sendEvent()` will be discarded.
 * `onTransformUpdated( callback )` - The transmitter or receiver can call this interface to register a callback. The callback is invoked when the transform between the entities is updated because Aardvark processed a frame. See below for more details on active interface transforms.
 
-* 
+## Locked interfaces
+
+Normally the active interface for a transmitter will be the current highest priority volume that the transmitter's own volume intersects.
+There are some circumstances where that floating behavior isn't sufficient, so the transmitter may call `lock()` on the active interface to **lock** that interface to that receiver. 
+Once an interface is locked, the transmitter will not start another interface until it calls `unlock()`.
+
+Locking an interface has two effects:
+
+1. The transmitter will start another interface.
+2. Regardless of what happens with the intersection between the transmitter and receivers' volumes, the active interface will not end. The spacial relationship of the two entities in a locked interface will never cause the interface to end.
+
+If the receiver disappears or stops publishing the interface it shares with the transmitter, the transmitter will receive a call back to the handler it registered with `onEnded()`.
+This is the transmitter's cue that the interface is no longer valid.
+A transmitter in this situation will still need to call `unlock()` if it wants to be eligible for new interfaces.
+
+If the transmitter in a locked interface disappears or stops publishing the interface it shares with the receiver, the lock is discarded and the interface ends immediately for the receiver. 
+
+### Relocking
+
+Sometimes a transmitter will need to shift its lock from one receiver to another without any time passing, and without the need to intersect volumes with the new receiver. 
+For instance, gadget seeds do this to transfer their newly spawned gadget to the gadget seed's parent.
+Sometimes this will happen with receivers that have an empty volume and don't ever intersect transmitters "naturally". 
+Transmitters can relock to that interface to force the new active interface.
+
+### Initial Interface Locks
+
+Sometimes entities will need to start up with a interface already in place. 
+Any entity that spawns a gadget that it needs to be the parent of would do this to point that new child at itself.
+This is accomplished by setting the interfaceLocks property of `AvInterfaceEntity` to include the required receiver.
+
+This kind of interface lock can also include whatever additional information the interface requires in the `params` field of that initial lock.  
+
+## Entity volumes
+
+Entities normally intersect each other by testing their volumes against each other.
+There are some special rules, however, to cover some of these cases:
+* Empty volumes never intersect anything. They will only start interfaces via `relock()` on an active interface or via an initial interface lock. This is useful for any circumstance where the need for an interface can only be determined programmatically in the interface implementations themselves and Aardvark has no way of knowing hte interface needs to exist.
+* Infinite volumes intersect everything (except empty volumes.) These are useful for "catch all" entities like the room contain that allows you to drop a Moveable anywhere in space and have it appear in the container.
+* Entities that are ultimately parented to /user/hand/left, /user/hand/right, or /user/head will not intersect other volumes with the same parent. So Aardvark won't ever match a volume on the user's left hand with another volume on the user's left hand. This is to avoid a wide variety of annoying situations with the hands themselves.
+
+## Entity Transforms
+
+The transform between the two entities in an active interface will update to the current transform at a few different points in time:
+1. When the interface starts, so no matter what else, the active interface will always have a transform that is at least as recent as the start of the interface.
+2. When the interface ends.
+3. When an interface event is sent to a recipient. If the transmitter sends an event to the receiver, the receiver will get an updated transform along with that event, and vice versa.
+4. Every frame, but only to entities with their wantsTransform field set to true.
+
+
 
 # Documentation for built-in interfaces
+
+The `aardvarkxr/aardvark-react` npm package includes implementations for all of these interfaces. 
+Gadget implementors are free to use those implementations or write their own.
+
+
 
 ## `aardvark-grab@1`
 
 This interface allows the user to pick up the components of various gadgets and move them around. 
 
-**Transmitter**
+### Transmitter
 
 The default hand gadget that's built into Aardvark transmits this interface. 
 Eventually it may be possible to replace this default implementation with one of your own, but for now it is probably best to consider the `aardvark-grab@1` transmitter to be built-in.
 
-**Receiver**
+### Receiver
 
 When you include an `AvStandardGrabbable` component in your gadget, you are including an implementation of the receiver side of this interface.
 If you need more fine-grained control of your grabbable entity than `AvStandardGrabbable` can support, you could also use `MoveableComponent` directly, or implement the interface yourself.
+
+### Events
+
+**Drop Yourself**
+
+Sent by the transmitter to tell the receiver to drop itself into whatever container it's currently in.
+
+```
+{
+	type: "drop_yourself"
+}
+```
+
+**Drop Complete**
+
+Sent by the receiver to tell the transmitter that the drop is complete and that it should unlock the receiver.
+
+```
+{
+	type: "drop_complete"
+}
+```
+
+
+**Set Grabber**
+
+Sent by the transmitter to tell the receiver that it should set that grabber to be its parent and unlock itself from whatever container it is in.
+
+
+```
+{
+	type: "set_grabber"
+}
+```
+
 
