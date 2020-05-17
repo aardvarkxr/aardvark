@@ -1,4 +1,4 @@
-import { AardvarkManifest, AuthedRequest, Av, AvActionState, AvInterfaceEventProcessor, AvNode, AvNodeTransform, AvNodeType, AvStartGadgetResult, EAction, EHand, EndpointAddr, endpointAddrToString, EndpointType, ENodeFlags, Envelope, getActionFromState, InitialInterfaceLock, interfaceStringFromMsg, LocalUserInfo, MessageType, MsgGadgetStarted, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgInterfaceEnded, MsgInterfaceEvent, MsgInterfaceReceiveEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgMasterStartGadget, MsgNodeHaptic, MsgResourceLoadFailed, MsgSaveSettings, MsgSignRequest, MsgSignRequestResponse, MsgUpdateActionState, MsgUpdateSceneGraph, MsgUserInfo, stringToEndpointAddr } from '@aardvarkxr/aardvark-shared';
+import { AardvarkManifest, Av, AvActionState, AvInterfaceEventProcessor, AvNode, AvNodeTransform, AvNodeType, AvStartGadgetResult, EAction, EHand, EndpointAddr, endpointAddrToString, EndpointType, ENodeFlags, Envelope, getActionFromState, InitialInterfaceLock, interfaceStringFromMsg, MessageType, MsgGadgetStarted, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgInterfaceEnded, MsgInterfaceEvent, MsgInterfaceReceiveEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgMasterStartGadget, MsgNodeHaptic, MsgResourceLoadFailed, MsgSaveSettings, MsgUpdateActionState, MsgUpdateSceneGraph, stringToEndpointAddr } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import { IAvBaseNode } from './aardvark_base_node';
@@ -75,8 +75,6 @@ export class AvGadget
 	private m_remotePersistenceUuid: string;
 	private m_epToNotify: EndpointAddr = null;
 	private m_firstSceneGraph: boolean = true;
-	private m_userInfo: LocalUserInfo = null;
-	private m_userInfoListeners: (()=>void)[] = [];
 	private m_initialInterfaces: InitialInterfaceLock[] = [];
 
 	m_interfaceEventProcessors: {[nodeId: number]: AvInterfaceEventProcessor } = {}
@@ -149,7 +147,6 @@ export class AvGadget
 		this.m_endpoint.registerHandler( MessageType.MasterStartGadget, this.onMasterStartGadget );
 		this.m_endpoint.registerHandler( MessageType.UpdateActionState, this.onUpdateActionState );
 		this.m_endpoint.registerHandler( MessageType.ResourceLoadFailed, this.onResourceLoadFailed );
-		this.m_endpoint.registerHandler( MessageType.UserInfo, this.onUserInfo );
 		this.m_endpoint.registerAsyncHandler( MessageType.InterfaceEvent, this.onInterfaceEvent );
 		this.m_endpoint.registerAsyncHandler( MessageType.InterfaceStarted, this.onInterfaceStarted );
 		this.m_endpoint.registerAsyncHandler( MessageType.InterfaceEnded, this.onInterfaceEnded );
@@ -684,18 +681,6 @@ export class AvGadget
 		} );
 	} 
 
-	public get globallyUniqueId(): string 
-	{
-		if( this.m_ownerUuid && this.m_remotePersistenceUuid )
-		{
-			return this.m_remotePersistenceUuid + this.m_ownerUuid;
-		}
-		else
-		{
-			return this.m_persistenceUuid + this.localUserInfo.userUuid;
-		}
-	}
-
 	public get isRemote() : boolean
 	{
 		return !!this.findInitialInterface( RemoteGadgetComponent.interfaceName );
@@ -758,68 +743,6 @@ export class AvGadget
 		}
 	}
 
-	@bind
-	private onUserInfo( msg: MsgUserInfo )
-	{
-		this.m_userInfo = msg.info;
-		if( this.m_userInfoListeners )
-		{
-			for( let listener of this.m_userInfoListeners )
-			{
-				listener();
-			}
-		}
-	}
-
-	/** Adds a listener for user info updates */
-	public addUserInfoListener( fn: ()=>void ) 
-	{
-		this.m_userInfoListeners.push( fn );
-		if( this.m_userInfo )
-		{
-			fn();
-		}
-	}
-
-	/** Returns a promise that will be fulfilled when the 
-	 * local user info becomes available.
-	 */
-	public getLocalUserInfo(): Promise< LocalUserInfo >
-	{
-		if( this.m_userInfo )
-		{
-			return Promise.resolve( this.m_userInfo );
-		}
-	
-		return new Promise( (resolve, reject ) =>
-		{
-			let fn = () =>
-			{
-				resolve( this.localUserInfo );
-				global.setTimeout( () => { this.removeUserInfoListener( fn ); }, 1 );
-			};
-
-			this.addUserInfoListener( fn );
-		} );
-	}
-
-
-	/** Removes a listener for user info updates */
-	public removeUserInfoListener( fn: ()=>void ) 
-	{
-		let i = this.m_userInfoListeners.findIndex( fn );
-		if( i != -1 )
-		{
-			this.m_userInfoListeners.splice( i, 1 );
-		}
-	}
-
-	/** Returns the local user's uuid. */
-	public get localUserInfo() : LocalUserInfo
-	{
-		return this.m_userInfo;
-	}
-
 	/** Adds a handler for a raw Aardvark message. You probably don't need this. */
 	public registerMessageHandler( type: MessageType, handler: MessageHandler )
 	{
@@ -847,13 +770,5 @@ export class AvGadget
 		return this.m_endpoint.sendMessageAndWaitForResponse<T>( type, msg, responseType );
 	}
 
-	/** Sends a request to the server to be authenticated. */
-	public async signRequest( request: AuthedRequest )
-	{
-		let msgReq: MsgSignRequest = { request };
-		let [ msgRes ] = await this.m_endpoint.sendMessageAndWaitForResponse<MsgSignRequestResponse>( 
-			MessageType.SignRequest, msgReq, MessageType.SignRequestResponse );
-		return msgRes.request;
-	}
 }
 

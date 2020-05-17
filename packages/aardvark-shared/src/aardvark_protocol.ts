@@ -1,6 +1,5 @@
 import { WebAppManifest } from './web_app_manifest';
 import { AvActionState } from './aardvark';
-import { AuthedRequest, GadgetAuthedRequest } from './auth';
 
 export const AardvarkPort = 23842;
 
@@ -13,7 +12,7 @@ export enum MessageType
 	Error = 102,
 	GetAardvarkManifest = 103,
 	GetAardvarkManifestResponse = 104,
-	UserInfo = 105,
+	//UserInfo = 105,
 
 	// Monitor messages
 	// these are send to monitors to give them meta context
@@ -36,8 +35,8 @@ export enum MessageType
 	UpdateActionState = 311,
 	DestroyGadget = 312,
 	ResourceLoadFailed = 313,
-	SignRequest = 314,
-	SignRequestResponse = 315,
+	// SignRequest = 314,
+	// SignRequestResponse = 315,
 	InterfaceEvent = 316,
 
 	// System messages
@@ -234,18 +233,6 @@ export interface MsgSetEndpointTypeResponse
 	persistenceUuid?: string;
 }
 
-export interface LocalUserInfo extends AuthedRequest
-{
-	userUuid: string;
-	userDisplayName: string;
-	userPublicKey: string;
-}
-
-export interface MsgUserInfo
-{
-	info: LocalUserInfo;
-}
-
 export interface MsgNewEndpoint
 {
 	newEndpointType: EndpointType;
@@ -374,16 +361,6 @@ export interface MsgResourceLoadFailed
 	nodeId: EndpointAddr;
 	resourceUri: string;
 	error: string;
-}
-
-export interface MsgSignRequest
-{
-	request: AuthedRequest;
-}
-
-export interface MsgSignRequestResponse
-{
-	request: GadgetAuthedRequest;
 }
 
 // tx, ty, tz, rw, rx, ry, rz

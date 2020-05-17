@@ -1,4 +1,4 @@
-import { AardvarkManifest, AardvarkPort, AuthedRequest, AvNode, AvNodeTransform, AvNodeType, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, GadgetAuthedRequest, gadgetDetailsToId, MessageType, MsgDestroyGadget, MsgError, MsgGadgetStarted, MsgGeAardvarkManifestResponse, MsgGetAardvarkManifest, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgInstallGadget, MsgInterfaceEnded, MsgInterfaceEvent, MsgInterfaceReceiveEvent, MsgInterfaceSendEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgLostEndpoint, MsgMasterStartGadget, MsgNewEndpoint, MsgNodeHaptic, MsgOverrideTransform, MsgResourceLoadFailed, MsgSaveSettings, MsgSetEndpointType, MsgSetEndpointTypeResponse, MsgSignRequest, MsgSignRequestResponse, MsgUpdateActionState, MsgUpdateSceneGraph, MsgUserInfo, parseEndpointFieldUri, parseEnvelope, Permission, WebSocketCloseCodes } from '@aardvarkxr/aardvark-shared';
+import { AardvarkManifest, AardvarkPort, AvNode, AvNodeTransform, AvNodeType, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, gadgetDetailsToId, MessageType, MsgDestroyGadget, MsgError, MsgGadgetStarted, MsgGeAardvarkManifestResponse, MsgGetAardvarkManifest, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgInstallGadget, MsgInterfaceEnded, MsgInterfaceEvent, MsgInterfaceReceiveEvent, MsgInterfaceSendEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgLostEndpoint, MsgMasterStartGadget, MsgNewEndpoint, MsgNodeHaptic, MsgOverrideTransform, MsgResourceLoadFailed, MsgSaveSettings, MsgSetEndpointType, MsgSetEndpointTypeResponse, MsgUpdateActionState, MsgUpdateSceneGraph, parseEndpointFieldUri, parseEnvelope, Permission, WebSocketCloseCodes } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import { buildPersistentHookPathFromParts, HookPathParts, HookType, parsePersistentHookPath } from 'common/hook_utils';
 import * as express from 'express';
@@ -130,11 +130,6 @@ class CDispatcher
 		{
 			console.log( "Tried to send message to master, but there is no master gadget endpoint" );
 		}
-	}
-
-	public sendToMasterSigned( type: MessageType, m: AuthedRequest )
-	{
-		this.sendToMaster( type, persistence.signRequest( m ) );
 	}
 
 	public removeEndpoint( ep: CEndpoint )
@@ -989,7 +984,6 @@ class CEndpoint
 		this.registerEnvelopeHandler( MessageType.GetInstalledGadgets, this.onGetInstalledGadgets );
 		this.registerEnvelopeHandler( MessageType.DestroyGadget, this.onDestroyGadget );
 		this.registerEnvelopeHandler( MessageType.InstallGadget, this.onInstallGadget );
-		this.registerEnvelopeHandler( MessageType.SignRequest, this.onSignRequest );
 	}
 
 	public getId() { return this.m_id; }
@@ -1247,12 +1241,6 @@ class CEndpoint
 
 		this.sendMessage( MessageType.SetEndpointTypeResponse, msgResponse );
 
-		let msgUserInfo: MsgUserInfo =
-		{
-			info: persistence.localUserInfo,
-		}
-		this.sendMessage( MessageType.UserInfo, msgUserInfo );
-		
 		this.m_dispatcher.setEndpointType( this );
 
 		this.m_dispatcher.sendToAllEndpointsOfType( EndpointType.Monitor,
@@ -1308,23 +1296,6 @@ class CEndpoint
 		this.getGadgetData().verifyPermission( permissionName );
 	}
 
-
-	@bind private onSignRequest( env: Envelope, m: MsgSignRequest )
-	{
-		let actualReq: GadgetAuthedRequest =
-		{
-			...m.request,
-			ownerUuid: persistence.localUserInfo.userUuid,
-			gadgetUuid: this.getGadgetData().getPersistenceUuid(),
-		}
-
-		let msgRes: MsgSignRequestResponse =
-		{
-			request: persistence.signRequest( actualReq ) as GadgetAuthedRequest
-		};
-		
-		this.sendReply( MessageType.SignRequestResponse, msgRes, env );
-	}
 
 	@bind private onDestroyGadget( env: Envelope, m: MsgDestroyGadget )
 	{
