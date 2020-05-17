@@ -20,7 +20,7 @@ body, html
 	height: 100%;
 }
 
-.SliderContainer
+.ButtonContainer
 {
 	height: 10%;
 	width: 100%;
@@ -28,7 +28,7 @@ body, html
 	display: flex;
 }
 
-.SliderLabel
+.ButtonLabel
 {
 	background-color: aliceblue;
 	color: black;
@@ -39,32 +39,7 @@ body, html
 	margin-bottom: auto;
 }
 
-.SliderControl
-{
-	width: 80%;
-	height: 100%
-}
-
-.TranslateContainer
-{
-	height: 30%;
-	width: 100%;
-	flex-direction: row;
-	display: flex;
-}
-
-.TranslateLabel
-{
-	background-color: aliceblue;
-	color: black;
-	font-size: 1rem;
-	width: 20%;
-	text-align: center;
-	margin-top: auto;
-	margin-bottom: auto;
-}
-
-.TranslateControl
+.ButtonControl
 {
 	width: 80%;
 	height: 100%

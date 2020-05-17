@@ -21,14 +21,14 @@ export class AvPanelAnchor extends AvBaseNode< AvBaseNodeProps, {} >
 			if( domRect )
 			{
 				let x = ( ( domRect.left + domRect.right ) / ( 2 * window.innerWidth ) ) - 0.5;
-				let z = ( ( domRect.top + domRect.bottom ) / ( 2 * window.innerHeight ) ) - 0.5;
+				let y = - ( ( ( domRect.top + domRect.bottom ) / ( 2 * window.innerHeight ) ) - 0.5 );
 
 				node.propTransform = {};
 				node.propTransform.position =
 				{
 					x,
-					y: 0,
-					z,
+					y,
+					z: 0,
 				};
 			}
 		}

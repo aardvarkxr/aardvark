@@ -201,13 +201,15 @@ export class AvPanel extends React.Component< AvPanelProps, AvPanelState >
 						<AvTransform rotateX={ 90 } >
 							<AvModel uri={ g_builtinModelPanel } useBrowserTexture={ true }/>
 						</AvTransform>
+						{ this.props.children }
 					</AvTransform>
 					{ this.state.mousePosition && 
 						<AvTransform translateX={ this.state.mousePosition.x } translateY={ this.state.mousePosition.y } >
 							<AvPrimitive type={ PrimitiveType.Sphere } radius={ 0.002 } color="yellow"/>
 						</AvTransform> }
-					<AvInterfaceEntity volume={ volume } priority={ 10 } wantsTransforms={ true }
-						receives={ [ { iface: "aardvark-panel@1", processor: this.onPanel } ] }/>
+					{ this.props.interactive &&
+						<AvInterfaceEntity volume={ volume } priority={ 10 } wantsTransforms={ true }
+							receives={ [ { iface: "aardvark-panel@1", processor: this.onPanel } ] }/> }
 				</>
 	}
 }

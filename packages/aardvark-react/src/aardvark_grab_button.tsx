@@ -1,16 +1,19 @@
-import * as React from 'react';
-import { AvTransform } from './aardvark_transform';
+import { AvVolume, EVolumeType } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
+import * as React from 'react';
+import { ActiveInterface, AvInterfaceEntity } from './aardvark_interface_entity';
 import { AvModel } from './aardvark_model';
-import { HighlightType, AvGrabbable, GrabResponse } from './aardvark_grabbable';
-import { AvSphereHandle, AvModelBoxHandle } from './aardvark_handles';
-import { AvGrabEvent } from '@aardvarkxr/aardvark-shared';
+import { PanelRequest, PanelRequestType } from './aardvark_panel';
+import { AvTransform } from './aardvark_transform';
 
 
 interface GrabButtonProps
 {
 	/** The onTrigger callback is called when the grab button is grabbed. */
-	onTrigger: () => void;
+	onClick?: () => void;
+
+	/** The onTrigger callback is called when the grab button is grabbed. */
+	onRelease?: () => void;
 
 	/** The URI of the GLTF model to use for this grab button. Exactly one
 	 * of modelUri and radius must be specified. If modelUri is specified,
@@ -27,7 +30,7 @@ interface GrabButtonProps
 
 interface GrabButtonState
 {
-	highlight: HighlightType;
+	pokerCount: number;
 }
 
 /** This node is a control that signals when it is grabbed. */
@@ -39,44 +42,63 @@ export class AvGrabButton extends React.Component< GrabButtonProps, GrabButtonSt
 
 		this.state = 
 		{ 
-			highlight: HighlightType.None,
+			pokerCount: 0,
 		};
 	}
 
-	@bind updateHighlight( newHighlight: HighlightType )
+	@bind
+	private onPanel( activePoker: ActiveInterface )
 	{
-		this.setState( { highlight: newHighlight } );
-	}
-
-	@bind onGrabRequest( event: AvGrabEvent )
-	{
-		return new Promise<GrabResponse>( ( resolve, reject ) =>
+		this.setState( ( prevState ) => { return { pokerCount: prevState.pokerCount + 1 }; } );
+		activePoker.onEvent( ( event: PanelRequest ) =>
 		{
-			let resp: GrabResponse =
+			switch( event.type )
 			{
-				allowed: false,
-			}
-			resolve( resp );
+				case PanelRequestType.Down:
+					this.props.onClick?.();
+					break;
 
-			this.props.onTrigger();
+				case PanelRequestType.Up:
+					this.props.onRelease?.();
+					break;
+			}
+		} );
+
+		activePoker.onEnded( () =>
+		{
+			this.setState( ( prevState ) => { return { pokerCount: prevState.pokerCount - 1 }; } );
 		} );
 	}
 	
 	public render()
 	{
-		return <div>
-				<AvGrabbable updateHighlight={ this.updateHighlight } onGrabRequest={ this.onGrabRequest }
-					showGrabIndicator={ false }>
-					{ this.props.radius 
-						&& <AvSphereHandle radius={ this.props.radius ? this.props.radius : 0.1 } /> }
-					{ !this.props.radius && this.props.modelUri
-						&& <AvModelBoxHandle uri={ this.props.modelUri } /> }
-				</AvGrabbable>
-				<AvTransform uniformScale={ this.state.highlight == HighlightType.InRange ? 1.1 : 1.0 } >
-					{ this.props.modelUri && <AvModel uri={ this.props.modelUri } /> }
-					{ this.props.children }
-				</AvTransform>
-			</div>;
+		let scale = ( this.state.pokerCount > 0 ) ? 1.1 : 1.0;
+		let volume: AvVolume;
+		if( this.props.radius )
+		{
+			volume = 
+			{
+				type: EVolumeType.Sphere,
+				radius: this.props.radius,
+			};
+		}
+		else if( this.props.modelUri )
+		{
+			volume = 
+			{
+				type: EVolumeType.ModelBox,
+				uri: this.props.modelUri,
+			};
+		}
+
+		return <>
+			<AvTransform uniformScale={ scale }>
+				{ this.props.modelUri && <AvModel uri={ this.props.modelUri }/> }
+				{ this.props.children }
+			</AvTransform>
+			<AvInterfaceEntity volume={ volume } priority={ 20 }
+				receives={ [ { iface: "aardvark-panel@1", processor: this.onPanel } ] }/>
+		</>;
 	}
 }
 
