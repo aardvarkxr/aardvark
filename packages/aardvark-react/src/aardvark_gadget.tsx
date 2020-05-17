@@ -1,4 +1,4 @@
-import { AardvarkManifest, Av, AvActionState, AvInterfaceEventProcessor, AvNode, AvNodeTransform, AvNodeType, AvStartGadgetResult, EAction, EHand, EndpointAddr, endpointAddrToString, EndpointType, ENodeFlags, Envelope, getActionFromState, InitialInterfaceLock, interfaceStringFromMsg, MessageType, MsgGadgetStarted, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgInterfaceEnded, MsgInterfaceEvent, MsgInterfaceReceiveEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgMasterStartGadget, MsgNodeHaptic, MsgResourceLoadFailed, MsgSaveSettings, MsgUpdateActionState, MsgUpdateSceneGraph, stringToEndpointAddr } from '@aardvarkxr/aardvark-shared';
+import { AardvarkManifest, Av, AvActionState, AvInterfaceEventProcessor, AvNode, AvNodeTransform, AvNodeType, AvStartGadgetResult, EAction, EHand, EndpointAddr, endpointAddrToString, EndpointType, ENodeFlags, Envelope, getActionFromState, InitialInterfaceLock, interfaceStringFromMsg, MessageType, MsgGadgetStarted, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgInterfaceEnded, MsgInterfaceEvent, MsgInterfaceReceiveEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgNodeHaptic, MsgResourceLoadFailed, MsgSaveSettings, MsgUpdateActionState, MsgUpdateSceneGraph, stringToEndpointAddr } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import { IAvBaseNode } from './aardvark_base_node';
@@ -19,12 +19,6 @@ export interface AvInterfaceEntityProcessor
 		destinationFromPeer: AvNodeTransform ): void;
 }
 
-
-interface AvGadgetProps
-{
-	gadgetUri?: string;
-	onSettingsReceived?: ( settings: any ) => void;
-}
 
 function parseURL(url: string) 
 {
@@ -144,7 +138,6 @@ export class AvGadget
 		});
 
 		this.m_endpoint.registerHandler( MessageType.GadgetStarted, this.onGadgetStarted );
-		this.m_endpoint.registerHandler( MessageType.MasterStartGadget, this.onMasterStartGadget );
 		this.m_endpoint.registerHandler( MessageType.UpdateActionState, this.onUpdateActionState );
 		this.m_endpoint.registerHandler( MessageType.ResourceLoadFailed, this.onResourceLoadFailed );
 		this.m_endpoint.registerAsyncHandler( MessageType.InterfaceEvent, this.onInterfaceEvent );
@@ -420,19 +413,6 @@ export class AvGadget
 		{
 			processor( m.interface, env.sender, m.data );
 		}
-	}
-
-	@bind private onMasterStartGadget( m: MsgMasterStartGadget )
-	{
-		Av().startGadget( 
-			{
-				uri: m.uri, 
-				initialHook: m.initialHook, 
-				persistenceUuid: m.persistenceUuid,
-				remoteUniversePath: m.remoteUserId,
-				epToNotify: m.epToNotify,
-				remotePersistenceUuid: m.remotePersistenceUuid,
-			} );
 	}
 
 	@bind private onResourceLoadFailed( m: MsgResourceLoadFailed )

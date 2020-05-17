@@ -5,3 +5,19 @@ let traverser = new AvDefaultTraverser();
 
 Av().renderer.registerTraverser( traverser.traverse );
 
+// Always draw some hands
+Av().startGadget( 
+	{
+		uri: "http://localhost:23842/gadgets/default_hands", 
+		initialHook: "", 
+		persistenceUuid: "hands",
+	} );
+
+// Always start the gadget menu
+Av().startGadget( 
+	{
+		uri: "http://localhost:23842/gadgets/gadget_menu", 
+		initialHook: "", 
+		persistenceUuid: "hands",
+	} );
+

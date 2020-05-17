@@ -91,7 +91,6 @@ function createConfig( appName, appTitle, ext )
 
 module.exports = 
 [
-	createConfig( 'aardvark_master', 'Master App', 'tsx' ),
 	createConfig( 'aardvark_monitor', 'Monitor', 'tsx' ),
 	createConfig( 'aardvark_renderer', 'Renderer', 'ts' ),
 	createConfig( 'default_hands', 'Default Hands', 'tsx' ),

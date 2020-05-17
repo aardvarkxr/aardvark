@@ -133,7 +133,7 @@ void CAardvarkCefApp::OnContextInitialized()
 		pAdapter = nullptr;
 	}
 
-	aardvark::GadgetParams_t params = { "http://localhost:23842/gadgets/aardvark_master", "", "master", aardvark::EndpointAddr_t(), "", "" };
+	aardvark::GadgetParams_t params = { "http://localhost:23842/gadgets/aardvark_renderer", "", "master", aardvark::EndpointAddr_t(), "", "" };
 	startGadget( params );
 }
 

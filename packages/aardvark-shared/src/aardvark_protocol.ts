@@ -30,7 +30,7 @@ export enum MessageType
 	NodeHaptic = 306,
 	// AttachGadgetToHook = 307,
 	// DetachGadgetFromHook = 308,
-	MasterStartGadget = 309, // tells master to start a gadget
+	//MasterStartGadget = 309, // tells master to start a gadget
 	SaveSettings = 310,
 	UpdateActionState = 311,
 	DestroyGadget = 312,
@@ -305,16 +305,6 @@ export interface MsgInterfaceEvent
 	destination: EndpointAddr;
 	interface: string;
 	data: object;
-}
-
-export interface MsgMasterStartGadget
-{
-	uri: string;
-	initialHook: string;
-	persistenceUuid: string;
-	remoteUserId?: string;
-	epToNotify?: EndpointAddr;
-	remotePersistenceUuid?: string;
 }
 
 export interface MsgSaveSettings

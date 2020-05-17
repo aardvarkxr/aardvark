@@ -1,4 +1,4 @@
-import { AardvarkManifest, AardvarkPort, AvNode, AvNodeTransform, AvNodeType, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, gadgetDetailsToId, MessageType, MsgDestroyGadget, MsgError, MsgGadgetStarted, MsgGeAardvarkManifestResponse, MsgGetAardvarkManifest, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgInstallGadget, MsgInterfaceEnded, MsgInterfaceEvent, MsgInterfaceReceiveEvent, MsgInterfaceSendEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgLostEndpoint, MsgMasterStartGadget, MsgNewEndpoint, MsgNodeHaptic, MsgOverrideTransform, MsgResourceLoadFailed, MsgSaveSettings, MsgSetEndpointType, MsgSetEndpointTypeResponse, MsgUpdateActionState, MsgUpdateSceneGraph, parseEndpointFieldUri, parseEnvelope, Permission, WebSocketCloseCodes } from '@aardvarkxr/aardvark-shared';
+import { AardvarkManifest, AardvarkPort, AvNode, AvNodeTransform, AvNodeType, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, gadgetDetailsToId, MessageType, MsgDestroyGadget, MsgError, MsgGadgetStarted, MsgGeAardvarkManifestResponse, MsgGetAardvarkManifest, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgInstallGadget, MsgInterfaceEnded, MsgInterfaceEvent, MsgInterfaceReceiveEvent, MsgInterfaceSendEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgLostEndpoint, MsgNewEndpoint, MsgNodeHaptic, MsgOverrideTransform, MsgResourceLoadFailed, MsgSaveSettings, MsgSetEndpointType, MsgSetEndpointTypeResponse, MsgUpdateActionState, MsgUpdateSceneGraph, parseEndpointFieldUri, parseEnvelope, Permission, WebSocketCloseCodes } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import { buildPersistentHookPathFromParts, HookPathParts, HookType, parsePersistentHookPath } from 'common/hook_utils';
 import * as express from 'express';
@@ -38,22 +38,6 @@ class CDispatcher
 
 	public async init()
 	{
-	}
-
-	public startAllGadgets()
-	{
-		// Either start the gadget or schedule a start of the gadget when the hook it depends on arrives.
-		let gadgetsToStart = persistence.getActiveGadgets();
-		for( let gadget of gadgetsToStart )
-		{
-			let gadgetHookPath = persistence.getGadgetHookPath( gadget.uuid );
-			let hookParts = parsePersistentHookPath( gadgetHookPath )
-			this.findGadget( hookParts?.gadgetUuid ?? "master" )
-			.then( () =>
-			{
-				this.startOrRehookGadget( gadget.uri, gadgetHookPath, gadget.uuid );
-			} );
-		}		
 	}
 
 	public get nextSequenceNumber()
@@ -337,57 +321,6 @@ class CDispatcher
 		}
 	}
 
-	public async startOrRehookGadget( uri: string, initialHookPath: string, persistenceUuid: string )
-	{
-		// see if this gadget already exists
-		let gadget = this.m_gadgetsByUuid[ persistenceUuid ];
-		if( !gadget )
-		{
-			this.tellMasterToStartGadget( uri, initialHookPath, persistenceUuid );
-			return;
-		}
-
-		// tell the gadget to move to the newly available hook
-		let gadgetData = gadget.getGadgetData();
-		await gadgetData.attachToHook( initialHookPath );
-		gadgetData.sendSceneGraphToRenderer();
-	}
-
-	public tellMasterToStartGadget( uri: string, initialHook: string, persistenceUuid: string,
-		remoteUserId?: string, remotePersistenceUuid?: string ): Promise<number>
-	{
-		let existingGadget = this.m_gadgetsByUuid[ persistenceUuid ] ;
-		if( existingGadget )
-		{
-			return Promise.resolve( existingGadget.getId() );
-		}
-
-		return new Promise( ( resolve, reject ) =>
-		{
-			let notifyNodeId = this.m_notifyNodeId++;
-			this.m_startGadgetPromises[ notifyNodeId ] = [ resolve, reject ];
-
-			let epToNotify: EndpointAddr = 
-			{
-				type: EndpointType.Hub,
-				nodeId: notifyNodeId,
-			}
-
-			// we don't have one of these gadgets yet, so tell master to start one
-			let msg: MsgMasterStartGadget =
-			{
-				uri,
-				initialHook,
-				persistenceUuid,
-				remoteUserId,
-				epToNotify,
-				remotePersistenceUuid,
-			} 
-
-			this.sendToMaster( MessageType.MasterStartGadget, msg );
-		} );
-	}
-
 	public findGadgetById( gadgetId: number ): CGadgetData
 	{
 		for( let gadgetEp of this.m_gadgets )
@@ -552,7 +485,6 @@ class CGadgetData
 	public getHookNodes() { return this.m_hookNodes; }
 	public getPersistenceUuid() { return this.m_persistenceUuid; }
 	public getRemoteUniversePath() { return this.m_remoteUniversePath; }
-	public isMaster() { return this.m_persistenceUuid == "master"; }
 	public isBeingDestroyed() { return this.m_gadgetBeingDestroyed; }
 
 	public get debugName()
@@ -563,14 +495,6 @@ class CGadgetData
 			return "REMOTE";
 		else
 			return "Gadget with unspeakable name";
-	}
-
-	public verifyMaster()
-	{
-		if( !this.isMaster() )
-		{
-			throw "Gadget is not master";
-		}
 	}
 
 	public sendMessage( type: MessageType, msg: any, target: EndpointAddr = undefined, sender:EndpointAddr = undefined  )
@@ -844,10 +768,6 @@ class CGadgetData
 		{
 			// never send the grab hook for local gadgets
 			hookToSend = this.m_hook;
-			if( !this.isMaster() )
-			{
-				// console.log( "LOCAL scene graph update for " + this.getEndpointId() );
-			}
 		}
 
 		if( hookToSend )
@@ -1227,11 +1147,6 @@ class CEndpoint
 			}
 
 			msgResponse.persistenceUuid = this.m_gadgetData.getPersistenceUuid();
-
-			if( this.m_gadgetData.isMaster() )
-			{
-				this.m_dispatcher.startAllGadgets();
-			}
 
 		} 
 		else if (this.getType() == EndpointType.Renderer) 
