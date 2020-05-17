@@ -64,12 +64,8 @@ export interface AvBrowserTextureCallback
 export interface GadgetParams
 {
 	uri: string;
-	initialHook: string;
-	persistenceUuid: string;
+	initialInterfaces: string;
 	epToNotify?: EndpointAddr;
-	remoteUniversePath?: string;
-	ownerUuid?: string;
-	remotePersistenceUuid?: string;
 }
 
 export enum PanelMouseEventType

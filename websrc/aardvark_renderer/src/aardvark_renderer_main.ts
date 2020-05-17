@@ -9,15 +9,13 @@ Av().renderer.registerTraverser( traverser.traverse );
 Av().startGadget( 
 	{
 		uri: "http://localhost:23842/gadgets/default_hands", 
-		initialHook: "", 
-		persistenceUuid: "hands",
+		initialInterfaces: "", 
 	} );
 
 // Always start the gadget menu
 Av().startGadget( 
 	{
 		uri: "http://localhost:23842/gadgets/gadget_menu", 
-		initialHook: "", 
-		persistenceUuid: "hands",
+		initialInterfaces: "", 
 	} );
 

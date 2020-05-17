@@ -137,7 +137,7 @@ describe( "CAardvarkEndpoint ", () =>
 	{
 		let handshookPromise = new Promise ( ( resolve, reject ) =>
 		{
-			let ep = new CAardvarkEndpoint( ( settings: any, persistenceUuid: string ) =>
+			let ep = new CAardvarkEndpoint( ( settings: any ) =>
 			{
 				let msgSetEndpointType: MsgSetEndpointType =
 				{

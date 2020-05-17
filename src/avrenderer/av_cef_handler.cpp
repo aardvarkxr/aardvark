@@ -94,31 +94,13 @@ void CAardvarkCefHandler::onGadgetManifestReceived( bool success, const std::vec
 
 	std::map<std::string, std::string> mapArgs;
 
-	if ( !m_params.initialHook.empty() )
+	if ( !m_params.initialInterfaces.empty() )
 	{
-		mapArgs["initialHook"] = m_params.initialHook;
+		mapArgs["initialInterfaces"] = m_params.initialInterfaces;
 	}
 	if ( m_params.epToNotify.type != aardvark::EEndpointType::Unknown )
 	{
 		mapArgs["epToNotify"] = aardvark::endpointAddrToString( this->m_params.epToNotify );
-	}
-
-	if ( !m_params.persistenceUuid.empty() )
-	{
-		mapArgs["persistenceUuid"] = m_params.persistenceUuid;
-	}
-
-	if ( !m_params.remoteUniversePath.empty() )
-	{
-		mapArgs[ "remoteUniversePath" ] = m_params.remoteUniversePath;
-	}
-	if ( !m_params.ownerUuid.empty() )
-	{
-		mapArgs[ "ownerUuid" ] = m_params.ownerUuid;
-	}
-	if ( !m_params.remotePersistenceUuid.empty() )
-	{
-		mapArgs[ "remotePersistenceUuid" ] = m_params.remotePersistenceUuid;
 	}
 
 	std::string sArgs;

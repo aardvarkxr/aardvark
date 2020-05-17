@@ -13,7 +13,7 @@ export interface AsyncMessageHandler
 
 export interface OpenHandler
 {
-	( settings: any, persistenceUuid?: string ):void;
+	( settings: any ):void;
 }
 
 
@@ -163,7 +163,7 @@ export class CAardvarkEndpoint
 		this.m_endpointId = m.endpointId;
 		if( this.m_handshakeComplete )
 		{
-			this.m_handshakeComplete( m.settings, m.persistenceUuid );
+			this.m_handshakeComplete( m.settings );
 		}
 
 		// send all the messages that were queued while we were waiting to connect

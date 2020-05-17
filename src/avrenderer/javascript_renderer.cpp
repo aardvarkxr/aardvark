@@ -270,44 +270,12 @@ bool gadgetParamsFromJs( CefRefPtr< CefV8Value > obj, aardvark::GadgetParams_t *
 		}
 	}
 
-	if ( obj->HasValue( "initialHook" ) )
+	if ( obj->HasValue( "initialInterfaces" ) )
 	{
-		CefRefPtr<CefV8Value> type = obj->GetValue( "initialHook" );
+		CefRefPtr<CefV8Value> type = obj->GetValue( "initialInterfaces" );
 		if ( type->IsString() )
 		{
-			params->initialHook = type->GetStringValue();
-		}
-	}
-	if ( obj->HasValue( "persistenceUuid" ) )
-	{
-		CefRefPtr<CefV8Value> type = obj->GetValue( "persistenceUuid" );
-		if ( type->IsString() )
-		{
-			params->persistenceUuid = type->GetStringValue();
-		}
-	}
-	if ( obj->HasValue( "remoteUniversePath" ) )
-	{
-		CefRefPtr<CefV8Value> type = obj->GetValue( "remoteUniversePath" );
-		if ( type->IsString() )
-		{
-			params->remoteUniversePath = type->GetStringValue();
-		}
-	}
-	if ( obj->HasValue( "ownerUuid" ) )
-	{
-		CefRefPtr<CefV8Value> type = obj->GetValue( "ownerUuid" );
-		if ( type->IsString() )
-		{
-			params->ownerUuid = type->GetStringValue();
-		}
-	}
-	if ( obj->HasValue( "remotePersistenceUuid" ) )
-	{
-		CefRefPtr<CefV8Value> type = obj->GetValue( "remotePersistenceUuid" );
-		if ( type->IsString() )
-		{
-			params->remotePersistenceUuid = type->GetStringValue();
+			params->initialInterfaces = type->GetStringValue();
 		}
 	}
 

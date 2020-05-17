@@ -220,17 +220,12 @@ export interface MsgSetEndpointType
 {
 	newEndpointType: EndpointType;
 	gadgetUri?: string;
-	initialHook?: string;
-	persistenceUuid?: string;
-	remoteUniversePath?: string;
-	ownerUuid?: string;
 }
 
 export interface MsgSetEndpointTypeResponse
 {
 	endpointId: number;
 	settings?: any;
-	persistenceUuid?: string;
 }
 
 export interface MsgNewEndpoint
@@ -356,13 +351,6 @@ export interface MsgResourceLoadFailed
 // tx, ty, tz, rw, rx, ry, rz
 export type MinimalPose = [ number, number, number, number, number, number, number ];
 
-
-export interface SharedGadget
-{
-	gadgetUri: string;
-	persistenceUuid: string;
-	hook?: string;
-}
 
 export interface MsgInterfaceStarted
 {

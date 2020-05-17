@@ -63,10 +63,6 @@ export class AvGadget
 	m_manifest: AardvarkManifest = null;
 	m_actualGadgetUri: string = null;
 	m_actionState: { [hand:number]: AvActionState } = {};
-	private m_persistenceUuid: string;
-	private m_remoteUniversePath: string;
-	private m_ownerUuid: string;
-	private m_remotePersistenceUuid: string;
 	private m_epToNotify: EndpointAddr = null;
 	private m_firstSceneGraph: boolean = true;
 	private m_initialInterfaces: InitialInterfaceLock[] = [];
@@ -92,17 +88,12 @@ export class AvGadget
 		}
 
 		let params = parseURL( window.location.href );
-		this.m_persistenceUuid = params[ "persistenceUuid" ];
-		this.m_remoteUniversePath = params[ "remoteUniversePath" ];
-		this.m_ownerUuid = params[ "ownerUuid" ];
-		this.m_remotePersistenceUuid = params[ "remotePersistenceUuid" ];
 
 		try
 		{
-			console.log( "initialHook", params[ "initialHook" ] );
-			if( params[ "initialHook" ] )
+			if( params[ "initialInterfaces" ] )
 			{
-				this.m_initialInterfaces = JSON.parse( atob( params[ "initialHook" ] ) );
+				this.m_initialInterfaces = JSON.parse( atob( params[ "initialInterfaces" ] ) );
 				console.log( "initialInterfaces", this.m_initialInterfaces );
 			}
 		}
@@ -117,18 +108,10 @@ export class AvGadget
 			console.log( "This gadget wants to notify " + endpointAddrToString(this.m_epToNotify ) );
 		}
 
-		if( this.m_remoteUniversePath )
-		{
-			console.log( "This gadget is remote from " + this.m_remoteUniversePath );
-		}
-
-		this.m_endpoint = new CGadgetEndpoint( this.m_actualGadgetUri, 
-			params["initialHook"], this.m_persistenceUuid, this.m_remoteUniversePath,
-			this.m_ownerUuid,
-			this.onEndpointOpen );
+		this.m_endpoint = new CGadgetEndpoint( this.m_actualGadgetUri, this.onEndpointOpen );
 	}
 
-	@bind public onEndpointOpen( settings: any, persistenceUuid: string )
+	@bind public onEndpointOpen( settings: any )
 	{
 		this.m_endpoint.getGadgetManifest( this.m_actualGadgetUri )
 		.then( ( manifest: AardvarkManifest ) =>
@@ -151,14 +134,6 @@ export class AvGadget
 		if( this.m_onSettingsReceived )
 		{
 			this.m_onSettingsReceived( settings );
-		}
-
-		if( persistenceUuid != this.m_persistenceUuid )
-		{
-			history.pushState( 
-				{ gadgetUri: this.m_actualGadgetUri, persistenceUuid },
-				"", 
-				this.m_actualGadgetUri + "/index.html?persistenceUuid=" + persistenceUuid );
 		}
 	}
 
@@ -632,8 +607,7 @@ export class AvGadget
 		this.m_endpoint.sendMessage( MessageType.NodeHaptic, msg );
 	}
 
-	public startGadget( uri: string, initialInterfaces: InitialInterfaceLock[], remoteUniversePath?: string,
-		persistenceUuid?: string, ownerUuid?: string, remotePersistenceUuid?: string ) : 
+	public startGadget( uri: string, initialInterfaces: InitialInterfaceLock[] ) : 
 		Promise<AvStartGadgetResult>
 	{
 		return new Promise( ( resolve, reject ) =>
@@ -641,7 +615,7 @@ export class AvGadget
 			let notifyNodeId = this.m_nextNodeId++;
 			this.m_startGadgetPromises[ notifyNodeId ] = [ resolve, reject ];
 
-			let initialHook = btoa( JSON.stringify( initialInterfaces ) );
+			let initialInterfacesEncoded = btoa( JSON.stringify( initialInterfaces ) );
 			
 			let epToNotify: EndpointAddr = 
 			{
@@ -651,12 +625,9 @@ export class AvGadget
 			}
 			Av().startGadget( 
 				{
-					uri, initialHook, 
-					persistenceUuid: persistenceUuid ?? "", 
+					uri, 
+					initialInterfaces: initialInterfacesEncoded, 
 					epToNotify, 
-					remoteUniversePath,
-					ownerUuid,
-					remotePersistenceUuid,
 				} );
 		} );
 	} 

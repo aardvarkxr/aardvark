@@ -426,33 +426,11 @@ class CGadgetData
 	private m_updateTimer: NodeJS.Timeout = null;
 
 
-	constructor( ep: CEndpoint, uri: string, initialHook: string, persistenceUuid:string,
-		remoteUniversePath: string, dispatcher: CDispatcher )
+	constructor( ep: CEndpoint, uri: string, dispatcher: CDispatcher )
 	{
-		if( persistenceUuid )
-		{
-			if( !initialHook && !remoteUniversePath )
-			{
-				initialHook = persistence.getGadgetHookPath( persistenceUuid );
-			}
-
-			this.m_persistenceUuid = persistenceUuid;
-		}
-		else
-		{
-			this.m_persistenceUuid = persistence.createGadgetPersistence( uri );
-			if( initialHook )
-			{
-				persistence.setGadgetHook( this.m_persistenceUuid, initialHook, null );
-			}
-		}
-
 		this.m_ep = ep;
 		this.m_gadgetUri = uri;
-		this.m_remoteUniversePath = remoteUniversePath;
 		this.m_dispatcher = dispatcher;
-
-		this.attachToHook( initialHook );
 	}
 
 	public async init()
@@ -1126,28 +1104,12 @@ class CEndpoint
 
 		if( this.getType() == EndpointType.Gadget )
 		{
-			console.log( `  initial hook:  ${ m.initialHook }` );
-			console.log(  `  remote universe: ${ m.remoteUniversePath }`);
-			
-			this.m_gadgetData = new CGadgetData( this, m.gadgetUri, m.initialHook, m.persistenceUuid,
-				m.remoteUniversePath, this.m_dispatcher );
+			this.m_gadgetData = new CGadgetData( this, m.gadgetUri, this.m_dispatcher );
 
 			// Don't reply to the SetEndpointType until we've inited the gadget.
 			// This loads the manifest for the gadget and has the chance to verify
 			// some stuff.
 			await this.m_gadgetData.init(); 
-
-			if( !m.remoteUniversePath )
-			{
-				let settings = persistence.getGadgetSettings( this.m_gadgetData.getPersistenceUuid() );
-				if( settings )
-				{
-					msgResponse.settings = settings;
-				}	
-			}
-
-			msgResponse.persistenceUuid = this.m_gadgetData.getPersistenceUuid();
-
 		} 
 		else if (this.getType() == EndpointType.Renderer) 
 		{
