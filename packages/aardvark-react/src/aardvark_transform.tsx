@@ -3,7 +3,7 @@ import * as React from 'react';
 import { AvNodeType, AvQuaternion, AvNodeTransform, MinimalPose } from '@aardvarkxr/aardvark-shared';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 import { quat, vec3 } from '@tlaukkan/tsm';
-import { minimalPoseFromTransform, nodeTransformFromMat4, minimalToMat4Transform } from './math_utils';
+import { quatFromAxisAngleDegrees, nodeTransformFromMat4, minimalToMat4Transform } from './math_utils';
 
 interface AvTransformProps extends AvBaseNodeProps
 {
@@ -88,14 +88,6 @@ interface AvTransformProps extends AvBaseNodeProps
 	 * @default none
 	 */
 	transform?: AvNodeTransform | MinimalPose;
-}
-
-function quatFromAxisAngleDegrees( axis: vec3, deg?: number ): quat
-{
-	if( !deg )
-		return new quat( quat.identity.xyzw );
-
-	return quat.fromAxisAngle( axis, deg * Math.PI / 180 );
 }
 
 /** Applies a static transform to all children. */

@@ -1,5 +1,5 @@
 import { AvGadget } from './aardvark_gadget';
-import { InitialInterfaceLock, EndpointAddr, endpointAddrsMatch, InterfaceLockResult, endpointAddrToString } from '@aardvarkxr/aardvark-shared';
+import { InitialInterfaceLock, EndpointAddr, endpointAddrsMatch, InterfaceLockResult, endpointAddrToString, AvNodeTransform } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import { EntityComponent } from './aardvark_composed_entity';
 import { ActiveInterface, InterfaceProp } from './aardvark_interface_entity';
@@ -23,6 +23,7 @@ export interface ContainerRequest
 	type: ContainerRequestType;
 	newContainer?: EndpointAddr;
 	moveableToReplace?: EndpointAddr;
+	oldMoveableFromNewMoveable?: AvNodeTransform;
 }
 
 export enum GrabRequestType
@@ -52,6 +53,7 @@ export class MoveableComponent implements EntityComponent
 	private droppedIntoInitialParent: boolean = false;
 	private initialInterface:InitialInterfaceLock = null;
 	private waitingForRedrop:EndpointAddr = null;
+	private waitingForRedropTransform: AvNodeTransform = null;
 
 	constructor( callback: () => void, useInitialParent?: boolean )
 	{
@@ -125,13 +127,14 @@ export class MoveableComponent implements EntityComponent
 		this.updateListener();
 	}
 
-	private async dropIntoContainer( requestLock: boolean, moveableToReplace?: EndpointAddr )
+	private async dropIntoContainer( requestLock: boolean, moveableToReplace?: EndpointAddr, 
+		oldMoveableFromNewMoveable?: AvNodeTransform )
 	{
 		if( requestLock )
 		{
 			await this.activeContainer?.lock();
 		}
-		await this.activeContainer?.sendEvent( { state: "Resting", moveableToReplace } );
+		await this.activeContainer?.sendEvent( { state: "Resting", moveableToReplace, oldMoveableFromNewMoveable } );
 
 		this.wasEverDropped = true;
 		this.grabber = null;
@@ -155,6 +158,7 @@ export class MoveableComponent implements EntityComponent
 				{
 					console.log( `Redrop request to replace ${ endpointAddrToString( event.moveableToReplace )}` );
 					this.waitingForRedrop = event.moveableToReplace;
+					this.waitingForRedropTransform = event.oldMoveableFromNewMoveable;
 					activeContainer.relock( event.newContainer );
 				}
 				break;
@@ -183,7 +187,7 @@ export class MoveableComponent implements EntityComponent
 		if( this.waitingForRedrop )
 		{
 			console.log( `got new container ${ endpointAddrToString( activeContainer.peer ) } while waiting for redrop` );
-			this.dropIntoContainer( false, this.waitingForRedrop );
+			this.dropIntoContainer( false, this.waitingForRedrop, this.waitingForRedropTransform );
 			this.waitingForRedrop = null;
 		}
 	}

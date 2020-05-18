@@ -6,6 +6,8 @@ import bind from 'bind-decorator';
 import { AvTransform } from './aardvark_transform';
 import { AvEntityChild } from './aardvark_entity_child';
 import { ContainerRequestType, ContainerRequest, MoveableComponent } from './component_moveable';
+import { nodeTransformToMat4, nodeTransformFromMat4 } from './math_utils';
+import { vec3, mat4, vec4, mat3, quat } from '@tlaukkan/tsm';
 
 export enum ContainerItemState
 {
@@ -25,6 +27,7 @@ export interface ContainerItemStateEvent
 {
 	state: ContainerItemState;
 	moveableToReplace?: EndpointAddr;
+	oldMoveableFromNewMoveable?: AvNodeTransform;
 }
 
 export class SimpleContainerComponent implements EntityComponent
@@ -74,7 +77,12 @@ export class SimpleContainerComponent implements EntityComponent
 					if( item )
 					{
 						console.log( `found item for ${ endpointAddrToString( event.moveableToReplace ) }` );
-						myItem.containerFromEntity = item.containerFromEntity;
+						
+						let containerFromOldMoveable = nodeTransformToMat4( item.containerFromEntity );
+						let oldMoveableFromNewMoveable = nodeTransformToMat4( event.oldMoveableFromNewMoveable );
+						let containerFromNewMoveable = mat4.product( containerFromOldMoveable, oldMoveableFromNewMoveable, new mat4() );
+						myItem.containerFromEntity = nodeTransformFromMat4( containerFromNewMoveable );
+
 						item.iface.sendEvent( 
 							{ 
 								type: ContainerRequestType.RedropComplete, 

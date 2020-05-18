@@ -19,7 +19,7 @@ export function scaleMat( s: vec3)
 	return m;
 }
 
-function quatFromAxisAngleDegrees( axis: vec3, deg?: number ): quat
+export function quatFromAxisAngleDegrees( axis: vec3, deg?: number ): quat
 {
 	if( !deg )
 		return new quat( quat.identity.xyzw );

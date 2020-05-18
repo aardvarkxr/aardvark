@@ -10,6 +10,8 @@ import { ActiveInterface, InterfaceProp } from './aardvark_interface_entity';
 import { AvModel } from './aardvark_model';
 import { AvTransform } from './aardvark_transform';
 import { ContainerRequest, ContainerRequestType, MoveableComponent, MoveableComponentState } from './component_moveable';
+import { quatFromAxisAngleDegrees } from './math_utils';
+import { vec3, mat4, vec4, mat3, quat } from '@tlaukkan/tsm';
 
 
 interface AvGadgetSeedProps extends AvBaseNodeProps
@@ -110,8 +112,20 @@ export class GadgetSeedContainerComponent implements EntityComponent
 
 	public redrop( newContainer: EndpointAddr, moveableToReplace: EndpointAddr )
 	{
-		this.activeContainer?.sendEvent( 
-			{ type: ContainerRequestType.Redrop, newContainer, moveableToReplace } as ContainerRequest );
+		if( this.activeContainer )
+		{
+			let qx = quatFromAxisAngleDegrees( vec3.right, -90 );
+
+			let req: ContainerRequest =
+			{ 
+				type: ContainerRequestType.Redrop, 
+				newContainer, 
+				moveableToReplace,
+				oldMoveableFromNewMoveable: { rotation: { x: qx.x, y: qx.y, z: qx.z, w: qx.w } },
+			};
+	
+			this.activeContainer.sendEvent( req );
+		}
 	}
 
 	public onUpdate( callback: () => void ): void
@@ -124,7 +138,9 @@ export class GadgetSeedContainerComponent implements EntityComponent
 	{
 		if( this.contentsEpa && this.contentsRested )
 		{
-			return <AvEntityChild child={ this.contentsEpa } key={ endpointAddrToString( this.contentsEpa ) }/>
+			return <AvTransform rotateX={ -90 }>
+			 		<AvEntityChild child={ this.contentsEpa } key={ endpointAddrToString( this.contentsEpa ) }/>
+				</AvTransform>
 		}
 		else
 		{
