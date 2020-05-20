@@ -516,6 +516,10 @@ export class CInterfaceProcessor
 		this.callbacks.interfaceEnded( transmitterEpa, oldReceiverEpa, iface, transmitterFromOldReceiver );
 		this.callbacks.interfaceStarted( transmitterEpa, newReceiverEpa, iface, transmitterFromNewReceiver );
 
+		console.log( `Relocking interface ${ endpointAddrToString( transmitterEpa ) } `
+		+ ` from ${ endpointAddrToString( oldReceiverEpa ) }`
+		+` to ${ endpointAddrToString( newReceiverEpa ) } for ${ iface }` );
+
 		iip.receiver = newReceiverEpa;
 		iip.receiverWantsTransforms = newReceiver.wantsTransforms;
 

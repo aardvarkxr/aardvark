@@ -31,11 +31,14 @@ export enum GrabRequestType
 	DropYourself = "drop_yourself",
 	DropComplete = "drop_complete",
 	SetGrabber = "set_grabber",
+	RequestRegrab = "request_regrab",
 }
 
 export interface GrabRequest
 {
 	type: GrabRequestType;
+	newMoveable?: EndpointAddr;
+	oldMoveableFromNewMoveable?: AvNodeTransform;
 }
 
 export class MoveableComponent implements EntityComponent
@@ -141,6 +144,17 @@ export class MoveableComponent implements EntityComponent
 		this.updateListener();
 	}
 
+	public triggerRegrab( replacementMoveable: EndpointAddr, oldMoveableFromNewMoveable: AvNodeTransform )
+	{
+		let e: GrabRequest =
+		{
+			type: GrabRequestType.RequestRegrab,
+			newMoveable: replacementMoveable,
+			oldMoveableFromNewMoveable,
+		}
+		this.activeGrab?.sendEvent( e );
+	}
+
 	@bind
 	private onContainerStart( activeContainer: ActiveInterface )
 	{
@@ -239,6 +253,14 @@ export class MoveableComponent implements EntityComponent
 		return false;
 	}
 
+
+	public reset()
+	{
+		this.activeContainer?.unlock();
+		this.wasEverDropped = false;
+		this.grabber = null;
+		this.updateListener();
+	}
 
 	public onUpdate( callback: () => void ): void
 	{

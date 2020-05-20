@@ -1,4 +1,4 @@
-import { AardvarkManifest, AvVolume, EndpointAddr, endpointAddrToString, EVolumeType, g_builtinModelError, InitialInterfaceLock } from '@aardvarkxr/aardvark-shared';
+import { AardvarkManifest, AvVolume, EndpointAddr, endpointAddrToString, EVolumeType, g_builtinModelError, InitialInterfaceLock, AvNodeTransform } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import isUrl from 'is-url';
 import * as React from 'react';
@@ -36,7 +36,8 @@ enum GadgetSeedPhase
 	Idle,
 	GrabberNearby,
 	WaitingForGadgetStart,
-	WaitingForDrop,
+	WaitingForGadgetInContainer,
+	WaitingForRegrab,
 	WaitingForRedropToFinish,
 }
 
@@ -47,15 +48,20 @@ interface AvGadgetSeedState
 }
 
 
+const k_seedFromGadgetQuat = quatFromAxisAngleDegrees( vec3.right, -90 );
+const k_seedFromGadget: AvNodeTransform = { rotation: { x: k_seedFromGadgetQuat.x, y: k_seedFromGadgetQuat.y, z: k_seedFromGadgetQuat.z, w: k_seedFromGadgetQuat.w } };
+
 export class GadgetSeedContainerComponent implements EntityComponent
 {
 	private contentsEpa: EndpointAddr;
 	private contentsRested = false;
 	private entityCallback: () => void = null;
 	private activeContainer: ActiveInterface = null;
+	private childAddedCallback: () => void;
 
-	constructor()
+	constructor(childAddedCallback: () => void)
 	{
+		this.childAddedCallback = childAddedCallback;
 	}
 
 	private updateListener()
@@ -86,6 +92,7 @@ export class GadgetSeedContainerComponent implements EntityComponent
 			} );
 
 		this.activeContainer = activeContainer;
+		this.childAddedCallback?.();
 	}
 
 	public get transmits(): InterfaceProp[]
@@ -114,14 +121,12 @@ export class GadgetSeedContainerComponent implements EntityComponent
 	{
 		if( this.activeContainer )
 		{
-			let qx = quatFromAxisAngleDegrees( vec3.right, -90 );
-
 			let req: ContainerRequest =
 			{ 
 				type: ContainerRequestType.Redrop, 
 				newContainer, 
 				moveableToReplace,
-				oldMoveableFromNewMoveable: { rotation: { x: qx.x, y: qx.y, z: qx.z, w: qx.w } },
+				oldMoveableFromNewMoveable: k_seedFromGadget,
 			};
 	
 			this.activeContainer.sendEvent( req );
@@ -133,6 +138,11 @@ export class GadgetSeedContainerComponent implements EntityComponent
 		this.entityCallback = callback;
 	}
 
+
+	public get child(): EndpointAddr
+	{
+		return this.activeContainer?.peer;
+	}
 
 	public render(): JSX.Element
 	{
@@ -155,7 +165,7 @@ export class GadgetSeedContainerComponent implements EntityComponent
 export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSeedState >
 {
 	private moveableComponent = new MoveableComponent( this.onMoveableUpdate );
-	private containerComponent = new GadgetSeedContainerComponent();
+	private containerComponent = new GadgetSeedContainerComponent( this.triggerRegrab );
 	private refContainer = React.createRef<AvComposedEntity>();
 	private refSeed = React.createRef<AvComposedEntity>();
 
@@ -211,11 +221,20 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 				// Our next internal state change will be driven by the gadget starting
 				break;
 
-			case GadgetSeedPhase.WaitingForDrop:
-				if( this.moveableComponent.state == MoveableComponentState.InContainer )
+			case GadgetSeedPhase.WaitingForRegrab:
+				switch( this.moveableComponent.state )
 				{
-					this.containerComponent.redrop( this.moveableComponent.parent, this.refSeed.current?.globalId );
-					this.setState( { phase: GadgetSeedPhase.WaitingForRedropToFinish } );
+					case MoveableComponentState.InContainer:
+					case MoveableComponentState.Idle:
+					case MoveableComponentState.GrabberNearby:
+						// we've been dropped
+						this.setState( { phase: GadgetSeedPhase.Idle } );
+						this.moveableComponent.reset();
+						break;
+					
+					case MoveableComponentState.Grabbed:
+						// still waiting;
+						break;
 				}
 				break;
 
@@ -244,7 +263,21 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 		}
 
 		// we should have a gadget in our container by now? Maybe?
-		this.setState( { phase: GadgetSeedPhase.WaitingForDrop } );
+		if( this.containerComponent.child )
+		{
+			this.triggerRegrab();
+		}
+		else
+		{
+			this.setState( { phase: GadgetSeedPhase.WaitingForGadgetInContainer } );
+		}
+	}
+
+	@bind
+	private triggerRegrab()
+	{
+		this.moveableComponent.triggerRegrab( this.containerComponent.child, k_seedFromGadget );
+		this.setState( { phase: GadgetSeedPhase.WaitingForRegrab } );
 	}
 
 	@bind public onGadgetStarted( success: boolean, mainGrabbableId: string ) 
@@ -312,7 +345,7 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 			volume = { type: EVolumeType.Sphere, radius: radius };
 		}
 
-		let drawIcon = this.state.phase != GadgetSeedPhase.WaitingForDrop 
+		let drawIcon = this.state.phase != GadgetSeedPhase.WaitingForRegrab 
 			&& this.state.phase != GadgetSeedPhase.WaitingForRedropToFinish;
 		return (
 			<AvComposedEntity components={ [ this.moveableComponent ] } ref={ this.refSeed }

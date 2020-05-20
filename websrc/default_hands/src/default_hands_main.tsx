@@ -1,5 +1,5 @@
-import { ActiveInterface, AvComposedEntity, AvEntityChild, AvGadget, AvInterfaceEntity, AvOrigin, AvPrimitive, AvTransform, GrabRequest, GrabRequestType, PanelRequest, PanelRequestType, PrimitiveType, SimpleContainerComponent } from '@aardvarkxr/aardvark-react';
-import { AvNodeTransform, AvVolume, EAction, EHand, EVolumeType, g_builtinModelHandLeft, g_builtinModelHandRight } from '@aardvarkxr/aardvark-shared';
+import { ActiveInterface, AvComposedEntity, AvEntityChild, AvGadget, AvInterfaceEntity, AvOrigin, AvPrimitive, AvTransform, GrabRequest, GrabRequestType, PanelRequest, PanelRequestType, PrimitiveType, SimpleContainerComponent, multiplyTransforms } from '@aardvarkxr/aardvark-react';
+import { AvNodeTransform, AvVolume, EAction, EHand, EVolumeType, g_builtinModelHandLeft, g_builtinModelHandRight, InterfaceLockResult, EndpointAddr, endpointAddrsMatch, endpointAddrToString } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
@@ -9,13 +9,27 @@ interface DefaultHandProps
 	hand: EHand;
 }
 
+enum GrabberState
+{
+	Idle,
+	Highlight,
+	Grabbing,
+	LostGrab,
+	WaitingForDropComplete,
+	WaitingForRegrab,
+	WaitingForRegrabDropComplete,
+	WaitingForRegrabNewMoveable,
+	RegrabFailed,
+	GrabFailed,
+}
+
 interface DefaultHandState
 {
 	activeInterface: ActiveInterface;
 	grabberFromGrabbable?: AvNodeTransform;
-	grabButtonDown: boolean;
-	lostGrab: boolean;
-	waitingForDropComplete: boolean;
+	state: GrabberState;
+	regrabTarget?: EndpointAddr;
+	grabberFromRegrabTarget?: AvNodeTransform;
 }
 
 
@@ -31,9 +45,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 		this.state = 
 		{ 
 			activeInterface: null,
-			grabButtonDown: false,
-			lostGrab: false,
-			waitingForDropComplete: false,
+			state: GrabberState.Idle,
 		};
 
 		this.actionListenerHandle = AvGadget.instance().listenForActionStateWithComponent( this.props.hand, 
@@ -48,11 +60,32 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 	@bind
 	private onGrabStart( activeInterface: ActiveInterface )
 	{
-		AvGadget.instance().sendHapticEvent(activeInterface.self, 0.7, 1, 0 );
+		if( this.state.state == GrabberState.WaitingForRegrabNewMoveable )
+		{
+			if( !endpointAddrsMatch( activeInterface.peer, this.state.regrabTarget ) )
+			{
+				console.log( `Regrab target mismatch. Expected: ${ endpointAddrToString( this.state.regrabTarget )} `
+					+ `Received: ${ endpointAddrToString( activeInterface.peer ) }` );
+			}
+
+			this.setState( 
+				{ 
+					state: GrabberState.Grabbing, 
+					grabberFromGrabbable: this.state.grabberFromRegrabTarget ?? activeInterface.selfFromPeer, 
+					grabberFromRegrabTarget: null,
+					regrabTarget: null,
+				} );
+			activeInterface.sendEvent( { type: GrabRequestType.SetGrabber } as GrabRequest );
+		}
+		else
+		{
+			AvGadget.instance().sendHapticEvent(activeInterface.self, 0.7, 1, 0 );
+		}
+
 		let listenHandle = AvGadget.instance().listenForActionState( EAction.Grab, this.props.hand, 
 			async () =>
 			{
-				this.setState( { grabButtonDown: true } );
+				this.setState( { state: GrabberState.Grabbing } );
 				// A was pressed
 				await activeInterface.lock();
 				activeInterface.sendEvent( { type: GrabRequestType.SetGrabber } as GrabRequest );
@@ -61,33 +94,97 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 			async () =>
 			{
 				// A was released
-				if( !this.state.lostGrab )
+				switch( this.state.state )
 				{
-					// we need to wait here to make sure the moveable on the other 
-					// end has a good transform relative to its new container when 
-					// we unlock below.
-					await activeInterface.sendEvent( { type: GrabRequestType.DropYourself } as GrabRequest );
-					this.setState( { waitingForDropComplete: true } );
-				}
-				else
-				{
-					AvGadget.instance().unlistenForActionState( listenHandle );
-					this.setState( { activeInterface: null } );	
-					activeInterface.unlock();	
-					this.setState( { grabberFromGrabbable: null, grabButtonDown: false, lostGrab: false } );
+					case GrabberState.GrabFailed:
+						if( this.state.activeInterface )
+						{
+							this.setState( { state: GrabberState.Highlight } );
+						}
+						else
+						{
+							this.setState( { state: GrabberState.Idle } );
+						}
+						break;
+
+					case GrabberState.Grabbing:
+						// we need to wait here to make sure the moveable on the other 
+						// end has a good transform relative to its new container when 
+						// we unlock below.
+						await activeInterface.sendEvent( { type: GrabRequestType.DropYourself } as GrabRequest );
+						this.setState( { state: GrabberState.WaitingForDropComplete } );
+						break;
+
+					case GrabberState.LostGrab:
+						AvGadget.instance().unlistenForActionState( listenHandle );
+						activeInterface.unlock();	
+						this.setState( { grabberFromGrabbable: null, state: GrabberState.Idle } );
+						break;
+
+					case GrabberState.WaitingForRegrab:
+						this.setState( { state: GrabberState.RegrabFailed } );
+						break;
+
+					default:
+						// other states shouldn't get here
+						console.log( `Unexpected grabber state ${ GrabberState[ this.state.state ] } on grab release` );
 				}
 			} );
 
 		activeInterface.onEvent( 
-			( event: GrabRequest ) =>
+			async ( event: GrabRequest ) =>
 			{
 				switch( event.type )
 				{
 					case GrabRequestType.DropComplete:
 					{
-						activeInterface.unlock();	
-						this.setState( { grabberFromGrabbable: null, grabButtonDown: false, lostGrab: false, 
-							waitingForDropComplete: false } );	
+						switch( this.state.state )
+						{
+							case GrabberState.WaitingForDropComplete:
+								activeInterface.unlock();	
+								this.setState( { state: GrabberState.Highlight } );		
+								break;
+
+							case GrabberState.WaitingForRegrabDropComplete:
+								let resPromise = activeInterface.relock( this.state.regrabTarget );
+								this.setState( { state: GrabberState.WaitingForRegrab } );
+								let res = await resPromise;
+								if( res != InterfaceLockResult.Success )
+								{
+									console.log( `Regrab failed with ${ InterfaceLockResult[ res ] }` );
+									// @ts-ignore: Bogus always false error after await and setState
+									if( this.state.state == GrabberState.WaitingForRegrab )
+									{
+										this.setState( { state: GrabberState.Grabbing } );
+									}
+								}
+								break;
+
+							default:
+								// other states shouldn't get here
+								console.log( `Unexpected grabber state ${ GrabberState[ this.state.state ] } on DropComplete event` );
+								break;
+						}
+					}
+					break;
+
+					case GrabRequestType.RequestRegrab:
+					{
+						if( this.state.state == GrabberState.Grabbing )
+						{
+
+							// we need to wait here to make sure the old moveable on the other 
+							// end has a good transform relative to its new container when 
+							// we relock below.
+							await activeInterface.sendEvent( { type: GrabRequestType.DropYourself } as GrabRequest );
+							this.setState( 
+								{ 
+									state: GrabberState.WaitingForRegrabDropComplete, 
+									regrabTarget: event.newMoveable,
+									grabberFromRegrabTarget: multiplyTransforms( activeInterface.selfFromPeer, 
+										event.oldMoveableFromNewMoveable ),
+								} );
+						}
 					}
 					break;
 				}
@@ -95,16 +192,30 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 
 		activeInterface.onEnded( () =>
 		{
-			if( this.state.grabButtonDown )
+			switch( this.state.state )
 			{
-				this.setState( { lostGrab: true } );
+				case GrabberState.Grabbing:
+					this.setState( { state: GrabberState.LostGrab } );
+					break;
+
+				case GrabberState.Highlight:
+					this.setState( { state: GrabberState.Idle } );
+					AvGadget.instance().unlistenForActionState( listenHandle );
+					AvGadget.instance().sendHapticEvent(activeInterface.self, 0.3, 1, 0 );
+					break;
+
+				case GrabberState.WaitingForRegrab:
+					// This is the old endpoint leaving. We should get a new interface for the new 
+					// target soon.
+					this.setState( { state: GrabberState.WaitingForRegrabNewMoveable })
+					break;
+
+				default:
+					// other states shouldn't get here
+					console.log( `Unexpected grabber state ${ GrabberState[ this.state.state ] } on interface end` );
 			}
-			else
-			{
-				AvGadget.instance().unlistenForActionState( listenHandle );
-				this.setState( { activeInterface: null } );	
-				AvGadget.instance().sendHapticEvent(activeInterface.self, 0.3, 1, 0 );
-			}
+
+			this.setState( { activeInterface: null } );	
 		} );
 
 		this.setState( { activeInterface } );

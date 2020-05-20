@@ -259,4 +259,9 @@ export function minimalToMat4Transform( minimal: MinimalPose ): mat4
 	return nodeTransformToMat4( transform );
 }
 
-
+export function multiplyTransforms( lhs: AvNodeTransform, rhs: AvNodeTransform )
+{
+	let lm = nodeTransformToMat4( lhs );
+	let rm = nodeTransformToMat4( rhs );
+	return nodeTransformFromMat4( mat4.product( lm, rm, new mat4() ) );
+}
