@@ -198,6 +198,15 @@ export class CInterfaceProcessor
 						this.computeEntityTransform( transmitter, receiver ) );
 					continue;
 				}
+
+				if( transmitter.originPath == receiver.originPath && transmitter.originPath != "/space/stage" )
+				{
+					console.log( `interface end (matching origins) ${ endpointAddrToString( transmitter.epa ) } `
+						+` to ${ endpointAddrToString( receiver.epa ) } for ${ iip.iface }` );
+					this.callbacks.interfaceEnded( iip.transmitter, iip.receiver, iip.iface,
+						this.computeEntityTransform( transmitter, receiver ) );
+					continue;
+				}
 			}
 
 			iip.transmitterWantsTransforms = transmitter.wantsTransforms;
