@@ -36,7 +36,6 @@ enum GadgetSeedPhase
 	Idle,
 	GrabberNearby,
 	WaitingForGadgetStart,
-	WaitingForGadgetInContainer,
 	WaitingForRegrab,
 	WaitingForRedropToFinish,
 }
@@ -58,10 +57,12 @@ export class GadgetSeedContainerComponent implements EntityComponent
 	private entityCallback: () => void = null;
 	private activeContainer: ActiveInterface = null;
 	private childAddedCallback: () => void;
+	private childRemovedCallback: () => void;
 
-	constructor(childAddedCallback: () => void)
+	constructor( childAddedCallback: () => void, childRemovedCallback: () => void )
 	{
 		this.childAddedCallback = childAddedCallback;
+		this.childRemovedCallback = childRemovedCallback;
 	}
 
 	private updateListener()
@@ -89,6 +90,7 @@ export class GadgetSeedContainerComponent implements EntityComponent
 				this.contentsEpa = null;
 				this.activeContainer = null;
 				this.updateListener();
+				this.childRemovedCallback?.();
 			} );
 
 		this.activeContainer = activeContainer;
@@ -165,7 +167,7 @@ export class GadgetSeedContainerComponent implements EntityComponent
 export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSeedState >
 {
 	private moveableComponent = new MoveableComponent( this.onMoveableUpdate );
-	private containerComponent = new GadgetSeedContainerComponent( this.triggerRegrab );
+	private containerComponent = new GadgetSeedContainerComponent( this.onNewChild, this.onLostChild );
 	private refContainer = React.createRef<AvComposedEntity>();
 	private refSeed = React.createRef<AvComposedEntity>();
 
@@ -221,28 +223,42 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 				// Our next internal state change will be driven by the gadget starting
 				break;
 
-			case GadgetSeedPhase.WaitingForRegrab:
-				switch( this.moveableComponent.state )
-				{
-					case MoveableComponentState.InContainer:
-					case MoveableComponentState.Idle:
-					case MoveableComponentState.GrabberNearby:
-						// we've been dropped
-						this.setState( { phase: GadgetSeedPhase.Idle } );
-						this.moveableComponent.reset();
-						break;
-					
-					case MoveableComponentState.Grabbed:
-						// still waiting;
-						break;
-				}
-				break;
+		}
+	}
 
+	@bind
+	private onNewChild()
+	{
+		console.log( "onNewChild" );
+		switch ( this.moveableComponent.state )
+		{
+			case MoveableComponentState.Grabbed:
+				console.log( `regrabbing new gadget moveable ${ endpointAddrToString( this.containerComponent.child ) }` );
+				this.triggerRegrab();
+				break;
+			case MoveableComponentState.GrabberNearby:
+			case MoveableComponentState.InContainer:
+				console.log( `redropping new gadget moveable ${ endpointAddrToString( this.containerComponent.child ) }` );
+				this.containerComponent.redrop( this.moveableComponent.parent, this.refSeed.current.globalId );
+				this.setState( { phase: GadgetSeedPhase.WaitingForRedropToFinish } );
+				break;
+			case MoveableComponentState.Idle:
+				console.log( "How did we get all the way back to idle?" );
+				break;
+		}
+	}
+
+	@bind
+	private onLostChild()
+	{
+		console.log( "lost child in container" );
+		switch( this.state.phase )
+		{
 			case GadgetSeedPhase.WaitingForRedropToFinish:
-				if( this.moveableComponent.state == MoveableComponentState.Idle )
-				{
-					this.setState( { phase: GadgetSeedPhase.Idle } );
-				}
+			case GadgetSeedPhase.WaitingForRegrab:
+				// we've been dropped
+				this.setState( { phase: GadgetSeedPhase.Idle } );
+				this.moveableComponent.reset();
 				break;
 		}
 	}
@@ -259,21 +275,11 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 
 		if( !res.success )
 		{
+			this.setState( { phase: GadgetSeedPhase.Idle } );
 			throw new Error( "startGadget failed" );
-		}
-
-		// we should have a gadget in our container by now? Maybe?
-		if( this.containerComponent.child )
-		{
-			this.triggerRegrab();
-		}
-		else
-		{
-			this.setState( { phase: GadgetSeedPhase.WaitingForGadgetInContainer } );
 		}
 	}
 
-	@bind
 	private triggerRegrab()
 	{
 		this.moveableComponent.triggerRegrab( this.containerComponent.child, k_seedFromGadget );

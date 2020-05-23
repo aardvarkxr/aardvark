@@ -82,6 +82,11 @@ export function nodeTransformFromMat4( m: mat4 ) : AvNodeTransform
 
 export function nodeTransformToMat4( transform: AvNodeTransform ): mat4
 {
+	if( !transform )
+	{
+		return mat4.identity;
+	}
+	
 	let vTrans: vec3;
 	if ( transform.position )
 	{

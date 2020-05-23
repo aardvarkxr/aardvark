@@ -10,8 +10,8 @@
 	],
 	"aardvark":
 	{
-		"browserWidth": 16,
-		"browserHeight": 16,
+		"browserWidth": 512,
+		"browserHeight": 512,
 		"permissions" : [ "scenegraph" ]
 	}
 }

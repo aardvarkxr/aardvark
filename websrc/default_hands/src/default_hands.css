@@ -1,9 +1,14 @@
 body, html
 {
-	background-color: transparent;
+	background-color: #FFFFFFAA;
 	width: 100%;
 	height: 100%;
 	overflow: hidden;
+}
+
+div
+{
+	font-size: large;
 }
 
 .FullPage

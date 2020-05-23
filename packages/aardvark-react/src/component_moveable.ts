@@ -31,6 +31,7 @@ export enum GrabRequestType
 	DropYourself = "drop_yourself",
 	DropComplete = "drop_complete",
 	SetGrabber = "set_grabber",
+	ReleaseMe = "release_me",
 	RequestRegrab = "request_regrab",
 }
 
@@ -49,9 +50,9 @@ export class MoveableComponent implements EntityComponent
 	private entityCallback: () => void = null;
 	private ownerCallback: () => void = null;
 
-	private activeGrab: ActiveInterface = null;
+	private activeGrabs = new Set<ActiveInterface>();
 	private activeContainer: ActiveInterface = null;
-	private grabber: EndpointAddr = null;
+	private grabber: ActiveInterface = null;
 	private wasEverDropped: boolean = false;
 	private droppedIntoInitialParent: boolean = false;
 	private initialInterface:InitialInterfaceLock = null;
@@ -82,7 +83,7 @@ export class MoveableComponent implements EntityComponent
 		{
 			return MoveableComponentState.Grabbed;
 		}
-		else if( this.activeGrab )
+		else if( this.activeGrabs.size > 0 )
 		{
 			return MoveableComponentState.GrabberNearby;
 		}
@@ -101,7 +102,7 @@ export class MoveableComponent implements EntityComponent
 	{
 		activeGrab.onEnded(() =>
 		{
-			this.activeGrab = null;
+			this.activeGrabs.delete( activeGrab );
 			this.updateListener();
 		} );
 
@@ -111,22 +112,32 @@ export class MoveableComponent implements EntityComponent
 			switch( event.type )
 			{
 				case GrabRequestType.SetGrabber:
-					this.grabber = this.activeGrab.peer;
-
-					this.activeContainer?.sendEvent( { state: "Moving" } );
-					this.activeContainer?.unlock();
-
-					this.updateListener();
+					if( this.grabber == activeGrab )
+					{
+						console.log( `SetGrabber from ${endpointAddrToString( activeGrab.peer ) }, which was already our grabber` );
+					}
+					else
+					{
+						let release: GrabRequest = { type: GrabRequestType.ReleaseMe };
+						this.grabber?.sendEvent( release );
+	
+						this.grabber = activeGrab;
+	
+						this.activeContainer?.sendEvent( { state: "Moving" } );
+						this.activeContainer?.unlock();
+	
+						this.updateListener();
+					}
 					break;
 
 				case GrabRequestType.DropYourself:
 					await this.dropIntoContainer( true );
-					this.activeGrab.sendEvent( { type: GrabRequestType.DropComplete } as GrabRequest );
+					activeGrab.sendEvent( { type: GrabRequestType.DropComplete } as GrabRequest );
 					break;
 			}
 		} );
 
-		this.activeGrab = activeGrab;
+		this.activeGrabs.add( activeGrab );
 		this.updateListener();
 	}
 
@@ -152,7 +163,7 @@ export class MoveableComponent implements EntityComponent
 			newMoveable: replacementMoveable,
 			oldMoveableFromNewMoveable,
 		}
-		this.activeGrab?.sendEvent( e );
+		this.grabber?.sendEvent( e );
 	}
 
 	@bind
@@ -221,7 +232,7 @@ export class MoveableComponent implements EntityComponent
 		if( this.grabber )
 		{
 			// if we're currently grabbed, that's our parent
-			return this.grabber;
+			return this.grabber.peer;
 		}
 		else if( this.wasEverDropped )
 		{
@@ -257,6 +268,7 @@ export class MoveableComponent implements EntityComponent
 	public reset()
 	{
 		this.activeContainer?.unlock();
+		this.activeContainer?.sendEvent( { state: "Moving" } );
 		this.wasEverDropped = false;
 		this.grabber = null;
 		this.updateListener();
