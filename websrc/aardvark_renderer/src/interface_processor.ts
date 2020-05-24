@@ -1,5 +1,5 @@
 import { nodeTransformToMat4 } from '@aardvarkxr/aardvark-react';
-import { EndpointAddr, endpointAddrsMatch, endpointAddrToString, InitialInterfaceLock, InterfaceLockResult } from '@aardvarkxr/aardvark-shared';
+import { EndpointAddr, endpointAddrsMatch, endpointAddrToString, InitialInterfaceLock, InterfaceLockResult, EVolumeContext } from '@aardvarkxr/aardvark-shared';
 import { mat4 } from '@tlaukkan/tsm';
 import { TransformedVolume, volumesIntersect } from './volume_intersection';
 
@@ -53,13 +53,13 @@ export function findBestInterface( transmitter: InterfaceEntity, receiver: Inter
 }
 
 
-function entitiesIntersect( transmitter: InterfaceEntity, receiver: InterfaceEntity )
+function entitiesIntersect( transmitter: InterfaceEntity, receiver: InterfaceEntity, context: EVolumeContext )
 {
 	for( let tv of transmitter.volumes )
 	{
 		for( let rv of receiver.volumes )
 		{
-			if( volumesIntersect( tv, rv ) )
+			if( volumesIntersect( tv, rv, context ) )
 				return true;
 		}
 	}
@@ -190,7 +190,7 @@ export class CInterfaceProcessor
 			// intersect
 			if( !iip.locked )
 			{
-				if ( !entitiesIntersect( transmitter, receiver ) )
+				if ( !entitiesIntersect( transmitter, receiver, EVolumeContext.ContinueOnly ) )
 				{
 					console.log( `interface end (no intersect) ${ endpointAddrToString( transmitter.epa ) } `
 						+` to ${ endpointAddrToString( receiver.epa ) } for ${ iip.iface }` );
@@ -267,7 +267,7 @@ export class CInterfaceProcessor
 					continue;
 				}
 
-				if( !entitiesIntersect( transmitter, receiver ) )
+				if( !entitiesIntersect( transmitter, receiver, EVolumeContext.StartOnly ) )
 				{
 					continue;
 				}

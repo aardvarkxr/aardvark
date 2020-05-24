@@ -26,7 +26,7 @@ export interface AvComposedEntityProps
 	components: EntityComponent[];
 
 	/** The volume to use when matching this entity with other interface entities. */
-	volume: AvVolume;
+	volume: AvVolume | AvVolume[];
 
 	/** The priority to use for the entity. 
 	 * 

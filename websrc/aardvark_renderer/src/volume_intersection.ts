@@ -1,5 +1,5 @@
 import { mat4, vec4, vec3 } from '@tlaukkan/tsm';
-import { AvVolume, EVolumeType } from '@aardvarkxr/aardvark-shared';
+import { AvVolume, EVolumeType, EVolumeContext } from '@aardvarkxr/aardvark-shared';
 
 export interface TransformedVolume extends AvVolume
 {
@@ -91,8 +91,20 @@ function boxBoxIntersect( box1: TransformedVolume, box2: TransformedVolume )
 		zMax < box1.aabb.zMin || zMin > box1.aabb.zMax );
 }
 
-export function volumesIntersect( v1: TransformedVolume, v2: TransformedVolume )
+function volumeMatchesContext( v: TransformedVolume, context: EVolumeContext )
 {
+	let volumeContext = v.context ?? EVolumeContext.Always;
+	return context == EVolumeContext.Always || volumeContext == EVolumeContext.Always
+		|| context == volumeContext;
+}
+
+export function volumesIntersect( v1: TransformedVolume, v2: TransformedVolume, context: EVolumeContext )
+{
+	if( !volumeMatchesContext( v1, context ) || !volumeMatchesContext( v2, context ) )
+	{
+		return false;
+	}
+
 	if( v1.type == EVolumeType.Empty || v2.type == EVolumeType.Empty )
 	{
 		// empty volumes don't intersect with anything, including infinite volumes
@@ -112,7 +124,7 @@ export function volumesIntersect( v1: TransformedVolume, v2: TransformedVolume )
 	}
 	else if( v1.type == EVolumeType.AABB && v2.type == EVolumeType.Sphere )
 	{
-		return spheresIntersect( v2, v1 );
+		return sphereBoxIntersect( v2, v1 );
 	}
 	else if( v1.type == EVolumeType.AABB && v2.type == EVolumeType.AABB )
 	{

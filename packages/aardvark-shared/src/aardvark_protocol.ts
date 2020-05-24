@@ -523,6 +523,16 @@ export enum EVolumeType
 	Empty = 4,
 };
 
+/** Volume context allows entities to specify volumes that
+ * only apply to starting an interface, only apply to
+ * continuing an interface, or always apply. 
+ */
+export enum EVolumeContext
+{
+	Always = 0,
+	StartOnly = 1,
+	ContinueOnly = 2,
+};
 
 export interface AABB
 {
@@ -538,7 +548,8 @@ export interface AvVolume
 {
 	type: EVolumeType;
 	nodeFromVolume?: AvNodeTransform;
-	
+	context?: EVolumeContext;
+
 	radius?: number;
 	uri?: string;
 	aabb?: AABB;

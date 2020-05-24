@@ -35,6 +35,7 @@ export class SimpleContainerComponent implements EntityComponent
 	private contents: ContainerItem[] = [];
 	private entityCallback: () => void = null;
 	private activeContainer: ActiveInterface = null;
+	private itemChangedCallback: () => void = null;
 
 	constructor()
 	{
@@ -43,6 +44,12 @@ export class SimpleContainerComponent implements EntityComponent
 	private updateListener()
 	{
 		this.entityCallback?.();
+		this.itemChangedCallback?.();
+	}
+
+	public onItemChanged( itemChangedCallback: () => void )
+	{
+		this.itemChangedCallback = itemChangedCallback;
 	}
 
 	@bind
@@ -56,6 +63,7 @@ export class SimpleContainerComponent implements EntityComponent
 			iface: activeContainer,
 		};
 		this.contents.push( myItem );
+		this.itemChangedCallback?.();
 
 		activeContainer.onEvent( 
 			( event: ContainerItemStateEvent ) =>
@@ -130,7 +138,6 @@ export class SimpleContainerComponent implements EntityComponent
 		return false;
 	}
 
-
 	public get interfaceLocks(): InitialInterfaceLock[] { return []; }
 	
 	public onUpdate( callback: () => void ): void
@@ -138,6 +145,18 @@ export class SimpleContainerComponent implements EntityComponent
 		this.entityCallback = callback;
 	}
 
+	public get hasPotentialDrop(): boolean
+	{
+		for( let item of this.contents )
+		{
+			if( item.state == ContainerItemState.Moving )
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
 
 	public render(): JSX.Element
 	{

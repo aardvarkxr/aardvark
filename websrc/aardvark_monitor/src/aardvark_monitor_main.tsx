@@ -1,5 +1,5 @@
 import { CMonitorEndpoint, DegreesToRadians, EulerAnglesToQuaternion, QuaternionToEulerAngles, RadiansToDegrees } from '@aardvarkxr/aardvark-react';
-import { AardvarkManifest, AvNode, AvNodeTransform, AvNodeType, AvQuaternion, AvVector, AvVolume, EndpointAddr, endpointAddrToString, EndpointType, ENodeFlags, Envelope, EVolumeType, InitialInterfaceLock, MessageType, MsgLostEndpoint, MsgNewEndpoint, MsgOverrideTransform, MsgResourceLoadFailed, MsgUpdateSceneGraph } from '@aardvarkxr/aardvark-shared';
+import { AardvarkManifest, AvNode, AvNodeTransform, AvNodeType, AvQuaternion, AvVector, AvVolume, EndpointAddr, endpointAddrToString, EndpointType, ENodeFlags, Envelope, EVolumeType, InitialInterfaceLock, MessageType, MsgLostEndpoint, MsgNewEndpoint, MsgOverrideTransform, MsgResourceLoadFailed, MsgUpdateSceneGraph, EVolumeContext } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import { action, computed, observable, ObservableMap } from 'mobx';
 import { observer } from 'mobx-react';
@@ -648,22 +648,35 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 		if( !volume )
 			return null;
 
+		let contextName = "";
+		switch( volume.context ?? EVolumeContext.Always )
+		{
+			case EVolumeContext.ContinueOnly:
+				contextName= "(Con't)";
+				break;
+
+			case EVolumeContext.StartOnly:
+				contextName= "(Start)";
+				break;
+		}
+
 		switch( volume.type )
 		{
 			case EVolumeType.Sphere:
-				return <div className="AvNodeProperty">volume: radius={volume.radius }</div>;
+				return <div className="AvNodeProperty">volume{ contextName }: radius={volume.radius }</div>;
 
 			case EVolumeType.AABB:
-				return <div className="AvNodeProperty">volume: AABB({ JSON.stringify( volume.aabb ) } )</div>;
-
 			case EVolumeType.ModelBox:
-				return <div className="AvNodeProperty">volume: model box={ volume.uri }</div>;
+				if( volume.uri )
+					return <div className="AvNodeProperty">volume{ contextName }: model box={ volume.uri }</div>;
+				else
+					return <div className="AvNodeProperty">volume{ contextName }: AABB({ JSON.stringify( volume.aabb ) } )</div>;
 
 			case EVolumeType.Infinite:
-				return <div className="AvNodeProperty">volume: infinite</div>;
+				return <div className="AvNodeProperty">volume{ contextName }: infinite</div>;
 
 			case EVolumeType.Empty:
-				return <div className="AvNodeProperty">volume: empty</div>;
+				return <div className="AvNodeProperty">volume{ contextName }: empty</div>;
 
 			default:
 				return <div className="AvNodeProperty">volume: Unknown/invalid</div>;

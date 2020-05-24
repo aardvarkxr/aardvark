@@ -1,10 +1,10 @@
 import { TransformedVolume } from './../volume_intersection';
-import { EndpointAddr, EndpointType, endpointAddrsMatch, endpointAddrToString, InterfaceLockResult, InitialInterfaceLock } from '@aardvarkxr/aardvark-shared';
+import { EndpointAddr, EndpointType, endpointAddrsMatch, endpointAddrToString, InterfaceLockResult, InitialInterfaceLock, EVolumeContext } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3, vec4 } from '@tlaukkan/tsm';
 import { CInterfaceProcessor, InterfaceProcessorCallbacks, InterfaceEntity } from './../interface_processor';
 import { makeSphere, makeInfinite, makeEmpty } from '../volume_test_utils';
 import { syncBuiltinESMExports } from 'module';
-import { translateMat } from '@aardvarkxr/aardvark-react';
+import { translateMat, nodeTransformToMat4 } from '@aardvarkxr/aardvark-react';
 
 beforeEach( async() =>
 {
@@ -93,15 +93,15 @@ class CTestEntity implements InterfaceEntity
 	public transmits: string[] = [];
 	public receives: string[] = [];
 	public originPath: string = "/user/hand/right";
-	public universeFromEntity: mat4 = mat4.identity;
+	private _universeFromEntity: mat4 = mat4.identity;
 	public wantsTransforms = false;
 	public priority = 0;
 	public volumes: TransformedVolume[] = [];
 	public initialLocks: InitialInterfaceLock[] = [];
 
-	public addSphere( radius: number, position?: vec3 )
+	public addSphere( radius: number, position?: vec3, context?: EVolumeContext )
 	{
-		this.volumes.push( makeSphere( radius, position ) );
+		this.volumes.push( makeSphere( radius, position, undefined, context ) );
 	}
 
 	public addInfinite( )
@@ -113,7 +113,22 @@ class CTestEntity implements InterfaceEntity
 	{
 		this.volumes.push( makeEmpty() );
 	}
+
+	public set universeFromEntity( universeFromEntity: mat4 )
+	{
+		this._universeFromEntity = universeFromEntity;
+		for( let volume of this.volumes )
+		{
+			volume.universeFromVolume = mat4.product( universeFromEntity, nodeTransformToMat4( volume.nodeFromVolume ), new mat4() );
+		}
+	}
+
+	public get universeFromEntity()
+	{
+		return this._universeFromEntity;
+	}
 }
+
 
 expect.extend({
 	toHavePosition( received: mat4, expected: vec3 )
@@ -504,7 +519,7 @@ describe( "interface processor", () =>
 		let ip = new CInterfaceProcessor( cb );
 
 		let t1 = new CTestEntity();
-		t1.addSphere( 1 );
+		t1.addSphere( 10 );
 		t1.transmits.push( "test@1" );
 
 		let r1 = new CTestEntity();
@@ -565,6 +580,71 @@ describe( "interface processor", () =>
 				iface: "test@1",
 			});
 		expect( cb.calls[0].destinationFromPeer ).toHavePosition( new vec3( [ 0, 1, 0 ]));
+		cb.calls = [];
+
+	} );
+
+	it( "hysteresis", async () =>
+	{
+		let cb = new TestCallbacks();
+		let ip = new CInterfaceProcessor( cb );
+
+		let t1 = new CTestEntity();
+		t1.addSphere( 0.001 );
+		t1.transmits.push( "test@1" );
+
+		let r1 = new CTestEntity();
+		r1.addSphere( 0.1, undefined, EVolumeContext.StartOnly );
+		r1.addSphere( 1, undefined, EVolumeContext.ContinueOnly );
+		r1.originPath = "/space/stage";
+		r1.receives.push( "test@1" );
+
+		// start out beyond the range of the receiver's sphere
+		t1.universeFromEntity = translateMat( new vec3( [ 0, 1, 0 ] ) );
+
+		ip.processFrame( [ r1, t1 ] );
+		expect( cb.calls.length ).toBe( 0 );
+		cb.calls = [];
+
+		// move into range
+		t1.universeFromEntity = translateMat( new vec3( [ 0, 0, 0 ] ) );
+
+		ip.processFrame([r1, t1]);
+		expect( cb.calls.length ).toBe(1);
+		expect( cb.calls[0] ).toEqual(
+			{
+				type: CallType.Start,
+				transmitter: t1.epa,
+				receiver: r1.epa,
+				iface: "test@1",
+			});
+		cb.calls = [];
+
+		// Move back out a bit so we're outside the "start" sphere but inside the
+		// "continue" sphere
+		t1.universeFromEntity = translateMat( new vec3( [ 0, 0.8, 0 ] ) );
+		ip.processFrame([r1, t1]);
+		expect( cb.calls.length ).toBe( 0 );
+		cb.calls = [];
+
+		// now move out of the continue sphere
+		t1.universeFromEntity = translateMat( new vec3( [ 0, 1.5, 0 ] ) );
+		ip.processFrame([r1, t1]);
+		expect( cb.calls.length ).toBe(1);
+		expect( cb.calls[0] ).toMatchObject(
+			{
+				type: CallType.End,
+				transmitter: t1.epa,
+				receiver: r1.epa,
+				iface: "test@1",
+			});
+		cb.calls = [];
+
+		// Just for fun, move back into the continue sphere to make sure
+		// the interface doesn't start again
+		t1.universeFromEntity = translateMat( new vec3( [ 0, 0.8, 0 ] ) );
+		ip.processFrame([r1, t1]);
+		expect( cb.calls.length ).toBe( 0 );
 		cb.calls = [];
 
 	} );

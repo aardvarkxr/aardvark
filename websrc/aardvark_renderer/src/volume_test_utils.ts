@@ -1,25 +1,33 @@
-import { EVolumeType } from '@aardvarkxr/aardvark-shared';
+import { EVolumeType, EVolumeContext, AvNodeTransform } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3 } from '@tlaukkan/tsm';
-import { scaleMat, translateMat } from '@aardvarkxr/aardvark-react';
+import { scaleMat, translateMat, nodeTransformToMat4, nodeTransformFromMat4 } from '@aardvarkxr/aardvark-react';
 import { TransformedVolume } from './volume_intersection';
 
-export function makeSphere( radius: number, position?: vec3, scale?: number )
+export function makeSphere( radius: number, position?: vec3, scale?: number, context?: EVolumeContext )
 {
-	let mscale = scale ? scaleMat( new vec3( [ scale, scale, scale ] ) ) : mat4.identity;
-	let mtranslate = position ? translateMat( position ) : mat4.identity;
+	let nodeFromVolume: AvNodeTransform =
+	{
+		position: position ? { x: position.x, y: position.y, z: position.z } : undefined,
+		scale: scale ? { x: scale, y: scale, z: scale } : undefined,
+	};
+
 	return (
 		{
 			type: EVolumeType.Sphere,
+			context,
 			radius,
-			universeFromVolume: mat4.product( mtranslate, mscale, new mat4() ),
+			nodeFromVolume: nodeFromVolume,
+			universeFromVolume: nodeTransformToMat4( nodeFromVolume ),
 		} as TransformedVolume );
 }
 
-export function makeBox( ranges: [number, number, number, number, number, number], universeFromVolume?: mat4 )
+export function makeBox( ranges: [number, number, number, number, number, number], universeFromVolume?: mat4, context?: EVolumeContext )
 {
+	let nodeFromVolume = nodeTransformFromMat4( universeFromVolume );
 	return (
 		{
 			type: EVolumeType.AABB,
+			context,
 			aabb: {
 				xMin: ranges[0],
 				xMax: ranges[1],
@@ -28,7 +36,8 @@ export function makeBox( ranges: [number, number, number, number, number, number
 				zMin: ranges[4],
 				zMax: ranges[5],
 			},
-			universeFromVolume: universeFromVolume ?? mat4.identity,
+			nodeFromVolume,
+			universeFromVolume: nodeTransformToMat4( nodeFromVolume ),
 		} as TransformedVolume );
 }
 

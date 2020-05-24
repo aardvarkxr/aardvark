@@ -269,7 +269,7 @@ interface AvInterfaceEntityProps extends AvBaseNodeProps
 	priority?: number;
 
 	/** The volume to use when matching this entity with other interface entities. */
-	volume: AvVolume;
+	volume: AvVolume | AvVolume[];
 
 	/** A list of interface names and receivers that Aardvark should force this entity to 
 	 * have an interface with when it is created. Each of these initial interfaces must be
@@ -312,7 +312,14 @@ export class AvInterfaceEntity extends AvBaseNode< AvInterfaceEntityProps, {} >
 			needProcessor = needProcessor || ( interfaceProp.processor != null );
 		}
 
-		node.propVolumes = [ this.props.volume ];
+		if( Array.isArray( this.props.volume ) )
+		{
+			node.propVolumes = this.props.volume;
+		}
+		else
+		{
+			node.propVolumes = [ this.props.volume ];
+		}
 		node.propParentAddr = this.props.parent;
 		node.propPriority = this.props.priority;
 		

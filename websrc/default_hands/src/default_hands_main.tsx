@@ -1,5 +1,5 @@
 import { ActiveInterface, AvComposedEntity, AvEntityChild, AvGadget, AvInterfaceEntity, AvOrigin, AvPrimitive, AvTransform, GrabRequest, GrabRequestType, PanelRequest, PanelRequestType, PrimitiveType, SimpleContainerComponent, multiplyTransforms, AvPanel } from '@aardvarkxr/aardvark-react';
-import { AvNodeTransform, AvVolume, EAction, EHand, EVolumeType, g_builtinModelHandLeft, g_builtinModelHandRight, InterfaceLockResult, EndpointAddr, endpointAddrsMatch, endpointAddrToString } from '@aardvarkxr/aardvark-shared';
+import { AvNodeTransform, AvVolume, EAction, EHand, EVolumeType, g_builtinModelHandLeft, g_builtinModelHandRight, InterfaceLockResult, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EVolumeContext } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
@@ -53,6 +53,8 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 
 		this.grabListenerHandle = AvGadget.instance().listenForActionState( EAction.Grab, this.props.hand, 
 			this.onGrabPressed, this.onGrabReleased );
+
+		this.containerComponent.onItemChanged( () => this.forceUpdate() );
 	}
 
 	componentWillUnmount()
@@ -321,12 +323,18 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 
 	public render()
 	{
-		let modelColor = "#222288FF";
-		let highlightColor = "#FF0000FF";
+		let modelColor = "lightblue";
+		const k_grabColor = "red";
+		const k_dropColor = "green";
 		if( this.state.activeGrab )
 		{
-			modelColor = highlightColor;
+			modelColor = k_grabColor;
 		}
+		else if( this.containerComponent.hasPotentialDrop )
+		{
+			modelColor = k_dropColor;
+		}
+
 
 		let originPath:string;
 		let hookName:string;
@@ -348,15 +356,21 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 			break;
 		}
 
-		const k_containerVolume: AvVolume =
+		const k_containerOuterVolume: AvVolume =
 		{
 			type: EVolumeType.AABB,
+			context: EVolumeContext.ContinueOnly,
 			aabb:
 			{
 				xMin: -0.15, xMax: 0.15,
 				yMin: -0.15, yMax: 0.25,
 				zMin: -0.15, zMax: 0.15,
 			}
+		};
+		const k_containerInnerVolume: AvVolume =
+		{
+			type: EVolumeType.Sphere,
+			radius: 0.03,
 		};
 
 		const k_grabberVolume: AvVolume =
@@ -376,8 +390,9 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 			<>
 			<AvOrigin path={ originPath }>
 				<AvPrimitive radius={ 0.01 } type={ PrimitiveType.Sphere } color={ modelColor }/>
-				{/* <AvComposedEntity components={ [ this.containerComponent ]} volume={ k_containerVolume }
-					priority={ 100 }/> */}
+				<AvComposedEntity components={ [ this.containerComponent ]} 
+					volume={ [ k_containerInnerVolume, k_containerOuterVolume ] }
+					priority={ 100 }/>
 				<AvInterfaceEntity transmits={
 					[ 
 						{ iface: "aardvark-panel@1", processor: this.onPanelStart },
@@ -406,9 +421,21 @@ class DefaultHands extends React.Component< {}, {} >
 
 	public render()
 	{
-		const k_containerVolume: AvVolume =
+		const k_containerInnerVolume: AvVolume =
 		{
 			type: EVolumeType.AABB,
+			aabb:
+			{
+				xMin: -0.05, xMax: 0.05,
+				yMin: -0.06, yMax: 0.02,
+				zMin: -0.05, zMax: 0.05,
+			}
+		};
+
+		const k_containerOuterVolume: AvVolume =
+		{
+			type: EVolumeType.AABB,
+			context: EVolumeContext.ContinueOnly,
 			aabb:
 			{
 				xMin: -0.3, xMax: 0.3,
@@ -422,7 +449,8 @@ class DefaultHands extends React.Component< {}, {} >
 				<DefaultHand hand={ EHand.Left } ref={ this.leftRef }/>
 				<DefaultHand hand={ EHand.Right } ref={ this.rightRef } />
 				{/* <AvOrigin path="/user/head">
-					<AvComposedEntity components={ [ this.containerComponent ]} volume={ k_containerVolume }
+					<AvComposedEntity components={ [ this.containerComponent ]} 
+						volume={ [ k_containerInnerVolume, k_containerOuterVolume ] }
 						priority={ 90 }/>
 				</AvOrigin> */}
 				<AvOrigin path="/space/stage">
