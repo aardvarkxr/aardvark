@@ -1184,7 +1184,7 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 						let m: MsgResourceLoadFailed =
 						{
 							nodeId: node.globalId,
-							resourceUri: node.propVolume.uri,
+							resourceUri: volume.uri,
 							error: e.message,
 						};
 		
