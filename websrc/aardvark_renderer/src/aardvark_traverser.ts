@@ -235,7 +235,6 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 	private m_currentRoot: AvNodeRoot = null;
 	private m_renderList: AvModelInstance[] = [];
 	private m_nodeToNodeAnchors: { [ nodeGlobalId: string ]: NodeToNodeAnchor_t } = {};
-	private m_hooksInUse: EndpointAddr[] = [];
 	private m_frameNumber: number = 1;
 	private m_actionState: { [ hand: number ] : AvActionState } = {};
 	private m_dirtyGadgetActions = new Set<number>();
@@ -382,7 +381,6 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 		this.m_interfaceEntities = [];
 		this.m_entityParentTransforms = new EndpointAddrMap<PendingTransform >();
 
-		this.clearHooksInUse();
 		this.m_frameNumber++;
 
 		for ( let gadgetId in this.m_roots )
@@ -1200,47 +1198,6 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 		let transform = this.getTransform( epa );
 		return handFromOriginPath( transform?.getOriginPath() );
 	}
-
-	private isHookInUse( nodeId: EndpointAddr )
-	{
-		let hookData = this.getNodeDataByEpa( nodeId );
-		if( hookData && hookData.lastFlags & ENodeFlags.AllowMultipleDrops )
-		{
-			return false;
-		}
-
-		for( let hookId of this.m_hooksInUse )
-		{
-			if( endpointAddrsMatch( nodeId, hookId ) )
-				return true;
-		}
-		return false;
-	}
-
-	private addHookInUse( nodeId: EndpointAddr )
-	{
-		this.m_hooksInUse.push( nodeId );
-	}
-
-	private clearHooksInUse()
-	{
-		this.m_hooksInUse = [];
-	}
-
-	@bind
-	private getLastUniverseFromNode( nodeAddr: EndpointAddr ): mat4
-	{
-		let nodeGlobalId = endpointAddrToString( nodeAddr );
-		if( !this.m_lastFrameUniverseFromNodeTransforms.hasOwnProperty( nodeGlobalId ) )
-		{
-			return mat4.identity;
-		}
-		else
-		{
-			return this.m_lastFrameUniverseFromNodeTransforms[ nodeGlobalId ];
-		}
-	}
-
 }
 
 
