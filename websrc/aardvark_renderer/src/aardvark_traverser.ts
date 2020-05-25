@@ -6,6 +6,7 @@ import bind from 'bind-decorator';
 import { EndpointAddrMap } from './endpoint_addr_map';
 import { CInterfaceProcessor, InterfaceEntity, InterfaceProcessorCallbacks } from './interface_processor';
 import { TransformedVolume } from './volume_intersection';
+import { Traverser, TraverserCallbacks } from './traverser_interface';
 const equal = require( 'fast-deep-equal' );
 
 interface NodeData
@@ -220,7 +221,7 @@ function handFromOriginPath( originPath: string )
 }
 
 
-export class AvDefaultTraverser implements InterfaceProcessorCallbacks
+export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverser
 {
 	private m_inFrameTraversal = false;
 	private m_handDeviceForNode: { [nodeGlobalId:string]:EHand } = {};
@@ -235,7 +236,6 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 	private m_renderList: AvModelInstance[] = [];
 	private m_nodeToNodeAnchors: { [ nodeGlobalId: string ]: NodeToNodeAnchor_t } = {};
 	private m_hooksInUse: EndpointAddr[] = [];
-	private m_endpoint: CRendererEndpoint = null;
 	private m_frameNumber: number = 1;
 	private m_actionState: { [ hand: number ] : AvActionState } = {};
 	private m_dirtyGadgetActions = new Set<number>();
@@ -243,88 +243,45 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 	private m_interfaceProcessor = new CInterfaceProcessor( this );
 	private m_interfaceEntities: AvNode[] = [];
 	private m_entityParentTransforms = new EndpointAddrMap<PendingTransform >();
+	private m_callbacks: TraverserCallbacks;
 
-	constructor()
+	constructor( traverserCallbacks: TraverserCallbacks )
 	{
-		this.m_endpoint = new CRendererEndpoint( this.onEndpointOpen );
-		this.m_endpoint.registerHandler( MessageType.UpdateSceneGraph, this.onUpdateSceneGraph )
-		this.m_endpoint.registerHandler( MessageType.NodeHaptic, this.onNodeHaptic );
-		this.m_endpoint.registerHandler( MessageType.LostEndpoint, this.onLostEndpoint );
-		this.m_endpoint.registerHandler( MessageType.InterfaceSendEvent, this.onInterfaceSendEvent );
-		this.m_endpoint.registerHandler( MessageType.InterfaceLock, this.onInterfaceLock );
-		this.m_endpoint.registerHandler( MessageType.InterfaceUnlock, this.onInterfaceUnlock );
-		this.m_endpoint.registerHandler( MessageType.InterfaceRelock, this.onInterfaceRelock );
+		this.m_callbacks = traverserCallbacks;
 	}
 
-	@bind onEndpointOpen(settings: AvRendererConfig)
-	{
-		Av().renderer.setRendererConfig(JSON.stringify(settings))
-	}
-
-	private forgetGadget( endpointId: number )
+	public forgetGadget( endpointId: number )
 	{
 			// TODO: Clean up drags and such?
 			delete this.m_roots[ endpointId ];
-
 	}
 
-	@bind 
-	onLostEndpoint( m: MsgLostEndpoint )
+	public interfaceSendEvent( destEpa: EndpointAddr, peerEpa: EndpointAddr, iface: string, event: object )
 	{
-		this.forgetGadget( m.endpointId );
+		this.m_interfaceProcessor.interfaceEvent( destEpa, peerEpa, iface, event );
 	}
 
-	@bind
-	onInterfaceSendEvent( m: MsgInterfaceSendEvent, env: Envelope )
+	public interfaceLock( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string )
 	{
-		this.m_interfaceProcessor.interfaceEvent(m.destination, m.peer, m.iface, m.event );
-		let response: MsgInterfaceSendEventResponse =
-		{
-		};
-		this.m_endpoint.sendReply(MessageType.InterfaceSendEventResponse, response, env, 
-			{ type: EndpointType.Renderer } );
+		return this.m_interfaceProcessor.lockInterface( transmitter, receiver, iface );
 	}
 
-	@bind
-	onInterfaceLock( m: MsgInterfaceLock, env: Envelope )
+	public interfaceUnlock( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string )
 	{
-		let result = this.m_interfaceProcessor.lockInterface(m.transmitter, m.receiver, m.iface );
-		let response: MsgInterfaceLockResponse =
-		{
-			result,
-		};
-		this.m_endpoint.sendReply(MessageType.InterfaceLockResponse, response, env, 
-			{ type: EndpointType.Renderer } );
+		return this.m_interfaceProcessor.unlockInterface( transmitter, receiver, iface );
 	}
-	
-	@bind
-	onInterfaceUnlock( m: MsgInterfaceUnlock, env: Envelope )
+
+	public interfaceRelock( transmitter: EndpointAddr, oldReceiverEpa: EndpointAddr, 
+		newReceiverEpa: EndpointAddr, iface: string )
 	{
-		let result = this.m_interfaceProcessor.unlockInterface(m.transmitter, m.receiver, m.iface );
-		let response: MsgInterfaceUnlockResponse =
-		{
-			result,
-		};
-		this.m_endpoint.sendReply(MessageType.InterfaceUnlockResponse, response, env, 
-			{ type: EndpointType.Renderer } );
+		return this.m_interfaceProcessor.relockInterface( transmitter, oldReceiverEpa, newReceiverEpa, iface );
 	}
-	
-	@bind
-	onInterfaceRelock( m: MsgInterfaceRelock, env: Envelope )
-	{
-		let result = this.m_interfaceProcessor.relockInterface(m.transmitter, m.oldReceiver, m.newReceiver, m.iface );
-		let response: MsgInterfaceRelockResponse =
-		{
-			result,
-		};
-		this.m_endpoint.sendReply(MessageType.InterfaceRelockResponse, response, env, 
-			{ type: EndpointType.Renderer } );
-	}
+
 	
 	interfaceStarted( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string,
 		transmitterFromReceiver: mat4, params?: object ):void
 	{
-		this.m_endpoint.sendMessage( MessageType.InterfaceStarted, 
+		this.m_callbacks.sendMessage( MessageType.InterfaceStarted, 
 			{
 				transmitter,
 				receiver,
@@ -337,7 +294,7 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 	interfaceEnded( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string,
 		transmitterFromReceiver: mat4 ):void
 	{
-		this.m_endpoint.sendMessage( MessageType.InterfaceEnded, 
+		this.m_callbacks.sendMessage( MessageType.InterfaceEnded, 
 			{
 				transmitter,
 				receiver,
@@ -349,7 +306,7 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 	interfaceTransformUpdated( destination: EndpointAddr, peer: EndpointAddr, iface: string, 
 		destinationFromPeer: mat4 ): void
 	{
-		this.m_endpoint.sendMessage( MessageType.InterfaceTransformUpdated, 
+		this.m_callbacks.sendMessage( MessageType.InterfaceTransformUpdated, 
 			{
 				destination,
 				peer,
@@ -361,7 +318,7 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 	interfaceEvent( destination: EndpointAddr, peer: EndpointAddr, iface: string, event: object,
 		destinationFromPeer: mat4 ): void
 	{
-		this.m_endpoint.sendMessage( MessageType.InterfaceReceiveEvent, 
+		this.m_callbacks.sendMessage( MessageType.InterfaceReceiveEvent, 
 			{
 				destination,
 				peer,
@@ -371,30 +328,23 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 			} as MsgInterfaceReceiveEvent );
 	}
 
-	@bind 
-	onUpdateSceneGraph( m: MsgUpdateSceneGraph, env: Envelope )
+	public updateSceneGraph( root: AvNode, gadgetUrl: string, gadgetId: number )
 	{
-		if( !m.root )
-		{
-			this.forgetGadget( env.sender.endpointId );
-			return;
-		}
-
-		this.updateGlobalIds( m.root, env.sender.endpointId );
-		let rootData = this.m_roots[ env.sender.endpointId ];
+		this.updateGlobalIds( root, gadgetId );
+		let rootData = this.m_roots[ gadgetId ];
 		if( !rootData )
 		{
-			rootData = this.m_roots[ env.sender.endpointId ] = 
+			rootData = this.m_roots[ gadgetId ] = 
 			{ 
-				gadgetId: env.sender.endpointId, 
+				gadgetId, 
 				handIsRelevant: new Set<EHand>(),
 				wasGadgetDraggedLastFrame: false,
 				root: null,
-				gadgetUrl: m.gadgetUrl,
+				gadgetUrl: gadgetUrl,
 			};
 		}
 
-		rootData.root = m.root;
+		rootData.root = root;
 	}
 
 	private updateGlobalIds( node: AvNode, gadgetId: number )
@@ -500,7 +450,7 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 			actionState,
 		}
 
-		this.m_endpoint.sendMessage( MessageType.UpdateActionState, m );
+		this.m_callbacks.sendMessage( MessageType.UpdateActionState, m );
 	}
 
 
@@ -956,7 +906,7 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 					error: e.message,
 				};
 
-				this.m_endpoint.sendMessage( MessageType.ResourceLoadFailed, m );
+				this.m_callbacks.sendMessage( MessageType.ResourceLoadFailed, m );
 			}
 		}
 
@@ -1176,7 +1126,7 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 							error: e.message,
 						};
 		
-						this.m_endpoint.sendMessage( MessageType.ResourceLoadFailed, m );
+						this.m_callbacks.sendMessage( MessageType.ResourceLoadFailed, m );
 					}
 				}
 			}
@@ -1245,16 +1195,10 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 		return transform;
 	}
 
-	
-	@bind
-	public onNodeHaptic( m: MsgNodeHaptic  )
+	public getHandForEpa( epa: EndpointAddr ): EHand
 	{
-		let transform = this.getTransform( m.nodeId );
-		let hand = handFromOriginPath( transform?.getOriginPath() );
-		if( hand != EHand.Invalid )
-		{
-			Av().renderer.sendHapticEventForHand( hand, m.amplitude, m.frequency, m.duration );
-		}
+		let transform = this.getTransform( epa );
+		return handFromOriginPath( transform?.getOriginPath() );
 	}
 
 	private isHookInUse( nodeId: EndpointAddr )
