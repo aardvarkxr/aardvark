@@ -1,3 +1,4 @@
+import isUrl from 'is-url';
 import { computeUniverseFromLine, CRendererEndpoint, minIgnoringNulls, nodeTransformFromMat4, nodeTransformToMat4, scaleAxisToFit, scaleMat, vec3MultiplyAndAdd } from '@aardvarkxr/aardvark-react';
 import { Av, AvActionState, AvConstraint, AvModelInstance, AvNode, AvNodeTransform, AvNodeType, AvRendererConfig, EHand, emptyActionState, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, EVolumeType, filterActionsForGadget, g_builtinModelCylinder, g_builtinModelError, g_builtinModelPanel, g_builtinModelPanelInverted, MessageType, MsgInterfaceEnded, MsgInterfaceLock, MsgInterfaceLockResponse, MsgInterfaceReceiveEvent, MsgInterfaceRelock, MsgInterfaceRelockResponse, MsgInterfaceSendEvent, MsgInterfaceSendEventResponse, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgInterfaceUnlock, MsgInterfaceUnlockResponse, MsgLostEndpoint, MsgNodeHaptic, MsgResourceLoadFailed, MsgUpdateActionState, MsgUpdateSceneGraph, parseEndpointFieldUri } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3, vec4 } from '@tlaukkan/tsm';
@@ -190,6 +191,7 @@ interface NodeToNodeAnchor_t
 interface AvNodeRoot
 {
 	gadgetId: number;
+	gadgetUrl: string;
 	root: AvNode;
 	hook?: string | EndpointAddr;
 	hookFromGadget?: AvNodeTransform;
@@ -390,7 +392,8 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 				gadgetId: env.sender.endpointId, 
 				handIsRelevant: new Set<EHand>(),
 				wasGadgetDraggedLastFrame: false,
-				root: null 
+				root: null,
+				gadgetUrl: m.gadgetUrl,
 			};
 		}
 
@@ -1172,19 +1175,20 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 		{
 			if( volume.type == EVolumeType.ModelBox && !volume.aabb)
 			{
+				let modelUrl = isUrl( volume.uri ) ? volume.uri : this.m_currentRoot.gadgetUrl + "/" +volume.uri;
 				try
 				{
-					volume.aabb = Av().renderer.getAABBForModel( volume.uri );
+					volume.aabb = Av().renderer.getAABBForModel( modelUrl );
 				}
 				catch( e )
 				{
 					let nodeData = this.getNodeData( node );
-					if( nodeData.lastFailedModelUri != volume.uri )
+					if( nodeData.lastFailedModelUri != modelUrl )
 					{
 						let m: MsgResourceLoadFailed =
 						{
 							nodeId: node.globalId,
-							resourceUri: volume.uri,
+							resourceUri: modelUrl,
 							error: e.message,
 						};
 		

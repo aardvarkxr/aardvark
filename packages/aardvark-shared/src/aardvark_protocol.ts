@@ -259,6 +259,7 @@ export interface MsgUpdateSceneGraph
 	hook?: string|EndpointAddr;
 	hookFromGadget?: AvNodeTransform;
 	remoteUniversePath?: string;
+	gadgetUrl?: string;
 }
 
 

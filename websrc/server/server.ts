@@ -504,6 +504,7 @@ class CGadgetData
 		let msg: MsgUpdateSceneGraph = 
 		{
 			root: this.getRoot(),
+			gadgetUrl: this.getUri(),
 		};
 
 		return (
