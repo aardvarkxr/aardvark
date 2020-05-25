@@ -194,10 +194,8 @@ interface AvNodeRoot
 	gadgetUrl: string;
 	root: AvNode;
 	hook?: string | EndpointAddr;
-	hookFromGadget?: AvNodeTransform;
 	handIsRelevant: Set<EHand>;
 	wasGadgetDraggedLastFrame: boolean;
-	remoteUniverse?: string;
 }
 
 interface RemoteUniverse
@@ -399,8 +397,6 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 
 		rootData.root = m.root;
 		rootData.hook = m.hook;
-		rootData.hookFromGadget = m.hookFromGadget;
-		rootData.remoteUniverse = m.remoteUniversePath;
 	}
 
 	private updateGlobalIds( node: AvNode, gadgetId: number )
@@ -830,22 +826,12 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 	{
 		if( typeof origin === "string" )
 		{
-			if( this.m_currentRoot.remoteUniverse )
+			let parentFromOriginArray = Av().renderer.getUniverseFromOriginTransform( origin );
+			if( parentFromOriginArray )
 			{
-				let originTransform = this.getRemoteOriginTransform( this.m_currentRoot.remoteUniverse, 
-					origin );
-				let transform = this.updateTransform( node.globalId, originTransform, null, null );
-				transform.setOriginPath( this.m_currentRoot.remoteUniverse + origin );
-			}
-			else
-			{
-				let parentFromOriginArray = Av().renderer.getUniverseFromOriginTransform( origin );
-				if( parentFromOriginArray )
-				{
-					let transform = this.updateTransform( node.globalId, null, 
-						new mat4( parentFromOriginArray ), null );
-					transform.setOriginPath( origin );
-				}
+				let transform = this.updateTransform( node.globalId, null, 
+					new mat4( parentFromOriginArray ), null );
+				transform.setOriginPath( origin );
 			}
 
 			this.m_currentHand = handFromOriginPath( origin );

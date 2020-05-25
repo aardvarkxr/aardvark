@@ -311,7 +311,6 @@ class CGadgetData
 	private m_manifest: AardvarkManifest = null;
 	private m_root: AvNode = null;
 	private m_persistenceUuid: string = null;
-	private m_remoteUniversePath: string = null;
 	private m_dispatcher: CDispatcher = null;
 	private m_transformOverrides: { [ nodeId: number ]: AvNodeTransform } = {}
 	private m_nodes: { [ nodeId: number ]: AvNode } = {}
@@ -359,8 +358,6 @@ class CGadgetData
 	{
 		if( this.m_persistenceUuid )
 			return this.m_persistenceUuid;
-		else if( this.m_remoteUniversePath )
-			return "REMOTE";
 		else
 			return "Gadget with unspeakable name";
 	}
@@ -470,11 +467,7 @@ class CGadgetData
 	public destroyResources()
 	{
 		this.m_gadgetBeingDestroyed = true;
-
-		if( !this.m_remoteUniversePath )
-		{
-			persistence.destroyGadgetPersistence( this.m_gadgetUri, this.m_persistenceUuid );
-		}
+		persistence.destroyGadgetPersistence( this.m_gadgetUri, this.m_persistenceUuid );
 	}
 
 	public scheduleSceneGraphRefresh()

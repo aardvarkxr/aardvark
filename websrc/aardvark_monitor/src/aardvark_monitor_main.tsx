@@ -21,7 +21,6 @@ interface GadgetData extends EndpointData
 	grabbables?: EndpointAddr[];
 	hooks?: EndpointAddr[];
 	nodes?: { [ nodeId: number]: AvNode };
-	remoteUniversePath?: string;
 }
 
 class CMonitorStore
@@ -139,7 +138,6 @@ class CMonitorStore
 		let gadgetData = epData as GadgetData;
 		gadgetData.gadgetHook = message.hook;
 		gadgetData.gadgetRoot = message.root;
-		gadgetData.remoteUniversePath = message.remoteUniversePath;
 
 		gadgetData.nodes = {};
 		if( gadgetData.gadgetRoot )
@@ -813,10 +811,6 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 		}
 
 		let sGadgetClasses="Gadget";
-		if( gadgetData.remoteUniversePath )
-		{
-			sGadgetClasses += " Remote";
-		}
 
 		return <div className={ sGadgetClasses } onClick={ this.onToggleExpand }>
 			{ this.props.gadgetId }: 
@@ -824,8 +818,6 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 				<span className="GadgetUri">({ gadgetData.gadgetUri })</span>
 				{ hookInfo && <span className="GadgetUri">(&#x21AA; { hookInfo })</span> }
 			</div>
-			{ gadgetData.remoteUniversePath && 
-				<div className="GadgetRemote">{ gadgetData.remoteUniversePath } </div> }
 			{ this.state.expanded && this.renderNode( gadgetData.gadgetRoot ) }
 			{ this.renderGrabberState() }
 

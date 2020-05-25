@@ -6,10 +6,6 @@ import bind from 'bind-decorator';
 export class CGadgetEndpoint extends CAardvarkEndpoint
 {
 	private m_gadgetUri: string;
-	private m_initialHook: string;
-	private m_persistenceUuid: string;
-	private m_ownerUuid: string;
-	private m_remoteUniversePath: string;
 
 	constructor( gadgetUri: string, openHandler: OpenHandler, defaultHandler: AsyncMessageHandler = null )
 	{
