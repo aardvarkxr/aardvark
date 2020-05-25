@@ -193,7 +193,6 @@ interface AvNodeRoot
 	gadgetId: number;
 	gadgetUrl: string;
 	root: AvNode;
-	hook?: string | EndpointAddr;
 	handIsRelevant: Set<EHand>;
 	wasGadgetDraggedLastFrame: boolean;
 }
@@ -396,7 +395,6 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks
 		}
 
 		rootData.root = m.root;
-		rootData.hook = m.hook;
 	}
 
 	private updateGlobalIds( node: AvNode, gadgetId: number )

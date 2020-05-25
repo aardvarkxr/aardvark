@@ -16,10 +16,7 @@ interface GadgetData extends EndpointData
 {
 	gadgetUri?: string;
 	gadgetRoot?: AvNode;
-	gadgetHook?: string | EndpointAddr;
 	grabberIsPressed?: boolean;
-	grabbables?: EndpointAddr[];
-	hooks?: EndpointAddr[];
 	nodes?: { [ nodeId: number]: AvNode };
 }
 
@@ -136,7 +133,6 @@ class CMonitorStore
 		}
 
 		let gadgetData = epData as GadgetData;
-		gadgetData.gadgetHook = message.hook;
 		gadgetData.gadgetRoot = message.root;
 
 		gadgetData.nodes = {};
@@ -753,62 +749,9 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 		</div>
 	}
 
-	private renderGrabberState()
-	{
-		if( !this.state.expanded )
-			return null;
-
-		let gadgetData = MonitorStore.getGadgetData( this.props.gadgetId );
-		if( !gadgetData || 
-			!gadgetData.grabberIsPressed && !gadgetData.hooks && !gadgetData.grabbables )
-			return null;
-
-		let grabbables: string = "";
-		if( gadgetData.grabbables )
-		{
-			for( let grabbable of gadgetData.grabbables)
-			{
-				if( grabbables.length > 0 )
-				{
-					grabbables += ", ";
-				}
-				grabbables += endpointAddrToString( grabbable );
-			}
-		}
-		let hooks: string = "";
-		if( gadgetData.hooks )
-		{
-			for( let hook of gadgetData.hooks )
-			{
-				if( hooks.length > 0 )
-				{
-					hooks += ", ";
-				}
-				hooks += endpointAddrToString( hook );
-			}
-		}
-		return ( <div>{ gadgetData.grabberIsPressed ? "PRESSED" : "UNPRESSED" }
-			<div>Grabbables: { grabbables }</div>
-			<div>Hooks: { hooks }</div>
-		</div> );
-	}
-
-
 	public render()
 	{
 		let gadgetData = MonitorStore.getGadgetData( this.props.gadgetId );
-		let hookInfo:string;
-		if( gadgetData.gadgetHook )
-		{
-			if( typeof gadgetData.gadgetHook === "string" )
-			{
-				hookInfo = atob( gadgetData.gadgetHook );
-			}
-			else
-			{
-				hookInfo = endpointAddrToString( gadgetData.gadgetHook );
-			}
-		}
 
 		let sGadgetClasses="Gadget";
 
@@ -816,10 +759,8 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 			{ this.props.gadgetId }: 
 			<div className="GadgetName">{ this.state.manifest ? this.state.manifest.name : "???" } 
 				<span className="GadgetUri">({ gadgetData.gadgetUri })</span>
-				{ hookInfo && <span className="GadgetUri">(&#x21AA; { hookInfo })</span> }
 			</div>
 			{ this.state.expanded && this.renderNode( gadgetData.gadgetRoot ) }
-			{ this.renderGrabberState() }
 
 		</div>
 	}

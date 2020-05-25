@@ -256,7 +256,6 @@ export interface MsgGeAardvarkManifestResponse
 export interface MsgUpdateSceneGraph
 {
 	root?: AvNode;
-	hook?: string|EndpointAddr;
 	gadgetUrl?: string;
 }
 
