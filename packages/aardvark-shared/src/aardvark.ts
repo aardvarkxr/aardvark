@@ -1,4 +1,4 @@
-import { AABB as Aabb, AardvarkManifest, AvSharedTextureInfo, EHand, EndpointAddr, Permission } from './aardvark_protocol';
+import { AABB, AardvarkManifest, AvSharedTextureInfo, EHand, EndpointAddr, Permission } from './aardvark_protocol';
 
 export interface AvTraversalRenderer
 {
@@ -36,7 +36,7 @@ export interface AvRenderer
 	renderList( renderList: AvModelInstance[] ): void,
 	createModelInstance( uri: string): AvModelInstance;
 	getUniverseFromOriginTransform( origin: string ): number[];
-	getAABBForModel( uri: string ): Aabb;
+	getAABBForModel( uri: string ): AABB;
 
 	registerHapticProcessor( hapticProcessor: AvHapticProcessor ) : void;
 	sendHapticEventForHand( hand: EHand, amplitude: number, frequency: number, duration: number ): void;
