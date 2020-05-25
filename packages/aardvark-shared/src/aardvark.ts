@@ -29,7 +29,7 @@ export interface AvActionState
 }
 
 
-interface AvRenderer
+export interface AvRenderer
 {
 	setRendererConfig( rendererConfig: string ): void;
 	registerTraverser( traverser: AvTraversalRenderer ): void;

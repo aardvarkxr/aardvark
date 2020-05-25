@@ -17,7 +17,7 @@ let traverserCallbacks: TraverserCallbacks =
 	}
 };
 
-let traverser = new AvDefaultTraverser( traverserCallbacks );
+let traverser = new AvDefaultTraverser( traverserCallbacks, Av().renderer );
 
 rendererEndpoint.registerHandler( MessageType.UpdateSceneGraph, 
 	( m: MsgUpdateSceneGraph, env: Envelope ) =>

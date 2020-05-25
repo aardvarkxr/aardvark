@@ -1,6 +1,6 @@
 import isUrl from 'is-url';
 import { computeUniverseFromLine, CRendererEndpoint, minIgnoringNulls, nodeTransformFromMat4, nodeTransformToMat4, scaleAxisToFit, scaleMat, vec3MultiplyAndAdd } from '@aardvarkxr/aardvark-react';
-import { Av, AvActionState, AvConstraint, AvModelInstance, AvNode, AvNodeTransform, AvNodeType, AvRendererConfig, EHand, emptyActionState, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, EVolumeType, filterActionsForGadget, g_builtinModelCylinder, g_builtinModelError, g_builtinModelPanel, g_builtinModelPanelInverted, MessageType, MsgInterfaceEnded, MsgInterfaceLock, MsgInterfaceLockResponse, MsgInterfaceReceiveEvent, MsgInterfaceRelock, MsgInterfaceRelockResponse, MsgInterfaceSendEvent, MsgInterfaceSendEventResponse, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgInterfaceUnlock, MsgInterfaceUnlockResponse, MsgLostEndpoint, MsgNodeHaptic, MsgResourceLoadFailed, MsgUpdateActionState, MsgUpdateSceneGraph, parseEndpointFieldUri } from '@aardvarkxr/aardvark-shared';
+import { Av, AvActionState, AvConstraint, AvModelInstance, AvNode, AvNodeTransform, AvNodeType, AvRenderer, EHand, emptyActionState, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, EVolumeType, filterActionsForGadget, g_builtinModelCylinder, g_builtinModelError, g_builtinModelPanel, g_builtinModelPanelInverted, MessageType, MsgInterfaceEnded, MsgInterfaceLock, MsgInterfaceLockResponse, MsgInterfaceReceiveEvent, MsgInterfaceRelock, MsgInterfaceRelockResponse, MsgInterfaceSendEvent, MsgInterfaceSendEventResponse, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgInterfaceUnlock, MsgInterfaceUnlockResponse, MsgLostEndpoint, MsgNodeHaptic, MsgResourceLoadFailed, MsgUpdateActionState, MsgUpdateSceneGraph, parseEndpointFieldUri } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3, vec4 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
 import { EndpointAddrMap } from './endpoint_addr_map';
@@ -243,10 +243,12 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 	private m_interfaceEntities: AvNode[] = [];
 	private m_entityParentTransforms = new EndpointAddrMap<PendingTransform >();
 	private m_callbacks: TraverserCallbacks;
+	private m_renderer: AvRenderer;
 
-	constructor( traverserCallbacks: TraverserCallbacks )
+	constructor( traverserCallbacks: TraverserCallbacks, renderer: AvRenderer )
 	{
 		this.m_callbacks = traverserCallbacks;
+		this.m_renderer = renderer;
 	}
 
 	public forgetGadget( endpointId: number )
@@ -398,7 +400,7 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 	
 		this.m_inFrameTraversal = false;
 	
-		Av().renderer.renderList( this.m_renderList );
+		this.m_renderer.renderList( this.m_renderList );
 
 		this.updateInput();
 		this.updateInterfaceProcessor();
@@ -454,7 +456,7 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 
 	private updateActionState( hand: EHand )
 	{
-		let newActionState = Av().renderer.getActionState( hand );
+		let newActionState = this.m_renderer.getActionState( hand );
 		let oldActionState = this.m_actionState[ hand ]
 		if( !equal( newActionState, oldActionState ) )
 		{
@@ -772,7 +774,7 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 	{
 		if( typeof origin === "string" )
 		{
-			let parentFromOriginArray = Av().renderer.getUniverseFromOriginTransform( origin );
+			let parentFromOriginArray = this.m_renderer.getUniverseFromOriginTransform( origin );
 			if( parentFromOriginArray )
 			{
 				let transform = this.updateTransform( node.globalId, null, 
@@ -818,7 +820,7 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 
 	traverseHeadFacingTransform( node: AvNode, defaultParent: PendingTransform )
 	{
-		let universeFromHead = new mat4( Av().renderer.getUniverseFromOriginTransform( "/user/head" ) );
+		let universeFromHead = new mat4( this.m_renderer.getUniverseFromOriginTransform( "/user/head" ) );
 		this.updateTransformWithCompute( node.globalId, [ defaultParent ], null, null,
 			( universeFromParents: mat4[], parentFromNode ) =>
 			{
@@ -887,7 +889,7 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 		{
 			try
 			{
-				nodeData.modelInstance = Av().renderer.createModelInstance( modelToLoad );
+				nodeData.modelInstance = this.m_renderer.createModelInstance( modelToLoad );
 				if ( nodeData.modelInstance )
 				{
 					nodeData.lastModelUri = filteredUri;
@@ -933,7 +935,7 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 			let internalScale = 1;
 			if( node.propScaleToFit )
 			{
-				let aabb = Av().renderer.getAABBForModel( modelToLoad );
+				let aabb = this.m_renderer.getAABBForModel( modelToLoad );
 				if( !aabb )
 				{
 					// if we were told to scale the model, but it isn't loaded at this point,
@@ -989,7 +991,7 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 				sPanelModelUri = g_builtinModelPanelInverted;
 			}
 
-			nodeData.modelInstance = Av().renderer.createModelInstance( sPanelModelUri );
+			nodeData.modelInstance = this.m_renderer.createModelInstance( sPanelModelUri );
 		}
 
 		if ( nodeData.modelInstance )
@@ -1042,7 +1044,7 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 
 				if ( !nodeData.modelInstance )
 				{
-					nodeData.modelInstance = Av().renderer.createModelInstance( g_builtinModelCylinder );
+					nodeData.modelInstance = this.m_renderer.createModelInstance( g_builtinModelCylinder );
 					if ( nodeData.modelInstance )
 					{
 						nodeData.lastModelUri = g_builtinModelCylinder;
@@ -1110,7 +1112,7 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 				let modelUrl = isUrl( volume.uri ) ? volume.uri : this.m_currentRoot.gadgetUrl + "/" +volume.uri;
 				try
 				{
-					volume.aabb = Av().renderer.getAABBForModel( modelUrl );
+					volume.aabb = this.m_renderer.getAABBForModel( modelUrl );
 				}
 				catch( e )
 				{
