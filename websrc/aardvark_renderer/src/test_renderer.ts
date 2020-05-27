@@ -1,4 +1,4 @@
-import { AvRenderer, AvTraversalRenderer, AvModelInstance, AABB, AvHapticProcessor, EHand, AvActionState, AvSharedTextureInfo } from "@aardvarkxr/aardvark-shared";
+import { AvRenderer, AvTraversalRenderer, AvModelInstance, AABB, AvHapticProcessor, EHand, AvActionState, AvSharedTextureInfo, AvColor } from "@aardvarkxr/aardvark-shared";
 import { mat4, vec4 } from '@tlaukkan/tsm';
 
 
@@ -6,7 +6,7 @@ export class CTestModel implements AvModelInstance
 {
 	public url: string;
 	public universeFromModel: mat4 = null;
-	public color: vec4 = null;
+	public color: AvColor = null;
 	public overrideTexture: AvSharedTextureInfo = null;
 
 	constructor( url: string )
@@ -26,7 +26,17 @@ export class CTestModel implements AvModelInstance
 
 	public setBaseColor( color: [ number, number, number, number ] ): void
 	{
-		this.color = new vec4( color );
+		this.color = 
+		{
+			r: color[0],
+			g: color[1],
+			b: color[2],
+		};
+
+		if( color[3] != 1.0 )
+		{
+			this.color.a = color[3];
+		}
 	}
 }
 
