@@ -6,11 +6,12 @@ import { AvGadget } from './aardvark_gadget';
 
 export interface EntityComponent
 {
-	readonly transmits: InterfaceProp[];
-	readonly receives: InterfaceProp[];
-	readonly interfaceLocks: InitialInterfaceLock[];
-	readonly parent: EndpointAddr;
-	readonly wantsTransforms: boolean;
+	readonly transmits?: InterfaceProp[];
+	readonly receives?: InterfaceProp[];
+	readonly interfaceLocks?: InitialInterfaceLock[];
+	readonly parent?: EndpointAddr;
+	readonly wantsTransforms?: boolean;
+	setEntityEpa?: ( epa: EndpointAddr ) => void;
 	onUpdate( callback: () => void ): void;
 	render() : JSX.Element;
 }
@@ -44,7 +45,7 @@ export interface AvComposedEntityProps
  */
 export class AvComposedEntity extends React.Component< AvComposedEntityProps, {} >
 {
-	private refEntity = React.createRef<AvInterfaceEntity>();
+	private entityEpa: EndpointAddr = null;
 
 	constructor(props: any)
 	{
@@ -57,6 +58,18 @@ export class AvComposedEntity extends React.Component< AvComposedEntityProps, {}
 		this.refreshUpdateListeners();
 	}
 
+	@bind
+	private onEntityRef( entity: AvInterfaceEntity )
+	{
+		let epa = entity?.globalId ?? null;
+
+		this.entityEpa = epa;
+		for( let comp of this.props.components )
+		{
+			comp.setEntityEpa?.( epa );
+		}
+	}
+
 	private refreshUpdateListeners()
 	{
 		for( let comp of this.props.components )
@@ -67,7 +80,7 @@ export class AvComposedEntity extends React.Component< AvComposedEntityProps, {}
 
 	public get globalId(): EndpointAddr
 	{
-		return this.refEntity.current?.globalId;
+		return this.entityEpa;
 	}
 
 	@bind
@@ -85,15 +98,15 @@ export class AvComposedEntity extends React.Component< AvComposedEntityProps, {}
 		let interfaceLocks: InitialInterfaceLock[] = [];
 		for( let comp of this.props.components )
 		{
-			transmits = transmits.concat( comp.transmits );
-			receives = receives.concat( comp.receives );
-			wantsTransforms == wantsTransforms || comp.wantsTransforms;
+			transmits = transmits.concat( comp.transmits ?? [] );
+			receives = receives.concat( comp.receives ?? []);
+			wantsTransforms = wantsTransforms || ( comp.wantsTransforms ?? false );
 			if( !parent )
 			{
-				parent = comp.parent;
+				parent = comp.parent ?? null;
 			}
 
-			let compLocks = comp.interfaceLocks;
+			let compLocks = comp.interfaceLocks ?? null;
 			if( compLocks )
 			{
 				interfaceLocks = interfaceLocks.concat( compLocks );
@@ -101,7 +114,7 @@ export class AvComposedEntity extends React.Component< AvComposedEntityProps, {}
 		}
 
 		return <AvInterfaceEntity transmits={transmits} receives={ receives } wantsTransforms={ wantsTransforms }
-					parent={ parent } volume={ this.props.volume } ref={ this.refEntity } 
+					parent={ parent } volume={ this.props.volume } ref={ this.onEntityRef } 
 					priority={ this.props.priority } interfaceLocks={ interfaceLocks }>
 					{ this.props.children }
 					{ this.props.components.map( ( value: EntityComponent ) => value.render() ) }

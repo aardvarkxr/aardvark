@@ -1,12 +1,13 @@
-import { emptyVolume, InitialInterfaceLock, MinimalPose } from '@aardvarkxr/aardvark-shared';
+import { emptyVolume, InitialInterfaceLock, MinimalPose, EndpointAddr } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import { NetworkUniverseEvent, NetworkUniverseEventType, UniverseInitInfo } from './network_universe';
-import { ActiveInterface, AvInterfaceEntity } from './aardvark_interface_entity';
+import { ActiveInterface, AvInterfaceEntity, InterfaceProp } from './aardvark_interface_entity';
 import { RemoteGadgetEvent, RemoteGadgetEventType, RGESendEvent, RemoteGadgetComponent } from './component_remote_gadget';
 import { AvTransform } from './aardvark_transform';
 import { AvEntityChild } from './aardvark_entity_child';
 import { AvGadget } from './aardvark_gadget';
+import { EntityComponent } from './aardvark_composed_entity';
 
 interface RemoteUniverseProps
 {
@@ -41,23 +42,62 @@ interface RemoteUniverseParams
 	remoteGadgetId: number;
 }
 
-export class RemoteUniverse extends React.Component< RemoteUniverseProps, {} >
+export class RemoteUniverseComponent implements EntityComponent
 {
 	private remoteGadgets = new Map< number, RemoteGadgetInfo >();
-	private universeRef = React.createRef<AvInterfaceEntity>();
+	private remoteEventCallback: ( event: object, reliable: boolean ) => void;
+	private entityCallback: () => void = null;
+	private entityEpa: EndpointAddr = null;
+	private initInfo: UniverseInitInfo;
 
-	constructor( props: any )
+	/** @param initInfo The initialization info packet provided by the NetworkUniverse that this remote
+	 * universe is connected to.
+	 * 
+	 * @param onRemoteEvent This callback is called when the room should convey the supplied event to the network
+	 * universe and call remoteEvent() on that object. 
+	 * 
+	 * event		The opaque event object to send
+	 * reliable	If this is true, the event must be delivered or the gadgets may 
+	 * 					get out of synch with each other. If this is false, the room should
+	 * 					make its best effort to deliver the event, but the system will recover
+	 * 					if the event is discarded.
+	 */
+	constructor( initInfo: object, onRemoteEvent: ( event: object, reliable: boolean ) => void )
 	{
-		super( props );
+		this.initInfo = initInfo as UniverseInitInfo;
+		this.remoteEventCallback = onRemoteEvent;
 	}
-	
+
+	public onUpdate( callback: () => void )
+	{
+		this.entityCallback = callback;
+	}
+
+	public setEntityEpa( epa: EndpointAddr )
+	{
+		this.entityEpa = epa;
+
+		if( epa )
+		{
+			for( let gadgetInfo of this.initInfo.gadgets )
+			{
+				this.createGadget( gadgetInfo.remoteGadgetId,gadgetInfo.url, gadgetInfo.remoteLocks, 
+					gadgetInfo.universeFromGadget );
+			}	
+		}
+		else
+		{
+			console.log( "Discarding entity for remote universe. Remote gadgets will be destroyed.")
+		}
+	}
+
 	@bind
 	private onRemoteInterface( activeRemoteGadget: ActiveInterface )
 	{
 		let remoteParams = activeRemoteGadget.params as RemoteUniverseParams;
 		let gadgetInfo = this.remoteGadgets.get( remoteParams.remoteGadgetId );
 		gadgetInfo.iface = activeRemoteGadget;
-		this.forceUpdate();
+		this.entityCallback?.();
 		console.log( `Connection from remote gadget id ${ gadgetInfo.remoteGadgetId }` );
 
 		activeRemoteGadget.onEvent( ( event: RemoteGadgetEvent ) =>
@@ -67,7 +107,7 @@ export class RemoteUniverse extends React.Component< RemoteUniverseProps, {} >
 				case RemoteGadgetEventType.SendEventToMaster:
 				{
 					let sendEvent = event as RGESendEvent;
-					this.props.onRemoteEvent( 
+					this.remoteEventCallback( 
 						{ 
 							type: NetworkUniverseEventType.SendMasterGadgetEvent, 
 							remoteGadgetId: gadgetInfo.remoteGadgetId,
@@ -87,14 +127,14 @@ export class RemoteUniverse extends React.Component< RemoteUniverseProps, {} >
 		} );
 	}
 
-	componentDidMount()
+	public get receives()
 	{
-		let initInfo = this.props.initInfo as UniverseInitInfo;
-		for( let gadgetInfo of initInfo.gadgets )
-		{
-			this.createGadget( gadgetInfo.remoteGadgetId,gadgetInfo.url, gadgetInfo.remoteLocks, 
-				gadgetInfo.universeFromGadget );
-		}
+		return [ { iface: RemoteGadgetComponent.interfaceName, processor: this.onRemoteInterface } ];
+	}
+
+	public get wantsTransforms()
+	{
+		return true;
 	}
 
 	public networkEvent( event: object )
@@ -127,6 +167,10 @@ export class RemoteUniverse extends React.Component< RemoteUniverseProps, {} >
 		{
 			throw new Error( `duplicate createGadget for remote gadget id ${ remoteGadgetId } with ${ gadgetUrl }` );
 		}
+		if( !this.entityEpa )
+		{
+			throw new Error( `createGadget before the entity gave us their Endpoint Address` );
+		}
 
 		this.remoteGadgets.set( remoteGadgetId,
 			{
@@ -140,7 +184,7 @@ export class RemoteUniverse extends React.Component< RemoteUniverseProps, {} >
 		let fullLockList = [ ...remoteInterfaceLocks,
 		{
 			iface: RemoteGadgetComponent.interfaceName,
-			receiver: this.universeRef.current.globalId,
+			receiver: this.entityEpa,
 			params: { remoteGadgetId },
 		} ];
 
@@ -165,7 +209,7 @@ export class RemoteUniverse extends React.Component< RemoteUniverseProps, {} >
 		if( gadgetInfo )
 		{
 			gadgetInfo.universeFromGadget = universeFromGadget;
-			this.forceUpdate();
+			this.entityCallback?.();
 		}
 	}
 
@@ -191,13 +235,12 @@ export class RemoteUniverse extends React.Component< RemoteUniverseProps, {} >
 				continue;
 
 			children.push( <AvTransform transform={ gadget.universeFromGadget } key={ gadget.remoteGadgetId }>
-					<AvEntityChild child={ gadget.iface.peer } />
+					<AvEntityChild child={ gadget.iface.peer } key={ gadget.remoteGadgetId }/>
 				</AvTransform> );
 		}
 
-		return <AvInterfaceEntity receives={ [ { iface: RemoteGadgetComponent.interfaceName, processor: this.onRemoteInterface } ] }
-			volume={ emptyVolume() } ref={ this.universeRef }>
+		return <>
 				{ children }
-			</AvInterfaceEntity>;
+			</>;
 	}
 }

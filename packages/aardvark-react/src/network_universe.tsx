@@ -1,9 +1,11 @@
-import { AvNodeTransform, infiniteVolume, InitialInterfaceLock, MinimalPose } from '@aardvarkxr/aardvark-shared';
+import { AvNodeTransform, infiniteVolume, InitialInterfaceLock, MinimalPose, EndpointAddr } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
-import { ActiveInterface, AvInterfaceEntity } from './aardvark_interface_entity';
+import { ActiveInterface, AvInterfaceEntity, InterfaceProp } from './aardvark_interface_entity';
 import { NetworkGadgetEvent, NetworkGadgetEventType, NGESetGadgetInfo, NGESendEvent, NetworkedGadgetComponent } from './component_networked_gadget';
 import { minimalPoseFromTransform } from './math_utils';
+import { EntityComponent } from './aardvark_composed_entity';
+import { Interface } from 'readline';
 
 
 export enum NetworkUniverseEventType
@@ -50,33 +52,37 @@ interface NetworkedGadgetInfoInternal
 	iface: ActiveInterface;
 }
 
-interface NetworkUniverseProps
-{
-	/** This callback is called when room should send a an event to all remote universes.
-	 * 
-	 * @param event		An object, opaque to the room itself, that allows the network universe to
-	 * 					communicate with its remote peers.
-	 * @param reliable	If this argument is true, the room must deliver the message to every remote
-	 * 					universe or that universe will be out of synch with the network universe. 
-	 */
-	onNetworkEvent: ( event: object, reliable: boolean ) => void;
-}
 
 export interface UniverseInitInfo
 {
 	gadgets: NetworkedGadgetInfo[];
 }
 
-export class NetworkUniverse extends React.Component< NetworkUniverseProps, {} >
+/** A network that can be used with AvComposedComponent. The arguments below are for the 
+ * provided callback function.
+ * 
+ * @param event		An object, opaque to the room itself, that allows the network universe to
+ * 					communicate with its remote peers.
+ * @param reliable	If this argument is true, the room must deliver the message to every remote
+ * 					universe or that universe will be out of synch with the network universe. 
+ */
+export class NetworkUniverseComponent implements EntityComponent
 {
 	private networkedGadgets = new Map< number, NetworkedGadgetInfoInternal >();
 	static nextRemoteGadgetId = 1;
+	private networkEventCallback: ( event: object, reliable: boolean ) => void;
+	private entityCallback: () => void = null;
 
-	constructor( props: any )
+	constructor( networkEventCallback: ( event: object, reliable: boolean ) => void )
 	{
-		super( props );
+		this.networkEventCallback = networkEventCallback;
 	}
 	
+	public onUpdate( callback: () => void )
+	{
+		this.entityCallback = callback;
+	}
+
 	@bind
 	private onNetworkInterface( activeNetworkedGadget: ActiveInterface )
 	{
@@ -90,7 +96,7 @@ export class NetworkUniverse extends React.Component< NetworkUniverseProps, {} >
 				{
 					let setInfo = event as NGESetGadgetInfo;
 					let universeFromGadget = minimalPoseFromTransform( activeNetworkedGadget.selfFromPeer );
-					let remoteGadgetId = NetworkUniverse.nextRemoteGadgetId++;
+					let remoteGadgetId = NetworkUniverseComponent.nextRemoteGadgetId++;
 
 					if( gadgetInfo )
 					{
@@ -119,7 +125,7 @@ export class NetworkUniverse extends React.Component< NetworkUniverseProps, {} >
 							remoteInterfaceLocks: setInfo.locks, 
 							universeFromGadget 
 						};
-						this.props.onNetworkEvent( createEvent, true );	
+						this.networkEventCallback( createEvent, true );	
 					}
 				}
 				break;
@@ -135,7 +141,7 @@ export class NetworkUniverse extends React.Component< NetworkUniverseProps, {} >
 							remoteGadgetId: gadgetInfo.remoteGadgetId, 
 							event: sendEvent.event,
 						};
-						this.props.onNetworkEvent( netEvent, sendEvent.reliable );
+						this.networkEventCallback( netEvent, sendEvent.reliable );
 					}
 				}
 				break;
@@ -147,7 +153,7 @@ export class NetworkUniverse extends React.Component< NetworkUniverseProps, {} >
 			if( gadgetInfo )
 			{
 				this.networkedGadgets.delete( gadgetInfo.remoteGadgetId );
-				this.props.onNetworkEvent( 
+				this.networkEventCallback( 
 					{
 						type: NetworkUniverseEventType.DestroyRemoteGadget,
 						remoteGadgetId: gadgetInfo.remoteGadgetId, 
@@ -160,7 +166,7 @@ export class NetworkUniverse extends React.Component< NetworkUniverseProps, {} >
 			if( gadgetInfo )
 			{
 				let universeFromGadget = minimalPoseFromTransform( entityFromPeer );
-				this.props.onNetworkEvent( 
+				this.networkEventCallback( 
 					{
 						type: NetworkUniverseEventType.UpdateRemoteGadgetTransform,
 						remoteGadgetId: gadgetInfo.remoteGadgetId, 
@@ -168,6 +174,16 @@ export class NetworkUniverse extends React.Component< NetworkUniverseProps, {} >
 					} as NetworkUniverseEvent, false );
 			}
 		} );
+	}
+
+	public get receives()
+	{
+		return [ { iface: NetworkedGadgetComponent.interfaceName, processor: this.onNetworkInterface } ];
+	}
+
+	public get wantsTransforms()
+	{
+		return true;
 	}
 
 	public remoteEvent( event: object )
@@ -216,10 +232,9 @@ export class NetworkUniverse extends React.Component< NetworkUniverseProps, {} >
 		return { gadgets } as UniverseInitInfo;
 	}
 
-	render()
+	public render(): JSX.Element
 	{
-		return <AvInterfaceEntity receives={ [ { iface: NetworkedGadgetComponent.interfaceName, processor: this.onNetworkInterface } ] }
-			volume={ infiniteVolume() } wantsTransforms={ true }/>
+		return null;
 	}
 }
 
