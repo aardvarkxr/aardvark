@@ -70,9 +70,9 @@ export class CTestRenderer implements AvRenderer
 		this.lastRenderList = renderList;
 	}
 
-	public createModelInstance( uri: string): AvModelInstance
+	public createModelInstance( modelUrl: string, modelDataBase64: string ): AvModelInstance
 	{
-		let model = new CTestModel( uri );
+		let model = new CTestModel( modelUrl );
 		this.models.push( model );
 		return model;
 	}
@@ -80,15 +80,6 @@ export class CTestRenderer implements AvRenderer
 	public getUniverseFromOriginTransform( origin: string ): number[]
 	{
 		return mat4.identity.all();
-	}
-
-	public getAABBForModel( uri: string ): AABB
-	{
-		return { 
-			xMin: -1, xMax: 1,
-			yMin: -1, yMax: 1,
-			zMin: -1, zMax: 1,
-		};
 	}
 
 	public registerHapticProcessor( hapticProcessor: AvHapticProcessor ) : void

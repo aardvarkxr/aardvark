@@ -21,6 +21,11 @@
 			"@aardvarkxr/aardvark-cli" : [ "../packages/aardvark-cli/src/avcmd.ts" ],
 			"*" : [ "node_modules/@types/*", "node_modules/*", "*" ]
 		},
+		"typeRoots": 
+		[
+			"node_modules/@types",
+			"customTypes"
+		],
 		"moduleResolution" : "node"
 	}
 }

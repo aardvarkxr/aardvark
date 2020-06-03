@@ -452,7 +452,7 @@ export enum AvNodeType
 	Origin = 1,
 	Transform = 2,
 	Model = 3,
-	Panel = 4,
+	//Panel = 4,
 	//Poker = 5,
 	// Grabbable = 6,
 	// Handle = 7,

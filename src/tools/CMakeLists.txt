@@ -1,6 +1,8 @@
 cmake_minimum_required ( VERSION 3.14)
 
 add_library(tools STATIC
+	base64.cpp
+	${AV_SRC_PUBLIC}/tools/base64.h
 	filetools.cpp
 	${AV_SRC_PUBLIC}/tools/filetools.h
 	pathtools.cpp

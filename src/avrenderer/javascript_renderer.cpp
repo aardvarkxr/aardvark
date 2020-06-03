@@ -5,6 +5,7 @@
 #include "json/json.hpp"
 #include <aardvark/aardvark_renderer_config.h>
 #include <algorithm>
+#include <tools/base64.h>
 
 using aardvark::EEndpointType;
 using aardvark::EndpointAddr_t;
@@ -445,46 +446,9 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 		}
 	} );
 
-	RegisterFunction( container, "getAABBForModel", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
-	{
-		if ( arguments.size() != 1 )
-		{
-			exception = "Invalid arguments";
-			return;
-		}	
-
-		if ( !arguments[0]->IsString() )
-		{
-			exception = "argument must be the url of a model";
-			return;
-		}
-
-		AABB_t box;
-
-		std::string error;
-		if ( !m_renderer->getModelBox( arguments[ 0 ]->GetStringValue(), &box, &error ) )
-		{
-			retval = CefV8Value::CreateNull();
-			if (!error.empty())
-			{
-				exception = error;
-			}
-		}
-		else
-		{
-			retval = CefV8Value::CreateObject( nullptr, nullptr );
-			retval->SetValue( "xMin", CefV8Value::CreateDouble( box.xMin ), V8_PROPERTY_ATTRIBUTE_NONE );
-			retval->SetValue( "xMax", CefV8Value::CreateDouble( box.xMax ), V8_PROPERTY_ATTRIBUTE_NONE );
-			retval->SetValue( "yMin", CefV8Value::CreateDouble( box.yMin ), V8_PROPERTY_ATTRIBUTE_NONE );
-			retval->SetValue( "yMax", CefV8Value::CreateDouble( box.yMax ), V8_PROPERTY_ATTRIBUTE_NONE );
-			retval->SetValue( "zMin", CefV8Value::CreateDouble( box.zMin ), V8_PROPERTY_ATTRIBUTE_NONE );
-			retval->SetValue( "zMax", CefV8Value::CreateDouble( box.zMax ), V8_PROPERTY_ATTRIBUTE_NONE );
-		}
-	} );
-
 	RegisterFunction( container, "createModelInstance", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
-		if ( arguments.size() != 1 )
+		if ( arguments.size() != 2 )
 		{
 			exception = "Invalid arguments";
 			return;
@@ -492,13 +456,20 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 
 		if ( !arguments[0]->IsString() )
 		{
-			exception = "argument must be a URI string";
+			exception = "first argument must be a url string";
 			return;
 		}
 
-		std::string uri = arguments[0]->GetStringValue();
+		if ( !arguments[ 1 ]->IsString() )
+		{
+			exception = "second argument must be a base64 encoded string of the gltf model blob because CEF doesn't support arraybuffer";
+			return;
+		}
+
+		const std::string uri = arguments[0]->GetStringValue();
+		std::string modelData = base64_decode( arguments[ 1 ]->GetStringValue() );
 		std::string sError;
-		auto modelInstance = m_renderer->createModelInstance( uri, &sError );
+		auto modelInstance = m_renderer->createModelInstance( uri, modelData.c_str(), modelData.size(), &sError );
 		if ( !modelInstance )
 		{
 			if (!sError.empty())

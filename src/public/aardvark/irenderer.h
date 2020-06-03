@@ -73,11 +73,10 @@ public:
 	virtual void init( HINSTANCE hInstance, IVrManager *vrManager ) = 0;
 	virtual void runFrame( bool *shouldQuit, double frameTime ) = 0;
 
-	virtual std::unique_ptr<IModelInstance> createModelInstance( const std::string & uri, std::string *psError = nullptr ) = 0;
+	virtual std::unique_ptr<IModelInstance> createModelInstance( const std::string & uri, const void *modelData, size_t modelDataSize, std::string *psError = nullptr ) = 0;
 	virtual void setRenderingConfiguration(const CAardvarkRendererConfig& cRendererConfig) = 0;
 	virtual void resetRenderList() = 0;
 	virtual void addToRenderList( IModelInstance *modelInstance ) = 0;
 	virtual void processRenderList() = 0;
-	virtual bool getModelBox( const std::string & uri, AABB_t *pBox, std::string *psError = nullptr ) = 0;
 };
 

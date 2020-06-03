@@ -1989,7 +1989,7 @@ void VulkanExample::onWindowClose()
 	}
 }
 
-std::shared_ptr<vkglTF::Model> VulkanExample::findOrLoadModel( std::string modelUri, std::string *psError)
+std::shared_ptr<vkglTF::Model> VulkanExample::findOrLoadModel( std::string modelUri, const void* modelData, size_t modelDataSize, std::string *psError)
 {
 	auto iModel = m_mapModels.find( modelUri );
 	if ( iModel != m_mapModels.end() )
@@ -1997,52 +1997,31 @@ std::shared_ptr<vkglTF::Model> VulkanExample::findOrLoadModel( std::string model
 		return iModel->second;
 	}
 
-	// below this point we're definitely going to return nullptr because we need to
-	// make an async request for the model
-
 	// if we've already failed, just return nullptr and don't keep trying
 	auto failedRequest = m_failedModelRequests.find( modelUri );
-	if (failedRequest != m_failedModelRequests.end())
+	if ( failedRequest != m_failedModelRequests.end() )
 	{
-		if (psError)
+		if ( psError )
 		{
 			*psError = failedRequest->second;
 		}
 		return nullptr;
 	}
 
-	// if we already sent a request but are still waiting for the data, just return
-	// null. The caller will call again next frame.
-	if ( m_modelRequestsInProgress.find( modelUri ) != m_modelRequestsInProgress.end() )
-		return nullptr;
+	auto pModel = std::make_shared<vkglTF::Model>();
+	bool bLoaded = pModel->loadFromMemory( modelData, modelDataSize, vulkanDevice, m_descriptorManager, queue );
 
-	m_modelRequestsInProgress.insert( modelUri );
-
-	m_uriRequests.requestUri( modelUri, [this, modelUri]( CUriRequestHandler::Result_t result )
+	if ( bLoaded )
 	{
-		m_modelRequestsInProgress.erase( modelUri );
-		if ( !result.success )
-		{
-			m_failedModelRequests.insert( std::make_pair( modelUri, "Missing Resource" ) );
-		}
-		else
-		{
-			auto pModel = std::make_shared<vkglTF::Model>();
-			bool bLoaded = pModel->loadFromMemory( result.data.data(), result.data.size(), vulkanDevice, m_descriptorManager, queue );
-
-			if ( bLoaded )
-			{
-				m_mapModels.insert( std::make_pair( modelUri, pModel ) );
-				setupDescriptorSetsForModel( pModel );
-			}
-			else
-			{
-				m_failedModelRequests.insert( std::make_pair( modelUri, "Parse failed" ) );
-			}
-		}
-	} );
-
-	return nullptr;
+		m_mapModels.insert( std::make_pair( modelUri, pModel ) );
+		setupDescriptorSetsForModel( pModel );
+		return pModel;
+	}
+	else
+	{
+		m_failedModelRequests.insert( std::make_pair( modelUri, "Parse failed" ) );
+		return nullptr;
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -2200,23 +2179,6 @@ void VulkanExample::processRenderList()
 	m_uriRequests.processResults();
 }
 
-bool VulkanExample::getModelBox( const std::string & uri, AABB_t *pBox, std::string *psError)
-{
-	auto pModel = findOrLoadModel( uri, psError );
-	if ( !pModel )
-	{
-		return false;
-	}
-
-	pBox->xMin = pModel->dimensions.min.x;
-	pBox->yMin = pModel->dimensions.min.y;
-	pBox->zMin = pModel->dimensions.min.z;
-	pBox->xMax = pModel->dimensions.max.x;
-	pBox->yMax = pModel->dimensions.max.y;
-	pBox->zMax = pModel->dimensions.max.z;
-	return true;
-}
-
 
 void VulkanExample::submitEyeBuffers()
 {
@@ -2361,9 +2323,9 @@ void CVulkanRendererModelInstance::animate( float animationTimeElapsed )
 	}
 }
 
-std::unique_ptr<IModelInstance> VulkanExample::createModelInstance( const std::string & uri, std::string *psError)
+std::unique_ptr<IModelInstance> VulkanExample::createModelInstance( const std::string & uri, const void* modelData, size_t modelDataSize, std::string *psError)
 {
-	auto model = findOrLoadModel( uri, psError);
+	auto model = findOrLoadModel( uri, modelData, modelDataSize, psError);
 	if ( !model )
 	{
 		return nullptr;

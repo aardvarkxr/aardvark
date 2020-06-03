@@ -1,12 +1,31 @@
 import { translateMat } from '@aardvarkxr/aardvark-react';
-import * as Color from 'color';
-import { CTestRenderer, CTestModel } from './../test_renderer';
-import { TraverserCallbacks, Traverser } from './../traverser_interface';
-import { AvDefaultTraverser } from './../aardvark_traverser';
-import { AvNode, AvNodeType, ENodeFlags, MessageType, AvColor } from '@aardvarkxr/aardvark-shared';
+import { AvColor, MessageType } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3 } from '@tlaukkan/tsm';
-import { buildOrigin, addChild, buildModel, colorFromString, buildTransform } from '../scene_graph_test_utils';
+import { addChild, buildModel, buildOrigin, buildTransform, colorFromString } from '../scene_graph_test_utils';
+import { AvDefaultTraverser } from './../aardvark_traverser';
+import { modelCache, ModelInfo } from './../model_cache';
+import { CTestModel, CTestRenderer } from './../test_renderer';
+import { Traverser, TraverserCallbacks } from './../traverser_interface';
 const equal = require( 'fast-deep-equal' );
+
+jest.mock( '../model_cache' );
+const mockedModelCache = modelCache as jest.Mocked< typeof modelCache >;
+
+mockedModelCache.queueModelLoad.mockImplementation( 
+	( url: string ): ModelInfo =>
+	{
+		return 	{
+			binary: new ArrayBuffer( 123 ),
+			base64: "1234",
+			url,
+			aabb: 
+			{ 
+				xMin: -1, xMax: 1,
+				yMin: -1, yMax: 1,
+				zMin: -1, zMax: 1,
+			},
+		}
+	} );
 
 class CTestCallbacks implements TraverserCallbacks
 {

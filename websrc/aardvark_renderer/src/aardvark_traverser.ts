@@ -1,12 +1,13 @@
-import isUrl from 'is-url';
-import { computeUniverseFromLine, CRendererEndpoint, minIgnoringNulls, nodeTransformFromMat4, nodeTransformToMat4, scaleAxisToFit, scaleMat, vec3MultiplyAndAdd } from '@aardvarkxr/aardvark-react';
-import { Av, AvActionState, AvConstraint, AvModelInstance, AvNode, AvNodeTransform, AvNodeType, AvRenderer, EHand, emptyActionState, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, EVolumeType, filterActionsForGadget, g_builtinModelCylinder, g_builtinModelError, g_builtinModelPanel, g_builtinModelPanelInverted, MessageType, MsgInterfaceEnded, MsgInterfaceLock, MsgInterfaceLockResponse, MsgInterfaceReceiveEvent, MsgInterfaceRelock, MsgInterfaceRelockResponse, MsgInterfaceSendEvent, MsgInterfaceSendEventResponse, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgInterfaceUnlock, MsgInterfaceUnlockResponse, MsgLostEndpoint, MsgNodeHaptic, MsgResourceLoadFailed, MsgUpdateActionState, MsgUpdateSceneGraph, parseEndpointFieldUri } from '@aardvarkxr/aardvark-shared';
+import { minIgnoringNulls, nodeTransformFromMat4, nodeTransformToMat4, scaleAxisToFit, scaleMat, vec3MultiplyAndAdd, computeUniverseFromLine } from '@aardvarkxr/aardvark-react';
+import { AABB, AvActionState, AvConstraint, AvModelInstance, AvNode, AvNodeTransform, AvNodeType, AvRenderer, EHand, emptyActionState, EndpointAddr, endpointAddrToString, EndpointType, ENodeFlags, EVolumeType, filterActionsForGadget, g_builtinModelError, MessageType, MsgInterfaceEnded, MsgInterfaceReceiveEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgResourceLoadFailed, MsgUpdateActionState, parseEndpointFieldUri, g_builtinModelCylinder } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3, vec4 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
+import isUrl from 'is-url';
 import { EndpointAddrMap } from './endpoint_addr_map';
 import { CInterfaceProcessor, InterfaceEntity, InterfaceProcessorCallbacks } from './interface_processor';
-import { TransformedVolume } from './volume_intersection';
+import { modelCache, ModelInfo } from './model_cache';
 import { Traverser, TraverserCallbacks } from './traverser_interface';
+import { TransformedVolume } from './volume_intersection';
 const equal = require( 'fast-deep-equal' );
 
 interface NodeData
@@ -700,10 +701,6 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 			this.traverseModel( node, defaultParent );
 			break;
 
-		case AvNodeType.Panel:
-			this.traversePanel( node, defaultParent );
-			break;
-
 		case AvNodeType.Line:
 			this.traverseLine( node, defaultParent );
 			break;
@@ -880,33 +877,22 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 		}
 
 		let modelToLoad = nodeData.lastFailedModelUri ? g_builtinModelError : filteredUri 
-		if ( nodeData.lastModelUri != modelToLoad )
+		if ( nodeData.lastModelUri != modelToLoad && nodeData.lastFailedModelUri != filteredUri )
 		{
 			nodeData.modelInstance = null;
 		}
 
 		if ( !nodeData.modelInstance )
 		{
-			try
+			let modelData = this.tryLoadModelForNode( node, modelToLoad)
+			if( modelData )
 			{
-				nodeData.modelInstance = this.m_renderer.createModelInstance( modelToLoad );
+				nodeData.modelInstance = this.m_renderer.createModelInstance( modelToLoad, 
+					modelData.base64 );
 				if ( nodeData.modelInstance )
 				{
 					nodeData.lastModelUri = filteredUri;
 				}
-			}
-			catch( e )
-			{
-				nodeData.lastFailedModelUri = node.propModelUri;
-
-				let m: MsgResourceLoadFailed =
-				{
-					nodeId: node.globalId,
-					resourceUri: modelToLoad,
-					error: e.message,
-				};
-
-				this.m_callbacks.sendMessage( MessageType.ResourceLoadFailed, m );
 			}
 		}
 
@@ -935,7 +921,7 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 			let internalScale = 1;
 			if( node.propScaleToFit )
 			{
-				let aabb = this.m_renderer.getAABBForModel( modelToLoad );
+				let aabb: AABB = this.tryLoadModelForNode( node, modelToLoad ).aabb ?? null; 
 				if( !aabb )
 				{
 					// if we were told to scale the model, but it isn't loaded at this point,
@@ -972,55 +958,6 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 		}
 	}
 
-	traversePanel( node: AvNode, defaultParent: PendingTransform )
-	{
-		let nodeData = this.getNodeData( node );
-
-		// if we don't have shared texture info for this panel yet, there's
-		// nothing to do here
-		if( !node.propSharedTexture )
-			return;
-
-		let textureInfo = node.propSharedTexture;
-
-		if ( !nodeData.modelInstance )
-		{
-			let sPanelModelUri = g_builtinModelPanel;
-			if( textureInfo.invertY )
-			{
-				sPanelModelUri = g_builtinModelPanelInverted;
-			}
-
-			nodeData.modelInstance = this.m_renderer.createModelInstance( sPanelModelUri );
-		}
-
-		if ( nodeData.modelInstance )
-		{
-			try
-			{
-				nodeData.modelInstance.setOverrideTexture( textureInfo );
-			}
-			catch( e )
-			{
-				// just eat these and don't add the panel. Sometimes we find out about a panel 
-				// before we find out about its texture
-				return;
-			}
-
-			let hand = this.m_currentHand;
-			let showModel = this.m_currentVisibility;
-			this.updateTransform( node.globalId, defaultParent, mat4.identity,
-				( universeFromNode: mat4 ) =>
-			{
-				nodeData.modelInstance.setUniverseFromModelTransform( universeFromNode.all() );
-				if( showModel )
-				{
-					this.m_renderList.push( nodeData.modelInstance );
-				}
-			} );
-		}
-	}
-
 	getCurrentNodeOfType( type: AvNodeType ): AvNode
 	{
 		return this.m_currentNodeByType[ type ]?.[ this.m_currentNodeByType[ type ].length - 1 ];
@@ -1044,10 +981,15 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 
 				if ( !nodeData.modelInstance )
 				{
-					nodeData.modelInstance = this.m_renderer.createModelInstance( g_builtinModelCylinder );
-					if ( nodeData.modelInstance )
+					let cylinderModel = modelCache.queueModelLoad( g_builtinModelCylinder );
+					if( cylinderModel )
 					{
-						nodeData.lastModelUri = g_builtinModelCylinder;
+						nodeData.modelInstance = this.m_renderer.createModelInstance( g_builtinModelCylinder, 
+							cylinderModel.base64 );
+						if ( nodeData.modelInstance )
+						{
+							nodeData.lastModelUri = g_builtinModelCylinder;
+						}
 					}
 				}
 		
@@ -1102,7 +1044,32 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 			}
 		}
 	}
-	
+
+	private tryLoadModelForNode( node: AvNode, modelUrl: string ): ModelInfo
+	{
+		try
+		{
+			return modelCache.queueModelLoad( modelUrl );
+		}
+		catch( e )
+		{
+			let nodeData = this.getNodeData( node );
+			if( nodeData.lastFailedModelUri != modelUrl )
+			{
+				nodeData.lastFailedModelUri = modelUrl;
+
+				let m: MsgResourceLoadFailed =
+				{
+					nodeId: node.globalId,
+					resourceUri: modelUrl,
+					error: e.message,
+				};
+
+				this.m_callbacks.sendMessage( MessageType.ResourceLoadFailed, m );
+			}
+		}
+	}
+
 	traverseInterfaceEntity( node: AvNode, defaultParent: PendingTransform )
 	{
 		for( let volume of node.propVolumes ?? [] )
@@ -1110,28 +1077,10 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 			if( volume.type == EVolumeType.ModelBox && !volume.aabb)
 			{
 				let modelUrl = isUrl( volume.uri ) ? volume.uri : this.m_currentRoot.gadgetUrl + "/" +volume.uri;
-				try
-				{
-					volume.aabb = this.m_renderer.getAABBForModel( modelUrl );
-				}
-				catch( e )
-				{
-					let nodeData = this.getNodeData( node );
-					if( nodeData.lastFailedModelUri != modelUrl )
-					{
-						let m: MsgResourceLoadFailed =
-						{
-							nodeId: node.globalId,
-							resourceUri: modelUrl,
-							error: e.message,
-						};
-		
-						this.m_callbacks.sendMessage( MessageType.ResourceLoadFailed, m );
-					}
-				}
+				let model = this.tryLoadModelForNode( node, modelUrl );
+				volume.aabb = model?.aabb ?? null;
 			}
 		}
-
 
 		this.m_interfaceEntities.push( node );
 

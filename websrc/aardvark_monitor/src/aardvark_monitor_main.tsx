@@ -755,9 +755,10 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 
 		let sGadgetClasses="Gadget";
 
-		return <div className={ sGadgetClasses } onClick={ this.onToggleExpand }>
+		return <div className={ sGadgetClasses }>
 			{ this.props.gadgetId }: 
-			<div className="GadgetName">{ this.state.manifest ? this.state.manifest.name : "???" } 
+			<div className="GadgetName" onClick={ this.onToggleExpand }>
+				{ this.state.manifest ? this.state.manifest.name : "???" } 
 				<span className="GadgetUri">({ gadgetData.gadgetUri })</span>
 			</div>
 			{ this.state.expanded && this.renderNode( gadgetData.gadgetRoot ) }

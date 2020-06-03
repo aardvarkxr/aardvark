@@ -100,6 +100,22 @@
 			"console": "integratedTerminal",
 			"internalConsoleOptions": "neverOpen",
 			"port": 9229
-		}
+		},
+		{
+			"type": "node",
+			"request": "launch",
+			"name": "Jest watch all tests",
+			"program": "${workspaceRoot}/node_modules/jest/bin/jest.js",
+			"args": [
+			  "--verbose",
+			  "-i",
+			  "--no-cache",
+			  "--watchAll",
+			  "-t",
+			  "model cache"
+			],
+			"console": "integratedTerminal",
+			"internalConsoleOptions": "neverOpen"
+		},
 	]
 }

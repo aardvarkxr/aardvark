@@ -104,7 +104,7 @@ public:
 
 	virtual void onWindowClose() override;
 
-	std::shared_ptr<vkglTF::Model> VulkanExample::findOrLoadModel( std::string modelUri, std::string *psError );
+	std::shared_ptr<vkglTF::Model> VulkanExample::findOrLoadModel( std::string modelUri, const void* modelData, size_t modelDataSize, std::string *psError );
 
 	glm::mat4 GetHMDMatrixProjectionEye( vr::Hmd_Eye nEye );
 
@@ -119,11 +119,10 @@ public:
 	virtual void init( HINSTANCE hInstance, IVrManager *vrManager ) override;
 	virtual void runFrame( bool *shouldQuit, double frameTime ) override;
 	virtual void setRenderingConfiguration(const CAardvarkRendererConfig& cRendererConfig) override;
-	virtual std::unique_ptr<IModelInstance> createModelInstance( const std::string & uri, std::string *psError) override;
+	virtual std::unique_ptr<IModelInstance> createModelInstance( const std::string & uri, const void* modelData, size_t modelDataSize, std::string *psError) override;
 	virtual void resetRenderList() override;
 	virtual void addToRenderList( IModelInstance *modelInstance ) override;
 	virtual void processRenderList() override;
-	virtual bool getModelBox( const std::string & uri, AABB_t *pBox, std::string *psError ) override;
 
 protected:
 	void configureMirrorCamera();
