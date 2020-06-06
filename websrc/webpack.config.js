@@ -37,7 +37,11 @@ let defaults =
 
 	resolve:
 	{
-		modules:[ path.resolve( __dirname, 'node_modules' ) ],
+		modules:
+		[ 
+			path.resolve( __dirname, 'node_modules' ),
+			'node_modules',
+		],
 		extensions: [ '.ts', '.tsx', '.js' ],
 		alias: 
 		{
@@ -204,8 +208,12 @@ module.exports =
 
 		resolve:
 		{
-			modules:[ path.resolve( __dirname, 'node_modules' ) ],
 			extensions: [ '.ts', '.tsx', '.js' ],
+			modules:
+			[ 
+				path.resolve( __dirname, 'node_modules' ),
+				'node_modules',
+			],
 			alias: 
 			{
 				"common" : path.resolve( __dirname, "./common" ),

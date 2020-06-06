@@ -110,9 +110,7 @@
 			  "--verbose",
 			  "-i",
 			  "--no-cache",
-			  "--watchAll",
-			  "-t",
-			  "model cache"
+			  "--watchAll"
 			],
 			"console": "integratedTerminal",
 			"internalConsoleOptions": "neverOpen"

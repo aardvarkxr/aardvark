@@ -1,11 +1,11 @@
 import { minIgnoringNulls, nodeTransformFromMat4, nodeTransformToMat4, scaleAxisToFit, scaleMat, vec3MultiplyAndAdd, computeUniverseFromLine } from '@aardvarkxr/aardvark-react';
-import { AABB, AvActionState, AvConstraint, AvModelInstance, AvNode, AvNodeTransform, AvNodeType, AvRenderer, EHand, emptyActionState, EndpointAddr, endpointAddrToString, EndpointType, ENodeFlags, EVolumeType, filterActionsForGadget, g_builtinModelError, MessageType, MsgInterfaceEnded, MsgInterfaceReceiveEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgResourceLoadFailed, MsgUpdateActionState, parseEndpointFieldUri, g_builtinModelCylinder } from '@aardvarkxr/aardvark-shared';
+import { AABB, AvActionState, AvConstraint, AvModelInstance, AvNode, AvNodeTransform, AvNodeType, AvRenderer, EHand, emptyActionState, EndpointAddr, endpointAddrToString, EndpointType, ENodeFlags, EVolumeType, filterActionsForGadget, g_builtinModelError, MessageType, MsgInterfaceEnded, MsgInterfaceReceiveEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgResourceLoadFailed, MsgUpdateActionState, g_builtinModelCylinder } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3, vec4 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
-import isUrl from 'is-url';
 import { EndpointAddrMap } from './endpoint_addr_map';
 import { CInterfaceProcessor, InterfaceEntity, InterfaceProcessorCallbacks } from './interface_processor';
 import { modelCache, ModelInfo } from './model_cache';
+import { fixupUrl, UrlType } from './traverser_utils';
 import { Traverser, TraverserCallbacks } from './traverser_interface';
 import { TransformedVolume } from './volume_intersection';
 const equal = require( 'fast-deep-equal' );
@@ -847,6 +847,27 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 			} );
 	}
 
+	@bind
+	private getNodeField( nodeId: EndpointAddr, fieldName: string ): [ string, string ]
+	{
+		let nodeData = this.getNodeDataByEpa( nodeId );
+		if( nodeData && nodeData.lastNode )
+		{
+			let fieldValue = ( nodeData.lastNode as any )[ fieldName ];
+			if( typeof fieldValue == "string" )
+			{
+				return [ this.m_roots[ nodeId.endpointId ].gadgetUrl, fieldValue ];
+			}
+		}
+
+		return null;
+	}
+
+	private fixupUrlForCurrentNode( rawUrl: string ) : [ string, UrlType ]
+	{
+		return fixupUrl( this.m_currentRoot.gadgetUrl, rawUrl, this.getNodeField );
+	}
+
 	traverseModel( node: AvNode, defaultParent: PendingTransform )
 	{
 		let nodeData = this.getNodeData( node );
@@ -856,26 +877,10 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 			nodeData.lastFailedModelUri = null;
 		}
 
-		let filteredUri: string;
-		let endpointFieldUri = parseEndpointFieldUri( node.propModelUri );
-		if( !endpointFieldUri )
-		{
-			filteredUri = node.propModelUri;
-		}
-		else
-		{
-			let [ epa, field ] = endpointFieldUri;
-			let nodeData = this.getNodeDataByEpa( epa );
-			if( nodeData && nodeData.lastNode )
-			{
-				let fieldValue = ( nodeData.lastNode as any )[ field ];
-				if( typeof fieldValue == "string" )
-				{
-					filteredUri = fieldValue;
-				}
-			}
-		}
-
+		// we don't care about URL validity here because we want to fail once so the gadget gets its
+		// URL load failed exception
+		let foo = this.fixupUrlForCurrentNode( node.propModelUri );
+		const [ filteredUri, urlType ] = foo;
 		let modelToLoad = nodeData.lastFailedModelUri ? g_builtinModelError : filteredUri 
 		if ( nodeData.lastModelUri != modelToLoad && nodeData.lastFailedModelUri != filteredUri )
 		{
@@ -1076,7 +1081,7 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 		{
 			if( volume.type == EVolumeType.ModelBox && !volume.aabb)
 			{
-				let modelUrl = isUrl( volume.uri ) ? volume.uri : this.m_currentRoot.gadgetUrl + "/" +volume.uri;
+				const [ modelUrl ] = this.fixupUrlForCurrentNode( volume.uri );
 				let model = this.tryLoadModelForNode( node, modelUrl );
 				volume.aabb = model?.aabb ?? null;
 			}

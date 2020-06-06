@@ -1,11 +1,11 @@
 import { nodeTransformToMat4 } from '@aardvarkxr/aardvark-react';
-import { AABB, AvNodeTransform } from '@aardvarkxr/aardvark-shared';
+import { AABB, AvNodeTransform, EndpointAddr, stringToEndpointAddr } from '@aardvarkxr/aardvark-shared';
 import * as core from "@loaders.gl/core";
 import * as gltf from "@loaders.gl/gltf";
 import { mat4, vec4 } from '@tlaukkan/tsm';
 import axios from 'axios';
 import { fromByteArray } from 'base64-js';
-
+import * as IPFS from 'ipfs';
 
 export interface ModelInfo
 {
@@ -139,6 +139,17 @@ class ModelInfoInternal implements ModelInfo
 let models = new Map<string, ModelInfo>();
 let failedModels = new Set<string>();
 let loadsPending = new Set<string>();
+let ipfsNode: any = null;
+
+async function init()
+{
+	ipfsNode = await IPFS.create();
+	const version = await ipfsNode.version()
+
+	console.log('IPFS Version:', version.version );
+}
+
+//init();
 
 function loadModel( url: string ): Promise< ModelInfo >
 {
@@ -207,6 +218,7 @@ function queueModelLoad( url: string ): ModelInfo
 
 	}
 }
+
 
 export const modelCache = 
 {

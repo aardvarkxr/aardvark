@@ -188,17 +188,6 @@ export function computeEndpointFieldUri( epa: EndpointAddr, fieldName: string )
 	return `nodefield://${ endpointAddrToString( epa ) }/${ fieldName }`;
 }
 
-export function parseEndpointFieldUri( uri: string ): null | [ EndpointAddr, string ]
-{
-	let re = /^nodefield:\/\/(.*)\/(.*)$/;
-
-	let res = re.exec( uri );
-	if( !res )
-		return null;
-
-	return [ stringToEndpointAddr( res[1] ), res[2] ];
-}
-
 export interface Envelope
 {
 	type: MessageType;
