@@ -10,12 +10,20 @@ const mockedAxios = axios as jest.Mocked< typeof axios >;
 
 beforeEach( async() =>
 {
+	await modelCache.init(
+		{
+			negativeCaching: true,
+		}
+	);
 } );
 
-afterEach( () =>
+afterEach( async () =>
 {
 	mockedAxios.get.mockReset();
+	await modelCache.cleanup();
 } );
+
+const k_NonexistentUrl = "http://aardvarkxr.com/lsadjfsadlkjweoiruklsdjflkilskjvdowiuerojzkjoiuwrlaslkdslfa";
 
 describe( "model cache", () =>
 {
@@ -56,10 +64,10 @@ describe( "model cache", () =>
 	it( "failed load", async () =>
 	{
 		axios.get = jest.fn().mockRejectedValue( "HTTP request failed" );
-		let modelPromise = modelCache.loadModel( "bogus url" );
+		let modelPromise = modelCache.loadModel( k_NonexistentUrl );
 		expect( mockedAxios.get ).toHaveBeenCalled();
 
-		expect( modelPromise ).rejects.toEqual( "Model Load Failed: bogus url" );
+		expect( modelPromise ).rejects.toEqual( "Model Load Failed: " + k_NonexistentUrl );
 		try
 		{
 			let model = await modelPromise;
@@ -71,10 +79,10 @@ describe( "model cache", () =>
 
 		// check negative caching too
 		axios.get = jest.fn().mockResolvedValue( { data: sphereBlob } );
-		modelPromise = modelCache.loadModel( "bogus url" );
+		modelPromise = modelCache.loadModel( k_NonexistentUrl );
 		expect( mockedAxios.get ).not.toHaveBeenCalled();
 
-		expect( modelPromise ).rejects.toEqual( "Model Load Failed: bogus url" );
+		expect( modelPromise ).rejects.toEqual( "Model Load Failed: " + k_NonexistentUrl );
 		try
 		{
 			let model = await modelPromise;

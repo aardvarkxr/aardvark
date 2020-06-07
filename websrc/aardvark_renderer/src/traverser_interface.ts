@@ -4,6 +4,7 @@ import { AvNode, EndpointAddr, InterfaceLockResult, MessageType, EHand } from '@
 
 export interface Traverser
 {
+	init(): Promise<void>;
 	updateSceneGraph( rootNode: AvNode, gadgetUrl: string, gadgetId: number ): void;
 	forgetGadget( gadgetId: number ): void;
 	traverse(): void;

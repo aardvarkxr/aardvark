@@ -60,9 +60,15 @@ function fixupUrlInternal( gadgetBaseUrl: string, rawUrl: string,
 		return [ "/ipfs/" + res[1], UrlType.IPFS ];
 	}
 
-	if( !validator.isURL( rawUrl ) )
+	const k_validatorOptions: validator.IsURLOptions =
 	{
-		if( validator.isURL( gadgetBaseUrl ) )
+		require_tld: false,
+		require_protocol: true,
+	};
+
+	if( !validator.isURL( rawUrl, k_validatorOptions ) )
+	{
+		if( validator.isURL( gadgetBaseUrl, k_validatorOptions ) )
 		{
 			if( gadgetBaseUrl.endsWith( "/" ) )
 			{
@@ -92,3 +98,28 @@ export function fixupUrl( gadgetBaseUrl: string, rawUrl: string,
 	return fixupUrlInternal( gadgetBaseUrl, rawUrl, lookupNodeField, 0 );
 }
 
+interface TypedArrayFields
+{
+	readonly buffer: ArrayBuffer;
+	readonly byteLength: number;
+	readonly byteOffset: number;
+}
+
+/** Concatenates any number of array buffers into one big array buffer. */
+export function concatArrayBuffers( buffers: TypedArrayFields[] ): ArrayBuffer
+{
+	let totalSize = 0;
+	for( let b of buffers )
+	{
+		totalSize += b.byteLength;
+	}
+
+	let out = new Uint8Array( totalSize );
+	let sizeSoFar = 0;
+	for( let b of buffers )
+	{
+		out.set( new Uint8Array( b.buffer, b.byteOffset, b.byteLength ), sizeSoFar );
+		sizeSoFar += b.byteLength;
+	}
+	return out.buffer;
+}

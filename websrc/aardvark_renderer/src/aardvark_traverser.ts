@@ -252,6 +252,14 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 		this.m_renderer = renderer;
 	}
 
+	public async init()
+	{
+		await modelCache.init(
+			{
+				negativeCaching: false,
+			} );
+	}
+	
 	public forgetGadget( endpointId: number )
 	{
 			// TODO: Clean up drags and such?

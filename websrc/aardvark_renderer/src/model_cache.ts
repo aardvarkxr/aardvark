@@ -6,6 +6,7 @@ import { mat4, vec4 } from '@tlaukkan/tsm';
 import axios from 'axios';
 import { fromByteArray } from 'base64-js';
 import * as IPFS from 'ipfs';
+import { fixupUrl, UrlType, concatArrayBuffers } from './traverser_utils';
 
 export interface ModelInfo
 {
@@ -136,20 +137,49 @@ class ModelInfoInternal implements ModelInfo
 	}
 }
 
-let models = new Map<string, ModelInfo>();
-let failedModels = new Set<string>();
-let loadsPending = new Set<string>();
-let ipfsNode: any = null;
-
-async function init()
+/** Options for the model cache */
+export interface ModelCacheOptions
 {
+	/** If this is true, failed URLs will not be requested again.
+	 * 
+	 * @default true
+	 */
+	negativeCaching?: boolean;
+}
+
+
+let models: Map<string, ModelInfo> = null;
+let failedModels: Set<string> = null;
+let loadsPending: Set<string> = null;
+let ipfsNode: any = null;
+let options: ModelCacheOptions = null;
+let negativeCaching = false;
+
+async function init( optionsParam: ModelCacheOptions )
+{
+	await cleanup();
+
+	options = optionsParam;
 	ipfsNode = await IPFS.create();
 	const version = await ipfsNode.version()
 
 	console.log('IPFS Version:', version.version );
+
+	models = new Map<string, ModelInfo>();
+	failedModels = new Set<string>();
+	loadsPending = new Set<string>();
+
 }
 
-//init();
+async function cleanup()
+{
+	await ipfsNode?.stop();
+	ipfsNode = null;
+	models = null;
+	failedModels = null;
+	loadsPending = null;
+
+}
 
 function loadModel( url: string ): Promise< ModelInfo >
 {
@@ -168,16 +198,49 @@ function loadModel( url: string ): Promise< ModelInfo >
 
 		try
 		{
-			let response = await axios.get( url, { responseType: "arraybuffer" } );
-			let parsed = await core.parse( response.data, [ gltf.GLTFLoader ] );
+			const [ fixedUrl, urlType ] = fixupUrl( "", url, null );
+
+			let modelData: any = null;
+			switch( urlType )
+			{
+				case UrlType.HTTP:
+					{
+						let response = await axios.get( fixedUrl, { responseType: "arraybuffer" } );
+						modelData = response.data;
+					}
+					break;
+
+				case UrlType.IPFS:
+					{
+						let chunks: Uint8Array[] = [];
+						for await( let chunk of ipfsNode.cat( fixedUrl ) )
+						{
+							chunks.push( chunk );
+						}
+
+						modelData = concatArrayBuffers( chunks );
+					}
+					break;
+
+				default:
+					{
+						reject( `Unable to load from invalid URL ${ url }` );
+					}
+					break;
+			}
+
+			let parsed = await core.parse( modelData, [ gltf.GLTFLoader ] );
 	
-			let model = new ModelInfoInternal( url, parsed, response.data );
+			let model = new ModelInfoInternal( url, parsed, modelData );
 			models.set( url, model );
 			resolve( model );	
 		}
 		catch( e )
 		{
-			failedModels.add( url );
+			if( options.negativeCaching ?? true )
+			{
+				failedModels.add( url );
+			}
 			reject( `Model Load Failed: ${ url }` );
 		}
 	} );
@@ -224,4 +287,6 @@ export const modelCache =
 {
 	queueModelLoad,
 	loadModel,
+	init,
+	cleanup,
 };

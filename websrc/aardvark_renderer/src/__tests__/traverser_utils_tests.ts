@@ -1,5 +1,5 @@
 import { computeEndpointFieldUri, EndpointAddr, endpointAddrsMatch, EndpointType } from '@aardvarkxr/aardvark-shared';
-import { fixupUrl, UrlType } from '../traverser_utils';
+import { fixupUrl, UrlType, concatArrayBuffers } from '../traverser_utils';
 
 
 beforeEach( async() =>
@@ -93,6 +93,30 @@ describe( "traverser utils", () =>
 
 	} );
 
+	it( "concatArrayBuffers", () =>
+	{
+		let b1 = new Uint8Array( [ 12, 87, 94 ] );
+		let b2 = new Uint8Array( [ 112, 187, 194 ] );
+		let expectedOut = new Uint8Array( [ 12, 87, 94, 112, 187, 194 ] );
+
+		let out = concatArrayBuffers( [ b1, b2 ] );
+		expect( out.byteLength ).toBe( 6 );
+		let outU8 = new Uint8Array( out );
+		expect( outU8 ).toEqual( expectedOut );
+	} );
+
+	it( "concatArrayBuffers extraspace", () =>
+	{
+		let b1 = new Uint8Array( [ 12, 87, 94 ] );
+		let b2backing = new Uint8Array( [ 23, 50, 112, 187, 194, 11, 11 ] );
+		let b2 = new Uint8Array( b2backing.buffer, 2, 3 );
+		let expectedOut = new Uint8Array( [ 12, 87, 94, 112, 187, 194 ] );
+
+		let out = concatArrayBuffers( [ b1, b2 ] );
+		expect( out.byteLength ).toBe( 6 );
+		let outU8 = new Uint8Array( out );
+		expect( outU8 ).toEqual( expectedOut );
+	} );
 } );
 
 

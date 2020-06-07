@@ -131,13 +131,15 @@ beforeEach( async() =>
 	cb = new CTestCallbacks();
 	r = new CTestRenderer();
 	traverser = new AvDefaultTraverser( cb, r );
+	await traverser.init();
 } );
 
-afterEach( () =>
+afterEach( async () =>
 {
 	cb = null;
 	r = null;
 	traverser = null;
+	await modelCache.cleanup();
 } );
 
 const k_testModelUrl = "http://test.com/mymodel.glb";
