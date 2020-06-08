@@ -1,9 +1,11 @@
-import { ActiveInterface, AvComposedEntity, AvGadget, AvInterfaceEntity, AvLine, AvPrimitive, AvStandardGrabbable, AvTransform, MoveableComponent, PrimitiveType, PrimitiveYOrigin, PrimitiveZOrigin } from '@aardvarkxr/aardvark-react';
+import { ActiveInterface, AvComposedEntity, AvGadget, AvInterfaceEntity, AvLine, AvPrimitive, AvStandardGrabbable, AvTransform, MoveableComponent, PrimitiveType, PrimitiveYOrigin, PrimitiveZOrigin, AvModel } from '@aardvarkxr/aardvark-react';
 import { AvNodeTransform, AvVolume, endpointAddrToString, EVolumeType, g_builtinModelBox } from '@aardvarkxr/aardvark-shared';
 import { vec2 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
+import * as IPFS from 'ipfs';
+import { Stroke, optimizeStroke, strokeToGlb } from './stroke';
 
 
 function vec2FromAvTransformPosition( transform: AvNodeTransform )
@@ -12,57 +14,6 @@ function vec2FromAvTransformPosition( transform: AvNodeTransform )
 		return null;
 
 	return new vec2( [ transform.position.x, transform.position.y ] );
-}
-
-interface Stroke
-{
-	id: number;
-	thickness: number;
-	points: vec2[];
-	color: string;
-}
-
-function optimizeStroke( stroke: Stroke )
-{
-	if( !stroke || stroke.points.length < 3 )
-	{
-		return 0;
-	}
-
-	let pointsRemoved = 0;
-	while( true )
-	{
-		let bestIndex: number;
-		let bestError = 99999;
-
-		// Look for points we can slice out of the stroke because 
-		// their error is too small to matter
-		for( let n = 0; n < stroke.points.length - 2; n++ )
-		{
-			let distN1 = vec2.distance( stroke.points[n], stroke.points[n + 1] );
-			let distN2 = vec2.distance( stroke.points[n], stroke.points[n + 2] );
-
-			let fakeN1 = vec2.mix(stroke.points[n], stroke.points[n+2], distN1/distN2, new vec2() );
-			let error = vec2.distance(stroke.points[n+1], fakeN1);
-			if( error < bestError )
-			{
-				bestIndex = n + 1;
-				bestError = error;
-			}
-		}
-
-		if( !bestIndex || bestError > 0.001 )
-		{
-			break;
-		}
-		else
-		{
-			stroke.points.splice( bestIndex, 1 );
-			pointsRemoved++;
-		}
-	}
-
-	return pointsRemoved;
 }
 
 
@@ -347,7 +298,8 @@ class Surface extends React.Component<SurfaceProps, SurfaceState>
 
 interface WhiteboardState
 {
-	strokes?: Stroke[];
+	pendingStrokes?: Stroke[];
+	strokes?: string[];
 }
 
 interface WhiteboardSettings
@@ -358,24 +310,49 @@ interface WhiteboardSettings
 class Whiteboard extends React.Component< {}, WhiteboardState >
 {
 	private nextStrokeId = 0;
+	private ipfsNode: any = null;
 
 	constructor( props: any )
 	{
 		super( props );
 		this.state = 
 		{ 
+			pendingStrokes: [],
 			strokes: []
 		};
+
+		IPFS.create().
+		then( async ( newNode: any ) =>
+		{
+			this.ipfsNode = newNode;
+			const version = await newNode.version()
+			console.log('IPFS Version:', version.version );
+		} );
 
 		AvGadget.instance().registerForSettings( this.onSettingsReceived );
 	}
 
 	@bind
-	private onAddStroke( newStroke: Stroke )
+	private async onAddStroke( newStroke: Stroke )
 	{
-		let removed = optimizeStroke( newStroke );
-		console.log( `Adding stroke. Optimized away ${ removed } points. ${ newStroke.points.length } remain` );
-		this.setState( { strokes: [...this.state.strokes, newStroke ] } );
+		// add the stroke to the pending list so we'll keep drawing it while we generate the GLB
+		this.setState( { pendingStrokes: [...this.state.pendingStrokes, newStroke ] } );
+
+		let strokeGlb = await strokeToGlb( newStroke );
+		let ipfsRes = this.ipfsNode.add( new Uint8Array( strokeGlb ) );
+		for await( let ipfsFile of ipfsRes )
+		{
+			console.log( `Stroke added: ${ newStroke.points.length } points `
+				+ `${ strokeGlb.byteLength } bytes. cid=${ipfsFile.cid }` );
+
+			let newPending = [ ...this.state.pendingStrokes ];
+			newPending.splice( newPending.indexOf( newStroke ), 1 );
+			this.setState( 
+				{ 
+					strokes: [...this.state.strokes, "/ipfs/" + ipfsFile.cid ],
+					pendingStrokes: newPending,
+				} );
+		}
 	}
 
 	public componentDidMount()
@@ -405,7 +382,11 @@ class Whiteboard extends React.Component< {}, WhiteboardState >
 		let strokeLines: JSX.Element[] = [];
 		for( let stroke of this.state.strokes )
 		{
-			strokeLines.push( <StrokeLines stroke={ stroke }/> );
+			strokeLines.push( <AvModel key={ stroke } uri={ stroke }/> );
+		}
+		for( let stroke of this.state.pendingStrokes )
+		{
+			strokeLines.push( <StrokeLines key={ stroke.id } stroke={ stroke }/> );
 		}
 
 		return (
