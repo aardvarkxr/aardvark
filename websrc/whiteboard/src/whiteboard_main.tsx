@@ -302,11 +302,6 @@ interface WhiteboardState
 	strokes?: string[];
 }
 
-interface WhiteboardSettings
-{
-	strokes?: Stroke[];
-}
-
 class Whiteboard extends React.Component< {}, WhiteboardState >
 {
 	private nextStrokeId = 0;
@@ -328,8 +323,6 @@ class Whiteboard extends React.Component< {}, WhiteboardState >
 			const version = await newNode.version()
 			console.log('IPFS Version:', version.version );
 		} );
-
-		AvGadget.instance().registerForSettings( this.onSettingsReceived );
 	}
 
 	@bind
@@ -361,20 +354,6 @@ class Whiteboard extends React.Component< {}, WhiteboardState >
 
 	public componentWillUnmount()
 	{
-	}
-
-
-	@bind public onSettingsReceived( settings: WhiteboardSettings )
-	{
-		if( settings && settings.strokes )
-		{
-			for( let stroke of settings.strokes )
-			{
-				this.nextStrokeId = Math.max( stroke.id + 1, this.nextStrokeId );
-			}
-		}
-
-		//this.setState( { strokes: settings?.strokes } );
 	}
 
 	public render()
