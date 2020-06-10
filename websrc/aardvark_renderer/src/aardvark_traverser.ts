@@ -900,11 +900,18 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 			let modelData = this.tryLoadModelForNode( node, modelToLoad)
 			if( modelData )
 			{
-				nodeData.modelInstance = this.m_renderer.createModelInstance( modelToLoad, 
-					modelData.base64 );
-				if ( nodeData.modelInstance )
+				try
 				{
-					nodeData.lastModelUri = filteredUri;
+					nodeData.modelInstance = this.m_renderer.createModelInstance( modelToLoad, 
+						modelData.base64 );
+					if ( nodeData.modelInstance )
+					{
+						nodeData.lastModelUri = filteredUri;
+					}
+				}
+				catch( e )
+				{
+					nodeData.lastFailedModelUri = filteredUri;
 				}
 			}
 		}
