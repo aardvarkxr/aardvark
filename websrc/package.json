@@ -61,7 +61,7 @@
     "express": "^4.17.1",
     "fast-deep-equal": "^3.1.1",
     "file-url": "^3.0.0",
-    "gltf-js-utils": "^2.0.2",
+    "gltf-js-utils": "^3.0.0",
     "ipfs": "^0.46.0",
     "is-url": "^1.2.4",
     "jszip": "^3.4.0",
