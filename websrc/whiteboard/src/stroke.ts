@@ -1,13 +1,16 @@
+import { AvVector } from '@aardvarkxr/aardvark-shared';
+import { translateMat } from '@aardvarkxr/aardvark-react';
 import { vec2, vec3 } from '@tlaukkan/tsm';
 import Color from 'color';
 import { exportGLB, Node, GLTFAsset, Material, Mesh as GltfMesh, Vertex, Scene } from "gltf-js-utils";
-import { CatmullRomCurve3, ExtrudeGeometry, ExtrudeGeometryOptions, Shape, Vector3 } from 'three';
+import { CatmullRomCurve3, ExtrudeGeometry, ExtrudeGeometryOptions, Shape, Vector3, Geometry, SphereGeometry, Matrix4 } from 'three';
 
 export interface Stroke
 {
 	id: number;
 	thickness: number;
-	points: vec2[];
+	points?: vec2[];
+	networkPoints?: AvVector[];
 	color: string;
 }
 
@@ -108,28 +111,48 @@ function makeCubeMesh( center: vec3, dims: vec3 )
 export function strokeToGlb( stroke: Stroke )
 {
 	//Create an array of three.js points for the path
-	let threePoints = stroke.points.map( ( p ) => new Vector3( p.x, p.y, 0 ) );
-	var curve = new CatmullRomCurve3( threePoints, false, "chordal", 0.1 );
-
-	// make a nice circle shape
-	const k_circleSegments = 16;
-	var circle = new Shape();
-	circle.moveTo( 0, stroke.thickness/2 );
-	for( let theta = Math.PI/ k_circleSegments; theta <= Math.PI * 2; theta += Math.PI/ k_circleSegments )
+	let threePoints:Vector3[];
+	if( stroke.points )
 	{
-		circle.lineTo(
-			Math.sin( theta ) * stroke.thickness / 2,
-			Math.cos( theta ) * stroke.thickness / 2,
-		);
+		threePoints = stroke.points.map( ( p ) => new Vector3( p.x, p.y, 0 ) );
+	}
+	else
+	{
+		threePoints = stroke.networkPoints.map( ( p ) => new Vector3( p.x, p.y, 0 ) );
 	}
 
-	let extrudeSettings:ExtrudeGeometryOptions = 
+	let geometry: Geometry = null;
+	if( threePoints.length == 1 )
 	{
-		steps: stroke.points.length * 2,
-		extrudePath: curve,
-	};
+		geometry = new SphereGeometry( stroke.thickness/2, 10, 10 );
+		let translateMat = new Matrix4();
+		translateMat.makeTranslation( threePoints[0].x, threePoints[0].y, threePoints[0].z );
+		geometry.applyMatrix4( translateMat );
+	}
+	else
+	{
+		var curve = new CatmullRomCurve3( threePoints, false, "chordal", 0.1 );
 
-	let geometry = new ExtrudeGeometry( circle, extrudeSettings );
+		// make a nice circle shape
+		const k_circleSegments = 16;
+		var circle = new Shape();
+		circle.moveTo( 0, stroke.thickness/2 );
+		for( let theta = Math.PI/ k_circleSegments; theta <= Math.PI * 2; theta += Math.PI/ k_circleSegments )
+		{
+			circle.lineTo(
+				Math.sin( theta ) * stroke.thickness / 2,
+				Math.cos( theta ) * stroke.thickness / 2,
+			);
+		}
+
+		let extrudeSettings:ExtrudeGeometryOptions = 
+		{
+			steps: threePoints.length * 2,
+			extrudePath: curve,
+		};
+
+		geometry = new ExtrudeGeometry( circle, extrudeSettings );
+	}
 
 	let asset = new GLTFAsset();
 	let mesh = new GltfMesh();

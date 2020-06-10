@@ -1,12 +1,13 @@
-import { ActiveInterface, AvComposedEntity, AvGadget, AvInterfaceEntity, AvLine, AvPrimitive, AvStandardGrabbable, AvTransform, MoveableComponent, PrimitiveType, PrimitiveYOrigin, PrimitiveZOrigin, AvModel } from '@aardvarkxr/aardvark-react';
-import { AvNodeTransform, AvVolume, endpointAddrToString, EVolumeType, g_builtinModelBox } from '@aardvarkxr/aardvark-shared';
+import { ActiveInterface, AvComposedEntity, AvGadget, AvInterfaceEntity, AvLine, AvModel, AvPrimitive, AvStandardGrabbable, AvTransform, MoveableComponent, PrimitiveType, PrimitiveYOrigin, PrimitiveZOrigin } from '@aardvarkxr/aardvark-react';
+import { AvNodeTransform, AvVector, AvVolume, endpointAddrToString, EVolumeType, g_builtinModelBox, InitialInterfaceLock } from '@aardvarkxr/aardvark-shared';
 import { vec2 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
+import * as IPFS from 'ipfs';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
-import * as IPFS from 'ipfs';
-import { Stroke, optimizeStroke, strokeToGlb } from './stroke';
+import { Stroke, strokeToGlb } from './stroke';
 
+const k_WhiteBoardStateInterface = "whiteboard_state@1";
 
 function vec2FromAvTransformPosition( transform: AvNodeTransform )
 {
@@ -136,11 +137,6 @@ function Marker( props: MarkerProps )
 		</AvTransform>;
 }
 
-interface SurfaceProps
-{
-	addStroke: ( newStroke: Stroke ) => void;
-}
-
 let nextStrokeId = 1;
 
 type SurfaceContactDetailsMap = {[endpointAddr: string]: Stroke };
@@ -181,6 +177,11 @@ function StrokeLines( props: StrokeLineProps )
 	}
 
 	return <div key={ strokeId }>{ transforms } </div>;
+}
+
+interface SurfaceProps
+{
+	addStroke: ( newStroke: Stroke, fromRemote: boolean ) => void;
 }
 
 interface SurfaceState
@@ -224,7 +225,7 @@ class Surface extends React.Component<SurfaceProps, SurfaceState>
 			console.log( `contact from ${ endpointAddrToString( activeContact.peer ) } ended`)
 			if( stroke && stroke.points.length > 0 )
 			{
-				this.props.addStroke( stroke );
+				this.props.addStroke( stroke, false );
 			}
 
 			if( stroke )
@@ -302,10 +303,24 @@ interface WhiteboardState
 	strokes?: string[];
 }
 
+interface WhiteboardInterfaceParams
+{
+	strokes?: string[];
+}
+
+interface WhiteboardEvent
+{
+	type: "add_stroke" | "stroke_added";
+	stroke?: Stroke;
+	strokeUrl?: string;
+}
+
+
 class Whiteboard extends React.Component< {}, WhiteboardState >
 {
 	private nextStrokeId = 0;
 	private ipfsNode: any = null;
+	private m_grabbableRef = React.createRef<AvStandardGrabbable>();
 
 	constructor( props: any )
 	{
@@ -326,23 +341,84 @@ class Whiteboard extends React.Component< {}, WhiteboardState >
 	}
 
 	@bind
-	private async onAddStroke( newStroke: Stroke )
+	private onRemoteEvent( event: WhiteboardEvent )
 	{
-		// add the stroke to the pending list so we'll keep drawing it while we generate the GLB
-		this.setState( { pendingStrokes: [...this.state.pendingStrokes, newStroke ] } );
+		switch( event.type )
+		{
+			case "add_stroke":
+				if( AvGadget.instance().isRemote )
+				{
+					console.log( "Received unexpected add_stroke event on remote" );
+				}
+				else
+				{
+					this.onAddStroke( event.stroke, true );
+				}
+				break;
+			
+			case "stroke_added":
+				if( !AvGadget.instance().isRemote )
+				{
+					console.log( "Received unexpected stroke_added event on master" );
+				}
+				else
+				{
+					this.setState( { strokes: [ ...this.state.strokes, event.strokeUrl ] } );
+				}
+				break;		
+		}
+	}
+
+	@bind
+	private async onAddStroke( newStroke: Stroke, fromRemote: boolean )
+	{
+		if( AvGadget.instance().isRemote )
+		{
+			// convert points to AvVector so they'll network
+			newStroke.networkPoints = newStroke.points.map( ( v: vec2 ) => 
+				( { x: v.x, y: v.y, z: 0 } as AvVector ) );
+			delete newStroke.points;
+			let m: WhiteboardEvent =
+			{
+				type: "add_stroke",
+				stroke: newStroke,
+			};
+			this.m_grabbableRef.current.sendRemoteEvent( m, true );
+			return;
+		}
+
+		if( !fromRemote )
+		{
+			// add the stroke to the pending list so we'll keep drawing it while we generate the GLB
+			this.setState( { pendingStrokes: [...this.state.pendingStrokes, newStroke ] } );
+		}
 
 		let strokeGlb = await strokeToGlb( newStroke );
 		let ipfsRes = this.ipfsNode.add( new Uint8Array( strokeGlb ) );
 		for await( let ipfsFile of ipfsRes )
 		{
-			console.log( `Stroke added: ${ newStroke.points.length } points `
+			console.log( `Stroke added: `
+				+ `${ newStroke.points?.length ?? newStroke.networkPoints?.length } points `
 				+ `${ strokeGlb.byteLength } bytes. cid=${ipfsFile.cid }` );
 
+			let newStrokeUrl = "/ipfs/" + ipfsFile.cid;
+
+			let m: WhiteboardEvent =
+			{
+				type: "stroke_added",
+				strokeUrl: newStrokeUrl,
+			};
+			this.m_grabbableRef.current.sendRemoteEvent( m, true );
+
 			let newPending = [ ...this.state.pendingStrokes ];
-			newPending.splice( newPending.indexOf( newStroke ), 1 );
+			if( !fromRemote )
+			{
+				newPending.splice( newPending.indexOf( newStroke ), 1 );
+			}
+
 			this.setState( 
 				{ 
-					strokes: [...this.state.strokes, "/ipfs/" + ipfsFile.cid ],
+					strokes: [...this.state.strokes, newStrokeUrl ],
 					pendingStrokes: newPending,
 				} );
 		}
@@ -350,6 +426,13 @@ class Whiteboard extends React.Component< {}, WhiteboardState >
 
 	public componentDidMount()
 	{
+		if( AvGadget.instance().isRemote )
+		{
+			let params = AvGadget.instance().findInitialInterface( k_WhiteBoardStateInterface )?.params as 
+				WhiteboardInterfaceParams;
+			
+			this.setState( { strokes: params.strokes } );
+		}
 	}
 
 	public componentWillUnmount()
@@ -368,9 +451,23 @@ class Whiteboard extends React.Component< {}, WhiteboardState >
 			strokeLines.push( <StrokeLines key={ stroke.id } stroke={ stroke }/> );
 		}
 
+		let remoteInitLocks: InitialInterfaceLock[] = [];
+		if( !AvGadget.instance().isRemote )
+		{
+			remoteInitLocks.push( {
+				iface: k_WhiteBoardStateInterface,
+				receiver: null,
+				params: 
+				{
+					strokes: this.state.strokes,
+				}
+			} );
+		}
+
 		return (
 			<AvStandardGrabbable modelUri={ g_builtinModelBox } modelScale={ 0.1 } 
-				modelColor="lightblue" useInitialParent={ true } remoteInterfaceLocks={ [] }>
+				modelColor="lightblue" useInitialParent={ true } remoteInterfaceLocks={ remoteInitLocks }
+				ref={ this.m_grabbableRef } remoteGadgetCallback={ this.onRemoteEvent } >
 				<AvTransform translateY={0.2}>
 					<AvTransform translateZ={ -0.005 }>
 						<AvPrimitive type={PrimitiveType.Cube} originZ={ PrimitiveZOrigin.Back }
