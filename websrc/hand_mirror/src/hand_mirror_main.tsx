@@ -42,7 +42,7 @@ class HandMirror extends React.Component< {}, HandMirrorState >
 		return <AvOrigin path="/space/stage">
 			<AvComposedEntity components={ [ this.networkUniverse ] }
 				volume={ infiniteVolume() }/> }
-			<AvTransform translateX={ 0.1 }>
+			<AvTransform translateX={ 0.5 }>
 				<AvComposedEntity components={ [ this.remoteUniverse ] }
 					volume={ emptyVolume() } />
 			</AvTransform>
