@@ -786,12 +786,6 @@ class CEndpoint
 		this.m_gadgetData.updateSceneGraph( m.root );
 	}
 
-	private isGadgetUriAllowed( gadgetUri: string ):boolean
-	{
-		return ( this.m_origin == "http://localhost:23842" ||  gadgetUri.startsWith( this.m_origin as string ) )
-			&& persistence.isGadgetUriInstalled( gadgetUri );
-	}
-
 	@bind private async onSetEndpointType( env: Envelope, m: MsgSetEndpointType )
 	{
 		switch( m.newEndpointType )
@@ -800,13 +794,6 @@ class CEndpoint
 				if( !m.gadgetUri )
 				{
 					this.sendError( "SetEndpointType to gadget must provide URI",
-						MessageType.SetEndpointType );
-					return;
-				}
-
-				if( !this.isGadgetUriAllowed( m.gadgetUri ) )
-				{
-					this.sendError( `Gadget URI is not allowed: ${ m.gadgetUri }`,
 						MessageType.SetEndpointType );
 					return;
 				}
