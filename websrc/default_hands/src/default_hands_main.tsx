@@ -1,8 +1,12 @@
-import { ActiveInterface, AvComposedEntity, AvEntityChild, AvGadget, AvInterfaceEntity, AvOrigin, AvPrimitive, AvTransform, GrabRequest, GrabRequestType, PanelRequest, PanelRequestType, PrimitiveType, SimpleContainerComponent, multiplyTransforms, AvPanel } from '@aardvarkxr/aardvark-react';
-import { AvNodeTransform, AvVolume, EAction, EHand, EVolumeType, g_builtinModelHandLeft, g_builtinModelHandRight, InterfaceLockResult, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EVolumeContext } from '@aardvarkxr/aardvark-shared';
+import { ActiveInterface, AvComposedEntity, AvEntityChild, AvGadget, AvInterfaceEntity, AvOrigin, AvPrimitive, AvTransform, GrabRequest, GrabRequestType, PanelRequest, PanelRequestType, PrimitiveType, SimpleContainerComponent, multiplyTransforms, AvPanel, AvGrabButton } from '@aardvarkxr/aardvark-react';
+import { AvNodeTransform, AvVolume, EAction, EHand, EVolumeType, g_builtinModelHandLeft, g_builtinModelHandRight, InterfaceLockResult, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EVolumeContext, g_builtinModelGear, emptyVolume } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
+import { makeEmpty } from 'aardvark_renderer/src/volume_test_utils';
+import { InterfaceEntity } from 'aardvark_renderer/src/interface_processor';
+
+const k_gadgetRegistryUI = "aardvark-gadget-registry@1";
 
 interface DefaultHandProps
 {
@@ -418,6 +422,61 @@ class DefaultHands extends React.Component< {}, {} >
 	private containerComponent = new SimpleContainerComponent();
 	private leftRef = React.createRef<DefaultHand>();
 	private rightRef = React.createRef<DefaultHand>();
+	private gadgetRegistry: ActiveInterface = null;
+	private gadgetRegistryRef = React.createRef<AvInterfaceEntity>();
+
+	@bind
+	private onGadgetRegistryUI( gadgetRegistry: ActiveInterface )
+	{
+		this.gadgetRegistry = gadgetRegistry;
+
+		gadgetRegistry.onEnded( () =>
+		{
+			this.gadgetRegistry = null;
+		} )
+	}
+
+	@bind
+	private toggleGadgetMenu()
+	{
+		this.gadgetRegistry?.sendEvent( { type: "toggle_visibility" } );
+	}
+
+	componentDidMount()
+	{
+		if( !AvGadget.instance().getEndpointId() || !this.gadgetRegistryRef.current )
+		{
+			// this is terrible. Figure out a way to call back into the gadget when it
+			// actually has an endpoint ID
+			window.setTimeout( () =>
+			{
+				this.startGadgetMenu();
+			}, 100 );
+		}
+		else
+		{
+			this.startGadgetMenu();
+		}
+	}
+
+	private startGadgetMenu()
+	{
+		if( !AvGadget.instance().getEndpointId() || !this.gadgetRegistryRef.current )
+		{
+			// this is terrible. Figure out a way to call back into the gadget when it
+			// actually has an endpoint ID
+			window.setTimeout( () =>
+			{
+				this.startGadgetMenu();
+			}, 100 );
+			return;
+		}
+
+		// Start the gadget menu once we have an ID
+		AvGadget.instance().startGadget( 
+			"http://localhost:23842/gadgets/gadget_menu", 
+			[ { iface: k_gadgetRegistryUI, receiver: this.gadgetRegistryRef.current.globalId } ] );
+	}
 
 	public render()
 	{
@@ -448,6 +507,22 @@ class DefaultHands extends React.Component< {}, {} >
 			<>
 				<DefaultHand hand={ EHand.Left } ref={ this.leftRef }/>
 				<DefaultHand hand={ EHand.Right } ref={ this.rightRef } />
+				<AvOrigin path={ "/user/head" } >
+					<AvInterfaceEntity receives={
+						[
+							{ 
+								iface: k_gadgetRegistryUI,
+								processor: this.onGadgetRegistryUI,
+							}
+						]
+					} volume={ emptyVolume() } ref={ this.gadgetRegistryRef } />
+				</AvOrigin>
+				<AvOrigin path="/user/hand/left">
+					<AvTransform translateZ={ 0.03 }>
+						<AvGrabButton onClick={ this.toggleGadgetMenu } 
+							modelUri={ g_builtinModelGear }/>
+					</AvTransform>
+				</AvOrigin>
 				{/* <AvOrigin path="/user/head">
 					<AvComposedEntity components={ [ this.containerComponent ]} 
 						volume={ [ k_containerInnerVolume, k_containerOuterVolume ] }
