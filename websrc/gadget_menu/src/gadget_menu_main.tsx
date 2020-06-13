@@ -1,9 +1,10 @@
-import { AvComposedEntity, AvGadget, AvGadgetSeed, AvOrigin, AvPrimitive, AvStandardGrabbable, AvTransform, MoveableComponent, MoveableComponentState, PrimitiveType, ShowGrabbableChildren, AvModel, AvPanel, AvHeadFacingTransform, ActiveInterface, AvInterfaceEntity } from '@aardvarkxr/aardvark-react';
+import { AvComposedEntity, AvGadget, AvGadgetSeed, AvOrigin, AvPrimitive, AvStandardGrabbable, AvTransform, MoveableComponent, MoveableComponentState, PrimitiveType, ShowGrabbableChildren, AvModel, AvPanel, AvHeadFacingTransform, ActiveInterface, AvInterfaceEntity, nodeTransformToMat4, QuaternionToEulerAngles, EulerAnglesToQuaternion, nodeTransformFromMat4 } from '@aardvarkxr/aardvark-react';
 import { EVolumeType, g_builtinModelGear, AvNodeTransform, emptyVolume } from '@aardvarkxr/aardvark-shared';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import Axios from 'axios';
 import bind from 'bind-decorator';
+import { vec3, vec4, mat4 } from '@tlaukkan/tsm';
 
 
 const k_gadgetRegistryUI = "aardvark-gadget-registry@1";
@@ -24,6 +25,7 @@ interface ControlPanelState
 	visible: boolean;
 	registry?: Registry;
 	registryLoadFailed?: boolean;
+	transform?: AvNodeTransform;
 }
 
 interface GadgetUIEvent
@@ -103,9 +105,52 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		}
 	}
 
-	private show( stageFromHead: AvNodeTransform )
+	private show( stageFromHeadTransform: AvNodeTransform )
 	{
-		this.setState( { visible: true } );
+		let stageFromHead = nodeTransformToMat4( stageFromHeadTransform );
+
+		let menuPos = new vec3( stageFromHead.multiplyVec4( new vec4( [ 0, 0, -0.5, 1 ] ) ).xyz );
+		let headPos = new vec3( stageFromHead.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) ).xyz );
+
+		let z = vec3.difference( headPos, menuPos );
+		z.y = 0;
+		z = z.normalize();
+
+		let y = vec3.up;
+
+		let x = vec3.cross( y, z );
+
+		let mat = new mat4([
+            x.x,
+            y.x,
+            z.x,
+            0,
+
+            x.y,
+            y.y,
+            z.y,
+            0,
+
+            x.z,
+            y.z,
+            z.z,
+            0,
+
+			0,
+			0,
+			0,
+            1,
+		] ).inverse();
+		
+		mat = new mat4( [
+			mat.at( 0 ), mat.at( 1 ), mat.at( 2 ), mat.at( 3 ),
+			mat.at( 4 + 0 ), mat.at( 4 + 1 ), mat.at( 4 + 2 ), mat.at( 4 + 3 ),
+			mat.at( 8 + 0 ), mat.at( 8 + 1 ), mat.at( 8 + 2 ), mat.at( 8 + 3 ),
+			menuPos.x, menuPos.y, menuPos.z, 1,
+		] );
+
+		let transform = nodeTransformFromMat4( mat );
+		this.setState( { visible: true, transform } );
 	}
 
 	private hide( )
@@ -157,10 +202,8 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 				} 
 				interfaceLocks={ [ AvGadget.instance().findInitialInterface( k_gadgetRegistryUI ) ]}
 				/>
-				<AvTransform translateY={ 1 } visible={ this.state.visible }>
-					<AvHeadFacingTransform>
-						{ this.renderGadgetSeedList() }
-					</AvHeadFacingTransform>
+				<AvTransform transform={ this.state.transform } visible={ this.state.visible }>
+					{ this.renderGadgetSeedList() }
 				</AvTransform>
 			</AvOrigin> );
 	}
