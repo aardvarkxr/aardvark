@@ -239,8 +239,8 @@ export class RemoteUniverseComponent implements EntityComponent
 				</AvTransform> );
 		}
 
-		return <>
+		return <div key="remote_universe">
 				{ children }
-			</>;
+			</div>;
 	}
 }

@@ -172,6 +172,6 @@ export class SimpleContainerComponent implements EntityComponent
 			}
 		}
 
-		return <> { contents } </>;
+		return <div key={ "container_contents" }> { contents } </div>;
 	}
 }

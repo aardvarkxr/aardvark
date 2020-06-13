@@ -150,7 +150,7 @@ export class GadgetSeedContainerComponent implements EntityComponent
 	{
 		if( this.contentsEpa && this.contentsRested )
 		{
-			return <AvTransform rotateX={ -90 }>
+			return <AvTransform rotateX={ -90 } key="seed">
 			 		<AvEntityChild child={ this.contentsEpa } key={ endpointAddrToString( this.contentsEpa ) }/>
 				</AvTransform>
 		}
