@@ -53,6 +53,11 @@ body, html
 	font-size: large;
 }
 
+.GadgetDescription
+{
+	font-size: large;
+}
+
 .GadgetMessage
 {
 	color: darkorange;

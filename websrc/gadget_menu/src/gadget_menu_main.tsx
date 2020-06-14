@@ -38,6 +38,11 @@ function GadgetInfoPanel( props: GadgetInfoPanelProps )
 {
 	return <InfoPanel>
 			<div className="GadgetName">{ props.manifest.name }</div>
+			<div className="GadgetDescription">{ props.manifest.description }</div>
+			{ props.manifest.categories && props.manifest.categories.length > 0 &&
+				<div className="GadgetDescription">
+					Categories: { props.manifest.categories.join( ", " ) }
+				</div> }
 			{ props.highlight == GadgetSeedHighlight.GadgetStarting &&
 				<div className="GadgetMessage">Loading...</div> }
 		</InfoPanel>
