@@ -113,8 +113,15 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		let headPos = new vec3( stageFromHead.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) ).xyz );
 
 		let z = vec3.difference( headPos, menuPos );
-		z.y = 0;
-		z = z.normalize();
+		if( z.length() < 0.05 )
+		{
+			z = vec3.forward;
+		}
+		else
+		{
+			z.y = 0;
+			z = z.normalize();	
+		}
 
 		let y = vec3.up;
 
@@ -122,33 +129,23 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 
 		let mat = new mat4([
             x.x,
-            y.x,
-            z.x,
-            0,
-
             x.y,
-            y.y,
-            z.y,
+            x.z,
             0,
 
-            x.z,
+            y.x,
+            y.y,
             y.z,
+            0,
+
+            z.x,
+            z.y,
             z.z,
             0,
 
-			0,
-			0,
-			0,
-            1,
-		] ).inverse();
-		
-		mat = new mat4( [
-			mat.at( 0 ), mat.at( 1 ), mat.at( 2 ), mat.at( 3 ),
-			mat.at( 4 + 0 ), mat.at( 4 + 1 ), mat.at( 4 + 2 ), mat.at( 4 + 3 ),
-			mat.at( 8 + 0 ), mat.at( 8 + 1 ), mat.at( 8 + 2 ), mat.at( 8 + 3 ),
 			menuPos.x, menuPos.y, menuPos.z, 1,
 		] );
-
+		
 		let transform = nodeTransformFromMat4( mat );
 		this.setState( { visible: true, transform } );
 	}
