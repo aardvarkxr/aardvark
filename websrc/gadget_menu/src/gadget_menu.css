@@ -11,43 +11,49 @@ body, html
 	width: 100%;
 	height: 100%;
 	overflow: hidden;
+	/* background-color: red; */
 }
 
-.HookCircle
+.FullPageContentWrapperOuter
 {
-	border-radius: 50%;
-	border-width: 0.1rem;
-	border-style: solid;
-	width: 90%;
-	height: 90%;
-	font-size: 2rem;
-	margin: 1px;
-}
-
-.NoHighlight
-{
-	border-color: #88888888;
-	background-color: #88888855;
-}
-
-.InRangeHighlight
-{
-	border-color: #888888FF;
-	background-color: #888888AA;
-}
-
-.GadgetSeedContainer
-{
-	background-color: transparent;
-	display: flex;
-	flex-direction: row;
-	flex-wrap: wrap;
-	height: 100%;
 	width: 100%;
+	height: 100%;
+	overflow: hidden;
+	display: table;
+	position: absolute;
+	top: 0;
+	left: 0;
+	margin: 0;
 }
 
-.GadgetSeed
+.FullPageContentWrapperInner
 {
-	height: 30%;
-	width: 30%;
+	padding: 0;
+	vertical-align: middle;
+	display: table-cell;
+	margin: 0;
+}
+
+.GadgetInfoPanel
+{
+	padding: 2px;
+	margin: 0 auto 0 0;
+	width: fit-content;
+	height: fit-content;
+	margin: 20px;
+	border-radius: 5px;
+	border: solid darkgray 2px;
+	background-color: lightgray;
+	display: flex;
+	flex-direction: column;
+}
+
+.GadgetName
+{
+	font-size: large;
+}
+
+.GadgetMessage
+{
+	color: darkorange;
 }

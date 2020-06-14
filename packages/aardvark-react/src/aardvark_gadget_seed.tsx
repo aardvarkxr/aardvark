@@ -13,14 +13,26 @@ import { ContainerRequest, ContainerRequestType, MoveableComponent, MoveableComp
 import { quatFromAxisAngleDegrees } from './math_utils';
 import { vec3, mat4, vec4, mat3, quat } from '@tlaukkan/tsm';
 
+export enum GadgetSeedHighlight
+{
+	Idle,
+	GrabberNearby,
+	GadgetStarting,
+}
+
 
 interface AvGadgetSeedProps extends AvBaseNodeProps
 {
-	/** The URI of the gadget for which this node is a seed. 
-	 * Gadget URIs are everything up to but not including the 
-	 * "/manifest.webmanifest" part of the path.
+	/** The manifest object for this gadget. These can be loaded from
+	 * gadget URLs with AvGadget.instance().loadManifest(...).
 	*/
-	uri: string;
+	manifest: AardvarkManifest;
+
+	/** The gadget URL that the manifest was loaded form. The gadget
+	 * seed needs to this so it can load the gadget's icon, and also
+	 * to start the gadget.
+	 */
+	gadgetUrl: string;
 
 	/** Size in meters of the gadget seed. This will control both
 	 * the active area and the scale of the gadget's model, at least
@@ -29,7 +41,11 @@ interface AvGadgetSeedProps extends AvBaseNodeProps
 	 * @default 0.1
 	 */
 	radius?: number;
+
+	/** Called when the seed is highlighted or unhighlighted. */
+	highlightCallback?: ( highlight: GadgetSeedHighlight ) => void;
 }
+
 
 enum GadgetSeedPhase
 {
@@ -43,7 +59,6 @@ enum GadgetSeedPhase
 interface AvGadgetSeedState
 {
 	phase: GadgetSeedPhase;
-	manifest?: AardvarkManifest;
 }
 
 
@@ -176,13 +191,38 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 		super( props );
 
 		this.state = { phase: GadgetSeedPhase.Idle };
-
-		AvGadget.instance().loadManifest( this.props.uri )
-		.then( ( manifest: AardvarkManifest ) =>
-		{
-			this.setState( { manifest } );
-		})
 	}
+
+	private seedPhaseToHighlight( phase: GadgetSeedPhase )
+	{
+		switch( phase )
+		{
+			default:
+			case GadgetSeedPhase.Idle:
+				return GadgetSeedHighlight.Idle;
+
+			case GadgetSeedPhase.GrabberNearby:
+				return GadgetSeedHighlight.GrabberNearby;
+
+			case GadgetSeedPhase.WaitingForGadgetStart:
+			case GadgetSeedPhase.WaitingForRedropToFinish:
+			case GadgetSeedPhase.WaitingForRegrab:
+				return GadgetSeedHighlight.GadgetStarting;
+		}
+	}
+
+
+	componentDidUpdate( prevProps: AvGadgetSeedProps, prevState: AvGadgetSeedState )
+	{
+		let oldHighlight = this.seedPhaseToHighlight( prevState.phase );
+		let newHighlight = this.seedPhaseToHighlight( this.state.phase );
+		if( oldHighlight != newHighlight )
+		{
+			console.log( `Changing from ${ GadgetSeedHighlight[ oldHighlight ] } to ${ GadgetSeedHighlight[ newHighlight ] }` );
+			this.props.highlightCallback?.( newHighlight );
+		}
+	}
+
 
 	@bind
 	private async onMoveableUpdate()
@@ -265,7 +305,7 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 
 	private async startGadget()
 	{
-		let res = await AvGadget.instance().startGadget( this.props.uri, 
+		let res = await AvGadget.instance().startGadget( this.props.gadgetUrl, 
 			[
 				{ 
 					iface: MoveableComponent.containerInterface,
@@ -293,10 +333,10 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 	
 	private findIconOfType( mimeType: string )
 	{
-		if( !this.state.manifest.icons )
+		if( !this.props.manifest.icons )
 			return null;
 
-		for( let icon of this.state.manifest.icons )
+		for( let icon of this.props.manifest.icons )
 		{
 			if( icon.type.toLowerCase() == mimeType.toLowerCase() )
 			{
@@ -313,7 +353,8 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 		let model = this.findIconOfType( "model/gltf-binary" );
 		if( model )
 		{
-			let modelUrl = isUrl( model.src ) ? model.src : this.props.uri + "/" + model.src;
+			let modelUrl = isUrl( model.src ) ? model.src : this.props.gadgetUrl + 
+				"/" + model.src;
 
 			return <AvModel uri= { modelUrl } scaleToFit={ { x: radius, y: radius, z: radius } }/>;
 		}
@@ -323,9 +364,6 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 
 	public render()
 	{
-		if( !this.state.manifest )
-			return null;
-
 		let radius = this.props.radius ? this.props.radius : 0.1;
 
 		let scale:number;
