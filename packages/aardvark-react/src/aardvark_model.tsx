@@ -1,7 +1,7 @@
 import bind from 'bind-decorator';
 import * as Color from 'color';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
-import { AvNodeType, AvColor, AvVector, AvSharedTextureInfo, Av } from '@aardvarkxr/aardvark-shared';
+import { AvNodeType, AvColor, AvVector, AvSharedTextureInfo, Av, ENodeFlags } from '@aardvarkxr/aardvark-shared';
 import { AvGadget } from './aardvark_gadget';
 
 interface AvModelProps extends AvBaseNodeProps
@@ -83,7 +83,16 @@ export class AvModel extends AvBaseNode< AvModelProps, {} >
 
 		if( this.props.useBrowserTexture )
 		{
-			node.propSharedTexture = this.m_sharedTextureInfo;
+			if( this.m_sharedTextureInfo )
+			{
+				node.propSharedTexture = this.m_sharedTextureInfo;
+			}
+			else
+			{
+				// we don't have our shared texture info yet. Don't show the model until
+				// it arrives
+				node.flags &= ~ENodeFlags.Visible;
+			}
 		}
 
 		return node;
