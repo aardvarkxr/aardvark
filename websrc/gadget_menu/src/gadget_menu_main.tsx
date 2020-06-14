@@ -9,6 +9,25 @@ import { vec3, vec4, mat4 } from '@tlaukkan/tsm';
 
 const k_gadgetRegistryUI = "aardvark-gadget-registry@1";
 
+interface InfoPanelProps
+{
+	children: JSX.Element[];
+}
+
+function InfoPanel( props: InfoPanelProps )
+{
+	return <div className="FullPageContentWrapperOuter"><div className="FullPageContentWrapperInner">
+		<div className="GadgetInfoPanel">
+			{ props.children }
+		</div>
+	</div>
+		<AvTransform translateX={ 0.13 } translateZ={ 0.03 }>
+			<AvPanel widthInMeters={ 0.2 } interactive={ false } />
+		</AvTransform>
+	</div>;
+}
+
+
 interface GadgetInfoPanelProps
 {
 	manifest: AardvarkManifest;
@@ -17,16 +36,11 @@ interface GadgetInfoPanelProps
 
 function GadgetInfoPanel( props: GadgetInfoPanelProps )
 {
-	return <div className="FullPageContentWrapperOuter"><div className="FullPageContentWrapperInner">
-		<div className="GadgetInfoPanel">
+	return <InfoPanel>
 			<div className="GadgetName">{ props.manifest.name }</div>
 			{ props.highlight == GadgetSeedHighlight.GadgetStarting &&
 				<div className="GadgetMessage">Loading...</div> }
-			<AvTransform translateX={ 0.13 } translateZ={ 0.03 }>
-				<AvPanel widthInMeters={ 0.2 } interactive={ false } />
-			</AvTransform>
-		</div>
-	</div></div>;
+		</InfoPanel>
 }
 
 
