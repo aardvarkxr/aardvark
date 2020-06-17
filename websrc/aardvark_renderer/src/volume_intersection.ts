@@ -1,5 +1,6 @@
-import { mat4, vec4, vec3 } from '@tlaukkan/tsm';
+import { mat4, vec4, vec3, vec2 } from '@tlaukkan/tsm';
 import { AvVolume, EVolumeType, EVolumeContext } from '@aardvarkxr/aardvark-shared';
+const createRay = require( 'ray-aabb' );
 
 export interface TransformedVolume extends AvVolume
 {
@@ -91,12 +92,92 @@ function boxBoxIntersect( box1: TransformedVolume, box2: TransformedVolume )
 		zMax < box1.aabb.zMin || zMin > box1.aabb.zMax );
 }
 
+
+function sphereRayIntersect( s: TransformedVolume, r: TransformedVolume )
+{
+	let rayFromUniverse = new mat4( r.universeFromVolume.all() ).inverse();
+	let rayFromSphere = mat4.product( rayFromUniverse, s.universeFromVolume, new mat4() );
+	let center = new vec3( rayFromSphere.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ),
+		new vec4() ).xyz );
+	let negCenter = new vec3( [ -center.x, -center.y, -center.z ] );
+
+
+	let a = 1; // vec3.right dotted with itself
+	let b = 2 * vec3.dot( vec3.right, negCenter );
+	let c = vec3.dot( negCenter, negCenter ) - s.radius * s.radius;
+
+	let dis = Math.sqrt( b * b - 4 * a * c );
+	return dis >= 0;
+}
+
+
+function boxRayIntersect( b: TransformedVolume, r: TransformedVolume )
+{
+	let boxFromUniverse = new mat4( b.universeFromVolume.all() ).inverse();
+	let boxFromRay = mat4.product( boxFromUniverse, r.universeFromVolume, new mat4() );
+	let start = new vec3( boxFromRay.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) ).xyz );
+	let dir = new vec3( boxFromRay.multiplyVec4( new vec4( [ 1, 0, 0, 0 ] ) ).xyz );
+
+	let ray = createRay( start.xyz, dir.xyz );
+	return ray.intersects( [ [ b.aabb.xMin, b.aabb.yMin, b.aabb.zMin ],
+		[ b.aabb.xMax, b.aabb.yMax, b.aabb.zMax ] ] );
+}
+
+export function rayFromMatrix( m: mat4 )
+{
+	return [ 
+		new vec3( m.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) ).xyz ),
+		new vec3( m.multiplyVec4( new vec4( [ 1, 0, 0, 0 ] ) ).xyz ) 
+	];
+}
+
+
+function rayRayIntersect( r0: TransformedVolume, r1: TransformedVolume )
+{
+	let r0FromUniverse = new mat4( r0.universeFromVolume.all() ).inverse();
+	let r0FromR1 = mat4.product( r0FromUniverse, r1.universeFromVolume, new mat4() );
+
+	let [ s1, d1 ] = rayFromMatrix( r0FromR1 );
+
+	if( d1.equals( vec3.right, 0.001 ) )
+	{
+		// lines are coincident.
+		return true;
+	}
+
+	let s1_2d = new vec2( s1.xy );
+	let d1_2d = new vec2( d1.xy );
+
+	let t1 = -s1_2d.y / d1_2d.y;
+
+	if( t1 < 0 )
+	{
+		// rays don't intersect in 2d because of r1
+		return false;
+	}
+
+	let x = s1_2d.x + d1_2d.x * t1;
+	if( x < 0 )
+	{
+		// rays don't intersect in 2d because of r0;
+	}
+
+	// now we know our t value and can compute the theoretical point of 
+	// intersection for ray 1
+	let line = new vec3( [ d1.x * t1, d1.y * t1, d1.z * t1 ] );
+	let p1 = vec3.sum( s1, line, new vec3() );
+	return p1.x >= 0 && Math.abs( p1.y ) < 0.001 && Math.abs( p1.z ) < 0.001;
+}
+
+
 function volumeMatchesContext( v: TransformedVolume, context: EVolumeContext )
 {
 	let volumeContext = v.context ?? EVolumeContext.Always;
 	return context == EVolumeContext.Always || volumeContext == EVolumeContext.Always
 		|| context == volumeContext;
 }
+
+
 
 export function volumesIntersect( v1: TransformedVolume, v2: TransformedVolume, context: EVolumeContext )
 {
@@ -114,25 +195,68 @@ export function volumesIntersect( v1: TransformedVolume, v2: TransformedVolume, 
 	{
 		return true;
 	}
-	else if( v1.type == EVolumeType.Sphere && v2.type == EVolumeType.Sphere )
+
+	let va: TransformedVolume, vb: TransformedVolume;
+	if( v1.type < v2.type )
 	{
-		return spheresIntersect( v1, v2 );
-	}
-	else if( v1.type == EVolumeType.Sphere && v2.type == EVolumeType.AABB )
-	{
-		return sphereBoxIntersect( v1, v2 );
-	}
-	else if( v1.type == EVolumeType.AABB && v2.type == EVolumeType.Sphere )
-	{
-		return sphereBoxIntersect( v2, v1 );
-	}
-	else if( v1.type == EVolumeType.AABB && v2.type == EVolumeType.AABB )
-	{
-		return boxBoxIntersect( v1, v2 );
+		va = v1;
+		vb = v2;
 	}
 	else
 	{
-		// what other kind is there?
-		return false;
+		va = v2;
+		vb = v1;
+	}
+
+	// we only have to deal with matching with types >= our own now. The order is:
+	// Sphere = 0,
+	// ModelBox = 1,
+	// AABB = 1,
+	// Infinite = 3,
+	// Empty = 4,
+	// Ray = 5, // ray is always down the positive X axis from the origin
+	switch( va.type )
+	{
+		case EVolumeType.Sphere:
+			switch( vb.type )
+			{
+				case EVolumeType.Sphere:
+					return spheresIntersect( va, vb );
+
+				case EVolumeType.AABB:
+					return sphereBoxIntersect( va, vb );
+
+				case EVolumeType.Ray:
+					return sphereRayIntersect( va, vb );
+		
+				default:
+					return false;
+			}
+
+		case EVolumeType.AABB:
+			switch( vb.type )
+			{
+				case EVolumeType.AABB:
+					return boxBoxIntersect( va, vb );
+
+				case EVolumeType.Ray:
+					return boxRayIntersect( va, vb );
+
+				default:
+					return false;
+			}
+		
+		case EVolumeType.Ray:
+			switch( vb.type )
+			{
+				case EVolumeType.Ray:
+					return rayRayIntersect( va, vb );
+
+				default:
+					return false;
+			}
+
+		default:
+			return false;
 	}
 }

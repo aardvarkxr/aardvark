@@ -21,7 +21,8 @@ export function makeSphere( radius: number, position?: vec3, scale?: number, con
 		} as TransformedVolume );
 }
 
-export function makeBox( ranges: [number, number, number, number, number, number], universeFromVolume?: mat4, context?: EVolumeContext )
+export function makeBox( ranges: [number, number, number, number, number, number], 
+	universeFromVolume?: mat4, context?: EVolumeContext )
 {
 	let nodeFromVolume = nodeTransformFromMat4( universeFromVolume );
 	return (
@@ -40,6 +41,51 @@ export function makeBox( ranges: [number, number, number, number, number, number
 			universeFromVolume: nodeTransformToMat4( nodeFromVolume ),
 		} as TransformedVolume );
 }
+
+export function makeRay( start: vec3, dir: vec3,
+	context?: EVolumeContext )
+{
+	let nodeFromVolume: mat4;
+
+	let back: vec3;
+	if( vec3.dot( vec3.up, dir ) > 0.999 )
+	{
+		back = vec3.forward;
+	}
+	else
+	{
+		back = vec3.cross( dir, vec3.up );
+	}
+
+	let up = vec3.cross( back, dir );
+
+	nodeFromVolume = new mat4([
+		dir.x,
+		dir.y,
+		dir.z,
+		0,
+
+		up.x,
+		up.y,
+		up.z,
+		0,
+
+		back.x,
+		back.y,
+		back.z,
+		0,
+
+		start.x, start.y, start.z, 1,
+	] );
+
+	return (
+		{
+			type: EVolumeType.Ray,
+			nodeFromVolume: nodeTransformFromMat4( nodeFromVolume ),
+			universeFromVolume: nodeFromVolume,
+		} as TransformedVolume );
+}
+
 
 export function makeInfinite()
 {

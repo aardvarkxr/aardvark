@@ -508,6 +508,7 @@ export enum EVolumeType
 	AABB = 1,
 	Infinite = 3,
 	Empty = 4,
+	Ray = 5, // ray is always down the positive X axis from the origin
 };
 
 /** Volume context allows entities to specify volumes that
