@@ -58,9 +58,11 @@ export class MoveableComponent implements EntityComponent
 	private initialInterface:InitialInterfaceLock = null;
 	private waitingForRedrop:EndpointAddr = null;
 	private waitingForRedropTransform: AvNodeTransform = null;
+	private canDropIntoContainers = true;
 
-	constructor( callback: () => void, useInitialParent?: boolean )
+	constructor( callback: () => void, useInitialParent?: boolean, canDropIntoContainers?: boolean )
 	{
+		this.canDropIntoContainers = canDropIntoContainers ?? true;
 		this.ownerCallback = callback;
 		if( useInitialParent )
 		{
@@ -219,7 +221,16 @@ export class MoveableComponent implements EntityComponent
 
 	public get transmits(): InterfaceProp[]
 	{
-		return [ { iface: MoveableComponent.containerInterface, processor: this.onContainerStart } ];
+		if( this.canDropIntoContainers )
+		{
+			return [ 
+				{ iface: MoveableComponent.containerInterface, processor: this.onContainerStart } 
+			];
+		}
+		else
+		{
+			return [];
+		}
 	}
 
 	public get receives(): InterfaceProp[]

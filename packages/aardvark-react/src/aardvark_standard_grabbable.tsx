@@ -45,15 +45,6 @@ export enum ShowGrabbableChildren
 	OnlyWhenNotGrabbed = 2,
 }
 
-export enum DropStyle
-{
-	/** Drop this grabbable on hooks */
-	DropOnHooks = 1,
-
-	/** Drop this grabbable in the world */
-	DropInTheWorld = 2,
-}
-
 interface StandardGrabbableProps
 {
 	/** The model to use for the grab handle of this grabbable. */
@@ -111,6 +102,14 @@ interface StandardGrabbableProps
 	 * @default none
 	 */
 	remoteGadgetCallback?: ( event: object ) => void;
+
+	/** If this canDropIntoContainers is true, the grabbable will drop itself into containers
+	 * when appropriate. Otherwise it will return to its scene graph-specified transform when
+	 * it is dropped.
+	 * 
+	 * @default true
+	 */
+	canDropIntoContainers?: boolean;
 }
 
 
@@ -139,7 +138,8 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 		}
 		else
 		{
-			this.moveableComponent = new MoveableComponent( this.onMoveableUpdate, this.props.useInitialParent ?? true );
+			this.moveableComponent = new MoveableComponent( this.onMoveableUpdate, 
+				this.props.useInitialParent ?? true, this.props.canDropIntoContainers );
 
 			if( this.props.remoteInterfaceLocks )
 			{
