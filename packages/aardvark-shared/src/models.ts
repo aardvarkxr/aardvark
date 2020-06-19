@@ -1,5 +1,6 @@
 export const g_builtinModelPrefix = "http://localhost:23842/models/";
 export const g_builtinModelAardvark = g_builtinModelPrefix + "aardvark.glb";
+export const g_builtinModelBarcodeScanner = g_builtinModelPrefix + "barcode_reader.glb";
 export const g_builtinModelSphere = g_builtinModelPrefix + "sphere/sphere.glb";
 export const g_builtinModelGear = g_builtinModelPrefix + "gear.glb";
 export const g_builtinModelPanel = g_builtinModelPrefix + "panel/panel.glb";
