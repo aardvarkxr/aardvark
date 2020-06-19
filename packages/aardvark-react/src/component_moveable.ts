@@ -33,6 +33,7 @@ export enum GrabRequestType
 	SetGrabber = "set_grabber",
 	ReleaseMe = "release_me",
 	RequestRegrab = "request_regrab",
+	OverrideTransform = "override_transform",
 }
 
 export interface GrabRequest
@@ -40,6 +41,7 @@ export interface GrabRequest
 	type: GrabRequestType;
 	newMoveable?: EndpointAddr;
 	oldMoveableFromNewMoveable?: AvNodeTransform;
+	grabberFromGrabbable?: AvNodeTransform;
 }
 
 export class MoveableComponent implements EntityComponent
@@ -59,10 +61,13 @@ export class MoveableComponent implements EntityComponent
 	private waitingForRedrop:EndpointAddr = null;
 	private waitingForRedropTransform: AvNodeTransform = null;
 	private canDropIntoContainers = true;
+	private forcedGrabberFromGrabbable: AvNodeTransform = null;
 
-	constructor( callback: () => void, useInitialParent?: boolean, canDropIntoContainers?: boolean )
+	constructor( callback: () => void, useInitialParent?: boolean, canDropIntoContainers?: boolean,
+		forcedGrabberFromGrabbable?: AvNodeTransform )
 	{
 		this.canDropIntoContainers = canDropIntoContainers ?? true;
+		this.forcedGrabberFromGrabbable = forcedGrabberFromGrabbable;
 		this.ownerCallback = callback;
 		if( useInitialParent )
 		{
@@ -125,6 +130,16 @@ export class MoveableComponent implements EntityComponent
 	
 						this.grabber = activeGrab;
 	
+						if( this.forcedGrabberFromGrabbable )
+						{
+							let overrideTransform: GrabRequest =
+							{
+								type: GrabRequestType.OverrideTransform,
+								grabberFromGrabbable: this.forcedGrabberFromGrabbable,
+							}
+							this.grabber.sendEvent( overrideTransform );
+						}
+
 						this.activeContainer?.sendEvent( { state: "Moving" } );
 						this.activeContainer?.unlock();
 	

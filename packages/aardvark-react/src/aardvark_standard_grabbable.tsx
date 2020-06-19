@@ -1,4 +1,4 @@
-import { AvVolume, emptyVolume, EVolumeType, infiniteVolume, InitialInterfaceLock } from '@aardvarkxr/aardvark-shared';
+import { AvVolume, emptyVolume, EVolumeType, infiniteVolume, InitialInterfaceLock, AvNodeTransform } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import { AvComposedEntity, EntityComponent } from './aardvark_composed_entity';
@@ -110,6 +110,12 @@ interface StandardGrabbableProps
 	 * @default true
 	 */
 	canDropIntoContainers?: boolean;
+
+	/** Use this transform when this grabbable is being grabbed. 
+	 * 
+	 * @default use the transform at the moment the grab started
+	 */
+	grabberFromGrabbable?: AvNodeTransform;
 }
 
 
@@ -139,7 +145,8 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 		else
 		{
 			this.moveableComponent = new MoveableComponent( this.onMoveableUpdate, 
-				this.props.useInitialParent ?? true, this.props.canDropIntoContainers );
+				this.props.useInitialParent ?? true, this.props.canDropIntoContainers,
+				this.props.grabberFromGrabbable );
 
 			if( this.props.remoteInterfaceLocks )
 			{
