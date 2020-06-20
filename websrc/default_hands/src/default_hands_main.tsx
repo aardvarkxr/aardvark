@@ -315,6 +315,11 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 		
 		activeInterface.onEnded( () =>
 		{
+			if( this.grabPressed )
+			{
+				activeInterface.unlock();
+			}
+			
 			this.setState( { activePanel: null } );	
 			AvGadget.instance().sendHapticEvent(activeInterface.self, 0.3, 1, 0 );
 		} );
