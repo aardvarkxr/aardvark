@@ -543,6 +543,7 @@ export interface AvVolume
 	radius?: number;
 	uri?: string;
 	aabb?: AABB;
+	scale?: number; // Scales radius or AABB (after model box is resolved)
 }
 
 export function emptyVolume(): AvVolume

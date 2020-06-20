@@ -1,10 +1,11 @@
-import { CMonitorEndpoint, DegreesToRadians, EulerAnglesToQuaternion, QuaternionToEulerAngles, RadiansToDegrees } from '@aardvarkxr/aardvark-react';
+import { CMonitorEndpoint, DegreesToRadians, EulerAnglesToQuaternion, QuaternionToEulerAngles, RadiansToDegrees, nodeTransformToMat4 } from '@aardvarkxr/aardvark-react';
 import { AardvarkManifest, AvNode, AvNodeTransform, AvNodeType, AvQuaternion, AvVector, AvVolume, EndpointAddr, endpointAddrToString, EndpointType, ENodeFlags, Envelope, EVolumeType, InitialInterfaceLock, MessageType, MsgLostEndpoint, MsgNewEndpoint, MsgOverrideTransform, MsgResourceLoadFailed, MsgUpdateSceneGraph, EVolumeContext } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import { action, computed, observable, ObservableMap } from 'mobx';
 import { observer } from 'mobx-react';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
+import { vec4 } from '@tlaukkan/tsm';
 
 interface EndpointData
 {
@@ -654,6 +655,11 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 				break;
 		}
 
+		if( volume.scale )
+		{
+			contextName += `[Scale=${ volume.scale.toFixed( 1 ) }]`;
+		}
+		
 		switch( volume.type )
 		{
 			case EVolumeType.Sphere:
@@ -671,6 +677,16 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 
 			case EVolumeType.Empty:
 				return <div className="AvNodeProperty">volume{ contextName }: empty</div>;
+			
+			case EVolumeType.Ray:
+				{
+					let matRay = nodeTransformToMat4( volume.nodeFromVolume );
+					let start = matRay.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) )
+					let dir = matRay.multiplyVec4( new vec4( [ 1, 0, 0, 0 ] ) )
+					return <div className="AvNodeProperty">volume{ contextName }: Ray( 
+						{ start.x.toFixed( 3 ) }, { start.y.toFixed( 3 ) }, { start.z.toFixed( 3 ) } ->
+						{ dir.x.toFixed( 3 ) }, { dir.y.toFixed( 3 ) }, { dir.z.toFixed( 3 ) }</div>
+				}
 
 			default:
 				return <div className="AvNodeProperty">volume: Unknown/invalid</div>;

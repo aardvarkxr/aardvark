@@ -513,11 +513,18 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 				// compute the transform to universe for each volume
 				for( let volume of entityNode.propVolumes ?? [] )
 				{
+					let matScale = volume.scale 
+						? scaleMat( new vec3( [ volume.scale, volume.scale, volume.scale ] ) )
+						: mat4.identity;
+
+					let universeFromVolume = mat4.product( universeFromEntity.getUniverseFromNode(), 
+						mat4.product( matScale, nodeTransformToMat4( volume.nodeFromVolume ?? {} ), 
+						new mat4() ), new mat4() );
+
 					volumes.push( 
 						{
 							...volume,
-							universeFromVolume: mat4.product( universeFromEntity.getUniverseFromNode(), 
-								nodeTransformToMat4( volume.nodeFromVolume ?? {} ), new mat4() ),
+							universeFromVolume,
 						} );
 				}
 			}
