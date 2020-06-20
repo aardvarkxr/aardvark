@@ -176,6 +176,38 @@ export class GadgetSeedContainerComponent implements EntityComponent
 	}
 }
 
+function findIconOfType( manifest: AardvarkManifest, mimeType: string )
+{
+	if( !manifest.icons )
+		return null;
+
+	for( let icon of manifest.icons )
+	{
+		if( icon.type.toLowerCase() == mimeType.toLowerCase() )
+		{
+			return icon;
+		}
+	}
+
+	return null;
+}
+
+
+export function renderGadgetIcon( gadgetUrl: string, manifest: AardvarkManifest, radius: number )
+{
+	let model = findIconOfType( manifest, "model/gltf-binary" );
+	if( model )
+	{
+		let modelUrl = isUrl( model.src ) ? model.src : gadgetUrl + 
+			"/" + model.src;
+
+		return <AvModel uri= { modelUrl } scaleToFit={ { x: radius, y: radius, z: radius } }/>;
+	}
+
+	return <AvModel uri= { g_builtinModelError } scaleToFit={ { x: radius, y: radius, z: radius } }/>;
+}
+
+
 /** A grabbable control that causes the grabber to grab a new
  * instance of a gadget instead of the control itself. 
  */
@@ -331,36 +363,6 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 		console.log( "main grabbable id was "+ mainGrabbableId );
 	}
 	
-	private findIconOfType( mimeType: string )
-	{
-		if( !this.props.manifest.icons )
-			return null;
-
-		for( let icon of this.props.manifest.icons )
-		{
-			if( icon.type.toLowerCase() == mimeType.toLowerCase() )
-			{
-				return icon;
-			}
-		}
-
-		return null;
-	}
-
-
-	private renderGadgetIcon( radius: number )
-	{
-		let model = this.findIconOfType( "model/gltf-binary" );
-		if( model )
-		{
-			let modelUrl = isUrl( model.src ) ? model.src : this.props.gadgetUrl + 
-				"/" + model.src;
-
-			return <AvModel uri= { modelUrl } scaleToFit={ { x: radius, y: radius, z: radius } }/>;
-		}
-
-		return <AvModel uri= { g_builtinModelError } scaleToFit={ { x: radius, y: radius, z: radius } }/>;
-	}
 
 	public render()
 	{
@@ -396,7 +398,7 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 				volume={ volume } >
 				{ drawIcon &&
 					<AvTransform uniformScale={ scale }>
-						{ this.renderGadgetIcon( radius ) }
+						{ renderGadgetIcon( this.props.gadgetUrl, this.props.manifest, radius ) }
 					</AvTransform>
 				}
 				<AvComposedEntity components={ [ this.containerComponent ] }
