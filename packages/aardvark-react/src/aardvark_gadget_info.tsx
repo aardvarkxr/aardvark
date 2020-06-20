@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { AvGadget } from './aardvark_gadget';
 import { AvInterfaceEntity, ActiveInterface } from './aardvark_interface_entity';
-import { AvVolume, AardvarkManifest } from '@aardvarkxr/aardvark-shared';
+import { AvVolume, AardvarkManifest, EVolumeType, EVolumeContext } from '@aardvarkxr/aardvark-shared';
 
 export const k_GadgetInfoInterface = "aardvark_gadget_info@1";
 
@@ -31,7 +31,13 @@ export function AvGadgetInfo( props: AvGadgetInfoProps )
 		activeInterface.sendEvent( event );
 	}
 
-	return <AvInterfaceEntity volume={ props.volume }
+	let volumes = 
+	[ 
+		{ ...props.volume, scale: 1.5, context: EVolumeContext.Always },
+		{ ...props.volume, scale: 4.0, context: EVolumeContext.ContinueOnly },
+	];
+
+	return <AvInterfaceEntity volume={ volumes }
 		transmits={ 
 			[
 				{ 
