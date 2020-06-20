@@ -166,6 +166,12 @@ export class AvGadget
 		}
 	}
 
+	/** Returns the gadget's manifest */
+	public get manifest()
+	{
+		return this.m_manifest;
+	}
+	
 	/** Returns the URL of the gadget. */
 	public get url()
 	{

@@ -8,6 +8,7 @@ import { AvTransform } from './aardvark_transform';
 import { MoveableComponent, MoveableComponentState } from './component_moveable';
 import { NetworkedGadgetComponent } from './component_networked_gadget';
 import { RemoteGadgetComponent } from './component_remote_gadget';
+import { AvGadgetInfo } from './aardvark_gadget_info';
 const equal = require( 'fast-deep-equal' );
 
 /** This enum defines the possible highlight states of an AvGrabbable. 
@@ -116,6 +117,13 @@ interface StandardGrabbableProps
 	 * @default use the transform at the moment the grab started
 	 */
 	grabberFromGrabbable?: AvNodeTransform;
+
+	/** If this prop is true the grabbable will advertise gadget info for the gadget. This
+	 * allows users to destroy the gadget, share the gadget, etc. 
+	 * 
+	 * @default: true
+	 */
+	advertiseGadgetInfo?: boolean;
 }
 
 
@@ -257,16 +265,17 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 			scale *= this.props.modelScale;
 		}
 
-		let volume: AvVolume = this.remoteComponent ? emptyVolume() :
-			{
-				type: EVolumeType.ModelBox, 
-				uri: this.props.modelUri, 
-				nodeFromVolume:
-				{ 
-					scale: { x: scale, y: scale, z: scale }
-				},
-			};
+		let infoVolume: AvVolume = 
+		{
+			type: EVolumeType.ModelBox, 
+			uri: this.props.modelUri, 
+			nodeFromVolume:
+			{ 
+				scale: { x: scale, y: scale, z: scale }
+			},
+		};
 
+		let volume: AvVolume = this.remoteComponent ? emptyVolume() : infoVolume;
 		let components: EntityComponent[] = [ this.remoteComponent ?? this.moveableComponent ];
 
 		return (
@@ -278,6 +287,8 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 				</AvTransform>
 				{ this.props.children && 
 					<AvTransform visible={ showChildren }>{ this.props.children }</AvTransform> }
+				{ ( this.props.advertiseGadgetInfo ?? true ) &&
+					<AvGadgetInfo volume={ infoVolume } /> }
 			</AvComposedEntity> );
 	}
 }

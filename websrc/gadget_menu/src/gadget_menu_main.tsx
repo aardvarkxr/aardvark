@@ -1,5 +1,5 @@
-import { AvComposedEntity, AvGadget, AvGadgetSeed, AvOrigin, AvPrimitive, AvStandardGrabbable, AvTransform, MoveableComponent, MoveableComponentState, PrimitiveType, ShowGrabbableChildren, AvModel, AvPanel, AvHeadFacingTransform, ActiveInterface, AvInterfaceEntity, nodeTransformToMat4, QuaternionToEulerAngles, EulerAnglesToQuaternion, nodeTransformFromMat4, GadgetSeedHighlight } from '@aardvarkxr/aardvark-react';
-import { EVolumeType, g_builtinModelGear, AvNodeTransform, emptyVolume, AardvarkManifest } from '@aardvarkxr/aardvark-shared';
+import { AvComposedEntity, AvGadget, AvGadgetSeed, AvOrigin, AvPrimitive, AvStandardGrabbable, AvTransform, MoveableComponent, MoveableComponentState, PrimitiveType, ShowGrabbableChildren, AvModel, AvPanel, AvHeadFacingTransform, ActiveInterface, AvInterfaceEntity, nodeTransformToMat4, QuaternionToEulerAngles, EulerAnglesToQuaternion, nodeTransformFromMat4, GadgetSeedHighlight, AvHighlightTransmitters, k_GadgetInfoInterface, GadgetInfoEvent } from '@aardvarkxr/aardvark-react';
+import { EVolumeType, g_builtinModelGear, AvNodeTransform, emptyVolume, AardvarkManifest, g_builtinModelBarcodeScanner, g_builtinModelDropAttract, AvVolume, rayVolume, EndpointAddr } from '@aardvarkxr/aardvark-shared';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import Axios from 'axios';
@@ -11,7 +11,7 @@ const k_gadgetRegistryUI = "aardvark-gadget-registry@1";
 
 interface InfoPanelProps
 {
-	children: JSX.Element[];
+	children: JSX.Element[] | JSX.Element;
 }
 
 function InfoPanel( props: InfoPanelProps )
@@ -31,7 +31,7 @@ function InfoPanel( props: InfoPanelProps )
 interface GadgetInfoPanelProps
 {
 	manifest: AardvarkManifest;
-	highlight: GadgetSeedHighlight;
+	highlight?: GadgetSeedHighlight;
 }
 
 function GadgetInfoPanel( props: GadgetInfoPanelProps )
@@ -67,12 +67,20 @@ interface GadgetInfoPanel
 	highlight: GadgetSeedHighlight;
 }
 
+interface ScannerGadget
+{
+	gadgetUrl: string;
+	gadgetManifest: AardvarkManifest;
+	gadgetEndpoint: EndpointAddr;
+}
+
 interface ControlPanelState
 {
 	visible: boolean;
 	registryLoadFailed?: boolean;
 	transform?: AvNodeTransform;
 	panel?: GadgetInfoPanel;
+	scannerGadget?: ScannerGadget;
 }
 
 interface GadgetUIEvent
@@ -198,7 +206,8 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 								} }/>
 					</AvTransform>
 
-					{ this.state.panel?.gadgetUrl == gadget.url && 
+					{ this.state.panel?.gadgetUrl == gadget.url 
+						&& !this.state.scannerGadget &&
 						<GadgetInfoPanel manifest={ gadget.manifest } 
 							highlight={ this.state.panel.highlight } /> }
 				</AvTransform>);
@@ -288,6 +297,77 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		} );
 	}
 
+	@bind
+	private generateGadgetInfoHighlight()
+	{
+		return 	<AvHeadFacingTransform>
+			<AvTransform rotateX={ 90 } uniformScale={ 0.5 } translateZ={ 0.02 }>
+				<AvModel uri={ g_builtinModelDropAttract } color="lightgreen"/>
+			</AvTransform>
+		</AvHeadFacingTransform>;
+	}
+
+	@bind
+	private onGadgetInfo( gadgetInfoInterface: ActiveInterface )
+	{
+		gadgetInfoInterface.onEvent( ( event: GadgetInfoEvent ) =>
+		{
+			switch( event.type )
+			{
+				case "gadget_info":
+					this.setState( { scannerGadget:
+						{
+							gadgetUrl: event.gadgetUrl,
+							gadgetManifest: event.gadgetManifest,
+							gadgetEndpoint: gadgetInfoInterface.peer,
+						} } );
+					break;
+			}
+		} );
+
+		gadgetInfoInterface.onEnded( () => 
+		{
+			this.setState( { scannerGadget: null } );
+		} );
+	}
+
+	private renderGadgetScannerPanel()
+	{
+		if( !this.state.scannerGadget )
+		{
+			return <InfoPanel >
+				<div>Point at a gadget to learn more about it.</div>
+			</InfoPanel>;
+		}
+		else
+		{
+			return <GadgetInfoPanel manifest={ this.state.scannerGadget.gadgetManifest } />
+		}
+	}
+
+	private renderGadgetScanner()
+	{
+		let ray = rayVolume( new vec3( [ 0, 0.02, -0.02 ] ), new vec3( [ 0, 0, -1 ] ) );
+
+		return (
+			<AvStandardGrabbable modelUri={ g_builtinModelBarcodeScanner }
+				canDropIntoContainers={ false } 
+				grabberFromGrabbable={ {} }
+				advertiseGadgetInfo={ false }
+				showChildren={ ShowGrabbableChildren.OnlyWhenGrabbed }
+				>
+				<AvHighlightTransmitters 
+					highlightContentCallback={ this.generateGadgetInfoHighlight }
+					interfaceName={ k_GadgetInfoInterface }/>
+				<AvInterfaceEntity receives={
+					[ { iface: k_GadgetInfoInterface, processor: this.onGadgetInfo } ]
+					} volume={ ray } 
+					priority={ 10 }/>
+				{ this.renderGadgetScannerPanel() }
+			</AvStandardGrabbable> );
+	}
+
+
 	public render()
 	{
 		return (
@@ -304,6 +384,9 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 				/>
 				<AvTransform transform={ this.state.transform } visible={ this.state.visible }>
 					{ this.renderGadgetSeedList() }
+					<AvTransform translateX={ -0.5 }>
+						{ this.renderGadgetScanner() }
+					</AvTransform>
 				</AvTransform>
 			</AvOrigin> );
 	}
