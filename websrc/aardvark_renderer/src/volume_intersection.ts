@@ -116,7 +116,7 @@ function boxRayIntersect( b: TransformedVolume, r: TransformedVolume )
 	let boxFromUniverse = new mat4( b.universeFromVolume.all() ).inverse();
 	let boxFromRay = mat4.product( boxFromUniverse, r.universeFromVolume, new mat4() );
 	let start = new vec3( boxFromRay.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) ).xyz );
-	let dir = new vec3( boxFromRay.multiplyVec4( new vec4( [ 1, 0, 0, 0 ] ) ).xyz );
+	let dir = new vec3( boxFromRay.multiplyVec4( new vec4( [ 1, 0, 0, 0 ] ) ).xyz ).normalize();
 
 	let ray = createRay( start.xyz, dir.xyz );
 	return ray.intersects( [ [ b.aabb.xMin, b.aabb.yMin, b.aabb.zMin ],
@@ -127,7 +127,7 @@ export function rayFromMatrix( m: mat4 )
 {
 	return [ 
 		new vec3( m.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) ).xyz ),
-		new vec3( m.multiplyVec4( new vec4( [ 1, 0, 0, 0 ] ) ).xyz ) 
+		new vec3( m.multiplyVec4( new vec4( [ 1, 0, 0, 0 ] ) ).xyz ).normalize() 
 	];
 }
 
