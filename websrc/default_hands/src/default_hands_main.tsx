@@ -1,5 +1,5 @@
-import { ActiveInterface, AvComposedEntity, AvEntityChild, AvGadget, AvInterfaceEntity, AvOrigin, AvPrimitive, AvTransform, GrabRequest, GrabRequestType, PanelRequest, PanelRequestType, PrimitiveType, SimpleContainerComponent, multiplyTransforms, AvPanel, AvGrabButton } from '@aardvarkxr/aardvark-react';
-import { AvNodeTransform, AvVolume, EAction, EHand, EVolumeType, g_builtinModelHandLeft, g_builtinModelHandRight, InterfaceLockResult, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EVolumeContext, g_builtinModelGear, emptyVolume } from '@aardvarkxr/aardvark-shared';
+import { ActiveInterface, AvComposedEntity, AvEntityChild, AvGadget, AvInterfaceEntity, AvOrigin, AvPrimitive, AvTransform, GrabRequest, GrabRequestType, PanelRequest, PanelRequestType, PrimitiveType, SimpleContainerComponent, multiplyTransforms, AvPanel, AvGrabButton, AvModel } from '@aardvarkxr/aardvark-react';
+import {g_builtinModelDropAttract,  AvNodeTransform, AvVolume, EAction, EHand, EVolumeType, g_builtinModelHandLeft, g_builtinModelHandRight, InterfaceLockResult, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EVolumeContext, g_builtinModelGear, emptyVolume } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
@@ -267,6 +267,12 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 						}
 					}
 					break;
+
+					case GrabRequestType.OverrideTransform:
+					{
+						this.setState( { grabberFromGrabbable: event.grabberFromGrabbable } );
+					}
+					break;
 				}
 			} );
 
@@ -518,7 +524,7 @@ class DefaultHands extends React.Component< {}, {} >
 					} volume={ emptyVolume() } ref={ this.gadgetRegistryRef } />
 				</AvOrigin>
 				<AvOrigin path="/user/hand/left">
-					<AvTransform translateZ={ 0.03 }>
+					<AvTransform translateZ={ 0.04 }>
 						<AvGrabButton onClick={ this.toggleGadgetMenu } 
 							modelUri={ g_builtinModelGear }/>
 					</AvTransform>
