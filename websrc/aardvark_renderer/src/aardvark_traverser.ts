@@ -807,10 +807,16 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 
 	traverseTransform( node: AvNode, defaultParent: PendingTransform )
 	{
+		let parent = defaultParent;
+		if( node.propParentAddr )
+		{
+			parent = this.getTransform( node.propParentAddr );
+		}
+
 		if ( node.propTransform )
 		{
 			let mat = nodeTransformToMat4( node.propTransform );
-			this.updateTransform( node.globalId, defaultParent, mat, null );
+			this.updateTransform( node.globalId, parent, mat, null );
 		}
 	}
 

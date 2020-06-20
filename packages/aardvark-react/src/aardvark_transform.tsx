@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import { AvNodeType, AvQuaternion, AvNodeTransform, MinimalPose } from '@aardvarkxr/aardvark-shared';
+import { AvNodeType, AvQuaternion, AvNodeTransform, MinimalPose, EndpointAddr } from '@aardvarkxr/aardvark-shared';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 import { quat, vec3 } from '@tlaukkan/tsm';
 import { quatFromAxisAngleDegrees, nodeTransformFromMat4, minimalToMat4Transform } from './math_utils';
@@ -88,6 +88,16 @@ interface AvTransformProps extends AvBaseNodeProps
 	 * @default none
 	 */
 	transform?: AvNodeTransform | MinimalPose;
+
+	/** Sets the specified node as the parent of this transform. The endpoint
+	 * address for the parent node can be in any gadget.
+	 * 
+	 * If the parent node is not valid, this node and its children will not 
+	 * be traversed.
+	 * 
+	 * @default none
+	 */
+	parent?: EndpointAddr;
 }
 
 /** Applies a static transform to all children. */
@@ -160,6 +170,8 @@ export class AvTransform extends AvBaseNode< AvTransformProps, {} >
 			}
 		}
 
+		node.propParentAddr = this.props.parent;
+		
 		return node;
 	}
 }

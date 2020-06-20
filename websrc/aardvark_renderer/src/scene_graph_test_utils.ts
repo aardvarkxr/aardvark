@@ -1,16 +1,30 @@
-import { AvColor, AvNode, AvNodeType, AvSharedTextureInfo, ENodeFlags } from '@aardvarkxr/aardvark-shared';
+import { AvColor, AvNode, AvNodeType, AvSharedTextureInfo, ENodeFlags, EndpointType } from '@aardvarkxr/aardvark-shared';
 import * as Color from 'color';
 import { vec3 } from '@tlaukkan/tsm';
 
 let g_nextNodeId = 0;
+let g_currentGadgetId = 1;
+
+export function currentGadgetId()
+{
+	return g_currentGadgetId;
+}
+
+export function nextGadget()
+{
+	g_currentGadgetId++;
+}
 
 function buildNode( type: AvNodeType )
 {
+	let id = g_nextNodeId++;
+
 	let node: AvNode =
 	{
 		type,
 		flags: ENodeFlags.Visible,
-		id: g_nextNodeId++,
+		id,
+		globalId: { type: EndpointType.Node, endpointId: g_currentGadgetId, nodeId: id },
 	}
 	return node;
 }

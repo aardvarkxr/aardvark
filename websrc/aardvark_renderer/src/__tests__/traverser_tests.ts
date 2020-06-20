@@ -1,7 +1,7 @@
 import { translateMat } from '@aardvarkxr/aardvark-react';
 import { AvColor, MessageType } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3 } from '@tlaukkan/tsm';
-import { addChild, buildModel, buildOrigin, buildTransform, colorFromString } from '../scene_graph_test_utils';
+import { addChild, buildModel, buildOrigin, buildTransform, colorFromString, nextGadget, currentGadgetId } from '../scene_graph_test_utils';
 import { AvDefaultTraverser } from './../aardvark_traverser';
 import { modelCache, ModelInfo } from './../model_cache';
 import { CTestModel, CTestRenderer } from './../test_renderer';
@@ -140,6 +140,7 @@ afterEach( async () =>
 	r = null;
 	traverser = null;
 	await modelCache.cleanup();
+	nextGadget();
 } );
 
 const k_testModelUrl = "http://test.com/mymodel.glb";
@@ -152,13 +153,13 @@ describe( "AvDefaultTraverser ", () =>
 		let root = buildOrigin( "/space/stage" );
 		addChild( root, buildModel( k_testModelUrl ) );
 
-		traverser.updateSceneGraph( root, k_testGadgetUrl, 12 );
+		traverser.updateSceneGraph( root, k_testGadgetUrl, currentGadgetId() );
 		traverser.traverse();
 
 		expect( r.lastRenderList.length ).toBe( 1 );
 		expect( r.lastRenderList ).toContainModels( 1, k_testModelUrl );
 
-		traverser.forgetGadget( 12 );
+		traverser.forgetGadget( currentGadgetId() );
 		traverser.traverse();
 
 		expect( r.lastRenderList.length ).toBe( 0 );
@@ -171,7 +172,7 @@ describe( "AvDefaultTraverser ", () =>
 		addChild( root, buildModel( k_testModelUrl ) );
 		addChild( root, buildModel( k_testModelUrl ) );
 
-		traverser.updateSceneGraph( root, k_testGadgetUrl, 12 );
+		traverser.updateSceneGraph( root, k_testGadgetUrl, currentGadgetId() );
 		traverser.traverse();
 
 		expect( r.lastRenderList.length ).toBe( 2 );
@@ -184,7 +185,7 @@ describe( "AvDefaultTraverser ", () =>
 		addChild( root, buildModel( k_testModelUrl, "red" ) );
 		addChild( root, buildModel( k_testModelUrl, "blue" ) );
 
-		traverser.updateSceneGraph( root, k_testGadgetUrl, 12 );
+		traverser.updateSceneGraph( root, k_testGadgetUrl, currentGadgetId() );
 		traverser.traverse();
 
 		expect( r.lastRenderList.length ).toBe( 2 );
@@ -198,7 +199,24 @@ describe( "AvDefaultTraverser ", () =>
 		let trans = addChild( root, buildTransform( new vec3( [ 1, 2, 3 ] ) ) );
 		addChild( trans, buildModel( k_testModelUrl ) );
 
-		traverser.updateSceneGraph( root, k_testGadgetUrl, 12 );
+		traverser.updateSceneGraph( root, k_testGadgetUrl, currentGadgetId() );
+		traverser.traverse();
+
+		expect( r.lastRenderList.length ).toBe( 1 );
+		expect( r.lastRenderList ).toContainModels( 1, k_testModelUrl, undefined, 
+			translateMat( new vec3( [ 1, 2, 3 ] ) ) );
+	} );
+
+	it( "transform parent", async () =>
+	{
+		let root = buildOrigin( "/space/stage" );
+		let transDeclaredParent = addChild( root, buildTransform( new vec3( [ 1, 2, 3 ] ) ) );
+		let transActualParent = addChild( root, buildTransform( new vec3( [ 11, 12, 13 ] ) ) );
+		let transReparent = addChild( transActualParent, buildTransform( new vec3( [ 0, 0, 0 ] ) ) );
+		transReparent.propParentAddr = transDeclaredParent.globalId;
+		addChild( transReparent, buildModel( k_testModelUrl ) );
+
+		traverser.updateSceneGraph( root, k_testGadgetUrl, currentGadgetId() );
 		traverser.traverse();
 
 		expect( r.lastRenderList.length ).toBe( 1 );
