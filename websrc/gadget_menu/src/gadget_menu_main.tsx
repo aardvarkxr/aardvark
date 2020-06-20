@@ -1,5 +1,5 @@
-import { AvComposedEntity, AvGadget, AvGadgetSeed, AvOrigin, AvPrimitive, AvStandardGrabbable, AvTransform, MoveableComponent, MoveableComponentState, PrimitiveType, ShowGrabbableChildren, AvModel, AvPanel, AvHeadFacingTransform, ActiveInterface, AvInterfaceEntity, nodeTransformToMat4, QuaternionToEulerAngles, EulerAnglesToQuaternion, nodeTransformFromMat4, GadgetSeedHighlight, AvHighlightTransmitters, k_GadgetInfoInterface, GadgetInfoEvent, renderGadgetIcon, PrimitiveYOrigin, AvLine } from '@aardvarkxr/aardvark-react';
-import { EVolumeType, g_builtinModelGear, AvNodeTransform, emptyVolume, AardvarkManifest, g_builtinModelBarcodeScanner, g_builtinModelDropAttract, AvVolume, rayVolume, EndpointAddr, AvVector, EVolumeContext } from '@aardvarkxr/aardvark-shared';
+import { AvComposedEntity, AvGadget, AvGadgetSeed, AvOrigin, AvPrimitive, AvStandardGrabbable, AvTransform, MoveableComponent, MoveableComponentState, PrimitiveType, ShowGrabbableChildren, AvModel, AvPanel, AvHeadFacingTransform, ActiveInterface, AvInterfaceEntity, nodeTransformToMat4, QuaternionToEulerAngles, EulerAnglesToQuaternion, nodeTransformFromMat4, GadgetSeedHighlight, AvHighlightTransmitters, k_GadgetInfoInterface, GadgetInfoEvent, renderGadgetIcon, PrimitiveYOrigin, AvLine, AvGrabButton } from '@aardvarkxr/aardvark-react';
+import { EVolumeType, g_builtinModelGear, AvNodeTransform, emptyVolume, AardvarkManifest, g_builtinModelBarcodeScanner, g_builtinModelDropAttract, AvVolume, rayVolume, EndpointAddr, AvVector, EVolumeContext, g_builtinModelTrashcan, g_builtinModelStar, MsgDestroyGadget, MessageType } from '@aardvarkxr/aardvark-shared';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import Axios from 'axios';
@@ -398,6 +398,27 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		} );
 	}
 
+	@bind
+	private onTrashGadget()
+	{
+		if( !this.state.scannerGadget )
+			return;
+
+		let m: MsgDestroyGadget =
+		{
+			gadgetId: this.state.scannerGadget.gadgetEndpoint.endpointId
+		};
+
+		AvGadget.instance().sendMessage( MessageType.DestroyGadget, m );
+	}
+
+	@bind
+	private onFavoriteGadget()
+	{
+		console.log( "Adding to favorites", this.state.scannerGadget?.gadgetUrl );
+	}
+	
+
 	private renderGadgetScanner()
 	{
 		return (
@@ -430,6 +451,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 					gadgetUrl={ this.state.scannerGadget?.gadgetUrl }
 					endpointAddr={ this.state.scannerGadget?.gadgetEndpoint }
 				/>
+				
 				{ this.state.scannerGadget &&
 					<>
 						<AvTransform translateY={ 0.20 } rotateX={ 90 }>
@@ -439,6 +461,16 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 						<AvTransform translateY={ 0.045 } translateZ={ -0.02 } rotateX={ -90 }>
 							<AvLine thickness={ 0.006 } endId={ this.state.scannerGadget.gadgetEndpoint }
 								color="lightgreen"/>
+						</AvTransform>
+						<AvTransform translateY={ 0.10 } translateX={ -0.03 } translateZ={ 0.05 } 
+							rotateX={ -90 }
+							uniformScale={ 0.2 }>
+							<AvGrabButton modelUri={ g_builtinModelTrashcan } 
+								onClick={ this.onTrashGadget }/>
+						</AvTransform>
+						<AvTransform translateY={ 0.10 } translateX={ 0.03 } translateZ={ 0.05 }>
+							<AvGrabButton modelUri={ g_builtinModelStar } 
+								onClick={ this.onFavoriteGadget }/>
 						</AvTransform>
 					</> }
 
