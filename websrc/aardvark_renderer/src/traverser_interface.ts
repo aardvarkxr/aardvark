@@ -22,3 +22,4 @@ export interface TraverserCallbacks
 {
 	sendMessage( type: MessageType, m: object ): void;
 }
+
