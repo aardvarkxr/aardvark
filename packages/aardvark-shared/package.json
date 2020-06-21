@@ -1,6 +1,6 @@
 {
   "name": "@aardvarkxr/aardvark-shared",
-  "version": "0.8.1",
+  "version": "0.10.0",
   "description": "Shared source code for Aardvark",
   "main": "lib/index",
   "types": "lib/index",
@@ -20,10 +20,12 @@
     "webpack-merge": "^4.2.2"
   },
   "dependencies": {
+    "@tlaukkan/tsm": "^0.8.5",
     "@types/uuid": "^3.4.5",
     "bind-decorator": "^1.0.11",
     "color": "^3.1.2",
     "node": "^12.12.0",
+    "quaternion": "^1.1.0",
     "uuid": "^7.0.1"
   }
 }
