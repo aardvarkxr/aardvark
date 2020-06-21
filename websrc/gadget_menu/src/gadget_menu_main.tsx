@@ -607,7 +607,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 				/>
 				<AvTransform transform={ this.state.transform } visible={ this.state.visible }>
 					{ this.renderGadgetSeedList() }
-					<AvTransform translateX={ -0.5 }>
+					<AvTransform translateX={ -0.30 } translateZ={ 0.15 } rotateY={ 30 }>
 						{ this.renderGadgetScanner() }
 					</AvTransform>
 				</AvTransform>
