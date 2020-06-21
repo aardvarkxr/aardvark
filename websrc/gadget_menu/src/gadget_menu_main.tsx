@@ -1,5 +1,5 @@
-import { AvComposedEntity, AvGadget, AvGadgetSeed, AvOrigin, AvPrimitive, AvStandardGrabbable, AvTransform, MoveableComponent, MoveableComponentState, PrimitiveType, ShowGrabbableChildren, AvModel, AvPanel, AvHeadFacingTransform, ActiveInterface, AvInterfaceEntity, nodeTransformToMat4, QuaternionToEulerAngles, EulerAnglesToQuaternion, nodeTransformFromMat4, GadgetSeedHighlight, AvHighlightTransmitters, k_GadgetInfoInterface, GadgetInfoEvent, renderGadgetIcon, PrimitiveYOrigin, AvLine, AvGrabButton } from '@aardvarkxr/aardvark-react';
-import { EVolumeType, g_builtinModelGear, AvNodeTransform, emptyVolume, AardvarkManifest, g_builtinModelBarcodeScanner, g_builtinModelDropAttract, AvVolume, rayVolume, EndpointAddr, AvVector, EVolumeContext, g_builtinModelTrashcan, g_builtinModelStar, MsgDestroyGadget, MessageType } from '@aardvarkxr/aardvark-shared';
+import { AvComposedEntity, AvGadget, AvGadgetSeed, AvOrigin, AvPrimitive, AvStandardGrabbable, AvTransform, MoveableComponent, MoveableComponentState, PrimitiveType, ShowGrabbableChildren, AvModel, AvPanel, AvHeadFacingTransform, ActiveInterface, AvInterfaceEntity, nodeTransformToMat4, QuaternionToEulerAngles, EulerAnglesToQuaternion, nodeTransformFromMat4, GadgetSeedHighlight, AvHighlightTransmitters, k_GadgetInfoInterface, GadgetInfoEvent, renderGadgetIcon, PrimitiveYOrigin, AvLine, AvGrabButton, HiddenChildrenBehavior } from '@aardvarkxr/aardvark-react';
+import { EVolumeType, g_builtinModelGear, AvNodeTransform, emptyVolume, AardvarkManifest, g_builtinModelBarcodeScanner, g_builtinModelDropAttract, AvVolume, rayVolume, EndpointAddr, AvVector, EVolumeContext, g_builtinModelTrashcan, g_builtinModelStar, MsgDestroyGadget, MessageType, g_builtinModelHammerAndWrench } from '@aardvarkxr/aardvark-shared';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import Axios from 'axios';
@@ -80,11 +80,22 @@ function GadgetScannerPanel( props: GadgetScannerPanelProps )
 		</InfoPanel>
 }
 
+interface ErrorPanelProps
+{
+	error: string;
+}
+
+function ErrorPanel( props: ErrorPanelProps )
+{
+	return <InfoPanel widthInMeters={ 0.3 } translation={ { x: 0, y: 0.13, z: 0.03 } }>
+			<div className="GadgetDescription">{ props.error }</div>
+		</InfoPanel>
+}
+
 
 interface RegistryEntry
 {
 	url: string;
-	manifest?: AardvarkManifest;
 }
 
 interface Registry
@@ -106,9 +117,17 @@ interface ScannerGadget
 	gadgetEndpoint: EndpointAddr;
 }
 
+enum ControlPanelTab
+{
+	Main,
+	Favorites,
+	Builtin,
+}
+
 interface ControlPanelState
 {
 	visible: boolean;
+	tab: ControlPanelTab;
 	registryLoadFailed?: boolean;
 	transform?: AvNodeTransform;
 	panel?: GadgetInfoPanel;
@@ -120,45 +139,30 @@ interface GadgetUIEvent
 	type: "toggle_visibility";
 }
 
-function makeRayFan( start: vec3, dir: vec3, angleDegrees: number, rayCount: number,
-	context: EVolumeContext )
-{
-	let dirFakeUp = dir.equals( vec3.up, 0.01 ) ? vec3.forward : vec3.up;
-	let dirFakeBack = dir.equals( vec3.up, 0.01 ) ? vec3.right : vec3.forward;
-
-	let dirRight = vec3.cross( dir, dirFakeUp, new vec3() );
-	let dirUp = vec3.cross( dirFakeBack, dirRight, new vec3() );
-
-	let radius = Math.sin( angleDegrees * Math.PI / 180 );
-	let dirs = [ dir ];
-	for( let i = 0; i < rayCount; i++ )
-	{
-		let angle = i * 2 * Math.PI / rayCount;
-		let nudgeRight = new vec3( dirRight.xyz ).scale( radius * Math.sin( angle ) );
-		let nudgeUp = new vec3( dirUp.xyz ).scale( radius * Math.cos( angle ) );
-		dirs.push( vec3.sum( dir, vec3.sum( nudgeRight, nudgeUp ), new vec3() ).normalize() );
-	}
-
-	let rays: AvVolume[] = [ rayVolume( start, dir ) ];
-	for( let dir of dirs )
-	{
-		rays.push( { ...rayVolume( start, dir ), context } );
-	}
-	return rays;
-}
 
 const k_rayStart = new vec3( [  0.000, 0.045, -0.02 ] );
 const k_rayDir = new vec3( [ 0, 0, -1 ] );
+
+interface GadgetMenuSettings
+{
+	favorites: string[];
+}
+
+const k_alwaysInstalledGadgets =
+[
+	"http://localhost:23842/gadgets/test_panel",
+	"http://localhost:23842/gadgets/hand_mirror",
+	"http://localhost:23842/gadgets/control_test",
+	"http://localhost:23842/gadgets/whiteboard",
+];
 
 class ControlPanel extends React.Component< {}, ControlPanelState >
 {
 	private highlights = new Map<string, GadgetInfoPanel>();
 	private registry: Registry;
-	readonly rays = [ rayVolume( k_rayStart, k_rayDir ) ]
-	// makeRayFan( k_rayStart, k_rayDir, 2.5, 8, EVolumeContext.Always )
-	// 	.concat( makeRayFan(k_rayStart, k_rayDir, 5, 12, EVolumeContext.Always) )
-	// 	.concat( makeRayFan(k_rayStart, k_rayDir, 7, 16, EVolumeContext.ContinueOnly ) )
-	// 	.concat( makeRayFan(k_rayStart, k_rayDir, 9, 24, EVolumeContext.ContinueOnly ) );
+	readonly rays = [ rayVolume( k_rayStart, k_rayDir ) ];
+	private settings: GadgetMenuSettings = null;
+	private manifestsByUrl = new Map< string, AardvarkManifest >();
 
 	constructor( props: any )
 	{
@@ -166,7 +170,18 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		this.state = 
 		{ 
 			visible: false,
+			tab: ControlPanelTab.Main,
 		};
+
+		let settingsString = window.localStorage.getItem( "aardvark_gadget_menu_settings" );
+		if( !settingsString )
+		{
+			this.settings = { favorites: [] };
+		}
+		else
+		{
+			this.settings = JSON.parse( settingsString ) as GadgetMenuSettings;
+		}
 
 		Axios.get( "https://aardvarkxr.github.io/gadget-registry/registry.json" )
 		.then( ( response ) =>
@@ -174,30 +189,41 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 			this.registry = response.data as Registry;
 			for( let entry of this.registry.gadgets )
 			{
-				AvGadget.instance().loadManifest( entry.url )
-				.then( ( manifest: AardvarkManifest ) =>
-				{
-					// all we do here is stuff the manifest into the registry entry.
-					// This will be populated into the UI itself next time the UI is 
-					// rendered
-					entry.manifest = manifest;
-				} );
+				this.requestManifest( entry.url );
 			}
 		} )
 		.catch( ( reason: any ) =>
 		{
 			this.setState( { registryLoadFailed: true } );
 		} );
+
+		for( let favorite of this.settings.favorites )
+		{
+			this.requestManifest( favorite );
+		}
+
+		for( let builtin of k_alwaysInstalledGadgets )
+		{
+			this.requestManifest( builtin );
+		}
 	}
 
-	private renderErrorPanel( text: string )
+	private requestManifest( url: string )
 	{
-		return <>
-			<div>{ text }</div>
-			<AvPanel widthInMeters={ 1 } interactive={ false } />
-			</>
+		AvGadget.instance().loadManifest( url )
+		.then( ( manifest: AardvarkManifest ) =>
+		{
+			// all we do here is stuff the manifest into the map.
+			// This will be populated into the UI itself next time the UI is 
+			// rendered
+			this.manifestsByUrl.set( url, manifest );
+		} );
 	}
 
+	private updateSettings()
+	{
+		window.localStorage.setItem( "aardvark_gadget_menu_settings", JSON.stringify( this.settings ) );
+	}
 
 	private onSeedHighlight( gadgetUrl: string, highlight: GadgetSeedHighlight )
 	{
@@ -228,39 +254,93 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 
 	private renderGadgetSeedList()
 	{
-		let loadedEntries: RegistryEntry[] = [];
+		switch( this.state.tab )
+		{
+			case ControlPanelTab.Main:
+				return this.renderMainTab();
+
+			case ControlPanelTab.Builtin:
+				return this.renderBuiltinTab();
+
+			case ControlPanelTab.Favorites:
+				return this.renderFavoritesTab();
+		}
+	}
+
+	private renderMainTab()
+	{
+		let loadedEntries: string[] = [];
 		for( let entry of this.registry?.gadgets ?? [] )
 		{
-			if( entry.manifest )
+			loadedEntries.push( entry.url );
+		}
+
+		return this.renderRegistryEntries( loadedEntries );
+	}
+
+	private renderBuiltinTab()
+	{
+		return this.renderRegistryEntries( k_alwaysInstalledGadgets );
+	}
+
+	private renderFavoritesTab()
+	{
+		return this.renderRegistryEntries( this.settings.favorites );
+	}
+
+	private renderTabButton( translateX: number, modelUri: string, tab: ControlPanelTab )
+	{
+		let scale = this.state.tab == tab ? 2.2 : 1.5;
+		return <AvTransform translateX={ translateX } uniformScale={ scale }>
+				<AvGrabButton modelUri={ modelUri }
+					onClick={ () => this.setState( { tab } ) }/>
+			</AvTransform>;
+	}
+
+	private renderRegistryEntries( entryUrls: string[] )
+	{
+		let entries: { url: string, manifest: AardvarkManifest }[] = [];
+		for( let url of entryUrls ?? [] )
+		{
+			if( this.manifestsByUrl.has( url ) )
 			{
-				loadedEntries.push( entry );
+				entries.push( { url, manifest: this.manifestsByUrl.get( url ) } );
 			}
 		}
 
-		if( !loadedEntries.length )
+		let error: JSX.Element = null;
+		if( !entries.length )
 		{
 			if( this.state.registryLoadFailed )
 			{
-				return this.renderErrorPanel( "Error loading gadget registry" );
+				error = <ErrorPanel error="Error loading gadget registry" />;
 			}
-			else
+			else switch( this.state.tab )
 			{
-				return this.renderErrorPanel( "Loading gadget registry..." );
+				case ControlPanelTab.Builtin:
+				case ControlPanelTab.Main:
+					error = <ErrorPanel error= "Loading gadget registry..." />;
+					break;
+
+				case ControlPanelTab.Favorites:
+					error = <ErrorPanel error="Use the gadget scanner to add favorites." />;
+					break;
 			}
 		}
 
 		const k_cellWidth = 0.06;
-		let rowCount = Math.ceil( loadedEntries.length / 3 );
+		const k_bottomPadding = 0.04;
+		let rowCount = Math.ceil( entries.length / 3 );
 		let top = rowCount * k_cellWidth;
 		let seeds: JSX.Element[] = [];
-		for( let gadgetIndex = 0; gadgetIndex < loadedEntries.length; gadgetIndex++ )
+		for( let gadgetIndex = 0; gadgetIndex < entries.length; gadgetIndex++ )
 		{
-			let gadget = loadedEntries[ gadgetIndex ];
+			let gadget = entries[ gadgetIndex ];
 			let col = gadgetIndex % 3;
 			let row = Math.floor( gadgetIndex / 3 );
 
 			seeds.push( 
-				<AvTransform translateY = { top - row * k_cellWidth } 
+				<AvTransform translateY = { k_bottomPadding + top - row * k_cellWidth } 
 					translateX = { ( col - 1 ) * k_cellWidth } 
 					key={ gadget.url } >
 
@@ -281,6 +361,15 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		}
 		return <>
 			{ seeds }
+			{ error }
+
+			{ this.renderTabButton( -0.07, g_builtinModelHammerAndWrench, ControlPanelTab.Main ) }
+			{ this.renderTabButton(  0.00, g_builtinModelHammerAndWrench, ControlPanelTab.Builtin ) }
+			{ this.renderTabButton(  0.07, g_builtinModelStar, ControlPanelTab.Favorites ) }
+			
+			<AvTransform translateY={ 0.05} rotateZ={ 90 }>
+				<AvPrimitive type={ PrimitiveType.Cylinder } radius={ 0.003 } height={ 0.20 }/>
+			</AvTransform>
 			</>;
 	}
 
@@ -415,7 +504,30 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 	@bind
 	private onFavoriteGadget()
 	{
-		console.log( "Adding to favorites", this.state.scannerGadget?.gadgetUrl );
+		if( !this.state.scannerGadget )
+			return;
+
+		if( -1 == this.settings.favorites.indexOf( this.state.scannerGadget.gadgetUrl ) )
+		{
+			console.log( `Adding to favorites: ${ this.state.scannerGadget?.gadgetUrl } ` );
+			this.settings.favorites.push( this.state.scannerGadget.gadgetUrl );
+			this.updateSettings();
+
+			if( !this.manifestsByUrl.has( this.state.scannerGadget.gadgetUrl ) )
+			{
+				this.manifestsByUrl.set( this.state.scannerGadget.gadgetUrl, 
+					this.state.scannerGadget.gadgetManifest );
+			}
+
+			if( this.state.tab == ControlPanelTab.Favorites )
+			{
+				this.forceUpdate();
+			}
+		}
+		else
+		{
+			console.log( `Favorites already contains: ${ this.state.scannerGadget?.gadgetUrl } ` );
+		}
 	}
 	
 
@@ -427,6 +539,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 				grabberFromGrabbable={ {} }
 				advertiseGadgetInfo={ false }
 				showChildren={ ShowGrabbableChildren.OnlyWhenGrabbed }
+				hiddenChildrenBehavior={ HiddenChildrenBehavior.Omit }
 				>
 
 				{
@@ -451,7 +564,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 					gadgetUrl={ this.state.scannerGadget?.gadgetUrl }
 					endpointAddr={ this.state.scannerGadget?.gadgetEndpoint }
 				/>
-				
+
 				{ this.state.scannerGadget &&
 					<>
 						<AvTransform translateY={ 0.20 } rotateX={ 90 }>
