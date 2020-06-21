@@ -4,7 +4,7 @@
 	"icons" :
 	[
 		{
-			"src": "http://localhost:23842/models/panel/panel.glb",
+			"src": "whiteboard.glb",
 			"type": "model/gltf-binary"
 		}
 	],

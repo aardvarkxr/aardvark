@@ -1,4 +1,5 @@
 const path = require('path');
+const fs = require( 'fs' );
 var HtmlWebpackPlugin = require( 'html-webpack-plugin' );
 const CopyPlugin = require('copy-webpack-plugin');
 
@@ -70,6 +71,32 @@ function createConfig( appName, appTitle, ext )
 		path: dest,
 	}
 
+	let copyList =
+	[
+		{ from: './' +appName + '/manifest.webmanifest', to: 'manifest.webmanifest' }
+	];
+
+	if( fs.existsSync( './' +appName + '/src/' + appName + '.css' ) )
+	{
+		copyList.push(
+			{ from: './' +appName + '/src/' + appName + '.css', to: appName + '.css' } );
+	}
+
+	let publicSrc = './' +appName + '/public';
+	if( fs.existsSync( publicSrc ) )
+	{
+		let dirContents = fs.readdirSync( publicSrc );
+		for( let filename of dirContents )
+		{
+			copyList.push( 
+				{
+					from: publicSrc + '/' + filename,
+					to: filename,
+				}
+			)
+		}
+	}
+
 	config.plugins =
 	[
 		new HtmlWebpackPlugin(
@@ -81,12 +108,7 @@ function createConfig( appName, appTitle, ext )
 				name: appName,
 			}
 		),
-		new CopyPlugin(
-			[
-				{ from: './' +appName + '/src/' + appName + '.css', to: appName + '.css' },
-				{ from: './' +appName + '/manifest.webmanifest', to: 'manifest.webmanifest' }
-			]
-			),
+		new CopyPlugin( copyList ),
   	];
 
 	return config;
