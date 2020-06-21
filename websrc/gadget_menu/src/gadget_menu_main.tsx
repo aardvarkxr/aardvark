@@ -1,10 +1,10 @@
-import { AvComposedEntity, AvGadget, AvGadgetSeed, AvOrigin, AvPrimitive, AvStandardGrabbable, AvTransform, MoveableComponent, MoveableComponentState, PrimitiveType, ShowGrabbableChildren, AvModel, AvPanel, AvHeadFacingTransform, ActiveInterface, AvInterfaceEntity, nodeTransformToMat4, QuaternionToEulerAngles, EulerAnglesToQuaternion, nodeTransformFromMat4, GadgetSeedHighlight, AvHighlightTransmitters, k_GadgetInfoInterface, GadgetInfoEvent, renderGadgetIcon, PrimitiveYOrigin, AvLine, AvGrabButton, HiddenChildrenBehavior } from '@aardvarkxr/aardvark-react';
-import { EVolumeType, g_builtinModelGear, AvNodeTransform, emptyVolume, AardvarkManifest, g_builtinModelBarcodeScanner, g_builtinModelDropAttract, AvVolume, rayVolume, EndpointAddr, AvVector, EVolumeContext, g_builtinModelTrashcan, g_builtinModelStar, MsgDestroyGadget, MessageType, g_builtinModelHammerAndWrench } from '@aardvarkxr/aardvark-shared';
-import * as React from 'react';
-import * as ReactDOM from 'react-dom';
+import { ActiveInterface, AvGadget, AvGadgetSeed, AvGrabButton, AvHeadFacingTransform, AvHighlightTransmitters, AvInterfaceEntity, AvLine, AvModel, AvOrigin, AvPanel, AvPrimitive, AvStandardGrabbable, AvTransform, GadgetInfoEvent, GadgetSeedHighlight, HiddenChildrenBehavior, k_GadgetInfoInterface, nodeTransformFromMat4, nodeTransformToMat4, PrimitiveType, PrimitiveYOrigin, renderGadgetIcon, ShowGrabbableChildren } from '@aardvarkxr/aardvark-react';
+import { AardvarkManifest, AvNodeTransform, AvVector, emptyVolume, EndpointAddr, g_builtinModelBarcodeScanner, g_builtinModelDropAttract, g_builtinModelNetwork, g_builtinModelHammerAndWrench, g_builtinModelStar, g_builtinModelTrashcan, MessageType, MsgDestroyGadget, rayVolume } from '@aardvarkxr/aardvark-shared';
+import { mat4, vec3, vec4 } from '@tlaukkan/tsm';
 import Axios from 'axios';
 import bind from 'bind-decorator';
-import { vec3, vec4, mat4 } from '@tlaukkan/tsm';
+import * as React from 'react';
+import * as ReactDOM from 'react-dom';
 
 
 const k_gadgetRegistryUI = "aardvark-gadget-registry@1";
@@ -363,7 +363,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 			{ seeds }
 			{ error }
 
-			{ this.renderTabButton( -0.07, g_builtinModelHammerAndWrench, ControlPanelTab.Main ) }
+			{ this.renderTabButton( -0.07, g_builtinModelNetwork, ControlPanelTab.Main ) }
 			{ this.renderTabButton(  0.00, g_builtinModelHammerAndWrench, ControlPanelTab.Builtin ) }
 			{ this.renderTabButton(  0.07, g_builtinModelStar, ControlPanelTab.Favorites ) }
 			
