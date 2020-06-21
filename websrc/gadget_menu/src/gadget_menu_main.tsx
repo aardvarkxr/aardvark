@@ -197,6 +197,27 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 			this.setState( { registryLoadFailed: true } );
 		} );
 
+		AvGadget.instance().getInstalledGadgets()
+		.then( ( installedGadgets: string[] ) =>
+		{
+			let addedOne = false;
+			for( let gadgetUrl of installedGadgets )
+			{
+				if( -1 == this.settings.favorites.indexOf( gadgetUrl ) )
+				{
+					console.log( `Adding favorite from installed list: ${ gadgetUrl } ` );
+					this.settings.favorites.push( gadgetUrl );
+					this.requestManifest( gadgetUrl );
+					addedOne = true;
+				}
+			}
+
+			if( addedOne )
+			{
+				this.updateSettings();
+			}
+		} );
+
 		for( let favorite of this.settings.favorites )
 		{
 			this.requestManifest( favorite );

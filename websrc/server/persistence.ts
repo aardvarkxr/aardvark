@@ -7,21 +7,6 @@ import { v4 as uuid } from 'uuid';
 import { getJSONFromUri } from './serverutils';
 
 
-const g_alwaysInstalledGadgets =
-[
-	"http://localhost:23842/gadgets/test_panel",
-	"http://localhost:23842/gadgets/hand_mirror",
-	"http://localhost:23842/gadgets/control_test",
-	"http://localhost:23842/gadgets/whiteboard",
-];
-
-const g_builtinGadgets =
-[
-	"http://localhost:23842/gadgets/aardvark_master",
-	"http://localhost:23842/gadgets/default_hands",
-	"http://localhost:23842/gadgets/gadget_menu",
-];
-
 class CPersistenceManager
 {
 	private m_state: AardvarkState;
@@ -215,7 +200,7 @@ class CPersistenceManager
 
 	public getInstalledGadgets() : string[]
 	{
-		return this.m_state.installedGadgets.concat( g_alwaysInstalledGadgets );
+		return this.m_state.installedGadgets;
 	}
 
 	public addInstalledGadget( gadgetUri: string )
@@ -238,13 +223,6 @@ class CPersistenceManager
 				});
 			this.markDirty();
 		}
-	}
-
-	public isGadgetUriInstalled( gadgetUri: string ): boolean
-	{
-		return this.m_state.installedGadgets.includes( gadgetUri )
-			|| g_alwaysInstalledGadgets.includes( gadgetUri )
-			|| g_builtinGadgets.includes( gadgetUri )
 	}
 }
 
