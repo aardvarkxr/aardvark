@@ -71,8 +71,6 @@ function GadgetScannerPanel( props: GadgetScannerPanelProps )
 						<div className="GadgetDescription">
 							Categories: { props.manifest.categories.join( ", " ) }
 						</div> }
-					<div className="GadgetDescription">Delete control</div>
-					<div className="GadgetDescription">Share control</div>
 				</> }
 			{ !props.manifest &&
 				<div className="GadgetDescription">Aim the scanner at a gadget to learn more about it.</div>
