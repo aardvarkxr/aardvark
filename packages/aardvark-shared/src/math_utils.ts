@@ -1,7 +1,6 @@
-import { MinimalPose, AvNodeTransform } from '@aardvarkxr/aardvark-shared';
+import { MinimalPose, AvNodeTransform } from './aardvark_protocol';
 import { vec3, mat4, vec4, mat3, quat } from '@tlaukkan/tsm';
-
-const Quaternion = require( 'quaternion' );
+import * as Quaternion from 'quaternion';
 
 export function translateMat( t: vec3)
 {
