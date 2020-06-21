@@ -25,5 +25,8 @@ namespace tools
 
 	/** returns the log path */
 	std::filesystem::path GetLogDirectory();
+
+	/** returns the cache path */
+	std::filesystem::path GetCacheDirectory();
 };
 

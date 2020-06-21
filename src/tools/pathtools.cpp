@@ -129,4 +129,10 @@ namespace tools
 		return GetUserDocumentsPath() / "aardvark" / "logs";
 	}
 
+	/** returns the cache path */
+	std::filesystem::path GetCacheDirectory()
+	{
+		return GetUserDocumentsPath() / "aardvark" / "cache";
+	}
+
 }

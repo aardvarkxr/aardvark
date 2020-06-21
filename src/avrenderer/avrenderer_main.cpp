@@ -76,6 +76,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 	//settings.multi_threaded_message_loop = true;
 	settings.windowless_rendering_enabled = true;
 
+	std::wstring cachePath = tools::GetCacheDirectory().wstring();
+	cef_string_wide_to_utf16( cachePath.c_str(), cachePath.size(), &settings.cache_path );
+
 	// Initialize CEF.
 	CefInitialize( mainArgs, settings, app.get(), sandbox_info );
 
