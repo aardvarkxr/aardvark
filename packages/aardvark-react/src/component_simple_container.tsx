@@ -1,12 +1,11 @@
 import * as React from 'react';
-import { EndpointAddr, AvNodeTransform, endpointAddrToString, InitialInterfaceLock, endpointAddrsMatch } from '@aardvarkxr/aardvark-shared';
+import { nodeTransformToMat4, nodeTransformFromMat4, EndpointAddr, AvNodeTransform, endpointAddrToString, InitialInterfaceLock, endpointAddrsMatch } from '@aardvarkxr/aardvark-shared';
 import { EntityComponent } from './aardvark_composed_entity';
 import { InterfaceProp, ActiveInterface } from './aardvark_interface_entity';
 import bind from 'bind-decorator';
 import { AvTransform } from './aardvark_transform';
 import { AvEntityChild } from './aardvark_entity_child';
 import { ContainerRequestType, ContainerRequest, MoveableComponent } from './component_moveable';
-import { nodeTransformToMat4, nodeTransformFromMat4 } from './math_utils';
 import { vec3, mat4, vec4, mat3, quat } from '@tlaukkan/tsm';
 
 export enum ContainerItemState

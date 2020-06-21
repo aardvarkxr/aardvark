@@ -28,4 +28,3 @@ export * from './gadget_endpoint';
 export * from './network_universe';
 export * from './renderer_endpoint';
 export * from './remote_universe';
-export * from './math_utils';

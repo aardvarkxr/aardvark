@@ -1,7 +1,7 @@
 import { vec3, mat4 } from '@tlaukkan/tsm';
 import { WebAppManifest } from './web_app_manifest';
 import { AvActionState } from './aardvark';
-import { nodeTransformFromMat4 } from '../../aardvark-react/src/math_utils';
+import { nodeTransformFromMat4 } from './math_utils';
 
 export const AardvarkPort = 23842;
 

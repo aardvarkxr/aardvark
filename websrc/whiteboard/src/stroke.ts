@@ -1,9 +1,8 @@
 import { AvVector } from '@aardvarkxr/aardvark-shared';
-import { translateMat } from '@aardvarkxr/aardvark-react';
 import { vec2, vec3 } from '@tlaukkan/tsm';
 import Color from 'color';
-import { exportGLB, Node, GLTFAsset, Material, Mesh as GltfMesh, Vertex, Scene } from "gltf-js-utils";
-import { CatmullRomCurve3, ExtrudeGeometry, ExtrudeGeometryOptions, Shape, Vector3, Geometry, SphereGeometry, Matrix4 } from 'three';
+import { exportGLB, GLTFAsset, Material, Mesh as GltfMesh, Node, Scene, Vertex } from "gltf-js-utils";
+import { CatmullRomCurve3, ExtrudeGeometry, ExtrudeGeometryOptions, Geometry, Matrix4, Shape, SphereGeometry, Vector3 } from 'three';
 
 export interface Stroke
 {

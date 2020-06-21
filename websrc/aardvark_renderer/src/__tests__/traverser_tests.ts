@@ -1,5 +1,4 @@
-import { translateMat } from '@aardvarkxr/aardvark-react';
-import { AvColor, MessageType } from '@aardvarkxr/aardvark-shared';
+import { AvColor, MessageType, translateMat } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3 } from '@tlaukkan/tsm';
 import { addChild, buildModel, buildOrigin, buildTransform, colorFromString, nextGadget, currentGadgetId } from '../scene_graph_test_utils';
 import { AvDefaultTraverser } from './../aardvark_traverser';

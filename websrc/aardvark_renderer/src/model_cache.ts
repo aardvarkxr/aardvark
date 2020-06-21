@@ -1,5 +1,4 @@
-import { nodeTransformToMat4 } from '@aardvarkxr/aardvark-react';
-import { AABB, AvNodeTransform, EndpointAddr, stringToEndpointAddr } from '@aardvarkxr/aardvark-shared';
+import { AABB, AvNodeTransform, nodeTransformToMat4, stringToEndpointAddr } from '@aardvarkxr/aardvark-shared';
 import * as core from "@loaders.gl/core";
 import * as gltf from "@loaders.gl/gltf";
 import { mat4, vec4 } from '@tlaukkan/tsm';

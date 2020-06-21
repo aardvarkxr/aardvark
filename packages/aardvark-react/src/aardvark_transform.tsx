@@ -1,9 +1,7 @@
-import * as React from 'react';
-
-import { AvNodeType, AvQuaternion, AvNodeTransform, MinimalPose, EndpointAddr } from '@aardvarkxr/aardvark-shared';
+import { AvNodeTransform, AvNodeType, AvQuaternion, EndpointAddr, MinimalPose, minimalToMat4Transform, nodeTransformFromMat4, quatFromAxisAngleDegrees } from '@aardvarkxr/aardvark-shared';
+import { vec3 } from '@tlaukkan/tsm';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
-import { quat, vec3 } from '@tlaukkan/tsm';
-import { quatFromAxisAngleDegrees, nodeTransformFromMat4, minimalToMat4Transform } from './math_utils';
+
 
 interface AvTransformProps extends AvBaseNodeProps
 {
@@ -171,7 +169,7 @@ export class AvTransform extends AvBaseNode< AvTransformProps, {} >
 		}
 
 		node.propParentAddr = this.props.parent;
-		
+
 		return node;
 	}
 }

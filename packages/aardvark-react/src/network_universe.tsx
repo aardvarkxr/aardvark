@@ -1,11 +1,8 @@
-import { AvNodeTransform, infiniteVolume, InitialInterfaceLock, MinimalPose, EndpointAddr } from '@aardvarkxr/aardvark-shared';
+import { AvNodeTransform, InitialInterfaceLock, MinimalPose, minimalPoseFromTransform } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
-import * as React from 'react';
-import { ActiveInterface, AvInterfaceEntity, InterfaceProp } from './aardvark_interface_entity';
-import { NetworkGadgetEvent, NetworkGadgetEventType, NGESetGadgetInfo, NGESendEvent, NetworkedGadgetComponent } from './component_networked_gadget';
-import { minimalPoseFromTransform } from './math_utils';
 import { EntityComponent } from './aardvark_composed_entity';
-import { Interface } from 'readline';
+import { ActiveInterface } from './aardvark_interface_entity';
+import { NetworkedGadgetComponent, NetworkGadgetEvent, NetworkGadgetEventType, NGESendEvent, NGESetGadgetInfo } from './component_networked_gadget';
 
 
 export enum NetworkUniverseEventType

@@ -1,5 +1,4 @@
-import { nodeTransformToMat4 } from '@aardvarkxr/aardvark-react';
-import { EndpointAddr, endpointAddrsMatch, endpointAddrToString, InitialInterfaceLock, InterfaceLockResult, EVolumeContext } from '@aardvarkxr/aardvark-shared';
+import { EndpointAddr, endpointAddrsMatch, endpointAddrToString, EVolumeContext, InitialInterfaceLock, InterfaceLockResult } from '@aardvarkxr/aardvark-shared';
 import { mat4 } from '@tlaukkan/tsm';
 import { TransformedVolume, volumesIntersect } from './volume_intersection';
 

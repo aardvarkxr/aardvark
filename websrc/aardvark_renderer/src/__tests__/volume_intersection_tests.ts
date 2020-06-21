@@ -1,8 +1,7 @@
-import { EVolumeContext, AvVolume, EVolumeType, AvNodeTransform } from '@aardvarkxr/aardvark-shared';
+import { EVolumeContext, rotationMatFromEulerDegrees, scaleMat, translateMat } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3 } from '@tlaukkan/tsm';
-import { scaleMat, translateMat, nodeTransformToMat4, rotationMatFromEulerDegrees } from '@aardvarkxr/aardvark-react';
-import { volumesIntersect, TransformedVolume, rayFromMatrix } from './../volume_intersection';
-import { makeBox, makeInfinite, makeSphere, makeEmpty, makeRay } from '../volume_test_utils';
+import { makeBox, makeEmpty, makeInfinite, makeRay, makeSphere } from '../volume_test_utils';
+import { rayFromMatrix, volumesIntersect } from './../volume_intersection';
 
 beforeEach( async() =>
 {

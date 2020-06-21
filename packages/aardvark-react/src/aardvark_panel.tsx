@@ -1,4 +1,4 @@
-import { Av, AvNodeTransform, AvSharedTextureInfo, AvVolume, EndpointAddr, EVolumeType, g_builtinModelPanel, PanelMouseEventType } from '@aardvarkxr/aardvark-shared';
+import { Av, AvNodeTransform, AvSharedTextureInfo, AvVolume, EndpointAddr, EVolumeType, g_builtinModelPanel, nodeTransformToMat4, PanelMouseEventType } from '@aardvarkxr/aardvark-shared';
 import { vec2, vec4 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
 import * as React from 'react';
@@ -8,7 +8,6 @@ import { ActiveInterface, AvInterfaceEntity } from './aardvark_interface_entity'
 import { AvModel } from './aardvark_model';
 import { AvPrimitive, PrimitiveType } from './aardvark_primitive';
 import { AvTransform } from './aardvark_transform';
-import { nodeTransformToMat4 } from './math_utils';
 
 
 export interface PanelMouseEvent

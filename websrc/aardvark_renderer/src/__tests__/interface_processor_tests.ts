@@ -1,10 +1,8 @@
 import { TransformedVolume } from './../volume_intersection';
-import { EndpointAddr, EndpointType, endpointAddrsMatch, endpointAddrToString, InterfaceLockResult, InitialInterfaceLock, EVolumeContext } from '@aardvarkxr/aardvark-shared';
+import { translateMat, nodeTransformToMat4, EndpointAddr, EndpointType, endpointAddrsMatch, endpointAddrToString, InterfaceLockResult, InitialInterfaceLock, EVolumeContext } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3, vec4 } from '@tlaukkan/tsm';
 import { CInterfaceProcessor, InterfaceProcessorCallbacks, InterfaceEntity } from './../interface_processor';
 import { makeSphere, makeInfinite, makeEmpty } from '../volume_test_utils';
-import { syncBuiltinESMExports } from 'module';
-import { translateMat, nodeTransformToMat4 } from '@aardvarkxr/aardvark-react';
 
 beforeEach( async() =>
 {

@@ -1,6 +1,5 @@
-import { EVolumeType, EVolumeContext, AvNodeTransform } from '@aardvarkxr/aardvark-shared';
+import { EVolumeType, EVolumeContext, AvNodeTransform, scaleMat, translateMat, nodeTransformToMat4, nodeTransformFromMat4  } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3 } from '@tlaukkan/tsm';
-import { scaleMat, translateMat, nodeTransformToMat4, nodeTransformFromMat4 } from '@aardvarkxr/aardvark-react';
 import { TransformedVolume } from './volume_intersection';
 
 export function makeSphere( radius: number, position?: vec3, scale?: number, context?: EVolumeContext )

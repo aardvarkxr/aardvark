@@ -1,8 +1,7 @@
-import { AvNodeTransform, AvNodeType, EndpointAddr, endpointAddrsMatch, InterfaceLockResult, MessageType, MsgInterfaceLock, MsgInterfaceLockResponse, MsgInterfaceUnlock, MsgInterfaceUnlockResponse, AvVolume, ENodeFlags, MsgInterfaceSendEvent, InitialInterfaceLock, MsgInterfaceRelockResponse, MsgInterfaceRelock, MsgInterfaceSendEventResponse } from '@aardvarkxr/aardvark-shared';
+import { AvNodeTransform, AvNodeType, AvVolume, EndpointAddr, endpointAddrsMatch, ENodeFlags, InitialInterfaceLock, InterfaceLockResult, invertNodeTransform, MessageType, MsgInterfaceLock, MsgInterfaceLockResponse, MsgInterfaceRelock, MsgInterfaceRelockResponse, MsgInterfaceSendEvent, MsgInterfaceSendEventResponse, MsgInterfaceUnlock, MsgInterfaceUnlockResponse } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 import { AvGadget } from './aardvark_gadget';
-import { invertNodeTransform } from './math_utils';
 
 export enum InterfaceRole
 {

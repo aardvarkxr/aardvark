@@ -1,4 +1,5 @@
-import { AardvarkManifest, AvVolume, EndpointAddr, endpointAddrToString, EVolumeType, g_builtinModelError, InitialInterfaceLock, AvNodeTransform } from '@aardvarkxr/aardvark-shared';
+import { AardvarkManifest, AvNodeTransform, AvVolume, EndpointAddr, endpointAddrToString, EVolumeType, g_builtinModelError, InitialInterfaceLock, quatFromAxisAngleDegrees } from '@aardvarkxr/aardvark-shared';
+import { vec3 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
 import isUrl from 'is-url';
 import * as React from 'react';
@@ -10,8 +11,6 @@ import { ActiveInterface, InterfaceProp } from './aardvark_interface_entity';
 import { AvModel } from './aardvark_model';
 import { AvTransform } from './aardvark_transform';
 import { ContainerRequest, ContainerRequestType, MoveableComponent, MoveableComponentState } from './component_moveable';
-import { quatFromAxisAngleDegrees } from './math_utils';
-import { vec3, mat4, vec4, mat3, quat } from '@tlaukkan/tsm';
 
 export enum GadgetSeedHighlight
 {

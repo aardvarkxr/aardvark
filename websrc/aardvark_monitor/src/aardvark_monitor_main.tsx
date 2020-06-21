@@ -1,5 +1,5 @@
-import { CMonitorEndpoint, DegreesToRadians, EulerAnglesToQuaternion, QuaternionToEulerAngles, RadiansToDegrees, nodeTransformToMat4 } from '@aardvarkxr/aardvark-react';
-import { AardvarkManifest, AvNode, AvNodeTransform, AvNodeType, AvQuaternion, AvVector, AvVolume, EndpointAddr, endpointAddrToString, EndpointType, ENodeFlags, Envelope, EVolumeType, InitialInterfaceLock, MessageType, MsgLostEndpoint, MsgNewEndpoint, MsgOverrideTransform, MsgResourceLoadFailed, MsgUpdateSceneGraph, EVolumeContext } from '@aardvarkxr/aardvark-shared';
+import { CMonitorEndpoint, DegreesToRadians, EulerAnglesToQuaternion, QuaternionToEulerAngles, RadiansToDegrees } from '@aardvarkxr/aardvark-react';
+import { AardvarkManifest, AvNode, AvNodeTransform, AvNodeType, AvQuaternion, AvVector, AvVolume, EndpointAddr, nodeTransformToMat4, endpointAddrToString, EndpointType, ENodeFlags, Envelope, EVolumeType, InitialInterfaceLock, MessageType, MsgLostEndpoint, MsgNewEndpoint, MsgOverrideTransform, MsgResourceLoadFailed, MsgUpdateSceneGraph, EVolumeContext } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import { action, computed, observable, ObservableMap } from 'mobx';
 import { observer } from 'mobx-react';
