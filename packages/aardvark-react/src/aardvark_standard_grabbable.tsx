@@ -46,6 +46,15 @@ export enum ShowGrabbableChildren
 	OnlyWhenNotGrabbed = 2,
 }
 
+export enum HiddenChildrenBehavior
+{
+	/** Emit the child nodes, but mark them as hidden. */
+	Hidden = 0,
+
+	/** Do not emit the child nodes. */
+	Omit = 1,
+}
+
 interface StandardGrabbableProps
 {
 	/** The model to use for the grab handle of this grabbable. */
@@ -56,6 +65,14 @@ interface StandardGrabbableProps
 	 * @default ShowGrabbableChildren.Always
 	*/
 	showChildren?: ShowGrabbableChildren;
+
+	/** Controls how child nodes are hidden. If showChildren is set to 
+	 * ShowGrabbableChildren.Always or if the grabbable has no children,
+	 * this prop is ignored.
+	 * 
+	 * @default HiddenChildrenBehavior.Hidden
+	 */
+	hiddenChildrenBehavior?: HiddenChildrenBehavior;
 
 	/** Uniform scale to apply to the grab handle.
 	 * 
@@ -278,6 +295,21 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 		let volume: AvVolume = this.remoteComponent ? emptyVolume() : infoVolume;
 		let components: EntityComponent[] = [ this.remoteComponent ?? this.moveableComponent ];
 
+		let children = this.props.children;
+		if( !showChildren )
+		{
+			switch( this.props.hiddenChildrenBehavior ?? HiddenChildrenBehavior.Hidden )
+			{
+				default:
+				case HiddenChildrenBehavior.Hidden:
+					children = <AvTransform visible={ showChildren }>{ this.props.children }</AvTransform>;
+					break;
+
+				case HiddenChildrenBehavior.Omit:
+					children = null;
+			}
+		}
+
 		return (
 			<AvComposedEntity components={ components }	volume={ volume }>
 				{ this.networkedComponent 
@@ -285,8 +317,7 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 				<AvTransform uniformScale={ scale }>
 					<AvModel uri={ this.props.modelUri} color={ this.props.modelColor }/>
 				</AvTransform>
-				{ this.props.children && 
-					<AvTransform visible={ showChildren }>{ this.props.children }</AvTransform> }
+				{ children }
 				{ ( this.props.advertiseGadgetInfo ?? true ) &&
 					<AvGadgetInfo volume={ infoVolume } /> }
 			</AvComposedEntity> );
