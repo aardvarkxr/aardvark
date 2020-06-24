@@ -1,10 +1,11 @@
-import { ActiveInterface, AvComposedEntity, AvEntityChild, AvGadget, AvInterfaceEntity, AvOrigin, AvPrimitive, AvTransform, GrabRequest, GrabRequestType, PanelRequest, PanelRequestType, PrimitiveType, SimpleContainerComponent, AvPanel, AvGrabButton, AvModel } from '@aardvarkxr/aardvark-react';
-import {g_builtinModelDropAttract,  AvNodeTransform, AvVolume, EAction, EHand, EVolumeType, multiplyTransforms, g_builtinModelHandLeft, g_builtinModelHandRight, InterfaceLockResult, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EVolumeContext, g_builtinModelGear, emptyVolume } from '@aardvarkxr/aardvark-shared';
+import { ActiveInterface, AvComposedEntity, AvEntityChild, AvGadget, AvInterfaceEntity, AvOrigin, AvPrimitive, AvTransform, GrabRequest, GrabRequestType, PanelRequest, PanelRequestType, PrimitiveType, SimpleContainerComponent, AvPanel, AvGrabButton, AvModel, PrimitiveYOrigin } from '@aardvarkxr/aardvark-react';
+import {g_builtinModelDropAttract,  AvNodeTransform, AvVolume, EAction, EHand, EVolumeType, multiplyTransforms, g_builtinModelHandLeft, g_builtinModelHandRight, InterfaceLockResult, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EVolumeContext, g_builtinModelGear, emptyVolume, rayVolume } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import { makeEmpty } from 'aardvark_renderer/src/volume_test_utils';
 import { InterfaceEntity } from 'aardvark_renderer/src/interface_processor';
+import { vec3 } from '@tlaukkan/tsm';
 
 const k_gadgetRegistryUI = "aardvark-gadget-registry@1";
 
@@ -35,6 +36,8 @@ interface DefaultHandState
 	state: GrabberState;
 	regrabTarget?: EndpointAddr;
 	grabberFromRegrabTarget?: AvNodeTransform;
+	showRay?: boolean;
+	wasShowingRay?: boolean;
 }
 
 
@@ -43,6 +46,8 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 	private grabListenerHandle = 0;
 	private containerComponent = new SimpleContainerComponent();
 	private grabPressed = false;
+	private grabRayHandler = 0;
+	private grabMoveHandler = 0;
 
 	constructor( props: any )
 	{
@@ -57,6 +62,8 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 
 		this.grabListenerHandle = AvGadget.instance().listenForActionState( EAction.Grab, this.props.hand, 
 			this.onGrabPressed, this.onGrabReleased );
+		this.grabRayHandler = AvGadget.instance().listenForActionState( EAction.GrabShowRay, this.props.hand, 
+			this.onGrabShowRay, this.onGrabHideRay );
 
 		this.containerComponent.onItemChanged( () => this.forceUpdate() );
 	}
@@ -64,6 +71,30 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 	componentWillUnmount()
 	{
 		AvGadget.instance().unlistenForActionState( this.grabListenerHandle );
+		AvGadget.instance().unlistenForActionState( this.grabRayHandler );
+	}
+
+	@bind
+	private onGrabMove( newValue: [ number, number ] )
+	{
+	}
+
+	@bind
+	private onGrabShowRay()
+	{
+		this.setState( 
+			{ 
+				showRay: true
+			} );
+	}
+
+	@bind
+	private onGrabHideRay()
+	{
+		this.setState( 
+			{ 
+				showRay: false
+			} );
 	}
 
 	@bind
@@ -76,6 +107,8 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 		}
 
 		this.grabPressed = true;
+		this.grabMoveHandler = AvGadget.instance().listenForVector2ActionState( 
+			EAction.GrabMove, this.props.hand, this.onGrabMove );
 
 		if( this.state.activeGrab )
 		{
@@ -109,6 +142,8 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 		}
 
 		this.grabPressed = false;
+		AvGadget.instance().unlistenForActionState( this.grabMoveHandler );
+		this.grabMoveHandler = 0;
 
 		if( this.state.activeGrab )
 		{
@@ -199,7 +234,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 			this.setState( { state: GrabberState.Highlight } );
 		}
 		console.log( `setting activeInterface to ${ endpointAddrToString( activeInterface.peer ) }`)
-		this.setState( { activeGrab: activeInterface } );
+		this.setState( { activeGrab: activeInterface, wasShowingRay: this.state.showRay } );
 
 
 		activeInterface.onEvent( 
@@ -303,7 +338,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 
 			console.log( `unsetting activeInterface from ${ endpointAddrToString( this.state.activeGrab?.peer ) }`)
 
-			this.setState( { activeGrab: null } );	
+			this.setState( { activeGrab: null, wasShowingRay: false } );	
 		} );
 
 	}
@@ -388,11 +423,28 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 			radius: 0.03,
 		};
 
-		const k_grabberVolume: AvVolume =
+		const k_grabberBallVolume: AvVolume =
 		{ 
 			type: EVolumeType.Sphere, 
 			radius: 0.01,
 		};
+
+		let grabberVolumes = [ k_grabberBallVolume ];
+
+		let ray: JSX.Element = null;
+		if( this.state.state == GrabberState.Idle && this.state.showRay 
+			|| this.state.wasShowingRay )
+		{
+			grabberVolumes.push( rayVolume( new vec3( [ 0, 0, 0 ] ), new vec3( [ 0, 0, -1 ] ) ) );
+			if( this.state.state == GrabberState.Idle ||
+				this.state.state == GrabberState.Highlight )
+			{
+				ray = <AvTransform rotateX={ -90 }>
+				<AvPrimitive radius={ 0.005 } height={ 4 } type={ PrimitiveType.Cylinder }
+					color="lightgrey" originY={ PrimitiveYOrigin.Bottom } />
+				</AvTransform>;
+			}
+		}
 
 		let child: EndpointAddr = null;
 		if( this.state.activeGrab && this.state.grabberFromGrabbable
@@ -405,6 +457,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 			<>
 			<AvOrigin path={ originPath }>
 				<AvPrimitive radius={ 0.01 } type={ PrimitiveType.Sphere } color={ modelColor }/>
+				{ ray }
 				<AvComposedEntity components={ [ this.containerComponent ]} 
 					volume={ [ k_containerInnerVolume, k_containerOuterVolume ] }
 					priority={ 100 }/>
@@ -413,7 +466,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 						{ iface: "aardvark-panel@1", processor: this.onPanelStart },
 						{ iface: "aardvark-grab@1", processor: this.onGrabStart },
 					] }
-					volume={ k_grabberVolume } >
+					volume={ grabberVolumes } >
 						{
 							child
 							&& <AvTransform transform={ this.state.grabberFromGrabbable }>
