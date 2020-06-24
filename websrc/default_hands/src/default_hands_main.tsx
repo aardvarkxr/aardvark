@@ -1,5 +1,5 @@
 import { ActiveInterface, AvComposedEntity, AvEntityChild, AvGadget, AvInterfaceEntity, AvOrigin, AvPrimitive, AvTransform, GrabRequest, GrabRequestType, PanelRequest, PanelRequestType, PrimitiveType, SimpleContainerComponent, AvPanel, AvGrabButton, AvModel, PrimitiveYOrigin } from '@aardvarkxr/aardvark-react';
-import {g_builtinModelDropAttract,  AvNodeTransform, AvVolume, EAction, EHand, EVolumeType, multiplyTransforms, g_builtinModelHandLeft, g_builtinModelHandRight, InterfaceLockResult, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EVolumeContext, g_builtinModelGear, emptyVolume, rayVolume } from '@aardvarkxr/aardvark-shared';
+import {g_builtinModelDropAttract,  AvNodeTransform, AvVolume, EAction, EHand, EVolumeType, multiplyTransforms, g_builtinModelHandLeft, g_builtinModelHandRight, InterfaceLockResult, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EVolumeContext, g_builtinModelGear, emptyVolume, rayVolume, AvVector, AvQuaternion } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
@@ -32,7 +32,10 @@ interface DefaultHandState
 {
 	activeGrab: ActiveInterface;
 	activePanel: ActiveInterface;
-	grabberFromGrabbable?: AvNodeTransform;
+	grabberFromGrabbableOverride?: AvNodeTransform;
+	grabberFromGrabbableDirection?: vec3;
+	grabberFromGrabbableRange?: number;
+	grabberFromGrabbableRotation?: AvQuaternion;
 	state: GrabberState;
 	regrabTarget?: EndpointAddr;
 	grabberFromRegrabTarget?: AvNodeTransform;
@@ -48,6 +51,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 	private grabPressed = false;
 	private grabRayHandler = 0;
 	private grabMoveHandler = 0;
+	private lastMoveTime = 0;
 
 	constructor( props: any )
 	{
@@ -77,6 +81,29 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 	@bind
 	private onGrabMove( newValue: [ number, number ] )
 	{
+		const k_moveSpeed = 2.0; // meters per second
+
+		let now = performance.now();
+		let elapsedSeconds = Math.max( 0, ( now - this.lastMoveTime ) / 1000 );
+		this.lastMoveTime = now;
+
+		this.setState( (prevState: DefaultHandState ) =>
+		{
+			return { grabberFromGrabbableRange: prevState.grabberFromGrabbableRange 
+				+ elapsedSeconds * k_moveSpeed * newValue[ 1 ] };
+		} );
+	}
+
+	private startGrabMove()
+	{
+		this.grabMoveHandler = AvGadget.instance().listenForVector2ActionState( 
+			EAction.GrabMove, this.props.hand, this.onGrabMove );
+		this.lastMoveTime = performance.now();
+	}
+
+	private stopGrabMove()
+	{
+		AvGadget.instance().unlistenForActionState( this.grabMoveHandler );
 	}
 
 	@bind
@@ -107,8 +134,6 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 		}
 
 		this.grabPressed = true;
-		this.grabMoveHandler = AvGadget.instance().listenForVector2ActionState( 
-			EAction.GrabMove, this.props.hand, this.onGrabMove );
 
 		if( this.state.activeGrab )
 		{
@@ -123,7 +148,23 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 			if( this.state.activeGrab )
 			{
 				this.state.activeGrab.sendEvent( { type: GrabRequestType.SetGrabber } as GrabRequest );
-				this.setState( { grabberFromGrabbable: this.state.activeGrab.selfFromPeer } );
+				let grabberFromGrabbable = this.state.activeGrab.selfFromPeer;
+				let grabberFromGrabbableDirection = new vec3( [ 
+					grabberFromGrabbable.position?.x ?? 0,
+					grabberFromGrabbable.position?.y ?? 0,
+					grabberFromGrabbable.position?.z ?? 0 ] );
+				let grabberFromGrabbableRange = grabberFromGrabbableDirection.length();
+				grabberFromGrabbableDirection.normalize();
+				
+				this.setState( 
+					{ 
+						grabberFromGrabbableOverride: null,
+						grabberFromGrabbableDirection,
+						grabberFromGrabbableRange,
+						grabberFromGrabbableRotation: grabberFromGrabbable.rotation,
+					} );
+
+				this.startGrabMove();
 			}
 		}
 		else if( this.state.activePanel )
@@ -142,8 +183,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 		}
 
 		this.grabPressed = false;
-		AvGadget.instance().unlistenForActionState( this.grabMoveHandler );
-		this.grabMoveHandler = 0;
+		this.stopGrabMove();
 
 		if( this.state.activeGrab )
 		{
@@ -170,7 +210,12 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 	
 				case GrabberState.LostGrab:
 					this.state.activeGrab.unlock();	
-					this.setState( { grabberFromGrabbable: null, state: GrabberState.Idle } );
+					this.setState( 
+						{ 
+							grabberFromGrabbableDirection: null, 
+							grabberFromGrabbableRange: null, 
+							grabberFromGrabbableRotation: null, 
+							state: GrabberState.Idle } );
 					break;
 	
 				case GrabberState.WaitingForRegrab:
@@ -205,13 +250,27 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 					+ `Received: ${ endpointAddrToString( activeInterface.peer ) }` );
 			}
 
+			let grabberFromGrabbable = this.state.grabberFromRegrabTarget ?? activeInterface.selfFromPeer;
+			let grabberFromGrabbableDirection = new vec3( [ 
+				grabberFromGrabbable.position?.x ?? 0,
+				grabberFromGrabbable.position?.y ?? 0,
+				grabberFromGrabbable.position?.z ?? 0 ] );
+			let grabberFromGrabbableRange = grabberFromGrabbableDirection.length();
+			grabberFromGrabbableDirection.normalize();
+
 			this.setState( 
 				{ 
 					state: GrabberState.Grabbing, 
-					grabberFromGrabbable: this.state.grabberFromRegrabTarget ?? activeInterface.selfFromPeer, 
+					grabberFromGrabbableOverride: null,
+					grabberFromGrabbableDirection,
+					grabberFromGrabbableRange,
+					grabberFromGrabbableRotation: grabberFromGrabbable.rotation,
 					grabberFromRegrabTarget: null,
 					regrabTarget: null,
 				} );
+
+			this.startGrabMove();
+
 			let res = await activeInterface.lock();
 			if( res != InterfaceLockResult.AlreadyLocked )
 			{
@@ -248,12 +307,20 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 						{
 							case GrabberState.WaitingForDropComplete:
 								activeInterface.unlock();	
-								this.setState( { state: GrabberState.Highlight, grabberFromGrabbable: null  } );		
+								this.setState( { state: GrabberState.Highlight,
+									grabberFromGrabbableOverride: null,
+									grabberFromGrabbableDirection: null, 
+									grabberFromGrabbableRange: null, 
+									grabberFromGrabbableRotation: null } );		
 								break;
 
 							case GrabberState.WaitingForRegrabDropComplete:
 								let resPromise = activeInterface.relock( this.state.regrabTarget );
-								this.setState( { state: GrabberState.WaitingForRegrab, grabberFromGrabbable: null } );
+								this.setState( { state: GrabberState.WaitingForRegrab,
+									grabberFromGrabbableOverride: null,
+									grabberFromGrabbableDirection: null, 
+									grabberFromGrabbableRange: null, 
+									grabberFromGrabbableRotation: null, } );
 								let res = await resPromise;
 								if( res != InterfaceLockResult.Success )
 								{
@@ -298,14 +365,18 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 					{
 						if( this.state.state == GrabberState.Grabbing )
 						{
-							this.setState( { state: GrabberState.GrabReleased, grabberFromGrabbable: null } );
+							this.setState( { state: GrabberState.GrabReleased, 
+								grabberFromGrabbableOverride: null,
+								grabberFromGrabbableDirection: null, 
+								grabberFromGrabbableRange: null, 
+								grabberFromGrabbableRotation: null, } );
 						}
 					}
 					break;
 
 					case GrabRequestType.OverrideTransform:
 					{
-						this.setState( { grabberFromGrabbable: event.grabberFromGrabbable } );
+						this.setState( { grabberFromGrabbableOverride: event.grabberFromGrabbable } );
 					}
 					break;
 				}
@@ -367,7 +438,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 		return <div>
 			<div>{ GrabberState[ this.state.state ] }</div>
 			<div>ActiveInterface: { this.state.activeGrab ? endpointAddrToString( this.state.activeGrab.peer ): "none" }</div>
-			<div>Transform: { this.state.grabberFromGrabbable ? JSON.stringify( this.state.grabberFromGrabbable ): "none" }</div>
+			{/* <div>Transform: { this.state.grabberFromGrabbable ? JSON.stringify( this.state.grabberFromGrabbable ): "none" }</div> */}
 		</div>
 	}
 
@@ -432,8 +503,8 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 		let grabberVolumes = [ k_grabberBallVolume ];
 
 		let ray: JSX.Element = null;
-		if( this.state.state == GrabberState.Idle && this.state.showRay 
-			|| this.state.wasShowingRay )
+		if( this.state.showRay &&
+			( this.state.state == GrabberState.Idle || this.state.wasShowingRay ) )
 		{
 			grabberVolumes.push( rayVolume( new vec3( [ 0, 0, 0 ] ), new vec3( [ 0, 0, -1 ] ) ) );
 			if( this.state.state == GrabberState.Idle ||
@@ -446,8 +517,27 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 			}
 		}
 
+		let grabberFromGrabbable: AvNodeTransform = null;
+		if( this.state.grabberFromGrabbableOverride )
+		{
+			grabberFromGrabbable = this.state.grabberFromGrabbableOverride;
+		}
+		else if( this.state.grabberFromGrabbableDirection )
+		{
+			grabberFromGrabbable =
+			{
+				position: 
+				{
+					x: this.state.grabberFromGrabbableDirection.x * this.state.grabberFromGrabbableRange,
+					y: this.state.grabberFromGrabbableDirection.y * this.state.grabberFromGrabbableRange,
+					z: this.state.grabberFromGrabbableDirection.z * this.state.grabberFromGrabbableRange,
+				},
+				rotation: this.state.grabberFromGrabbableRotation,
+			};
+		}
+
 		let child: EndpointAddr = null;
-		if( this.state.activeGrab && this.state.grabberFromGrabbable
+		if( this.state.activeGrab && grabberFromGrabbable
 			&& this.state.state != GrabberState.GrabReleased )
 		{
 			child = this.state.activeGrab.peer;
@@ -469,7 +559,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 					volume={ grabberVolumes } >
 						{
 							child
-							&& <AvTransform transform={ this.state.grabberFromGrabbable }>
+							&& <AvTransform transform={ grabberFromGrabbable }>
 								<AvEntityChild child={ child }/>
 							</AvTransform>
 						}
