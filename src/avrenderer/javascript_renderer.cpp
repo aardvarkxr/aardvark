@@ -508,8 +508,14 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 		retval->SetValue( "a", CefV8Value::CreateBool( actionState.a ), V8_PROPERTY_ATTRIBUTE_NONE );
 		retval->SetValue( "b", CefV8Value::CreateBool( actionState.b ), V8_PROPERTY_ATTRIBUTE_NONE );
 		retval->SetValue( "grab", CefV8Value::CreateBool( actionState.grab ), V8_PROPERTY_ATTRIBUTE_NONE );
+		retval->SetValue( "grabShowRay", CefV8Value::CreateBool( actionState.grabShowRay ), V8_PROPERTY_ATTRIBUTE_NONE );
 		retval->SetValue( "squeeze", CefV8Value::CreateBool( actionState.squeeze ), V8_PROPERTY_ATTRIBUTE_NONE );
 		retval->SetValue( "detach", CefV8Value::CreateBool( actionState.detach ), V8_PROPERTY_ATTRIBUTE_NONE );
+
+		CefRefPtr<CefV8Value> grabMove = CefV8Value::CreateArray( 2 );
+		grabMove->SetValue( 0, CefV8Value::CreateDouble( actionState.grabMove.x ) );
+		grabMove->SetValue( 1, CefV8Value::CreateDouble( actionState.grabMove.y ) );
+		retval->SetValue( "grabMove", grabMove, V8_PROPERTY_ATTRIBUTE_NONE );
 	} );
 
 

@@ -27,10 +27,12 @@ public:
 	struct ActionState_t
 	{
 		bool grab = false;
+		bool grabShowRay = false;
 		bool a = false;
 		bool b = false;
 		bool squeeze = false;
 		bool detach = false;
+		glm::vec2 grabMove = {};
 
 		glm::mat4 universeFromHand;
 		glm::mat4 universeFromCamera;

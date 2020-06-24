@@ -11,6 +11,8 @@ void CVRManager::init()
 	vr::VRInput()->GetActionSetHandle( "/actions/aardvark", &m_actionSet );
 	vr::VRInput()->GetActionHandle( "/actions/aardvark/out/haptic", &m_actionHaptic );
 	vr::VRInput()->GetActionHandle( "/actions/aardvark/in/grab", &m_actionGrab );
+	vr::VRInput()->GetActionHandle( "/actions/aardvark/in/grab_show_ray", &m_actionGrabShowRay );
+	vr::VRInput()->GetActionHandle( "/actions/aardvark/in/move_grabbed", &m_actionGrabMove );
 	vr::VRInput()->GetActionHandle( "/actions/aardvark/in/a", &m_actionA );
 	vr::VRInput()->GetActionHandle( "/actions/aardvark/in/b", &m_actionB );
 	vr::VRInput()->GetActionHandle( "/actions/aardvark/in/squeeze", &m_actionSqueeze);
@@ -145,6 +147,20 @@ bool GetAction( vr::VRActionHandle_t action, vr::VRInputValueHandle_t whichHand 
 	return actionData.bActive && actionData.bState;
 }
 
+glm::vec2 GetActionVector2( vr::VRActionHandle_t action, vr::VRInputValueHandle_t whichHand )
+{
+	vr::InputAnalogActionData_t actionData;
+	vr::EVRInputError err = vr::VRInput()->GetAnalogActionData( action, &actionData,
+		sizeof( actionData ), whichHand );
+	if ( vr::VRInputError_None != err || !actionData.bActive )
+		return glm::vec2();
+
+	glm::vec2 res;
+	res.x = actionData.x;
+	res.y = actionData.y;
+	return res;
+}
+
 
 void CVRManager::doInputWork()
 {
@@ -193,6 +209,8 @@ CVRManager::ActionState_t CVRManager::getActionStateForHand( EHand eHand )
 	state.a = GetAction( m_actionA, pathDevice );
 	state.b = GetAction( m_actionB, pathDevice );
 	state.grab = GetAction( m_actionGrab, pathDevice );
+	state.grabShowRay = GetAction( m_actionGrabShowRay, pathDevice );
+	state.grabMove = GetActionVector2( m_actionGrabMove, pathDevice );
 	state.squeeze = GetAction( m_actionSqueeze, pathDevice );
 	state.detach = GetAction( m_actionDetach, pathDevice );
 

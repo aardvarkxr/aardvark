@@ -32,6 +32,8 @@ protected:
 
 	vr::VRActionSetHandle_t m_actionSet = vr::k_ulInvalidActionSetHandle;
 	vr::VRActionHandle_t m_actionGrab = vr::k_ulInvalidActionHandle;
+	vr::VRActionHandle_t m_actionGrabShowRay = vr::k_ulInvalidActionHandle;
+	vr::VRActionHandle_t m_actionGrabMove = vr::k_ulInvalidActionHandle;
 	vr::VRActionHandle_t m_actionA = vr::k_ulInvalidActionHandle;
 	vr::VRActionHandle_t m_actionB = vr::k_ulInvalidActionHandle;
 	vr::VRActionHandle_t m_actionSqueeze = vr::k_ulInvalidActionHandle;

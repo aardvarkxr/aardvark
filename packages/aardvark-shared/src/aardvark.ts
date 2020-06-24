@@ -25,6 +25,8 @@ export interface AvActionState
 
 	// these actions are not available to gadgets
 	grab?: boolean;
+	grabShowRay?: boolean;
+	grabMove?: [ number, number ];
 	detach?: boolean;
 }
 

@@ -736,23 +736,9 @@ export enum EAction
 	Squeeze = 2,
 	Grab = 3,
 	Detach = 4,
+	GrabShowRay = 5,
+	GrabMove = 6,
 	Max
-}
-
-export function getActionFromState( action: EAction, state: AvActionState): boolean
-{
-	if( !state )
-		return false;
-
-	switch( action )
-	{
-		case EAction.A: return state.a;
-		case EAction.B: return state.b;
-		case EAction.Grab: return state.grab;
-		case EAction.Squeeze: return state.squeeze;
-		case EAction.Detach: return state.detach;
-		default: return false;
-	}
 }
 
 export function emptyActionState(): AvActionState
@@ -760,18 +746,17 @@ export function emptyActionState(): AvActionState
 	return (
 		{
 			a: false, b:false, squeeze: false,
-			grab: false, detach: false
+			grab: false, grabShowRay: false, detach: false,
+			grabMove: [ 0, 0 ]
 		} );
 }
 
 
 export function filterActionsForGadget( actionState: AvActionState ): AvActionState
 {
+	// Don't actually filter for now.
 	return {
-		a: actionState.a,
-		b: actionState.b,
-		squeeze: actionState.squeeze,
-		grab: actionState.grab,
+		...actionState,
 	};
 }
 

@@ -126,6 +126,54 @@
                   "force_input" : "force"
                },
                "path" : "/user/hand/right/input/trackpad"
+            },
+            {
+               "inputs" : {
+                  "click" : {
+                     "output" : "/actions/aardvark/in/grab_show_ray"
+                  }
+               },
+               "mode" : "button",
+               "parameters" : {
+                  "click_activate_threshold" : "0.10",
+                  "click_deactivate_threshold" : "0.05",
+                  "force_input" : "value",
+                  "haptic_amplitude" : "0"
+               },
+               "path" : "/user/hand/left/input/trigger"
+            },
+            {
+               "inputs" : {
+                  "click" : {
+                     "output" : "/actions/aardvark/in/grab_show_ray"
+                  }
+               },
+               "mode" : "button",
+               "parameters" : {
+                  "click_activate_threshold" : "0.10",
+                  "click_deactivate_threshold" : "0.05",
+                  "force_input" : "value",
+                  "haptic_amplitude" : "0"
+               },
+               "path" : "/user/hand/right/input/trigger"
+            },
+            {
+               "inputs" : {
+                  "position" : {
+                     "output" : "/actions/aardvark/in/move_grabbed"
+                  }
+               },
+               "mode" : "joystick",
+               "path" : "/user/hand/left/input/thumbstick"
+            },
+            {
+               "inputs" : {
+                  "position" : {
+                     "output" : "/actions/aardvark/in/move_grabbed"
+                  }
+               },
+               "mode" : "joystick",
+               "path" : "/user/hand/right/input/thumbstick"
             }
          ]
       }

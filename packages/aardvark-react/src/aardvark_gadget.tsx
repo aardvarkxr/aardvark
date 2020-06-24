@@ -1,4 +1,4 @@
-import { AardvarkManifest, Av, AvActionState, AvInterfaceEventProcessor, AvNode, AvNodeTransform, AvNodeType, AvStartGadgetResult, EAction, EHand, EndpointAddr, endpointAddrToString, EndpointType, ENodeFlags, Envelope, getActionFromState, InitialInterfaceLock, interfaceStringFromMsg, MessageType, MsgGadgetStarted, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgInterfaceEnded, MsgInterfaceEvent, MsgInterfaceReceiveEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgNodeHaptic, MsgResourceLoadFailed, MsgSaveSettings, MsgUpdateActionState, MsgUpdateSceneGraph, stringToEndpointAddr } from '@aardvarkxr/aardvark-shared';
+import { AardvarkManifest, Av, AvActionState, AvInterfaceEventProcessor, AvNode, AvNodeTransform, AvNodeType, AvStartGadgetResult, EAction, EHand, EndpointAddr, endpointAddrToString, EndpointType, ENodeFlags, Envelope, InitialInterfaceLock, interfaceStringFromMsg, MessageType, MsgGadgetStarted, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgInterfaceEnded, MsgInterfaceEvent, MsgInterfaceReceiveEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgNodeHaptic, MsgResourceLoadFailed, MsgSaveSettings, MsgUpdateActionState, MsgUpdateSceneGraph, stringToEndpointAddr } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import { IAvBaseNode } from './aardvark_base_node';
@@ -39,12 +39,31 @@ function parseURL(url: string)
 	return searchObject;
 }
 
+function getBooleanActionFromState( action: EAction, state: AvActionState): boolean
+{
+	if( !state )
+		return false;
+
+	switch( action )
+	{
+		case EAction.A: return state.a;
+		case EAction.B: return state.b;
+		case EAction.Grab: return state.grab;
+		case EAction.GrabShowRay: return state.grabShowRay;
+		case EAction.Squeeze: return state.squeeze;
+		case EAction.Detach: return state.detach;
+		default: return false;
+	}
+}
+
+
 interface ActionStateListener
 {
 	hand: EHand;
 	action: EAction;
 	rising?: () => void;
 	falling?: () => void;
+	update?: ( newValue: [ number, number ] ) => void;
 }
 
 
@@ -405,6 +424,11 @@ export class AvGadget
 	public listenForActionState( action: EAction, hand: EHand, 
 		rising: () => void, falling: () =>void ): number
 	{
+		if( action == EAction.GrabMove )
+		{
+			throw new Error( `listenForActionState for ${ EAction[ action ] } which is vector2` );
+		}
+
 		let handle = this.m_nextNodeId++;
 		
 		this.m_actionStateListeners[ handle ] = 
@@ -413,6 +437,26 @@ export class AvGadget
 			action,
 			rising,
 			falling,
+		};
+
+		return handle;
+	}
+
+	public listenForVector2ActionState( action: EAction, hand: EHand, 
+		update: ( value: [ number, number ] ) => void ): number
+	{
+		if( action != EAction.GrabMove )
+		{
+			throw new Error( `listenForVector2ActionState for ${ EAction[ action ] } which is boolean` );
+		}
+
+		let handle = this.m_nextNodeId++;
+		
+		this.m_actionStateListeners[ handle ] = 
+		{
+			hand,
+			action,
+			update,
 		};
 
 		return handle;
@@ -444,15 +488,22 @@ export class AvGadget
 				let listener = this.m_actionStateListeners[ handle ];
 				if( listener.hand == m.hand || listener.hand == EHand.Invalid )
 				{
-					let oldAction = getActionFromState( listener.action, oldState );
-					let newAction = getActionFromState( listener.action, newState );
-					if( !oldAction && newAction && listener.rising )
+					if( listener.action == EAction.GrabMove )
 					{
-						listener.rising();
+						listener.update?.( newState.grabMove );
 					}
-					else if( oldAction && !newAction && listener.falling )
+					else
 					{
-						listener.falling();
+						let oldAction = getBooleanActionFromState( listener.action, oldState );
+						let newAction = getBooleanActionFromState( listener.action, newState );
+						if( !oldAction && newAction && listener.rising )
+						{
+							listener.rising();
+						}
+						else if( oldAction && !newAction && listener.falling )
+						{
+							listener.falling();
+						}	
 					}
 				}
 			}
@@ -468,12 +519,12 @@ export class AvGadget
 	{
 		if( hand == undefined || hand == EHand.Invalid )
 		{
-			return getActionFromState( action, this.m_actionState[ EHand.Left] )
-				|| getActionFromState( action, this.m_actionState[ EHand.Right] );
+			return getBooleanActionFromState( action, this.m_actionState[ EHand.Left] )
+				|| getBooleanActionFromState( action, this.m_actionState[ EHand.Right] );
 		}
 		else
 		{
-			return getActionFromState( action, this.m_actionState[ hand ] )
+			return getBooleanActionFromState( action, this.m_actionState[ hand ] )
 		}
 	}
 	
