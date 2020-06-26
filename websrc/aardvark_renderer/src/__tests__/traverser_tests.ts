@@ -1,4 +1,5 @@
-import { AvColor, MessageType, translateMat } from '@aardvarkxr/aardvark-shared';
+import { QuaternionToEulerAngles, DegreesToRadians, EulerAnglesToQuaternion, AvTransform } from '@aardvarkxr/aardvark-react';
+import { AvColor, MessageType, translateMat, AvNodeTransform, nodeTransformToMat4 } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3 } from '@tlaukkan/tsm';
 import { addChild, buildModel, buildOrigin, buildTransform, colorFromString, nextGadget, currentGadgetId } from '../scene_graph_test_utils';
 import { AvDefaultTraverser } from './../aardvark_traverser';
@@ -70,7 +71,7 @@ expect.extend(
 				if( universeFromModel && !matsAreClose( universeFromModel, model.universeFromModel ) )
 				{
 					reason = `matrices did not match expected=${ universeFromModel.all() } `
-						+ `${ model.universeFromModel.all() }`;
+						+ `actual=${ model.universeFromModel.all() }`;
 					continue;
 				}
 
@@ -223,5 +224,59 @@ describe( "AvDefaultTraverser ", () =>
 			translateMat( new vec3( [ 1, 2, 3 ] ) ) );
 	} );
 
+	it( "transform parent with constraint", async () =>
+	{
+		let root = buildOrigin( "/space/stage" );
+		let transDeclaredParent = addChild( root, buildTransform( new vec3( [ 11, 12, 13 ] ) ) );
+		let transActualParent = addChild( root, buildTransform( new vec3( [ 1, 2, 3 ] ) ) );
+		let transReparent = addChild( transActualParent, buildTransform( new vec3( [ 0, 0, 0 ] ) ) );
+		transReparent.propParentAddr = transDeclaredParent.globalId;
+		transReparent.propConstraint =
+		{
+			minX: 0, minY: 0, minZ: 0,
+			maxX: 3, maxY: 4, maxZ: 5,
+		};
+		addChild( transReparent, buildModel( k_testModelUrl ) );
+
+		traverser.updateSceneGraph( root, k_testGadgetUrl, currentGadgetId() );
+		traverser.traverse();
+
+		expect( r.lastRenderList.length ).toBe( 1 );
+		expect( r.lastRenderList ).toContainModels( 1, k_testModelUrl, undefined, 
+			translateMat( new vec3( [ 4, 6, 8 ] ) ) );
+	} );
+
+	it( "transform parent with gravity constraint", async () =>
+	{
+		let root = buildOrigin( "/space/stage" );
+		let transDeclaredParent = addChild( root, buildTransform( new vec3( [ 11, 12, 13 ] ) ) );
+		transDeclaredParent.propTransform.rotation = EulerAnglesToQuaternion( 
+			{ 
+				yaw: DegreesToRadians( 45 ),
+				pitch: 0,
+				roll: DegreesToRadians( 60 ),
+			} );
+		let transActualParent = addChild( root, buildTransform( new vec3( [ 1, 2, 3 ] ) ) );
+		let transReparent = addChild( transActualParent, buildTransform( new vec3( [ 0, 0, 0 ] ) ) );
+		transReparent.propParentAddr = transDeclaredParent.globalId;
+		transReparent.propConstraint =
+		{
+			gravityAligned: true,
+		};
+		addChild( transReparent, buildModel( k_testModelUrl ) );
+
+		traverser.updateSceneGraph( root, k_testGadgetUrl, currentGadgetId() );
+		traverser.traverse();
+
+		let expected: AvNodeTransform =
+		{
+			position: { x: 11, y: 12, z: 13 },
+			rotation: EulerAnglesToQuaternion( { yaw: DegreesToRadians( 45 ), pitch: 0, roll: 0 } ),
+		}
+		let expectedMat = nodeTransformToMat4( expected );
+
+		expect( r.lastRenderList.length ).toBe( 1 );
+		expect( r.lastRenderList ).toContainModels( 1, k_testModelUrl, undefined, expectedMat );
+	} );
 
 } );

@@ -613,12 +613,13 @@ export enum ENodeFlags
 
 export interface AvConstraint
 {
-	minX: number;
-	maxX: number;
-	minY: number;
-	maxY: number;
-	minZ: number;
-	maxZ: number;
+	minX?: number;
+	maxX?: number;
+	minY?: number;
+	maxY?: number;
+	minZ?: number;
+	maxZ?: number;
+	gravityAligned?: boolean;
 }
 
 export interface AvColor

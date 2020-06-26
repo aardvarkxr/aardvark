@@ -32,7 +32,7 @@ interface NodeData
 
 interface TransformComputeFunction
 {
-	( universeFromParents: mat4[], parentFromNode: mat4 ): mat4;
+	( universeFromParent: mat4[], parentFromNode: mat4 ): mat4;
 }
 
 class PendingTransform
@@ -46,7 +46,8 @@ class PendingTransform
 	private m_computeFunction: TransformComputeFunction = null;
 	private m_currentlyResolving = false;
 	private m_originPath: string = null;
-
+	private m_constraint: AvConstraint = null;
+	
 	constructor( id: string )
 	{
 		this.m_id = id;
@@ -74,22 +75,22 @@ class PendingTransform
 
 		if( this.m_parents )
 		{
-			let universeFromParents: mat4[] = [];
 			for( let parent of this.m_parents )
 			{
 				parent.resolve();
-				universeFromParents.push( parent.m_universeFromNode );
 			}
 
 			if( this.m_computeFunction )
 			{
+				let universeFromParents = this.m_parents.map( ( parent ) => parent.getUniverseFromNode() );
 				this.m_universeFromNode = this.m_computeFunction( universeFromParents, 
 					this.m_parentFromNode );
 			}
 			else
 			{
+				let universeFromParent = this.universeFromParentWithConstraint();
 				this.m_universeFromNode = new mat4;
-				mat4.product( universeFromParents[ 0 ], this.m_parentFromNode, 
+				mat4.product( universeFromParent, this.m_parentFromNode, 
 					this.m_universeFromNode );
 			}
 		}
@@ -105,6 +106,63 @@ class PendingTransform
 			this.m_applyFunction( this.m_universeFromNode );
 		}
 
+	}
+
+	private universeFromParentWithConstraint()
+	{
+		let universeFromFinalParent = this.m_parents[0].getUniverseFromNode();
+		if( !this.m_constraint || this.m_parents.length != 2 )
+			return universeFromFinalParent;
+
+		// figure out how to get things into constraint space
+		let universeFromConstraintParent = this.m_parents[1].getUniverseFromNode();
+		let constraintParentFromUniverse = new mat4( universeFromConstraintParent.all() ).inverse();
+		let constraintParentFromFinalParent = mat4.product( constraintParentFromUniverse, 
+			universeFromFinalParent, new mat4() );
+
+		// translation in constraint space
+		let transConstraint = new vec3( constraintParentFromFinalParent.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) ).xyz );
+
+		// apply the constraint
+		let clamp = ( value: number, min?: number, max?: number ) =>
+		{
+			return Math.max( min ?? Number.NEGATIVE_INFINITY,
+				Math.min( max ?? Number.POSITIVE_INFINITY, value ) );
+		}
+
+		transConstraint.x = clamp( transConstraint.x, this.m_constraint.minX, this.m_constraint.maxX );
+		transConstraint.y = clamp( transConstraint.y, this.m_constraint.minY, this.m_constraint.maxY );
+		transConstraint.z = clamp( transConstraint.z, this.m_constraint.minZ, this.m_constraint.maxZ );
+
+		// translation in universe space
+		let trans = new vec3( universeFromConstraintParent.multiplyVec4(
+			new vec4( [ transConstraint.x, transConstraint.y, transConstraint.z, 1 ] ) ).xyz );
+
+		let xBasis = new vec3( universeFromFinalParent.row( 0 ) as [ number, number, number ] );
+		let yBasis = new vec3( universeFromFinalParent.row( 1 ) as [ number, number, number ] );
+		let zBasis = new vec3( universeFromFinalParent.row( 2 ) as [ number, number, number ] );
+
+		// now apply gravity alignment, if necessary, which is in universe space (since the
+		// universe is the only thing here's that's gravity-aligned. )
+		if( this.m_constraint.gravityAligned )
+		{
+			// figure out basis vectors where Y is up
+			let newYBasis = vec3.up;
+			let newXBasis = vec3.cross( newYBasis, zBasis );
+			let newZBasis = vec3.cross( newXBasis, newYBasis );
+
+			// then replace the original basis vectors with those
+			xBasis = newXBasis;
+			yBasis = newYBasis;
+			zBasis = newZBasis;
+		}
+
+		return new mat4( [
+			xBasis.x, xBasis.y, xBasis.z, 0,
+			yBasis.x, yBasis.y, yBasis.z, 0,
+			zBasis.x, zBasis.y, zBasis.z, 0,
+			trans.x, trans.y, trans.z, 1,
+		] );
 	}
 
 	public setOriginPath( originPath: string )
@@ -144,7 +202,7 @@ class PendingTransform
 	
 	public update( parents: PendingTransform[], parentFromNode: mat4, 
 		updateCallback?: ( universeFromNode:mat4 ) => void,
-		computeCallback?: TransformComputeFunction)
+		computeCallback?: TransformComputeFunction )
 	{
 		this.m_universeFromNode = undefined; // unresolve the transform if it's resolved
 		this.m_needsUpdate = false;
@@ -154,6 +212,11 @@ class PendingTransform
 		this.m_computeFunction = computeCallback;
 
 		this.checkForLoops();
+	}
+
+	public set constraint( constraint: AvConstraint )
+	{
+		this.m_constraint = constraint;
 	}
 
 	private checkForLoops()
@@ -822,7 +885,8 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 		if ( node.propTransform )
 		{
 			let mat = nodeTransformToMat4( node.propTransform );
-			this.updateTransform( node.globalId, parent, mat, null );
+			this.updateTransformWithConstraint( node.globalId, 
+				parent, defaultParent, node.propConstraint, mat, null );
 		}
 	}
 
@@ -831,7 +895,8 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 		if( node.propParentAddr )
 		{
 			let parentTransform = this.getTransform( node.propParentAddr );
-			this.updateTransform( node.globalId, parentTransform, null, null );
+			this.updateTransformWithConstraint( node.globalId, 
+				parentTransform, defaultParent,	node.propConstraint, null, null )
 		}
 	}
 
@@ -839,7 +904,7 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 	{
 		let universeFromHead = new mat4( this.m_renderer.getUniverseFromOriginTransform( "/user/head" ) );
 		this.updateTransformWithCompute( node.globalId, [ defaultParent ], null, null,
-			( universeFromParents: mat4[], parentFromNode ) =>
+			( universeFromParent: mat4[], parentFromNode ) =>
 			{
 				let yAxisRough = new vec3( [ 0, 1, 0 ] );
 				let hmdUp = universeFromHead.multiplyVec3( new vec3( [ 0, 1, 0 ] ) );
@@ -848,7 +913,7 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 					yAxisRough = hmdUp;
 				}
 
-				let universeFromNodeTranslation = universeFromParents[0].multiply( parentFromNode );
+				let universeFromNodeTranslation = universeFromParent[0].multiply( parentFromNode );
 				let nodeTranslation = universeFromNodeTranslation.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) );
 				let headTranslation = universeFromHead.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) );
 				let zAxis = new vec3( headTranslation.subtract( nodeTranslation ).xyz ).normalize();
@@ -1125,7 +1190,8 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 				this.m_entityParentTransforms.set( node.globalId, newParent );
 			}
 
-			this.updateTransform( node.globalId, this.m_entityParentTransforms.get( node.globalId ), 
+			this.updateTransformWithConstraint( node.globalId, 
+				this.m_entityParentTransforms.get( node.globalId ), defaultParent, node.propConstraint,
 				null, null );
 		}
 	}
@@ -1163,6 +1229,18 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 	{
 		let transform = this.getTransform( globalNodeId );
 		transform.update( parent ? [ parent ] : null, parentFromNode, applyFunction );
+		return transform;
+	}
+
+	updateTransformWithConstraint( globalNodeId: EndpointAddr,
+		finalParent: PendingTransform, constraintParent: PendingTransform, constraint: AvConstraint,
+		parentFromNode: mat4,
+		applyFunction: ( universeFromNode: mat4 ) => void )
+	{
+		let transform = this.getTransform( globalNodeId );
+		transform.update( [ finalParent, constraintParent ], parentFromNode, applyFunction );
+		transform.constraint = constraint;
+
 		return transform;
 	}
 
