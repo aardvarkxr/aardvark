@@ -148,8 +148,8 @@ class PendingTransform
 		{
 			// figure out basis vectors where Y is up
 			let newYBasis = vec3.up;
-			let newXBasis = vec3.cross( newYBasis, zBasis );
-			let newZBasis = vec3.cross( newXBasis, newYBasis );
+			let newXBasis = vec3.cross( newYBasis, zBasis ).normalize();
+			let newZBasis = vec3.cross( newXBasis, newYBasis ).normalize();
 
 			// then replace the original basis vectors with those
 			xBasis = newXBasis;
