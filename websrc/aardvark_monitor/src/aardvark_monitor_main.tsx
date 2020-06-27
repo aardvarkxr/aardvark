@@ -743,9 +743,13 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 				node.propVolumes.map( ( volume ) => this.renderVolume( volume ) ) }
 			{ node.propInteractive && <div className="AvNodeProperty">Interactive</div> }
 			{ node.propConstraint && <div className="AvNodeProperty">Constraint: 
-				[ { node.propConstraint.minX }, {node.propConstraint.maxX } ]
-				[ { node.propConstraint.minY }, {node.propConstraint.maxY } ]
-				[ { node.propConstraint.minZ }, {node.propConstraint.maxZ } ]
+				{ node.propConstraint.gravityAligned && "Gravity Aligned " }
+				[ { node.propConstraint.minX ?? Number.NEGATIVE_INFINITY }, 
+					{node.propConstraint.maxX ?? Number.POSITIVE_INFINITY } ]
+				[ { node.propConstraint.minY ?? Number.NEGATIVE_INFINITY }, 
+					{node.propConstraint.maxY ?? Number.POSITIVE_INFINITY } ]
+				[ { node.propConstraint.minZ ?? Number.NEGATIVE_INFINITY }, 
+					{node.propConstraint.maxZ ?? Number.POSITIVE_INFINITY } ]
 				</div> }
 			{ node.propSharedTexture && <div className="AvNodeProperty">{ JSON.stringify( node.propSharedTexture ) }</div> }
 			{ node.propTransform && <TransformMonitor 
