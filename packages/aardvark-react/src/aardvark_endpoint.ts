@@ -288,9 +288,10 @@ export class CMonitorEndpoint extends CAardvarkEndpoint
 
 export class CUtilityEndpoint extends CAardvarkEndpoint
 {
-	constructor( defaultHandler: AsyncMessageHandler = null )
+	constructor( defaultHandler: AsyncMessageHandler = null, handshakeComplete: OpenHandler = null )
 	{
-		super( () => { this.onOpen() }, null, defaultHandler );
+		super( () => { this.onOpen() }, handshakeComplete, defaultHandler );
+		this.allowReconnect();
 	}
 
 	@bind onOpen()

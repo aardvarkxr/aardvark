@@ -66,6 +66,20 @@ interface ActionStateListener
 	update?: ( newValue: [ number, number ] ) => void;
 }
 
+export function GetGadgetUrlFromWindow()
+{
+	if( window.location.pathname.lastIndexOf( ".html" ) == window.location.pathname.length - 5 )
+	{
+		return window.location.origin
+			+ window.location.pathname.slice( 0, window.location.pathname.lastIndexOf( "/" ) );
+		//console.log( "Stripping gadget URI down to", this.m_actualGadgetUri );
+	}
+	else
+	{
+		return window.location.origin + window.location.pathname;
+	}
+}
+
 
 /** The singleton gadget object for the browser. */
 export class AvGadget
@@ -94,18 +108,7 @@ export class AvGadget
 
 	constructor()
 	{
-		if( window.location.pathname.lastIndexOf( ".html" ) == window.location.pathname.length - 5 )
-		{
-			this.m_actualGadgetUri = 
-				window.location.origin
-				+ window.location.pathname.slice( 0, window.location.pathname.lastIndexOf( "/" ) );
-			//console.log( "Stripping gadget URI down to", this.m_actualGadgetUri );
-		}
-		else
-		{
-			this.m_actualGadgetUri = window.location.origin;
-		}
-
+		this.m_actualGadgetUri = GetGadgetUrlFromWindow();
 		let params = parseURL( window.location.href );
 
 		try

@@ -191,19 +191,32 @@ function findIconOfType( manifest: AardvarkManifest, mimeType: string )
 	return null;
 }
 
-
-export function renderGadgetIcon( gadgetUrl: string, manifest: AardvarkManifest, radius: number )
+export function findGltfIconFullUrl( gadgetUrl: string, manifest: AardvarkManifest)
 {
 	let model = findIconOfType( manifest, "model/gltf-binary" );
 	if( model )
 	{
-		let modelUrl = isUrl( model.src ) ? model.src : gadgetUrl + 
+		return isUrl( model.src ) ? model.src : gadgetUrl + 
 			"/" + model.src;
+	}
+	else
+	{
+		return null;
+	}
+}
 
+
+export function renderGadgetIcon( gadgetUrl: string, manifest: AardvarkManifest, radius: number )
+{
+	let modelUrl = findGltfIconFullUrl( gadgetUrl, manifest );
+	if( modelUrl )
+	{
 		return <AvModel uri= { modelUrl } scaleToFit={ { x: radius, y: radius, z: radius } }/>;
 	}
-
-	return <AvModel uri= { g_builtinModelError } scaleToFit={ { x: radius, y: radius, z: radius } }/>;
+	else
+	{
+		return <AvModel uri= { g_builtinModelError } scaleToFit={ { x: radius, y: radius, z: radius } }/>;
+	}
 }
 
 

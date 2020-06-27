@@ -712,6 +712,7 @@ export enum Permission
 {
 	Master = "master",
 	SceneGraph = "scenegraph",
+	Favorites = "favorites",
 }
 
 export interface AardvarkManifestExtension

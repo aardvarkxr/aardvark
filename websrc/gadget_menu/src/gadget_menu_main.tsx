@@ -1,5 +1,5 @@
 import { ActiveInterface, AvGadget, AvGadgetSeed, AvGrabButton, AvHeadFacingTransform, AvHighlightTransmitters, AvInterfaceEntity, AvLine, AvModel, AvOrigin, AvPanel, AvPrimitive, AvStandardGrabbable, AvTransform, GadgetInfoEvent, GadgetSeedHighlight, HiddenChildrenBehavior, k_GadgetInfoInterface, PrimitiveType, PrimitiveYOrigin, renderGadgetIcon, ShowGrabbableChildren } from '@aardvarkxr/aardvark-react';
-import { AardvarkManifest, AvNodeTransform, AvVector, emptyVolume, EndpointAddr, g_builtinModelBarcodeScanner, nodeTransformToMat4, nodeTransformFromMat4, g_builtinModelDropAttract, g_builtinModelNetwork, g_builtinModelHammerAndWrench, g_builtinModelStar, g_builtinModelTrashcan, MessageType, MsgDestroyGadget, rayVolume } from '@aardvarkxr/aardvark-shared';
+import { AardvarkManifest, AvNodeTransform, AvVector, emptyVolume, EndpointAddr, g_builtinModelBarcodeScanner, nodeTransformToMat4, nodeTransformFromMat4, g_builtinModelDropAttract, g_builtinModelNetwork, g_builtinModelHammerAndWrench, g_builtinModelStar, g_builtinModelTrashcan, MessageType, MsgDestroyGadget, rayVolume, MsgInstallGadget } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3, vec4 } from '@tlaukkan/tsm';
 import Axios from 'axios';
 import bind from 'bind-decorator';
@@ -170,6 +170,8 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 			visible: false,
 			tab: ControlPanelTab.Main,
 		};
+
+		AvGadget.instance().registerMessageHandler( MessageType.InstallGadget,  this.onWebFavorite );
 
 		let settingsString = window.localStorage.getItem( "aardvark_gadget_menu_settings" );
 		if( !settingsString )
@@ -520,22 +522,41 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		AvGadget.instance().sendMessage( MessageType.DestroyGadget, m );
 	}
 
+	@bind 
+	private onWebFavorite( m: MsgInstallGadget )
+	{
+		this.addFavorite( m.gadgetUri );
+	}
+
+
 	@bind
 	private onFavoriteGadget()
 	{
-		if( !this.state.scannerGadget )
+		if( !this.state.scannerGadget?.gadgetUrl )
 			return;
 
-		if( -1 == this.settings.favorites.indexOf( this.state.scannerGadget.gadgetUrl ) )
+		this.addFavorite( this.state.scannerGadget.gadgetUrl,
+			this.state.scannerGadget.gadgetManifest );
+	}
+
+	private addFavorite( gadgetUrl: string, manifest?: AardvarkManifest )
+	{
+		if( -1 == this.settings.favorites.indexOf( gadgetUrl ) )
 		{
-			console.log( `Adding to favorites: ${ this.state.scannerGadget?.gadgetUrl } ` );
-			this.settings.favorites.push( this.state.scannerGadget.gadgetUrl );
+			console.log( `Adding to favorites: ${ gadgetUrl } ` );
+			this.settings.favorites.push( gadgetUrl );
 			this.updateSettings();
 
-			if( !this.manifestsByUrl.has( this.state.scannerGadget.gadgetUrl ) )
+			if( !this.manifestsByUrl.has( gadgetUrl ) )
 			{
-				this.manifestsByUrl.set( this.state.scannerGadget.gadgetUrl, 
-					this.state.scannerGadget.gadgetManifest );
+				if( !manifest )
+				{
+					this.requestManifest( gadgetUrl );
+				}
+				else
+				{
+					this.manifestsByUrl.set( gadgetUrl, manifest );
+				}
 			}
 
 			if( this.state.tab == ControlPanelTab.Favorites )
@@ -545,7 +566,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		}
 		else
 		{
-			console.log( `Favorites already contains: ${ this.state.scannerGadget?.gadgetUrl } ` );
+			console.log( `Favorites already contains: ${ gadgetUrl } ` );
 		}
 	}
 	

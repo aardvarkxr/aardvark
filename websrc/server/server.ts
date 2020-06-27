@@ -372,6 +372,12 @@ class CGadgetData
 		return this.m_nodes[ nodeId ];
 	}
 
+	public hasPermission( permissionName: Permission ): boolean
+	{
+		return this.m_manifest?.aardvark?.permissions.includes( permissionName ) ?? false;
+	}
+
+
 	public verifyPermission( permissionName: Permission )
 	{
 		if( !this.m_manifest )
@@ -871,8 +877,19 @@ class CEndpoint
 
 	@bind private onInstallGadget( env: Envelope, m: MsgInstallGadget )
 	{
-		console.log( `Installing gadget from web ${ m.gadgetUri }` );
-		persistence.addInstalledGadget( m.gadgetUri );
+		console.log( `Favoriting gadget from web ${ m.gadgetUri }` );
+		for( let gadget of this.m_dispatcher.getListForType( EndpointType.Gadget ) )
+		{
+			if( gadget.hasPermission( Permission.Favorites ) )
+			{
+				gadget.sendMessage( MessageType.InstallGadget, m );
+			}
+		}
+	}
+
+	public hasPermission( permissionName: Permission ): boolean
+	{
+		return this.getGadgetData() && this.getGadgetData().hasPermission( permissionName );
 	}
 
 	public verifyPermission( permissionName: Permission )
@@ -1010,7 +1027,7 @@ class CServer
 		{
 			setHeaders: ( res: express.Response, path: string ) =>
 			{
-				if( path.endsWith( ".webmanifest" ) )
+				if( path.endsWith( ".webmanifest" ) || path.endsWith( ".glb" ) )
 				{
 					res.setHeader( "Access-Control-Allow-Origin", "*" );
 				}
