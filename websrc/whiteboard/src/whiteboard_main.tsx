@@ -83,7 +83,7 @@ interface MarkerProps
 function Marker( props: MarkerProps )
 {
 	const [ color, setColor ] = React.useState( props.initialColor );
-	const [ moveable, setMoveable ] = React.useState( new MoveableComponent( () => {} ) );
+	const [ moveable, setMoveable ] = React.useState( new MoveableComponent( () => {}, false, false ) );
 
 	let onColorPicker = ( activeColorPicker: ActiveInterface ) =>
 	{
