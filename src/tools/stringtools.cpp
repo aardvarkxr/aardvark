@@ -5,6 +5,7 @@
 #include <codecvt>
 #include <algorithm>
 #include <cctype>
+#include <sstream>
 
 namespace tools
 {
@@ -41,6 +42,20 @@ namespace tools
 		}
 
 		return prefix.end() == std::mismatch( prefix.begin(), prefix.end(), testString.begin() ).first;
+	}
+
+	std::vector<std::string> tokenizeString( const std::string& s )
+	{
+		std::stringstream ss( s );
+		std::string item;
+		std::vector<std::string> elems;
+
+		while ( std::getline( ss, item, ' ' ) ) 
+		{
+			elems.push_back(std::move(item)); // if C++11 (based on comment from @mchiasson)
+		}
+
+		return elems;
 	}
 
 }

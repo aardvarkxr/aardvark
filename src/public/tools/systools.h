@@ -11,4 +11,7 @@ namespace tools
 	/** Invokes a URL via the system, causing the default handler for that url
 	* to be invoked. */
 	void invokeURL( const std::string& url );
+
+	/** exit this process if there's already an instance of the same exe */
+	void singletonProcess( const char* processKey );
 }

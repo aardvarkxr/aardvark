@@ -16,9 +16,39 @@
 #include <tools/stringtools.h>
 
 // OS specific macros for the example main entry points
-int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
+int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR cmdLine, int)
 {
 	tools::initLogs();
+
+	// make sure cwd is right
+	std::filesystem::path cwd = std::filesystem::current_path();
+	if ( !std::filesystem::exists( cwd / "data" ) )
+	{
+		// if there's no data directory here, we need to figure out directory
+		// to run in from the exe
+		cwd = tools::GetExecutablePath().remove_filename();
+		while ( !std::filesystem::exists( cwd / "data" ) && cwd.has_parent_path() )
+		{
+			cwd = cwd.parent_path();
+		}
+
+		if ( !std::filesystem::exists( cwd / "data" ) )
+		{
+			tools::LogDefault()->info( "failed to find data directory from exe path %s. Continuing, but this will probably fail",
+				tools::GetExecutablePath().c_str() );
+		}
+		else
+		{
+			tools::LogDefault()->info( "Changing to data directory %s.", cwd.c_str() );
+			std::filesystem::current_path( cwd );
+		}
+	}
+
+	std::vector< std::string > vecArgs = tools::tokenizeString( cmdLine );
+	if ( vecArgs.size() == 2 && vecArgs[0] == "handleurl" )
+	{
+		tools::LogDefault()->info( "started from URL %s", vecArgs[1].c_str() );
+	}
 
 	// give the CEF subprocess the first crack
 	  // Enable High-DPI support on Windows 7 or newer.
@@ -53,11 +83,12 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 	// ---------------------------------------------------------
 	// Everything below here only happens in the browser process
 	// ---------------------------------------------------------
+	tools::singletonProcess( "avrenderer" );
 
 	tools::LogDefault()->info( "Starting browser process" );
 
-	std::string urlHandlerCommand = "\"" + tools::WStringToUtf8( getNodeExePath() ) + "\" \"" 
-		+ tools::WStringToUtf8( getAvCmdJsPath() ) + "\" handleurl \"%1\"";
+	std::string urlHandlerCommand = "\"" + tools::WStringToUtf8( tools::GetExecutablePath() ) + "\" "
+		+  " handleurl \"%1\"";
 	tools::registerURLSchemeHandler( "aardvark", urlHandlerCommand );
 
 	if ( !StartServer( hInstance ) )

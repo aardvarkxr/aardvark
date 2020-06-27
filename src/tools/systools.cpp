@@ -1,6 +1,8 @@
 #include "tools/systools.h"
 
 #include <windows.h>
+#include <synchapi.h>
+
 #include <tools/logging.h>
 #include <tools/stringtools.h>
 
@@ -58,6 +60,29 @@ namespace tools
 	void invokeURL( const std::string& url )
 	{
 		::ShellExecuteA( nullptr, url.c_str(), nullptr, nullptr, nullptr, SW_SHOW );
+	}
+
+	/** exit this process if there's already an instance of the process key */
+	void singletonProcess( const char *processKey )
+	{
+		HANDLE hMutex = CreateMutexExA( nullptr, processKey, CREATE_MUTEX_INITIAL_OWNER, SYNCHRONIZE );
+		if ( !hMutex )
+		{
+			exit( -1 );
+		}
+
+		// see if we can wait for it
+		DWORD res = WaitForSingleObject( hMutex, 0 );
+		switch ( res )
+		{
+		case WAIT_OBJECT_0:
+			// we're the owner. This is what we expect
+			return;
+
+		default:
+			// any other result is a failure and we need to exit
+			exit( 1 );
+		}
 	}
 
 }
