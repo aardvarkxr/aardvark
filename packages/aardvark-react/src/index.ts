@@ -24,6 +24,7 @@ export * from './component_moveable';
 export * from './component_networked_gadget';
 export * from './component_remote_gadget';
 export * from './component_simple_container';
+export * from './default_landing_page';
 export * from './gadget_endpoint';
 export * from './network_universe';
 export * from './renderer_endpoint';

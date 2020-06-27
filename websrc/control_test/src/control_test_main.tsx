@@ -1,5 +1,5 @@
-import { AvGrabButton, AvPanel, AvPanelAnchor, AvStandardGrabbable, AvTransform, AvModel } from '@aardvarkxr/aardvark-react';
-import { g_builtinModelAardvark, g_builtinModelPlus } from '@aardvarkxr/aardvark-shared';
+import { AvGrabButton, AvPanel, AvPanelAnchor, AvStandardGrabbable, AvTransform, AvModel, DefaultLanding } from '@aardvarkxr/aardvark-react';
+import { g_builtinModelAardvark, g_builtinModelPlus, Av } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
@@ -68,4 +68,5 @@ class ControlTest extends React.Component< {}, ControlTestState >
 	}
 }
 
-ReactDOM.render( <ControlTest/>, document.getElementById( "root" ) );
+let main = Av() ? <ControlTest/> : <DefaultLanding/>;
+ReactDOM.render( main, document.getElementById( "root" ) );

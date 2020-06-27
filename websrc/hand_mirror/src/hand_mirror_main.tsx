@@ -1,5 +1,5 @@
-import { AvOrigin, AvStandardGrabbable, AvTransform, RemoteUniverseComponent, NetworkUniverseComponent, AvComposedEntity } from '@aardvarkxr/aardvark-react';
-import { g_builtinModelHandMirror, infiniteVolume, emptyVolume } from '@aardvarkxr/aardvark-shared';
+import { AvOrigin, AvStandardGrabbable, AvTransform, RemoteUniverseComponent, NetworkUniverseComponent, AvComposedEntity, DefaultLanding } from '@aardvarkxr/aardvark-react';
+import { g_builtinModelHandMirror, infiniteVolume, emptyVolume, Av } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
@@ -60,4 +60,5 @@ class HandMirror extends React.Component< {}, HandMirrorState >
 }
 
 
-ReactDOM.render( <HandMirror/>, document.getElementById( "root" ) );
+let main = Av() ? <HandMirror/> : <DefaultLanding/>;
+ReactDOM.render( main, document.getElementById( "root" ) );

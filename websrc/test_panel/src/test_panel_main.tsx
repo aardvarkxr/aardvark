@@ -1,5 +1,5 @@
-import { AvGadget, AvPanel, AvStandardGrabbable, AvTransform, HighlightType } from '@aardvarkxr/aardvark-react';
-import { EAction, EHand, g_builtinModelBox, InitialInterfaceLock } from '@aardvarkxr/aardvark-shared';
+import { AvGadget, AvPanel, AvStandardGrabbable, AvTransform, HighlightType, DefaultLanding } from '@aardvarkxr/aardvark-react';
+import { EAction, EHand, g_builtinModelBox, InitialInterfaceLock, Av } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
@@ -207,4 +207,5 @@ class TestPanel extends React.Component< {}, TestPanelState >
 
 }
 
-ReactDOM.render( <TestPanel/>, document.getElementById( "root" ) );
+let main = Av() ? <TestPanel/> : <DefaultLanding/>;
+ReactDOM.render( main, document.getElementById( "root" ) );

@@ -1,0 +1,14 @@
+.LandingButton
+{
+	width: fit-content;
+	border: 1px solid darkgreen;
+	background-color: lightgreen;
+	border-radius: 7px;
+	padding: 3px;
+}
+
+.LandingButton:hover
+{
+	background-color: #2a996b;
+}
+

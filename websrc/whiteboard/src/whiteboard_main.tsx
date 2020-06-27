@@ -1,5 +1,5 @@
-import { ActiveInterface, AvComposedEntity, AvGadget, AvInterfaceEntity, AvLine, AvModel, AvPrimitive, AvStandardGrabbable, AvTransform, MoveableComponent, PrimitiveType, PrimitiveYOrigin, PrimitiveZOrigin } from '@aardvarkxr/aardvark-react';
-import { AvNodeTransform, AvVector, AvVolume, endpointAddrToString, EVolumeType, g_builtinModelBox, InitialInterfaceLock } from '@aardvarkxr/aardvark-shared';
+import { ActiveInterface, AvComposedEntity, AvGadget, AvInterfaceEntity, AvLine, AvModel, AvPrimitive, AvStandardGrabbable, AvTransform, MoveableComponent, PrimitiveType, PrimitiveYOrigin, PrimitiveZOrigin, DefaultLanding } from '@aardvarkxr/aardvark-react';
+import { Av, AvNodeTransform, AvVector, AvVolume, endpointAddrToString, EVolumeType, g_builtinModelBox, InitialInterfaceLock } from '@aardvarkxr/aardvark-shared';
 import { vec2 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
 import * as IPFS from 'ipfs';
@@ -503,4 +503,6 @@ class Whiteboard extends React.Component< {}, WhiteboardState >
 
 }
 
-ReactDOM.render( <Whiteboard/>, document.getElementById( "root" ) );
+
+let main = Av() ? <Whiteboard/> : <DefaultLanding/>;
+ReactDOM.render( main, document.getElementById( "root" ) );
