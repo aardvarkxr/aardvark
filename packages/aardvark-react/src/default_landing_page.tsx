@@ -1,8 +1,10 @@
-import { CUtilityEndpoint, findGltfIconFullUrl, GetGadgetUrlFromWindow } from '@aardvarkxr/aardvark-react';
 import { AardvarkManifest, MessageType, MsgInstallGadget } from '@aardvarkxr/aardvark-shared';
 import axios from 'axios';
 import * as React from 'react';
 import './Landing.css';
+import { CUtilityEndpoint } from './aardvark_endpoint';
+import { GetGadgetUrlFromWindow } from './aardvark_gadget';
+import { findGltfIconFullUrl } from './aardvark_gadget_seed';
 
 export interface DefaultLandingProps
 {
