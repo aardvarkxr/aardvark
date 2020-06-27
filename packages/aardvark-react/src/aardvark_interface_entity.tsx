@@ -1,4 +1,4 @@
-import { AvNodeTransform, AvNodeType, AvVolume, EndpointAddr, endpointAddrsMatch, ENodeFlags, InitialInterfaceLock, InterfaceLockResult, invertNodeTransform, MessageType, MsgInterfaceLock, MsgInterfaceLockResponse, MsgInterfaceRelock, MsgInterfaceRelockResponse, MsgInterfaceSendEvent, MsgInterfaceSendEventResponse, MsgInterfaceUnlock, MsgInterfaceUnlockResponse } from '@aardvarkxr/aardvark-shared';
+import { AvNodeTransform, AvNodeType, AvVolume, EndpointAddr, endpointAddrsMatch, ENodeFlags, InitialInterfaceLock, InterfaceLockResult, invertNodeTransform, MessageType, MsgInterfaceLock, MsgInterfaceLockResponse, MsgInterfaceRelock, MsgInterfaceRelockResponse, MsgInterfaceSendEvent, MsgInterfaceSendEventResponse, MsgInterfaceUnlock, MsgInterfaceUnlockResponse, AvConstraint } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 import { AvGadget } from './aardvark_gadget';
@@ -284,6 +284,13 @@ interface AvInterfaceEntityProps extends AvBaseNodeProps
 	 * @default []
 	 */
 	interfaceLocks?: InitialInterfaceLock[];
+
+	/** Sets the constraint to apply to this node's transform before applying the
+	 * parent transform. Using constraints without a parent may have unexpected results.
+	 * 
+	 * @default none
+	 */
+	constraint?: AvConstraint;
 }
 
 /** Defines one participant in the interface system */
@@ -320,6 +327,7 @@ export class AvInterfaceEntity extends AvBaseNode< AvInterfaceEntityProps, {} >
 			node.propVolumes = [ this.props.volume ];
 		}
 		node.propParentAddr = this.props.parent;
+		node.propConstraint = this.props.constraint;
 		node.propPriority = this.props.priority;
 		
 		for( let interfaceLock of ( this.props.interfaceLocks ?? [] ) )

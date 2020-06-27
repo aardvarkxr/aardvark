@@ -1,4 +1,4 @@
-import { AvNodeTransform, AvNodeType, AvQuaternion, EndpointAddr, MinimalPose, minimalToMat4Transform, nodeTransformFromMat4, quatFromAxisAngleDegrees } from '@aardvarkxr/aardvark-shared';
+import { AvNodeTransform, AvNodeType, AvQuaternion, EndpointAddr, MinimalPose, minimalToMat4Transform, nodeTransformFromMat4, quatFromAxisAngleDegrees, AvConstraint } from '@aardvarkxr/aardvark-shared';
 import { vec3 } from '@tlaukkan/tsm';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 
@@ -96,6 +96,13 @@ interface AvTransformProps extends AvBaseNodeProps
 	 * @default none
 	 */
 	parent?: EndpointAddr;
+
+	/** Sets the constraint to apply to this node's transform before applying the
+	 * parent transform. Using constraints without a parent may have unexpected results.
+	 * 
+	 * @default none
+	 */
+	constraint?: AvConstraint;
 }
 
 /** Applies a static transform to all children. */
@@ -169,6 +176,7 @@ export class AvTransform extends AvBaseNode< AvTransformProps, {} >
 		}
 
 		node.propParentAddr = this.props.parent;
+		node.propConstraint = this.props.constraint;
 
 		return node;
 	}

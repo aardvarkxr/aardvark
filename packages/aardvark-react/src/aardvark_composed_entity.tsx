@@ -1,4 +1,4 @@
-import { AvVolume, EndpointAddr, EndpointType, InitialInterfaceLock } from '@aardvarkxr/aardvark-shared';
+import { AvVolume, EndpointAddr, EndpointType, InitialInterfaceLock, AvConstraint } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import { AvInterfaceEntity, InterfaceProp } from './aardvark_interface_entity';
@@ -34,6 +34,13 @@ export interface AvComposedEntityProps
 	 * @default 0
 	*/
 	priority?: number;
+	
+	/** Sets the constraint to apply to this node's transform before applying the
+	 * parent transform. Using constraints without a parent may have unexpected results.
+	 * 
+	 * @default none
+	 */
+	constraint?: AvConstraint;
 }
 
 /** Allows for the construction of interface entities out of reusable interface components.
@@ -115,7 +122,8 @@ export class AvComposedEntity extends React.Component< AvComposedEntityProps, {}
 
 		return <AvInterfaceEntity transmits={transmits} receives={ receives } wantsTransforms={ wantsTransforms }
 					parent={ parent } volume={ this.props.volume } ref={ this.onEntityRef } 
-					priority={ this.props.priority } interfaceLocks={ interfaceLocks }>
+					priority={ this.props.priority } interfaceLocks={ interfaceLocks }
+					constraint={ this.props.constraint }>
 					{ this.props.children }
 					{ this.props.components.map( ( value: EntityComponent ) => value.render() ) }
 				</AvInterfaceEntity>;

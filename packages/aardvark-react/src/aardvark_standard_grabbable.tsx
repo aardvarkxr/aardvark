@@ -1,4 +1,4 @@
-import { AvVolume, emptyVolume, EVolumeType, infiniteVolume, InitialInterfaceLock, AvNodeTransform } from '@aardvarkxr/aardvark-shared';
+import { AvVolume, emptyVolume, EVolumeType, infiniteVolume, InitialInterfaceLock, AvNodeTransform, AvConstraint } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import { AvComposedEntity, EntityComponent } from './aardvark_composed_entity';
@@ -141,6 +141,13 @@ interface StandardGrabbableProps
 	 * @default: true
 	 */
 	advertiseGadgetInfo?: boolean;
+
+	/** If this prop is true the grabbable will ignore all rotation other than yaw
+	 * from its parent so that it is always upright.
+	 * 
+	 * @default: false
+	 */
+	gravityAligned?: boolean;
 }
 
 
@@ -310,8 +317,14 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 			}
 		}
 
+		let constraint: AvConstraint = null;
+		if( this.props.gravityAligned )
+		{
+			constraint = { gravityAligned: this.props.gravityAligned };
+		}
+
 		return (
-			<AvComposedEntity components={ components }	volume={ volume }>
+			<AvComposedEntity components={ components }	volume={ volume } constraint={ constraint }>
 				{ this.networkedComponent 
 					&& <AvComposedEntity components={ [ this.networkedComponent ] } volume={ infiniteVolume() } /> }
 				<AvTransform uniformScale={ scale }>
