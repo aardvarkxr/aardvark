@@ -5,91 +5,109 @@ import './Landing.css';
 import { CUtilityEndpoint } from './aardvark_endpoint';
 import { GetGadgetUrlFromWindow } from './aardvark_gadget';
 import { findGltfIconFullUrl } from './aardvark_gadget_seed';
+import bind from 'bind-decorator';
 
 export interface DefaultLandingProps
 {
 
 }
 
-export function DefaultLanding( props: DefaultLandingProps )
+interface DefaultLandingState
 {
-	const [ manifest, setManifest ] = React.useState<AardvarkManifest>( null );
-	const [ error, setError ] = React.useState<string>( null );
-	const [ endpoint, setEndpoint ] = React.useState<CUtilityEndpoint>( null );
-	const [ connected, setConnected ] = React.useState( false );
+	manifest?: AardvarkManifest;
+	error?: string;
+	connected: boolean;
+}
 
-	let gadgetUrl = GetGadgetUrlFromWindow();
+export class DefaultLanding extends React.Component<DefaultLandingProps, DefaultLandingState >
+{
+	private endpoint: CUtilityEndpoint;
+	private gadgetUrl: string;
 
-	let onConnectToServer = () => 
+	constructor( props: any )
 	{
-		setConnected( true );
+		super( props );
+
+		this.state = { connected: false };
+
+		this.endpoint = new CUtilityEndpoint( null, this.onConnectToServer );
+		this.gadgetUrl = GetGadgetUrlFromWindow();
+
+		axios.get( this.gadgetUrl + "/manifest.webmanifest" )
+		.then( ( response ) =>
+		{
+			this.setState( { manifest: response.data as AardvarkManifest } );
+		} )
+		.catch( ( reason: any ) =>
+		{
+			this.setState( { error: "Failed to load manifest" } );
+		} );	
+
 	}
 
-	let onStartAardvark = () =>
+	@bind
+	private onConnectToServer() 
+	{
+		this.setState( { connected: true } );
+	}
+
+	@bind
+	private onStartAardvark()
 	{
 		window.open( "aardvark://start" );
 	}
 
-	let onAddFavorite = () =>
+	@bind
+	private onAddFavorite()
 	{
 		let m: MsgInstallGadget =
 		{
-			gadgetUri: gadgetUrl,
+			gadgetUri: this.gadgetUrl,
 		}
-		endpoint.sendMessage( MessageType.InstallGadget, m );
+		this.endpoint.sendMessage( MessageType.InstallGadget, m );
 	}
 
-	if( !error && !manifest )
+	private renderFavorite()
 	{
-		axios.get( gadgetUrl + "/manifest.webmanifest" )
-		.then( ( response ) =>
-		{
-			setManifest( response.data as AardvarkManifest );
-			setEndpoint( new CUtilityEndpoint( null, onConnectToServer ) );
-		} )
-		.catch( ( reason: any ) =>
-		{
-			setError( "Failed to load manifest" );
-		} );	
-	}
-
-	let renderFavorite = () =>
-	{
-		if( !connected )
+		if( !this.state.connected )
 		{
 			return <div className="LandingButton"
-				onClick={ onStartAardvark }>Start Aardvark</div>;
+				onClick={ this.onStartAardvark }>Start Aardvark</div>;
 		}
 
-		return <div className="LandingButton" onClick={ onAddFavorite }>Add to Favorites</div>;
+		return <div className="LandingButton" onClick={ this.onAddFavorite }>Add to Favorites</div>;
 	}
 
-	if( error )
-	{
-		return <div>Error: { error }</div>
-	}
-	else if( !manifest )
-	{
-		return <div>Loading...</div>
-	}
-	else
-	{
-		let icon: JSX.Element = null;
-		let iconUrl = findGltfIconFullUrl( gadgetUrl, manifest );
 
-		if( iconUrl )
+	render()
+	{
+		if( this.state.error )
 		{
-			icon = <iframe src={ "https://aardvarkxr.github.io/icon_model_viewer/index.html#" + iconUrl }
-				frameBorder={ 0 } style={ { "border": "none", margin: 0, overflow: "hidden" } }></iframe>
+			return <div>Error: { this.state.error }</div>
 		}
-
-		return <div style={ { display: "flex", flexDirection: "column" }}>
-			<div style={ { fontSize: "large", fontStyle: "bold" }}>{ manifest.name }</div>
-			{ manifest.description && 
-				<div >{ manifest.description }</div> }
-			{ renderFavorite() }
-			{ icon }
-		</div>
+		else if( !this.state.manifest )
+		{
+			return <div>Loading...</div>
+		}
+		else
+		{
+			let icon: JSX.Element = null;
+			let iconUrl = findGltfIconFullUrl( this.gadgetUrl, this.state.manifest );
+	
+			if( iconUrl )
+			{
+				icon = <iframe src={ "https://aardvarkxr.github.io/icon_model_viewer/index.html#" + iconUrl }
+					frameBorder={ 0 } style={ { "border": "none", margin: 0, overflow: "hidden" } }></iframe>
+			}
+	
+			return <div style={ { display: "flex", flexDirection: "column" }}>
+				<div style={ { fontSize: "large", fontStyle: "bold" }}>{ this.state.manifest.name }</div>
+				{ this.state.manifest.description && 
+					<div >{ this.state.manifest.description }</div> }
+				{ this.renderFavorite() }
+				{ icon }
+			</div>
+		}	
 	}
 }
 
