@@ -4,40 +4,6 @@ The @aardvarkxr/aardvark-react package includes many components that make buildi
 You can find documentation for those components [here](aardvark-react/).
 More details on initializing and building your first gadget below.
 
-# Installing useful tools
-
-`avcmd` is a command line tool that provides a bunch of useful Aardvark-related functionality. 
-To install it, run:
-
-	npm install -g @aardvarkxr/aardvark-cli
-
-This will install "avcmd" globally, and in your path. You can do several useful things with this command. 
-
-**avcmd install <path or url>**
-
-Adds the gadget at the path or URL to the control panel that appears under the gear icon.
-Make sure <path>/gadget_manifest.json or <url>/gadget_manifest.json is valid otherwise things will break when you create the gadget.
-
-You will need to restart avrenderer (including the server if you're running that on its own) to see the change.
-
-
-**avcmd uninstall <path or url>**
-
-Removes the gadget from the control panel.
-
-You will need to restart avrenderer (including the server if you're running that on its own) to see the change.
-
-
-**avcmd list**
-
-Lists the gadgets that are currently installed.
-
-
-**avcmd reset**
-
-Resets the gadget list to the default examples.
-
-
 ## Making your first gadget
 
 [Look here](getting_started) for instructions on building your first gadget.

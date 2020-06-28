@@ -17,7 +17,6 @@ Specifically you need to have the following applications installed:
 * [Visual Studio Code](https://code.visualstudio.com/download)
 * [npm](https://www.npmjs.com/get-npm)
 * typescript - Once npm is installed, you can install typescript with `npm install -g typescript`
-* avcmd - This is a command line tool for Aardvark developers. Once npm is installed, you can install it with `npm install -g @aardvarkxr/aardvark-cli`.
 
 There's nothing in the instructions below that cares what platform you're running on, but these instructions have only been tested on Windows 10.
 Aardvark itself also currently only runs on Windows.
@@ -28,7 +27,7 @@ The Aardvark init tool will help you create a mostly-blank project in the curren
 
 ```console
 E:\gettingstarted>npm init @aardvarkxr
-Aardvark gadget project create script (0.4.0)
+Aardvark gadget project create script (0.10.9)
 ? What is the package name to use for your gadget? mygadget
 ? What is the package name to use for your gadget? mygadget
 ? What is the user-facing name of your gadget? My Awesome Gadget
@@ -55,7 +54,7 @@ Your answers:  {
   joinsRooms: false,
   wantsVSCode: true
 }
-Using @aardvarkxr/aardvark-react@^0.4.0 and @aardvarkxr/aardvark-shared@^0.4.0
+Using @aardvarkxr/aardvark-react@^0.10.9 and @aardvarkxr/aardvark-shared@^0.10.9
 Created ./src
 Added manifest.webmanifest
 Added tsconfig.json
@@ -208,16 +207,36 @@ For more details on how all of that works, [How to Setup TypeScript with Webpack
 
 # Step 3 - Running your gadget for the first time
 
-First you need to install your gadget.
-
+In order for Aardvark to load your gadget, you will need it to be available over HTTP.
+The easiest way to do that is to use a local development server.
+[http-server](https://www.google.com/search?q=npm+http-server&oq=npm+htt&aqs=chrome.1.69i57j69i59j0l5j69i60.3303j1j7&sourceid=chrome&ie=UTF-8) (available via npm) is a reasonable choice.
+You can install it globally like this:
 ```console
-E:\gettingstarted>avcmd install dist
-Read state from C:\Users\username\aardvark\state.json for 5 active gadgets
-info: Installing My Awesome Gadget: file:///E:/gettingstarted/dist
-info: writing state to C:\Users\username\aardvark\state.json
+E:\gettingstarted>npm install -g http-server
 ```
 
-Then run Aardvark and you will see your gadget show up in the gadget menu.
+Then run it on the dist directory of your gadget:
+```console
+E:\gettingstarted>http-server --cors dist
+Starting up http-server, serving dist
+Available on:
+  http://<your IP address>:8080
+  http://127.0.0.1:8080
+Hit CTRL-C to stop the server
+```
+
+By default http-server will run on port 8080, but many other things also default to port 8080, so depending on what else you're running it may be on another port.
+See the output from the command to check which port it is actually using.
+
+The --cors option allows all the served content to be loaded by any script in any page via the `Access-Control-Allow-Origin` header.
+This is necessary for the manifest.webmanifest and any model files so that the various parts of Aardvark can load these resources. 
+You will need to ensure that wherever you host your gadget also returns `Access-Control-Allow-Origin: *` for the web manifest file and any model files.
+
+Now you can open your gadget in a browser to get a favorite button.
+[http://localhost:8080/](http://localhost:8080) is the default link, but you may need to adjust that URL to use whatever port the HTTP server ended up listening on.
+Whenever Aardvark is running, this page will have an "Add to favorites" button that will add that gadget to your favorites list.
+At that point you can spawn the gadget from inside VR by using the tab with the star icon in the gadget menu.
+
 The white sphere is the placeholder model.
 
 ![Gadget in menu](gadget_in_menu.jpg "Gadget in Menu")
@@ -232,7 +251,7 @@ If you grab the placeholder sphere icon, you'll see your gadget's panel.
 Your gadget's src directory contains a file called manifest.webmanifest that has the following in it.
 ```webmanifest
 {
-	"xr_type": "aardvark-gadget@^0.6.6",
+	"xr_type": "aardvark-gadget@^0.10.9",
 	"name": "My Awesome Gadget",
 	"icons": [
 		{
