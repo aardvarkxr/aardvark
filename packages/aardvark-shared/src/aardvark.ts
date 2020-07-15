@@ -80,6 +80,13 @@ export enum PanelMouseEventType
 };
 
 
+export interface WindowInfo
+{
+	name: string;
+	handle: string;
+	texture: AvSharedTextureInfo;
+};
+
 export interface Aardvark
 {
 	hasPermission( permission: Permission ): boolean;
@@ -96,6 +103,10 @@ export interface Aardvark
 
 	// requires renderer permissions
 	renderer: AvRenderer;
+
+	// requires screeencapture permissions
+	subscribeWindowList( callback: ( windows: WindowInfo[] ) => void ): void;
+	unsubscribeWindowList():void;
 }
 
 declare global

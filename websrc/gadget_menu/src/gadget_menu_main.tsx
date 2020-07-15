@@ -1,5 +1,5 @@
 import { ActiveInterface, AvGadget, AvGadgetSeed, AvGrabButton, AvHeadFacingTransform, AvHighlightTransmitters, AvInterfaceEntity, AvLine, AvModel, AvOrigin, AvPanel, AvPrimitive, AvStandardGrabbable, AvTransform, GadgetInfoEvent, GadgetSeedHighlight, HiddenChildrenBehavior, k_GadgetInfoInterface, PrimitiveType, PrimitiveYOrigin, renderGadgetIcon, ShowGrabbableChildren } from '@aardvarkxr/aardvark-react';
-import { AardvarkManifest, AvNodeTransform, AvVector, emptyVolume, EndpointAddr, g_builtinModelBarcodeScanner, nodeTransformToMat4, nodeTransformFromMat4, g_builtinModelDropAttract, g_builtinModelNetwork, g_builtinModelHammerAndWrench, g_builtinModelStar, g_builtinModelTrashcan, MessageType, MsgDestroyGadget, rayVolume, MsgInstallGadget } from '@aardvarkxr/aardvark-shared';
+import { Av, WindowInfo, AardvarkManifest, AvNodeTransform, AvVector, emptyVolume, EndpointAddr, g_builtinModelBarcodeScanner, nodeTransformToMat4, nodeTransformFromMat4, g_builtinModelDropAttract, g_builtinModelNetwork, g_builtinModelHammerAndWrench, g_builtinModelStar, g_builtinModelTrashcan, MessageType, MsgDestroyGadget, rayVolume, MsgInstallGadget, g_builtinModelPanel, AvVolume, EVolumeType } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3, vec4 } from '@tlaukkan/tsm';
 import Axios from 'axios';
 import bind from 'bind-decorator';
@@ -37,6 +37,8 @@ interface GadgetInfoPanelProps
 	highlight?: GadgetSeedHighlight;
 }
 
+const k_desktopWindowGadget = "http://localhost:23842/gadgets/test_panel";
+
 function GadgetInfoPanel( props: GadgetInfoPanelProps )
 {
 	return <InfoPanel widthInMeters={ 0.2 } translation={ { x: 0.13, y: 0, z: 0.03 } }>
@@ -51,6 +53,21 @@ function GadgetInfoPanel( props: GadgetInfoPanelProps )
 		</InfoPanel>
 }
 
+interface WindowInfoPanelProps
+{
+	window: WindowInfo;
+	highlight?: GadgetSeedHighlight;
+}
+
+function WindowInfoPanel( props: WindowInfoPanelProps )
+{
+	return <InfoPanel widthInMeters={ 0.2 } translation={ { x: 0.13, y: 0, z: 0.03 } }>
+			<div className="GadgetName">{ props.window.name }</div>
+			<div className="GadgetDescription">{ props.window.handle }</div>
+			<div className="GadgetDescription">{ props.window.texture.width }</div>
+			<div className="GadgetDescription">{ props.window.texture.height }</div>
+		</InfoPanel>
+}
 
 interface GadgetScannerPanelProps
 {
@@ -108,6 +125,12 @@ interface GadgetInfoPanel
 	highlight: GadgetSeedHighlight;
 }
 
+interface WindowInfoPanel
+{
+	window: WindowInfo;
+	highlight: GadgetSeedHighlight;
+}
+
 interface ScannerGadget
 {
 	gadgetUrl: string;
@@ -120,6 +143,7 @@ enum ControlPanelTab
 	Main,
 	Favorites,
 	Builtin,
+	DesktopWindows,
 }
 
 interface ControlPanelState
@@ -129,7 +153,9 @@ interface ControlPanelState
 	registryLoadFailed?: boolean;
 	transform?: AvNodeTransform;
 	panel?: GadgetInfoPanel;
+	window?: WindowInfoPanel;
 	scannerGadget?: ScannerGadget;
+	windows?: WindowInfo[];
 }
 
 interface GadgetUIEvent
@@ -154,9 +180,42 @@ const k_alwaysInstalledGadgets =
 	"http://localhost:23842/gadgets/whiteboard",
 ];
 
+function subscribeWindowList(): Promise<WindowInfo[]>
+{
+	return new Promise( (resolve, reject ) =>
+	{
+		Av().subscribeWindowList( ( windows: WindowInfo[] ) =>
+		{
+			resolve( windows );
+		})
+	})
+}
+
+interface DesktopWindowPreviewProps
+{
+	window: WindowInfo;
+	highlightCallback: ( highlight: boolean) => void;
+}
+
+interface DesktopWindowPreviewState
+{
+
+}
+
+class DesktopWindowPreview extends React.Component< DesktopWindowPreviewProps, DesktopWindowPreviewState >
+{
+	constructor( props: any )
+	{
+		super( props );
+		this.state = {};
+	}
+}
+
+
 class ControlPanel extends React.Component< {}, ControlPanelState >
 {
 	private highlights = new Map<string, GadgetInfoPanel>();
+	private windowHighlights = new Map<string, WindowInfoPanel>();
 	private registry: Registry;
 	readonly rays = [ rayVolume( k_rayStart, k_rayDir ) ];
 	private settings: GadgetMenuSettings = null;
@@ -227,6 +286,11 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		{
 			this.requestManifest( builtin );
 		}
+
+		subscribeWindowList().then( ( windows: WindowInfo[] ) =>
+		{
+			this.setState( { windows } );
+		} );
 	}
 
 	private requestManifest( url: string )
@@ -273,6 +337,33 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 	}
 
 
+	private onWindowHighlight( window: WindowInfo, highlight: GadgetSeedHighlight )
+	{
+		if( highlight == GadgetSeedHighlight.Idle )
+		{
+			this.windowHighlights.delete( window.handle );
+		}
+		else
+		{
+			this.windowHighlights.set( window.handle,
+				{
+					window,
+					highlight,
+				} );
+		}
+
+		let entry = this.windowHighlights.entries().next();
+		if( entry.done )
+		{
+			this.setState( { window: null } );
+		}
+		else
+		{
+			this.setState( { window: entry.value[1] } );
+		}
+	}
+
+
 	private renderGadgetSeedList()
 	{
 		switch( this.state.tab )
@@ -285,6 +376,9 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 
 			case ControlPanelTab.Favorites:
 				return this.renderFavoritesTab();
+
+			case ControlPanelTab.DesktopWindows:
+				return this.renderDesktopWindowsTab();
 		}
 	}
 
@@ -307,6 +401,94 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 	private renderFavoritesTab()
 	{
 		return this.renderRegistryEntries( this.settings.favorites );
+	}
+
+	private renderFooter()
+	{
+		return <>
+			{ this.renderTabButton( -0.07, g_builtinModelNetwork, ControlPanelTab.Main ) }
+			{ this.renderTabButton(  0.00, g_builtinModelHammerAndWrench, ControlPanelTab.Builtin ) }
+			{ this.renderTabButton(  0.07, g_builtinModelStar, ControlPanelTab.Favorites ) }
+			{ this.renderTabButton(  0.105, g_builtinModelStar, ControlPanelTab.DesktopWindows ) }
+			
+			<AvTransform translateY={ 0.05} rotateZ={ 90 }>
+				<AvPrimitive type={ PrimitiveType.Cylinder } radius={ 0.003 } height={ 0.20 }/>
+			</AvTransform>
+		</>;
+	}
+
+	private renderDesktopWindowsTab()
+	{
+		const k_cellWidth = 0.20;
+		const k_bottomPadding = 0.04;
+		const k_thumbWidth = 0.9 * k_cellWidth;
+		let rowCount = Math.ceil( this.state.windows.length / 3 );
+		let top = rowCount * k_cellWidth;
+		let seeds: JSX.Element[] = [];
+
+		let desktopWindowManifest = this.manifestsByUrl.get( k_desktopWindowGadget );
+		if( desktopWindowManifest )
+		{
+
+			for( let windowIndex = 0; windowIndex < this.state.windows.length; windowIndex++ )
+			{
+				let window = this.state.windows[ windowIndex ];
+				let col = windowIndex % 3;
+				let row = Math.floor( windowIndex / 3 );
+	
+				if( window.texture.width <= 0 || window.texture.height <= 0 )
+					continue;
+	
+				let width = k_thumbWidth;
+				let height = k_thumbWidth * window.texture.height / window.texture.width;
+				if( window.texture.width < window.texture.height )
+				{
+					height = k_thumbWidth;
+					width = k_thumbWidth * window.texture.width / window.texture.height;
+				}
+	
+				let volume: AvVolume =
+				{
+					type: EVolumeType.AABB,
+					aabb:
+					{
+						xMin: -width/2, xMax: width/2,
+						yMin: -height/2, yMax: height/2,
+						zMin: -0.01, zMax: 0.01,
+					}
+				};
+
+				seeds.push( 
+					<AvTransform translateY = { k_bottomPadding + top - row * k_cellWidth } 
+						translateX = { ( col - 1 ) * k_cellWidth } 
+						key={ window.handle }>
+
+						<AvGadgetSeed key="gadget" manifest={ desktopWindowManifest } 
+							gadgetUrl={ k_desktopWindowGadget } 
+							highlightCallback={ ( highlight: GadgetSeedHighlight ) =>
+								{
+									this.onWindowHighlight( window, highlight );
+								} }
+							customAppearance= 
+							{
+								<AvTransform rotateX={ 90 } scaleX={ width } scaleZ={ height }>
+									<AvModel uri={ g_builtinModelPanel } sharedTexure={ window.texture }/>
+								</AvTransform>
+							} 
+							customVolume={ volume }/>
+
+						{ this.state.window?.window.handle == window.handle 
+							&& !this.state.scannerGadget &&
+							<WindowInfoPanel window={ window } 
+								highlight={ this.state.window?.highlight } /> }
+					</AvTransform>);
+			}
+		}
+		return <>
+			{ seeds }
+			{ this.renderFooter() }
+			</>;
+
 	}
 
 	private renderTabButton( translateX: number, modelUri: string, tab: ControlPanelTab )
@@ -384,13 +566,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 			{ seeds }
 			{ error }
 
-			{ this.renderTabButton( -0.07, g_builtinModelNetwork, ControlPanelTab.Main ) }
-			{ this.renderTabButton(  0.00, g_builtinModelHammerAndWrench, ControlPanelTab.Builtin ) }
-			{ this.renderTabButton(  0.07, g_builtinModelStar, ControlPanelTab.Favorites ) }
-			
-			<AvTransform translateY={ 0.05} rotateZ={ 90 }>
-				<AvPrimitive type={ PrimitiveType.Cylinder } radius={ 0.003 } height={ 0.20 }/>
-			</AvTransform>
+			{ this.renderFooter() }
 			</>;
 	}
 
@@ -450,7 +626,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		activeInterface.onEnded( () =>
 		{
 			console.log( "Exiting gadget menu because the hand gadget went away" );
-			window.close();
+			//window.close();
 			return;
 		} );
 		

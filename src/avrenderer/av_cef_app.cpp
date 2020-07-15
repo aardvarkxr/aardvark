@@ -14,6 +14,7 @@
 #include "av_cef_handler.h"
 #include "av_cef_javascript.h"
 #include <aardvark/aardvark_gadget_manifest.h>
+#include <tools/logging.h>
 
 #include <openvr.h>
 #include <processthreadsapi.h>
@@ -182,7 +183,10 @@ CAardvarkCefApp* CAardvarkCefApp::instance()
 
 void CAardvarkCefApp::runFrame()
 {
-	m_pD3D11ImmediateContext->Flush();
+	{
+		std::lock_guard<std::mutex> autolock( m_graphicsMutex );
+		m_pD3D11ImmediateContext->Flush();
+	}
 
 	if ( m_quitRequested && !m_quitHandled )
 	{
@@ -209,6 +213,15 @@ void CAardvarkCefApp::browserClosed( CAardvarkCefHandler *handler )
 	{
 		m_browsers.erase( i );
 	}
+
+	for ( auto i = m_windowListSubscriptions.begin(); i != m_windowListSubscriptions.end(); i++ )
+	{
+		if ( i->get()->handler == handler )
+		{
+			m_windowListSubscriptions.erase( i );
+			break;
+		}
+	}
 }
 
 
@@ -216,11 +229,25 @@ void CAardvarkCefApp::browserClosed( CAardvarkCefHandler *handler )
 bool CAardvarkCefApp::createTextureForBrowser( void **sharedHandle, 
 	int width, int height )
 {
+	ID3D11Texture2D* texture = nullptr;
+	if ( !createTextureInternal( sharedHandle, &texture, width, height ) )
+	{
+		return false;
+	}
+
+	m_browserTextures.insert( std::make_pair( *sharedHandle, texture ) );
+
+	return true;
+}
+
+bool CAardvarkCefApp::createTextureInternal( void **sharedHandle, ID3D11Texture2D** texture, int width, int height )
+{
 	if ( !m_pD3D11Device )
 	{
 		return false;
 	}
 
+	std::lock_guard<std::mutex> autolock( m_graphicsMutex );
 	D3D11_TEXTURE2D_DESC sharedDesc;
 	sharedDesc.Width = width;
 	sharedDesc.Height = height;
@@ -233,15 +260,14 @@ bool CAardvarkCefApp::createTextureForBrowser( void **sharedHandle,
 	sharedDesc.CPUAccessFlags = 0;
 	sharedDesc.MiscFlags = D3D11_RESOURCE_MISC_SHARED;
 
-	ID3D11Texture2D *texture = nullptr;
-	HRESULT result = m_pD3D11Device->CreateTexture2D( &sharedDesc, nullptr, &texture );
+	HRESULT result = m_pD3D11Device->CreateTexture2D( &sharedDesc, nullptr, texture );
 	if ( result != S_OK )
 		return false;
 
-	IDXGIResource *dxgiResource = nullptr;
-	texture->QueryInterface( __uuidof( IDXGIResource ), (LPVOID*)& dxgiResource );
+	IDXGIResource* dxgiResource = nullptr;
+	(*texture)->QueryInterface( __uuidof( IDXGIResource ), (LPVOID*)&dxgiResource );
 
-	void *handle = nullptr;
+	void* handle = nullptr;
 	dxgiResource->GetSharedHandle( &handle );
 	dxgiResource->Release();
 
@@ -250,14 +276,13 @@ bool CAardvarkCefApp::createTextureForBrowser( void **sharedHandle,
 		return false;
 	}
 
-	m_browserTextures.insert( std::make_pair( handle, texture ) );
-
 	*sharedHandle = handle;
 	return true;
 }
 
 void CAardvarkCefApp::updateTexture( void *sharedHandle, const void *buffer, int width, int height )
 {
+	std::lock_guard<std::mutex> autolock( m_graphicsMutex );
 	auto i = m_browserTextures.find( sharedHandle );
 	if ( i == m_browserTextures.end() )
 		return;
@@ -272,3 +297,237 @@ void CAardvarkCefApp::updateTexture( void *sharedHandle, const void *buffer, int
 	m_pD3D11ImmediateContext->UpdateSubresource( i->second, 0, &box, buffer, width * 4, width * height * 4 );
 }
 
+void CAardvarkCefApp::resizeTextureForBrowser( void** sharedHandle, int width, int height )
+{
+	std::lock_guard<std::mutex> autolock( m_graphicsMutex );
+	auto i = m_browserTextures.find( sharedHandle );
+	if ( i == m_browserTextures.end() )
+		return;
+
+	i->second->Release();
+	m_browserTextures.erase( i );
+
+	createTextureForBrowser( sharedHandle, width, height );
+}
+
+
+using namespace SL::Screen_Capture;
+
+CefRefPtr<CefListValue> CAardvarkCefApp::subscribeToWindowList( CAardvarkCefHandler* handler )
+{
+	for ( auto& sub : m_windowListSubscriptions )
+	{
+		// only one subscription is allowed per handler
+		if ( sub->handler == handler )
+			return getWindowListForSubscription( *sub );
+	}
+
+	// get the new list
+	std::vector<SL::Screen_Capture::Window> windows = SL::Screen_Capture::GetWindows();
+	std::vector<SL::Screen_Capture::Window> newWindowList;
+	for ( const SL::Screen_Capture::Window& window : windows )
+	{
+		HWND hwnd = (HWND)window.Handle;
+		if ( !IsWindowVisible( hwnd ) )
+			continue;
+
+		if ( !IsWindowEnabled( hwnd ) )
+			continue;
+
+		long lstyle = GetWindowLong( hwnd, GWL_STYLE );
+		if ( ( lstyle & WS_CHILDWINDOW ) )
+			continue;
+
+		//HWND parentWnd = (HWND)GetWindowLong( hwnd, GWL_HWNDPARENT );
+		//if ( IsWindowEnabled( parentWnd ) )
+		//	return true;
+
+		//if ( IsWindowVisible( parentWnd ) )
+		//	return true;
+
+		if ( window.Size.x > 50 && window.Size.y > 50 && strlen( window.Name ) > 1 )
+		{
+			newWindowList.push_back( window );
+		}
+	}
+
+	CefRefPtr<CefListValue> pWindowList = CefListValue::Create();
+	pWindowList->SetSize( newWindowList.size() );
+
+	std::unique_ptr<WindowListSubscription> sub = std::make_unique<WindowListSubscription>();
+	sub->handler = handler;
+	for ( auto& newWindow : newWindowList )
+	{
+		WindowCapture capture;
+		capture.windowName = newWindow.Name;
+		capture.width = newWindow.Size.x;
+		capture.height = newWindow.Size.y;
+		if ( !createTextureForBrowser( &capture.sharedhandle, capture.width, capture.height ) )
+		{
+			tools::LogDefault()->error( "Failed to create texture for window %llx", newWindow.Handle );
+			continue;
+		}
+
+		sub->captures.insert( std::make_pair( newWindow.Handle, capture ) );
+	}
+
+	sub->captureHandler = CreateCaptureConfiguration( [ & ]() { return newWindowList; } );
+	WindowListSubscription* pSub = sub.get();
+	sub->captureHandler->onFrameChanged( [ pSub, this ]( const Image& img, const Window& window )
+	{
+		auto texture = pSub->captures.find( window.Handle );
+		if ( texture != pSub->captures.end() )
+		{
+			size_t requiredSize = sizeof( ImageBGRA ) * texture->second.width * texture->second.height;
+			if ( texture->second.buffer.size() < requiredSize )
+			{
+				texture->second.buffer.resize( requiredSize );
+			}
+
+			Extract( img, &texture->second.buffer[ 0 ], requiredSize );
+			
+			// turn off the alpha. Really need to do this in a shader instead of touching every pixel on the CPU again
+			for ( size_t unPixel = 0; unPixel < requiredSize / 4; unPixel++ )
+			{
+				texture->second.buffer[ unPixel * 4 + 3 ] = 0x7F;
+			}
+
+			updateTexture( texture->second.sharedhandle, &texture->second.buffer[ 0 ],
+				texture->second.width, texture->second.height );
+		}
+	} );
+	sub->captureHandler->start_capturing();
+
+	auto pList = getWindowListForSubscription( *sub );
+	m_windowListSubscriptions.push_back( std::move( sub ) );
+	return pList;
+}
+
+
+CefRefPtr<CefListValue> CAardvarkCefApp::getWindowListForSubscription( const WindowListSubscription& sub )
+{
+	CefRefPtr<CefListValue> pWindowList = CefListValue::Create();
+	pWindowList->SetSize( sub.captures.size() );
+	int nWindowIndex = 0;
+
+	for ( auto& capture : sub.captures )
+	{
+		CefRefPtr<CefListValue> pWindowInfo = CefListValue::Create();
+		pWindowInfo->SetString( 0, capture.second.windowName );
+		pWindowInfo->SetString( 1, std::to_string( (uint64_t)capture.first ) );
+		pWindowInfo->SetString( 2, std::to_string( (uint64_t)capture.second.sharedhandle ) );
+		pWindowInfo->SetInt( 3, capture.second.width );
+		pWindowInfo->SetInt( 4, capture.second.height );
+		pWindowInfo->SetBool( 5, false );
+
+		pWindowList->SetList( nWindowIndex++, pWindowInfo );
+	}
+
+	return pWindowList;
+}
+
+
+void CAardvarkCefApp::unsubscribeFromWindowList( CAardvarkCefHandler* handler )
+{
+	for ( WindowListSubscriptionVector::iterator i = m_windowListSubscriptions.begin(); i != m_windowListSubscriptions.end(); i++ )
+	{
+		// only one subscription is allowed per handler
+		if ( (*i)->handler == handler )
+		{
+			m_windowListSubscriptions.erase( i );
+			break;
+		}
+	}
+}
+
+//void CAardvarkCefApp::updateWindowList()
+//{
+//	// get the new list
+//	std::vector<SL::Screen_Capture::Window> windows = SL::Screen_Capture::GetWindows();
+//	std::vector<SL::Screen_Capture::Window> newWindowList;
+//	for ( const SL::Screen_Capture::Window& window : windows )
+//	{
+//		if ( window.Size.x > 50 && window.Size.y > 50 && strlen( window.Name ) > 1 )
+//		{
+//			newWindowList.push_back( window );
+//		}
+//	}
+//
+//	std::set<size_t> addedWindows;
+//	std::set<size_t> removedWindows;
+//	std::set<size_t> resizedWindows;
+//
+//	// add everything we currently track to the remove set. We'll pull them out as we find
+//	// them in the new list
+//	for ( auto& capture : m_captures )
+//	{
+//		removedWindows.insert( capture.first );
+//	}
+//
+//	// see if there were any changes
+//	for ( auto& newWindow : newWindowList )
+//	{
+//		auto iRemove = removedWindows.find( newWindow.Handle );
+//		if ( iRemove != removedWindows.end() )
+//		{
+//			removedWindows.erase( iRemove );
+//		}
+//		else
+//		{
+//			auto iUpdate = m_captures.find( newWindow.Handle );
+//			if ( iUpdate == m_captures.end() )
+//			{
+//				addedWindows.insert( newWindow.Handle );
+//
+//				WindowCapture capture;
+//				capture.width = newWindow.Size.x;
+//				capture.height = newWindow.Size.y;
+//				if ( !createTextureForBrowser( &capture.sharedhandle, capture.width, capture.height ) )
+//				{
+//					tools::LogDefault()->error( "Failed to create texture for window %llx", newWindow.Handle );
+//					continue;
+//				}
+//
+//				m_captures.insert( std::make_pair( newWindow.Handle, capture ) );
+//			}
+//			else if ( iUpdate->second.height != newWindow.Size.y || iUpdate->second.width != newWindow.Size.x )
+//			{
+//				// need to re-create the texture
+//				resizedWindows.insert( newWindow.Handle );
+//
+//				resizeTextureForBrowser( &iUpdate->second.sharedhandle, newWindow.Size.x, newWindow.Size.y );
+//			}
+//			else
+//			{
+//				// nothing to do!
+//			}
+//		}
+//	}
+//
+//	// if anything was added or removed, we need to create the listener again
+//	if ( !addedWindows.empty() || !removedWindows.empty() )
+//	{
+//		if ( m_captureHandler )
+//		{
+//			m_captureHandler = nullptr;
+//		}
+//
+//		m_captureHandler = CreateCaptureConfiguration( [ & ]() { return newWindowList; } );
+//		m_captureHandler->onFrameChanged( [ & ]( const Image & img, const Window& window )
+//		{
+//			auto texture = m_captures.find( window.Handle );
+//			if ( texture != m_captures.end() )
+//			{
+//				size_t requiredSize = sizeof( ImageBGRA ) * texture->second.width * texture->second.height;
+//				if ( m_captureBuffer.size() < requiredSize )
+//				{
+//					m_captureBuffer.resize( requiredSize );
+//				}
+//
+//				Extract( img, &m_captureBuffer[ 0 ], requiredSize );
+//				updateTexture( texture->second.sharedhandle, &m_captureBuffer[ 0 ], 
+//					texture->second.width, texture->second.height );
+//			}
+//		} );
+//	}
+//}

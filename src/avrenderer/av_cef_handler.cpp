@@ -19,6 +19,7 @@
 #include <tools/pathtools.h>
 #include <tools/logging.h>
 #include <tools/stringtools.h>
+#include <screen_capture_lite/include/ScreenCapture.h>
 
 #include <json/json.hpp>
 
@@ -337,6 +338,22 @@ bool CAardvarkCefHandler::OnProcessMessageReceived( CefRefPtr<CefBrowser> browse
 		break;
 
 		}
+	}
+	else if ( message->GetName() == "subscribe_window_list" )
+	{
+		auto pList = m_application->subscribeToWindowList( this );
+
+		CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "window_list" );
+
+		if ( pList )
+		{
+			msg->GetArgumentList()->SetList( 0, pList );
+		}
+		m_browser->GetFocusedFrame()->SendProcessMessage( PID_RENDERER, msg );
+	}
+	else if ( message->GetName() == "unsubscribe_window_list" )
+	{
+		m_application->unsubscribeFromWindowList( this );
 	}
 
 	return false;

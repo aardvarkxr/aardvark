@@ -43,6 +43,20 @@ interface AvGadgetSeedProps extends AvBaseNodeProps
 
 	/** Called when the seed is highlighted or unhighlighted. */
 	highlightCallback?: ( highlight: GadgetSeedHighlight ) => void;
+
+	/** Used instead of anything related to the manifest when drawing 
+	 * this gadget seed
+	 * 
+	 * @default none
+	 */
+	customAppearance?: JSX.Element;
+
+	/** If provided, this custom volume will be used instead of the radius 
+	 * property.
+	 * 
+	 * @default none
+	 */
+	customVolume?: AvVolume;
 }
 
 
@@ -398,6 +412,10 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 			// we want to not match against the container we're telling our child to redrop into
 			volume = { type: EVolumeType.Empty };
 		}
+		else if( this.props.customVolume )
+		{
+			volume = this.props.customVolume;
+		}
 		else
 		{
 			volume = { type: EVolumeType.Sphere, radius: radius };
@@ -410,7 +428,9 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 				volume={ volume } >
 				{ drawIcon &&
 					<AvTransform uniformScale={ scale }>
-						{ renderGadgetIcon( this.props.gadgetUrl, this.props.manifest, radius ) }
+						{ this.props.customAppearance }
+						{ !this.props.customAppearance && 
+							renderGadgetIcon( this.props.gadgetUrl, this.props.manifest, radius ) }
 					</AvTransform>
 				}
 				<AvComposedEntity components={ [ this.containerComponent ] }

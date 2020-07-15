@@ -35,6 +35,7 @@ target_link_libraries( avrenderer aardvark )
 target_link_libraries( avrenderer tools )
 target_link_libraries( avrenderer ${OpenVR_LIB_DIR}/openvr_api.lib )
 target_link_libraries( avrenderer DXGI.lib )
+target_link_libraries( avrenderer screen_capture_lite )
 
 target_include_directories( avrenderer PUBLIC ${AV_SRC_THIRDPARTY} )
 target_include_directories( avrenderer PRIVATE ${OpenVR_INCLUDE_DIR} )
@@ -58,6 +59,8 @@ message ( "out" ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/openvr_api.dll )
 add_custom_command(TARGET avrenderer POST_BUILD
                    COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${OpenVR_BIN_DIR}/openvr_api.dll" "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/"
 )
+
+target_link_libraries( avrenderer Dwmapi.lib )
 
 set( CEF_TARGET_OUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/")
 
