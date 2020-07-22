@@ -62,8 +62,8 @@ class DesktopWindow extends React.Component< {}, DesktopWindowState >
 			width = k_windowWidth * texture.width / texture.height;
 		}
 
-		return <AvTransform translateY={ 0.08 } >
-			<AvTransform rotateX={ 90 } scaleX={ width } scaleZ={ height }>
+		return 	<AvTransform scaleX={ width } scaleZ={ height } translateZ={ height / 2 + 0.08 }>
+			<AvTransform rotateX={ 180 }>
 				<AvModel uri={ g_builtinModelPanel } sharedTexure={ texture }/>
 			</AvTransform>
 		</AvTransform>;
