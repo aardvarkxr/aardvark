@@ -286,11 +286,6 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		{
 			this.requestManifest( builtin );
 		}
-
-		subscribeWindowList().then( ( windows: WindowInfo[] ) =>
-		{
-			this.setState( { windows } );
-		} );
 	}
 
 	private requestManifest( url: string )
@@ -363,6 +358,23 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		}
 	}
 
+	componentDidUpdate( prevProps: {}, prevState: ControlPanelState )
+	{
+		if( this.state.tab == ControlPanelTab.DesktopWindows 
+			&& prevState.tab != ControlPanelTab.DesktopWindows )
+		{
+			subscribeWindowList().then( ( windows: WindowInfo[] ) =>
+			{
+				this.setState( { windows } );
+			} );	
+		}
+		else if( this.state.tab != ControlPanelTab.DesktopWindows 
+			&& prevState.tab == ControlPanelTab.DesktopWindows )
+		{
+			Av().unsubscribeWindowList();
+		}
+	}
+
 
 	private renderGadgetSeedList()
 	{
@@ -419,6 +431,14 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 
 	private renderDesktopWindowsTab()
 	{
+		if( !this.state.windows || !this.state.windows.length )
+		{
+			return <>
+				<ErrorPanel error="Collecting windows..."/>
+				{ this.renderFooter() }
+			</>;
+		}
+
 		const k_cellWidth = 0.20;
 		const k_bottomPadding = 0.04;
 		const k_thumbWidth = 0.9 * k_cellWidth;
