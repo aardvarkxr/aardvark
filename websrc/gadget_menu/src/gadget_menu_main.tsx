@@ -37,7 +37,7 @@ interface GadgetInfoPanelProps
 	highlight?: GadgetSeedHighlight;
 }
 
-const k_desktopWindowGadget = "http://localhost:23842/gadgets/test_panel";
+const k_desktopWindowGadget = "http://localhost:23842/gadgets/desktop_window";
 
 function GadgetInfoPanel( props: GadgetInfoPanelProps )
 {
@@ -286,6 +286,8 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		{
 			this.requestManifest( builtin );
 		}
+
+		this.requestManifest( k_desktopWindowGadget );
 	}
 
 	private requestManifest( url: string )
@@ -489,6 +491,15 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 								{
 									this.onWindowHighlight( window, highlight );
 								} }
+							interfaceLocks={
+								[
+									{
+										iface: "aardvark-desktop-window@1",
+										receiver: null,
+										params: window,
+									}
+								]
+							}
 							customAppearance= 
 							{
 								<AvTransform rotateX={ 90 } scaleX={ width } scaleZ={ height }>

@@ -355,6 +355,14 @@ bool CAardvarkCefHandler::OnProcessMessageReceived( CefRefPtr<CefBrowser> browse
 	{
 		m_application->unsubscribeFromWindowList( this );
 	}
+	else if ( message->GetName() == "subscribe_window" )
+	{
+		m_application->subscribeToWindow( this, message->GetArgumentList()->GetString( 0 ) );
+	}
+	else if ( message->GetName() == "unsubscribe_window" )
+	{
+		m_application->unsubscribeFromWindow( this, message->GetArgumentList()->GetString( 0 ) );
+	}
 
 	return false;
 }
@@ -415,5 +423,16 @@ void CAardvarkResourceRequestHandler::OnProtocolExecution( CefRefPtr<CefBrowser>
 
 	// we never want to keep these dead windows around
 	browser->GetHost()->CloseBrowser( true );
+}
+
+
+// -----------------------------------------------------------------------------------------------------
+// Purpose: Called when a window info changes for a subscribed window
+// -----------------------------------------------------------------------------------------------------
+void CAardvarkCefHandler::windowUpdate( CefRefPtr<CefListValue> windowInfo )
+{
+	CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "window_update" );
+	msg->GetArgumentList()->SetList( 0, windowInfo );
+	m_browser->GetFocusedFrame()->SendProcessMessage( PID_RENDERER, msg );
 }
 

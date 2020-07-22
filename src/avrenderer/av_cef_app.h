@@ -44,6 +44,8 @@ public:
 	virtual void updateTexture( void* sharedHandle, const void* buffer, int width, int height ) override;
 	virtual CefRefPtr<CefListValue> subscribeToWindowList( CAardvarkCefHandler* handler ) override;
 	virtual void unsubscribeFromWindowList( CAardvarkCefHandler* handler ) override;
+	virtual void subscribeToWindow( CAardvarkCefHandler* handler, const std::string& windowHandle ) override;
+	virtual void unsubscribeFromWindow( CAardvarkCefHandler* handler, const std::string& windowHandle ) override;
 
 
 	bool wantsToQuit();
@@ -65,13 +67,23 @@ private:
 
 	struct WindowCapture
 	{
-		HWND hwnd;
-		void* sharedhandle;
-		uint32_t width;
-		uint32_t height;
+		HWND hwnd = nullptr;
+		void* sharedhandle = nullptr;
+		uint32_t width = 0;
+		uint32_t height = 0;
 		std::string windowName;
 	};
 
+	void sendWindowUpdate( CAardvarkCefHandler* handler, const WindowCapture& capture );
+	bool createWindowCapture( WindowCapture* cap, HWND hwnd, std::vector<uint8_t> & imageBuffer );
+
+	struct WindowSubscription
+	{
+		std::vector<CAardvarkCefHandler*> handlers;
+		WindowCapture capture;
+		std::vector<uint8_t> imageBuffer;
+	};
+	std::map<HWND, WindowSubscription> m_windowSubscriptions;
 
 	struct WindowListSubscription
 	{
@@ -82,6 +94,8 @@ private:
 	std::vector< std::unique_ptr<WindowListSubscription> > m_windowListSubscriptions;
 
 	CefRefPtr<CefListValue> getWindowListForSubscription( const WindowListSubscription& sub );
+
+	CefRefPtr<CefListValue> createCaptureMessage( const WindowCapture& capture );
 
 	// Include the default reference counting implementation.
 	IMPLEMENT_REFCOUNTING(CAardvarkCefApp);

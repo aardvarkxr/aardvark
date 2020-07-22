@@ -57,6 +57,13 @@ interface AvGadgetSeedProps extends AvBaseNodeProps
 	 * @default none
 	 */
 	customVolume?: AvVolume;
+
+	/** If provided, these initial interface locks will be passed along 
+	 * to the gadget when it's started.
+	 * 
+	 * @default none
+	 */
+	interfaceLocks?: InitialInterfaceLock[];
 }
 
 
@@ -363,13 +370,20 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 
 	private async startGadget()
 	{
-		let res = await AvGadget.instance().startGadget( this.props.gadgetUrl, 
-			[
-				{ 
-					iface: MoveableComponent.containerInterface,
-					receiver: this.refContainer.current.globalId,
-				}
-			] );
+		let locks: InitialInterfaceLock[] = 
+		[				
+			{ 
+				iface: MoveableComponent.containerInterface,
+				receiver: this.refContainer.current.globalId,
+			}
+		];
+
+		if( this.props.interfaceLocks )
+		{
+			locks = locks.concat( this.props.interfaceLocks );
+		}
+
+		let res = await AvGadget.instance().startGadget( this.props.gadgetUrl, locks );
 
 		if( !res.success )
 		{

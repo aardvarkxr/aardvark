@@ -13,5 +13,7 @@ public:
 
 	virtual CefRefPtr<CefListValue> subscribeToWindowList( CAardvarkCefHandler* handler ) = 0;
 	virtual void unsubscribeFromWindowList( CAardvarkCefHandler* handler ) = 0;
+	virtual void subscribeToWindow( CAardvarkCefHandler* handler, const std::string & windowHandle ) = 0;
+	virtual void unsubscribeFromWindow( CAardvarkCefHandler* handler, const std::string& windowHandle ) = 0;
 };
 

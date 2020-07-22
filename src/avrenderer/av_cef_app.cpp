@@ -5,6 +5,7 @@
 #include "av_cef_app.h"
 
 #include <string>
+#include <algorithm>
 
 #include "include/cef_browser.h"
 #include "include/cef_command_line.h"
@@ -363,92 +364,104 @@ CefRefPtr<CefListValue> CAardvarkCefApp::subscribeToWindowList( CAardvarkCefHand
 	sub->handler = handler;
 	for ( HWND newWindow : windows )
 	{
-		int nTitleLength = GetWindowTextLengthW( newWindow );
-		if ( !nTitleLength )
-			continue;
-
-		std::vector<wchar_t> title( nTitleLength + 1 );
-
-		int nReadLength = GetWindowTextW( newWindow, &title[ 0 ], nTitleLength + 1 );
-		if ( !nReadLength )
+		WindowCapture cap;
+		if ( createWindowCapture( &cap, newWindow, imageBuffer ) )
 		{
-			// just skip windows with no title
-			continue;
+			sub->captures.push_back( std::move( cap ) );
 		}
-
-		RECT rect = { 0 };
-		if ( !SUCCEEDED( DwmGetWindowAttribute( newWindow, DWMWA_EXTENDED_FRAME_BOUNDS, &rect, sizeof( rect ) ) ) ) 
-			continue;
-
-		size_t width = rect.right - rect.left;
-		size_t height = rect.bottom - rect.top;
-
-		HDC windowDC = GetWindowDC( newWindow );
-		HDC captureDC = CreateCompatibleDC( windowDC );
-		HBITMAP captureBitmap = CreateCompatibleBitmap( windowDC, (int)width, (int)height );
-
-		HGDIOBJ origObject = SelectObject( captureDC, captureBitmap );
-
-		BOOL result = PrintWindow( newWindow, captureDC, PW_RENDERFULLCONTENT );
-
-		if ( !result ) 
-		{
-			result = BitBlt( captureDC, rect.left, rect.top, 
-				(int)width, (int)height,
-				windowDC, 0, 0, SRCCOPY | CAPTUREBLT );
-		}
-
-		if ( result )
-		{
-			BITMAPINFOHEADER bi = { 0 };
-
-			size_t bufferSize = width * height * 4;
-			if ( bufferSize > imageBuffer.size() )
-			{
-				imageBuffer.resize( bufferSize );
-			}
-
-			bi.biSize = sizeof( BITMAPINFOHEADER );
-
-			bi.biWidth = (int)width;
-			bi.biHeight = -(int)height;
-			bi.biPlanes = 1;
-			bi.biBitCount = 32;
-			bi.biCompression = BI_RGB;
-			bi.biSizeImage = (int)bufferSize;
-			int res = GetDIBits( windowDC, captureBitmap, 0, (UINT)height, &imageBuffer[0], (BITMAPINFO*)&bi, DIB_RGB_COLORS );
-			if ( res <= 0 )
-			{
-				tools::LogDefault()->warn( "Failed to read bits from window bitmap: %d", res );
-			}
-
-			void* sharedHandle = nullptr;
-			if ( createTextureForBrowser( &sharedHandle, (int)width, (int)height ) )
-			{
-				// GetDIBits always passes back zero alpha
-				for ( size_t pixel = 0; pixel < width * height; pixel++ )
-				{
-					imageBuffer[ pixel * 4 + 3 ] = 0xFF;
-				}
-
-				updateTexture( sharedHandle, &imageBuffer[ 0 ], (int)width, (int)height );
-
-				WindowCapture cap;
-				cap.width = (int32_t)width;
-				cap.height = (int32_t)height;
-				cap.sharedhandle = sharedHandle;
-				cap.hwnd = newWindow;
-				cap.windowName = tools::WStringToUtf8( std::wstring( &title[ 0 ] ) );
-				sub->captures.push_back( std::move( cap ) );
-			}
-		}
-		SelectObject( captureDC, origObject );
-		DeleteDC( captureDC );
 	}
 
 	auto pList = getWindowListForSubscription( *sub );
 	m_windowListSubscriptions.push_back( std::move( sub ) );
 	return pList;
+}
+
+
+bool CAardvarkCefApp::createWindowCapture( CAardvarkCefApp::WindowCapture *cap, HWND hwnd, std::vector<uint8_t> & imageBuffer )
+{
+	int nTitleLength = GetWindowTextLengthW( hwnd );
+	if ( !nTitleLength )
+		return false;
+
+	std::vector<wchar_t> title( nTitleLength + 1 );
+
+	int nReadLength = GetWindowTextW( hwnd, &title[ 0 ], nTitleLength + 1 );
+	if ( !nReadLength )
+	{
+		// just skip windows with no title
+		return false;
+	}
+
+	RECT rect = { 0 };
+	if ( !SUCCEEDED( DwmGetWindowAttribute( hwnd, DWMWA_EXTENDED_FRAME_BOUNDS, &rect, sizeof( rect ) ) ) )
+		return false;
+
+	size_t width = rect.right - rect.left;
+	size_t height = rect.bottom - rect.top;
+
+	HDC windowDC = GetWindowDC( hwnd );
+	HDC captureDC = CreateCompatibleDC( windowDC );
+	HBITMAP captureBitmap = CreateCompatibleBitmap( windowDC, (int)width, (int)height );
+
+	HGDIOBJ origObject = SelectObject( captureDC, captureBitmap );
+
+	BOOL result = PrintWindow( hwnd, captureDC, PW_RENDERFULLCONTENT );
+
+	if ( !result )
+	{
+		result = BitBlt( captureDC, rect.left, rect.top,
+			(int)width, (int)height,
+			windowDC, 0, 0, SRCCOPY | CAPTUREBLT );
+	}
+
+	bool retVal = false;
+	if ( result )
+	{
+		BITMAPINFOHEADER bi = { 0 };
+
+		size_t bufferSize = width * height * 4;
+		if ( bufferSize > imageBuffer.size() )
+		{
+			imageBuffer.resize( bufferSize );
+		}
+
+		bi.biSize = sizeof( BITMAPINFOHEADER );
+
+		bi.biWidth = (int)width;
+		bi.biHeight = -(int)height;
+		bi.biPlanes = 1;
+		bi.biBitCount = 32;
+		bi.biCompression = BI_RGB;
+		bi.biSizeImage = (int)bufferSize;
+		int res = GetDIBits( windowDC, captureBitmap, 0, (UINT)height, &imageBuffer[ 0 ], (BITMAPINFO*)&bi, DIB_RGB_COLORS );
+		if ( res <= 0 )
+		{
+			tools::LogDefault()->warn( "Failed to read bits from window bitmap: %d", res );
+		}
+
+		void* sharedHandle = nullptr;
+		if ( createTextureForBrowser( &sharedHandle, (int)width, (int)height ) )
+		{
+			// GetDIBits always passes back zero alpha
+			for ( size_t pixel = 0; pixel < width * height; pixel++ )
+			{
+				imageBuffer[ pixel * 4 + 3 ] = 0xFF;
+			}
+
+			updateTexture( sharedHandle, &imageBuffer[ 0 ], (int)width, (int)height );
+			cap->width = (int32_t)width;
+			cap->height = (int32_t)height;
+			cap->sharedhandle = sharedHandle;
+			cap->hwnd = hwnd;
+			cap->windowName = tools::WStringToUtf8( std::wstring( &title[ 0 ] ) );
+
+			retVal = true;
+		}
+	}
+	SelectObject( captureDC, origObject );
+	DeleteDC( captureDC );
+
+	return retVal;
 }
 
 
@@ -460,18 +473,23 @@ CefRefPtr<CefListValue> CAardvarkCefApp::getWindowListForSubscription( const Win
 
 	for ( auto& capture : sub.captures )
 	{
-		CefRefPtr<CefListValue> pWindowInfo = CefListValue::Create();
-		pWindowInfo->SetString( 0, capture.windowName );
-		pWindowInfo->SetString( 1, std::to_string( (uint64_t)capture.hwnd) );
-		pWindowInfo->SetString( 2, std::to_string( (uint64_t)capture.sharedhandle ) );
-		pWindowInfo->SetInt( 3, capture.width );
-		pWindowInfo->SetInt( 4, capture.height );
-		pWindowInfo->SetBool( 5, false );
-
-		pWindowList->SetList( nWindowIndex++, pWindowInfo );
+		pWindowList->SetList( nWindowIndex++, createCaptureMessage( capture ) );
 	}
 
 	return pWindowList;
+}
+
+
+CefRefPtr<CefListValue> CAardvarkCefApp::createCaptureMessage( const WindowCapture& capture )
+{
+	CefRefPtr<CefListValue> pWindowInfo = CefListValue::Create();
+	pWindowInfo->SetString( 0, capture.windowName );
+	pWindowInfo->SetString( 1, std::to_string( (uint64_t)capture.hwnd ) );
+	pWindowInfo->SetString( 2, std::to_string( (uint64_t)capture.sharedhandle ) );
+	pWindowInfo->SetInt( 3, capture.width );
+	pWindowInfo->SetInt( 4, capture.height );
+	pWindowInfo->SetBool( 5, false );
+	return pWindowInfo;
 }
 
 
@@ -485,6 +503,57 @@ void CAardvarkCefApp::unsubscribeFromWindowList( CAardvarkCefHandler* handler )
 			m_windowListSubscriptions.erase( i );
 			break;
 		}
+	}
+}
+
+
+void CAardvarkCefApp::sendWindowUpdate( CAardvarkCefHandler* handler, const CAardvarkCefApp::WindowCapture& capture )
+{
+	handler->windowUpdate( createCaptureMessage( capture ) );
+}
+
+
+void CAardvarkCefApp::subscribeToWindow( CAardvarkCefHandler* handler, const std::string& windowHandle )
+{
+	HWND hwnd = (HWND)std::stoull( windowHandle );
+
+	auto i = m_windowSubscriptions.find( hwnd );
+	if ( i != m_windowSubscriptions.end() )
+	{
+		i->second.handlers.push_back( handler );
+		sendWindowUpdate( handler, i->second.capture );
+	}
+
+	WindowSubscription sub;
+	if ( createWindowCapture( &sub.capture, hwnd, sub.imageBuffer ) )
+	{
+		sub.handlers.push_back( handler );
+		auto insert = m_windowSubscriptions.insert( 
+			std::make_pair< HWND, WindowSubscription>( std::move( hwnd ), std::move( sub ) ) );
+		sendWindowUpdate( handler, insert.first->second.capture );
+	}
+}
+
+
+void CAardvarkCefApp::unsubscribeFromWindow( CAardvarkCefHandler* handler, const std::string& windowHandle )
+{
+	HWND hwnd = (HWND)std::stoull( windowHandle );
+
+	auto i = m_windowSubscriptions.find( hwnd );
+	if ( i == m_windowSubscriptions.end() )
+	{
+		return;
+	}
+
+	i->second.handlers.erase( std::remove_if( i->second.handlers.begin(), i->second.handlers.end(), [ handler ]( CAardvarkCefHandler* entry )
+		{
+			return entry == handler;
+		} ), i->second.handlers.end() );
+
+	if ( i->second.handlers.empty() )
+	{
+		//TODO: free the DXGI texture
+		m_windowSubscriptions.erase( i );
 	}
 }
 

@@ -107,6 +107,8 @@ export interface Aardvark
 	// requires screeencapture permissions
 	subscribeWindowList( callback: ( windows: WindowInfo[] ) => void ): void;
 	unsubscribeWindowList():void;
+	subscribeWindow( windowHandle: string, callback: ( window: WindowInfo ) => void ): void;
+	unsubscribeWindow( windowHandle: string ): void;
 }
 
 declare global
