@@ -15,9 +15,14 @@
 #include "av_cef_javascript.h"
 #include <aardvark/aardvark_gadget_manifest.h>
 #include <tools/logging.h>
+#include <tools/stringtools.h>
+
+#include <sdkddkver.h>
 
 #include <openvr.h>
 #include <processthreadsapi.h>
+#include <windows.h>
+#include <dwmapi.h>
 
 namespace 
 {
@@ -322,81 +327,124 @@ CefRefPtr<CefListValue> CAardvarkCefApp::subscribeToWindowList( CAardvarkCefHand
 			return getWindowListForSubscription( *sub );
 	}
 
+	ANIMATIONINFO str;
+	str.cbSize = sizeof( str );
+	str.iMinAnimate = 0;
+	SystemParametersInfo( SPI_SETANIMATION, sizeof( str ), (void*)&str, SPIF_UPDATEINIFILE | SPIF_SENDCHANGE );
+
 	// get the new list
-	std::vector<SL::Screen_Capture::Window> windows = SL::Screen_Capture::GetWindows();
-	std::vector<SL::Screen_Capture::Window> newWindowList;
-	for ( const SL::Screen_Capture::Window& window : windows )
-	{
-		HWND hwnd = (HWND)window.Handle;
+	std::vector<HWND> windows;
+	auto fnTopLevelCallback = [ &windows ]( HWND hwnd, LPARAM unused ) {
+		(void)unused;
+
 		if ( !IsWindowVisible( hwnd ) )
-			continue;
+			return TRUE;
 
 		if ( !IsWindowEnabled( hwnd ) )
-			continue;
+			return TRUE;
 
 		long lstyle = GetWindowLong( hwnd, GWL_STYLE );
 		if ( ( lstyle & WS_CHILDWINDOW ) )
-			continue;
+			return TRUE;
 
-		//HWND parentWnd = (HWND)GetWindowLong( hwnd, GWL_HWNDPARENT );
-		//if ( IsWindowEnabled( parentWnd ) )
-		//	return true;
+		windows.push_back( hwnd );
 
-		//if ( IsWindowVisible( parentWnd ) )
-		//	return true;
-
-		if ( window.Size.x > 50 && window.Size.y > 50 && strlen( window.Name ) > 1 )
-		{
-			newWindowList.push_back( window );
-		}
-	}
+		return TRUE;
+	};
+	EnumWindows( []( HWND hwnd, LPARAM callbackParam ) { return ( *static_cast<decltype( fnTopLevelCallback )*>( (void*)callbackParam ) )( hwnd, 0 ); },
+		(LPARAM)&fnTopLevelCallback );
 
 	CefRefPtr<CefListValue> pWindowList = CefListValue::Create();
-	pWindowList->SetSize( newWindowList.size() );
+	pWindowList->SetSize( windows.size() );
+
+	std::vector<uint8_t> imageBuffer;
 
 	std::unique_ptr<WindowListSubscription> sub = std::make_unique<WindowListSubscription>();
 	sub->handler = handler;
-	for ( auto& newWindow : newWindowList )
+	for ( HWND newWindow : windows )
 	{
-		WindowCapture capture;
-		capture.windowName = newWindow.Name;
-		capture.width = newWindow.Size.x;
-		capture.height = newWindow.Size.y;
-		if ( !createTextureForBrowser( &capture.sharedhandle, capture.width, capture.height ) )
+		int nTitleLength = GetWindowTextLengthW( newWindow );
+		if ( !nTitleLength )
+			continue;
+
+		std::vector<wchar_t> title( nTitleLength + 1 );
+
+		int nReadLength = GetWindowTextW( newWindow, &title[ 0 ], nTitleLength + 1 );
+		if ( !nReadLength )
 		{
-			tools::LogDefault()->error( "Failed to create texture for window %llx", newWindow.Handle );
+			// just skip windows with no title
 			continue;
 		}
 
-		sub->captures.insert( std::make_pair( newWindow.Handle, capture ) );
-	}
+		RECT rect = { 0 };
+		if ( !SUCCEEDED( DwmGetWindowAttribute( newWindow, DWMWA_EXTENDED_FRAME_BOUNDS, &rect, sizeof( rect ) ) ) ) 
+			continue;
 
-	sub->captureHandler = CreateCaptureConfiguration( [ & ]() { return newWindowList; } );
-	WindowListSubscription* pSub = sub.get();
-	sub->captureHandler->onFrameChanged( [ pSub, this ]( const Image& img, const Window& window )
-	{
-		auto texture = pSub->captures.find( window.Handle );
-		if ( texture != pSub->captures.end() )
+		size_t width = rect.right - rect.left;
+		size_t height = rect.bottom - rect.top;
+
+		HDC windowDC = GetWindowDC( newWindow );
+		HDC captureDC = CreateCompatibleDC( windowDC );
+		HBITMAP captureBitmap = CreateCompatibleBitmap( windowDC, (int)width, (int)height );
+
+		HGDIOBJ origObject = SelectObject( captureDC, captureBitmap );
+
+		BOOL result = PrintWindow( newWindow, captureDC, PW_RENDERFULLCONTENT );
+
+		if ( !result ) 
 		{
-			size_t requiredSize = sizeof( ImageBGRA ) * texture->second.width * texture->second.height;
-			if ( texture->second.buffer.size() < requiredSize )
-			{
-				texture->second.buffer.resize( requiredSize );
-			}
-
-			Extract( img, &texture->second.buffer[ 0 ], requiredSize );
-			
-			// turn off the alpha. Really need to do this in a shader instead of touching every pixel on the CPU again
-			for ( size_t unPixel = 0; unPixel < requiredSize / 4; unPixel++ )
-			{
-				texture->second.buffer[ unPixel * 4 + 3 ] = 0x7F;
-			}
-
-			updateTexture( texture->second.sharedhandle, &texture->second.buffer[ 0 ],
-				texture->second.width, texture->second.height );
+			result = BitBlt( captureDC, rect.left, rect.top, 
+				(int)width, (int)height,
+				windowDC, 0, 0, SRCCOPY | CAPTUREBLT );
 		}
-	} );
-	sub->captureHandler->start_capturing();
+
+		if ( result )
+		{
+			BITMAPINFOHEADER bi = { 0 };
+
+			size_t bufferSize = width * height * 4;
+			if ( bufferSize > imageBuffer.size() )
+			{
+				imageBuffer.resize( bufferSize );
+			}
+
+			bi.biSize = sizeof( BITMAPINFOHEADER );
+
+			bi.biWidth = (int)width;
+			bi.biHeight = -(int)height;
+			bi.biPlanes = 1;
+			bi.biBitCount = 32;
+			bi.biCompression = BI_RGB;
+			bi.biSizeImage = (int)bufferSize;
+			int res = GetDIBits( windowDC, captureBitmap, 0, (UINT)height, &imageBuffer[0], (BITMAPINFO*)&bi, DIB_RGB_COLORS );
+			if ( res <= 0 )
+			{
+				tools::LogDefault()->warn( "Failed to read bits from window bitmap: %d", res );
+			}
+
+			void* sharedHandle = nullptr;
+			if ( createTextureForBrowser( &sharedHandle, (int)width, (int)height ) )
+			{
+				// GetDIBits always passes back zero alpha
+				for ( size_t pixel = 0; pixel < width * height; pixel++ )
+				{
+					imageBuffer[ pixel * 4 + 3 ] = 0xFF;
+				}
+
+				updateTexture( sharedHandle, &imageBuffer[ 0 ], (int)width, (int)height );
+
+				WindowCapture cap;
+				cap.width = (int32_t)width;
+				cap.height = (int32_t)height;
+				cap.sharedhandle = sharedHandle;
+				cap.hwnd = newWindow;
+				cap.windowName = tools::WStringToUtf8( std::wstring( &title[ 0 ] ) );
+				sub->captures.push_back( std::move( cap ) );
+			}
+		}
+		SelectObject( captureDC, origObject );
+		DeleteDC( captureDC );
+	}
 
 	auto pList = getWindowListForSubscription( *sub );
 	m_windowListSubscriptions.push_back( std::move( sub ) );
@@ -413,11 +461,11 @@ CefRefPtr<CefListValue> CAardvarkCefApp::getWindowListForSubscription( const Win
 	for ( auto& capture : sub.captures )
 	{
 		CefRefPtr<CefListValue> pWindowInfo = CefListValue::Create();
-		pWindowInfo->SetString( 0, capture.second.windowName );
-		pWindowInfo->SetString( 1, std::to_string( (uint64_t)capture.first ) );
-		pWindowInfo->SetString( 2, std::to_string( (uint64_t)capture.second.sharedhandle ) );
-		pWindowInfo->SetInt( 3, capture.second.width );
-		pWindowInfo->SetInt( 4, capture.second.height );
+		pWindowInfo->SetString( 0, capture.windowName );
+		pWindowInfo->SetString( 1, std::to_string( (uint64_t)capture.hwnd) );
+		pWindowInfo->SetString( 2, std::to_string( (uint64_t)capture.sharedhandle ) );
+		pWindowInfo->SetInt( 3, capture.width );
+		pWindowInfo->SetInt( 4, capture.height );
 		pWindowInfo->SetBool( 5, false );
 
 		pWindowList->SetList( nWindowIndex++, pWindowInfo );

@@ -429,7 +429,7 @@ if(OS_WINDOWS)
     )
   list(APPEND CEF_COMPILER_DEFINES
     WIN32 _WIN32 _WINDOWS             # Windows platform
-    WINVER=0x0601 _WIN32_WINNT=0x601  # Targeting Windows 7
+    WINVER=0x0A00 _WIN32_WINNT=0xA00  # Targeting Windows 10
     NOMINMAX                          # Use the standard's templated min/max
     WIN32_LEAN_AND_MEAN               # Exclude less common API declarations
     _HAS_EXCEPTIONS=0                 # Disable exceptions

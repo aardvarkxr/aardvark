@@ -65,19 +65,18 @@ private:
 
 	struct WindowCapture
 	{
+		HWND hwnd;
+		void* sharedhandle;
 		uint32_t width;
 		uint32_t height;
-		void* sharedhandle;
 		std::string windowName;
-		std::vector<uint8_t> buffer;
 	};
 
 
 	struct WindowListSubscription
 	{
 		CAardvarkCefHandler* handler = nullptr;
-		std::map<size_t, WindowCapture> captures;
-		std::shared_ptr< SL::Screen_Capture::ICaptureConfiguration<SL::Screen_Capture::WindowCaptureCallback> > captureHandler;
+		std::vector<WindowCapture> captures;
 	};
 	typedef std::vector< std::unique_ptr<WindowListSubscription> > WindowListSubscriptionVector;
 	std::vector< std::unique_ptr<WindowListSubscription> > m_windowListSubscriptions;
