@@ -199,6 +199,27 @@ void CAardvarkCefApp::runFrame()
 		m_quitHandled = true;
 		CloseAllBrowsers( true );
 	}
+
+	for ( auto & sub : m_windowSubscriptions )
+	{
+		switch ( createWindowCapture( &sub.second.capture, sub.second.capture.hwnd, sub.second.imageBuffer ) )
+		{
+		case WindowCaptureResult::Failed:
+			// TODO: Remove from the list?
+			break;
+
+		case WindowCaptureResult::UpdatedInfo:
+			for ( auto handler : sub.second.handlers )
+			{
+				sendWindowUpdate( handler, sub.second.capture );
+			}
+			break;
+
+		case WindowCaptureResult::UpdatedTexture:
+			// Nothing to do here. Any gadgets using this window's texture will update next frame
+			break;
+		}
+	}
 }
 
 bool CAardvarkCefApp::wantsToQuit()
@@ -365,7 +386,7 @@ CefRefPtr<CefListValue> CAardvarkCefApp::subscribeToWindowList( CAardvarkCefHand
 	for ( HWND newWindow : windows )
 	{
 		WindowCapture cap;
-		if ( createWindowCapture( &cap, newWindow, imageBuffer ) )
+		if ( WindowCaptureResult::Failed != createWindowCapture( &cap, newWindow, imageBuffer ) )
 		{
 			sub->captures.push_back( std::move( cap ) );
 		}
@@ -377,11 +398,11 @@ CefRefPtr<CefListValue> CAardvarkCefApp::subscribeToWindowList( CAardvarkCefHand
 }
 
 
-bool CAardvarkCefApp::createWindowCapture( CAardvarkCefApp::WindowCapture *cap, HWND hwnd, std::vector<uint8_t> & imageBuffer )
+CAardvarkCefApp::WindowCaptureResult CAardvarkCefApp::createWindowCapture( CAardvarkCefApp::WindowCapture *cap, HWND hwnd, std::vector<uint8_t> & imageBuffer )
 {
 	int nTitleLength = GetWindowTextLengthW( hwnd );
 	if ( !nTitleLength )
-		return false;
+		return WindowCaptureResult::Failed;
 
 	std::vector<wchar_t> title( nTitleLength + 1 );
 
@@ -389,15 +410,20 @@ bool CAardvarkCefApp::createWindowCapture( CAardvarkCefApp::WindowCapture *cap, 
 	if ( !nReadLength )
 	{
 		// just skip windows with no title
-		return false;
+		return WindowCaptureResult::Failed;
 	}
 
 	RECT rect = { 0 };
 	if ( !SUCCEEDED( DwmGetWindowAttribute( hwnd, DWMWA_EXTENDED_FRAME_BOUNDS, &rect, sizeof( rect ) ) ) )
-		return false;
+		return WindowCaptureResult::Failed;
 
 	size_t width = rect.right - rect.left;
 	size_t height = rect.bottom - rect.top;
+
+	bool bNeedToRecreateTexture = cap->sharedhandle == nullptr || width != cap->width || height != cap->height;
+
+	std::string newName = tools::WStringToUtf8( std::wstring( &title[ 0 ] ) );
+	bool bNeedInfoUpdate = bNeedToRecreateTexture || newName != cap->windowName;
 
 	HDC windowDC = GetWindowDC( hwnd );
 	HDC captureDC = CreateCompatibleDC( windowDC );
@@ -414,7 +440,7 @@ bool CAardvarkCefApp::createWindowCapture( CAardvarkCefApp::WindowCapture *cap, 
 			windowDC, 0, 0, SRCCOPY | CAPTUREBLT );
 	}
 
-	bool retVal = false;
+	bool failed = true;
 	if ( result )
 	{
 		BITMAPINFOHEADER bi = { 0 };
@@ -439,8 +465,17 @@ bool CAardvarkCefApp::createWindowCapture( CAardvarkCefApp::WindowCapture *cap, 
 			tools::LogDefault()->warn( "Failed to read bits from window bitmap: %d", res );
 		}
 
-		void* sharedHandle = nullptr;
-		if ( createTextureForBrowser( &sharedHandle, (int)width, (int)height ) )
+		if ( bNeedToRecreateTexture )
+		{
+			if ( cap->sharedhandle )
+			{
+				// TODO: destroy shared texture
+			}
+			cap->sharedhandle = nullptr;
+			createTextureForBrowser( &cap->sharedhandle, (int)width, (int)height );
+		}
+
+		if ( cap->sharedhandle )
 		{
 			// GetDIBits always passes back zero alpha
 			for ( size_t pixel = 0; pixel < width * height; pixel++ )
@@ -448,20 +483,33 @@ bool CAardvarkCefApp::createWindowCapture( CAardvarkCefApp::WindowCapture *cap, 
 				imageBuffer[ pixel * 4 + 3 ] = 0xFF;
 			}
 
-			updateTexture( sharedHandle, &imageBuffer[ 0 ], (int)width, (int)height );
+			updateTexture( cap->sharedhandle, &imageBuffer[ 0 ], (int)width, (int)height );
 			cap->width = (int32_t)width;
 			cap->height = (int32_t)height;
-			cap->sharedhandle = sharedHandle;
 			cap->hwnd = hwnd;
-			cap->windowName = tools::WStringToUtf8( std::wstring( &title[ 0 ] ) );
+			cap->windowName = newName;
 
-			retVal = true;
+			failed = false;
 		}
 	}
+
 	SelectObject( captureDC, origObject );
+	ReleaseDC( hwnd, windowDC );
+	DeleteObject( captureBitmap );
 	DeleteDC( captureDC );
 
-	return retVal;
+	if ( failed )
+	{
+		return WindowCaptureResult::Failed;
+	}
+	else if ( bNeedInfoUpdate )
+	{
+		return WindowCaptureResult::UpdatedInfo;
+	}
+	else
+	{
+		return WindowCaptureResult::UpdatedTexture;
+	}
 }
 
 
@@ -525,7 +573,7 @@ void CAardvarkCefApp::subscribeToWindow( CAardvarkCefHandler* handler, const std
 	}
 
 	WindowSubscription sub;
-	if ( createWindowCapture( &sub.capture, hwnd, sub.imageBuffer ) )
+	if ( WindowCaptureResult::Failed != createWindowCapture( &sub.capture, hwnd, sub.imageBuffer ) )
 	{
 		sub.handlers.push_back( handler );
 		auto insert = m_windowSubscriptions.insert( 

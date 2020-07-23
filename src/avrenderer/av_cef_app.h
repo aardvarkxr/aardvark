@@ -74,8 +74,15 @@ private:
 		std::string windowName;
 	};
 
+	enum class WindowCaptureResult
+	{
+		Failed, // capture could not be created or has stopped working
+		UpdatedInfo, // something about the window has changed and subscribers should be updated
+		UpdatedTexture, // The shared texture has been updated. No need to update subscribers
+	};
+
 	void sendWindowUpdate( CAardvarkCefHandler* handler, const WindowCapture& capture );
-	bool createWindowCapture( WindowCapture* cap, HWND hwnd, std::vector<uint8_t> & imageBuffer );
+	WindowCaptureResult createWindowCapture( WindowCapture* cap, HWND hwnd, std::vector<uint8_t> & imageBuffer );
 
 	struct WindowSubscription
 	{
