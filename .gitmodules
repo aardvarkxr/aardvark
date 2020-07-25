@@ -1,4 +1,0 @@
-[submodule "src\\thirdparty\\screen_capture_lite"]
-	path = src\\thirdparty\\screen_capture_lite
-	url = https://github.com/JoeLudwig/screen_capture_lite.git
-	branch = joe_working_on_blank_windows

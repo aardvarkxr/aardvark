@@ -7,7 +7,6 @@
 #include "include/cef_app.h"
 #include "av_cef_handler.h"
 #include "iapplication.h"
-#include <screen_capture_lite/include/ScreenCapture.h>
 
 #include <thread>
 #include <d3d11.h>

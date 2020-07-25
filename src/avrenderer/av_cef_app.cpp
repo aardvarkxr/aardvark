@@ -338,8 +338,6 @@ void CAardvarkCefApp::resizeTextureForBrowser( void** sharedHandle, int width, i
 }
 
 
-using namespace SL::Screen_Capture;
-
 CefRefPtr<CefListValue> CAardvarkCefApp::subscribeToWindowList( CAardvarkCefHandler* handler )
 {
 	for ( auto& sub : m_windowListSubscriptions )

@@ -19,7 +19,6 @@
 #include <tools/pathtools.h>
 #include <tools/logging.h>
 #include <tools/stringtools.h>
-#include <screen_capture_lite/include/ScreenCapture.h>
 
 #include <json/json.hpp>
 
