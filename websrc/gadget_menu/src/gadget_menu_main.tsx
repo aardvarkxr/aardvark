@@ -444,7 +444,8 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		const k_cellWidth = 0.20;
 		const k_bottomPadding = 0.04;
 		const k_thumbWidth = 0.9 * k_cellWidth;
-		let rowCount = Math.ceil( this.state.windows.length / 3 );
+		const k_columnCount = 5;
+		let rowCount = Math.ceil( this.state.windows.length / k_columnCount );
 		let top = rowCount * k_cellWidth;
 		let seeds: JSX.Element[] = [];
 
@@ -455,8 +456,8 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 			for( let windowIndex = 0; windowIndex < this.state.windows.length; windowIndex++ )
 			{
 				let window = this.state.windows[ windowIndex ];
-				let col = windowIndex % 3;
-				let row = Math.floor( windowIndex / 3 );
+				let col = windowIndex % k_columnCount;
+				let row = Math.floor( windowIndex / k_columnCount );
 	
 				if( window.texture.width <= 0 || window.texture.height <= 0 )
 					continue;
