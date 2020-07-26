@@ -59,6 +59,8 @@ add_custom_command(TARGET avrenderer POST_BUILD
                    COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${OpenVR_BIN_DIR}/openvr_api.dll" "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/"
 )
 
+target_link_libraries( avrenderer Dwmapi.lib )
+
 set( CEF_TARGET_OUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/")
 
 #

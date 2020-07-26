@@ -117,6 +117,9 @@ public:
 
 	// Called when the manifest load is completed
 	void onGadgetManifestReceived( bool success, const std::vector< uint8_t > & manifestData );
+
+	// Called when a window info changes for a subscribed window
+	void windowUpdate( CefRefPtr<CefListValue> windowInfo );
 private:
 	// Platform-specific implementation.
 	void PlatformTitleChange(CefRefPtr<CefBrowser> browser,

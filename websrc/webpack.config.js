@@ -120,6 +120,7 @@ module.exports =
 	createConfig( 'aardvark_monitor', 'Monitor', 'tsx' ),
 	createConfig( 'aardvark_renderer', 'Renderer', 'ts' ),
 	createConfig( 'default_hands', 'Default Hands', 'tsx' ),
+	createConfig( 'desktop_window', 'Desktop Window', 'tsx' ),
 	createConfig( 'test_panel', 'Test Panel', 'tsx' ),
 	createConfig( 'gadget_menu', 'Gadget Menu', 'tsx' ),
 	createConfig( 'hand_mirror', 'Hand Mirror', 'tsx' ),

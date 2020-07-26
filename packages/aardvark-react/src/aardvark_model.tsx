@@ -33,6 +33,11 @@ interface AvModelProps extends AvBaseNodeProps
 	 * @default false
 	 */
 	useBrowserTexture?: boolean;
+
+	/** Tells Aardvark to use this texture to replace the texture
+	 * supplied by the model itself
+	 */
+	sharedTexure?: AvSharedTextureInfo;
 }
 
 /** Causes a GLTF model to be drawn at the specified location in the transform hierarchy. */
@@ -93,6 +98,10 @@ export class AvModel extends AvBaseNode< AvModelProps, {} >
 				// it arrives
 				node.flags &= ~ENodeFlags.Visible;
 			}
+		}
+		else if( this.props.sharedTexure )
+		{
+			node.propSharedTexture = this.props.sharedTexure;
 		}
 
 		return node;

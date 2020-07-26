@@ -30,12 +30,23 @@ public:
 	void runFrame();
 
 	void msgUpdateTextureInfo( CefRefPtr< CefProcessMessage > msg );
+	void msgWindowList( CefRefPtr< CefProcessMessage > msg );
+	void msgWindowUpdate( CefRefPtr< CefProcessMessage > msg );
 
 private:
 	CAardvarkRenderProcessHandler *m_handler = nullptr;
 	JsObjectPtr< CJavascriptRenderer > m_renderer;
 	CefRefPtr<CefV8Value> m_textureInfoCallback;
 	CefRefPtr<CefV8Context> m_textureInfoContext;
+	CefRefPtr<CefV8Value> m_windowListCallback;
+	CefRefPtr<CefV8Context> m_windowListContext;
+
+	struct WindowSubscription_t
+	{
+		CefRefPtr<CefV8Value> callback;
+		CefRefPtr<CefV8Context> context;
+	};
+	std::map<std::string, WindowSubscription_t> m_mapWindowSubscriptions;
 };
 
 CAardvarkObject::CAardvarkObject( CAardvarkRenderProcessHandler *renderProcessHandler )
@@ -147,6 +158,72 @@ bool CAardvarkObject::init( CefRefPtr<CefV8Value> container )
 
 	}
 
+	if ( hasPermission( "screencapture" ) )
+	{
+		RegisterFunction( container, "subscribeWindowList", [ this ]( const CefV8ValueList& arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+		{
+			if ( arguments.size() != 1 || !arguments[ 0 ]->IsFunction() )
+			{
+				exception = "Invalid arguments";
+				return;
+			}
+
+			m_windowListCallback = arguments[ 0 ];
+			m_windowListContext = CefV8Context::GetCurrentContext();
+
+			CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "subscribe_window_list" );
+			m_handler->sendBrowserMessage( msg );
+		} );
+
+		RegisterFunction( container, "unsubscribeWindowList", [ this ]( const CefV8ValueList& arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+		{
+			m_windowListCallback = nullptr;
+			m_windowListContext = nullptr;
+
+			CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "unsubscribe_window_list" );
+			m_handler->sendBrowserMessage( msg );
+		} );
+
+		RegisterFunction( container, "subscribeWindow", [ this ]( const CefV8ValueList& arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+		{
+			if ( arguments.size() != 2 
+				|| !arguments[ 1 ]->IsFunction() 
+				|| !arguments[0]->IsString() )
+			{
+				exception = "Invalid arguments";
+				return;
+			}
+
+			std::string windowHandle = arguments[ 0 ]->GetStringValue();
+			m_mapWindowSubscriptions[ windowHandle ] =
+			{
+				arguments[ 1 ],
+				CefV8Context::GetCurrentContext(),
+			};
+
+			CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "subscribe_window" );
+			msg->GetArgumentList()->SetString( 0, arguments[ 0 ]->GetStringValue() );
+			m_handler->sendBrowserMessage( msg );
+		} );
+
+		RegisterFunction( container, "unsubscribeWindow", [ this ]( const CefV8ValueList& arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+		{
+			if ( arguments.size() != 1
+				|| !arguments[ 0 ]->IsString() )
+			{
+				exception = "Invalid arguments";
+				return;
+			}
+
+			m_mapWindowSubscriptions.erase( arguments[ 0 ]->GetStringValue() );
+
+			CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "unsubscribe_window" );
+			msg->GetArgumentList()->SetString( 0, arguments[ 0 ]->GetStringValue() );
+			m_handler->sendBrowserMessage( msg );
+		} );
+
+	}
+
 	RegisterFunction( container, "closeBrowser", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
 		m_handler->requestClose();
@@ -187,6 +264,74 @@ void CAardvarkObject::msgUpdateTextureInfo( CefRefPtr< CefProcessMessage > msg )
 
 	m_textureInfoCallback->ExecuteFunction( nullptr, { textureInfo } );
 	m_textureInfoContext->Exit();
+}
+
+
+CefRefPtr<CefV8Value> windowInfoFromMessage( CefRefPtr<CefListValue> windowInfo )
+{
+	CefRefPtr< CefV8Value > windowObj = CefV8Value::CreateObject( nullptr, nullptr );
+	windowObj->SetValue( "name", CefV8Value::CreateString( windowInfo->GetString( 0 ) ),
+		V8_PROPERTY_ATTRIBUTE_READONLY );
+	windowObj->SetValue( "handle", CefV8Value::CreateString( windowInfo->GetString( 1 ) ),
+		V8_PROPERTY_ATTRIBUTE_READONLY );
+
+	CefRefPtr<CefV8Value> textureInfo = CefV8Value::CreateObject( nullptr, nullptr );
+	textureInfo->SetValue( "type", CefV8Value::CreateInt( (int)ETextureType::D3D11Texture2D ),
+		V8_PROPERTY_ATTRIBUTE_NONE );
+	textureInfo->SetValue( "format", CefV8Value::CreateInt( (int)ETextureFormat::B8G8R8A8 ),
+		V8_PROPERTY_ATTRIBUTE_NONE );
+	textureInfo->SetValue( "dxgiHandle", CefV8Value::CreateString( windowInfo->GetString( 2 ) ),
+		V8_PROPERTY_ATTRIBUTE_NONE );
+	textureInfo->SetValue( "width", CefV8Value::CreateInt( windowInfo->GetInt( 3 ) ),
+		V8_PROPERTY_ATTRIBUTE_NONE );
+	textureInfo->SetValue( "height", CefV8Value::CreateInt( windowInfo->GetInt( 4 ) ),
+		V8_PROPERTY_ATTRIBUTE_NONE );
+	textureInfo->SetValue( "invertY", CefV8Value::CreateBool( windowInfo->GetBool( 5 ) ),
+		V8_PROPERTY_ATTRIBUTE_NONE );
+
+	windowObj->SetValue( "texture", textureInfo, V8_PROPERTY_ATTRIBUTE_NONE );
+	return windowObj;
+}
+
+void CAardvarkObject::msgWindowList( CefRefPtr< CefProcessMessage > msg )
+{
+	if ( !m_windowListContext || !m_windowListCallback )
+	{
+		return;
+	}
+
+	m_windowListContext->Enter();
+
+	CefRefPtr<CefListValue> pWindows = msg->GetArgumentList()->GetSize() > 0 ? msg->GetArgumentList()->GetList( 0 ) : CefListValue::Create();
+
+	int windowCount = (int)pWindows->GetSize();
+	CefRefPtr<CefV8Value> windows = CefV8Value::CreateArray( windowCount );
+	for ( int i = 0; i < windowCount; i++ )
+	{
+		windows->SetValue( i, windowInfoFromMessage( pWindows->GetList( i ) ) );
+	}
+
+	m_windowListCallback->ExecuteFunction( nullptr, { windows } );
+	m_windowListContext->Exit();
+}
+
+
+void CAardvarkObject::msgWindowUpdate( CefRefPtr< CefProcessMessage > msg )
+{
+	CefRefPtr<CefListValue> windowInfo = msg->GetArgumentList()->GetList( 0 );
+	std::string windowHandle = windowInfo->GetString( 1 );
+	
+	auto i = m_mapWindowSubscriptions.find( windowHandle );
+	if ( i == m_mapWindowSubscriptions.end() )
+	{
+		return;
+	}
+
+	i->second.context->Enter();
+
+	CefRefPtr<CefV8Value> windowObj = windowInfoFromMessage( windowInfo );
+	i->second.callback->ExecuteFunction( nullptr, { windowObj } );
+	i->second.context->Exit();
 }
 
 
@@ -282,6 +427,20 @@ bool CAardvarkRenderProcessHandler::OnProcessMessageReceived( CefRefPtr<CefBrows
 		for ( auto context : m_contexts )
 		{
 			context.aardvarkObject->msgUpdateTextureInfo( message );
+		}
+	}
+	else if ( messageName == "window_list" )
+	{
+		for ( auto context : m_contexts )
+		{
+			context.aardvarkObject->msgWindowList( message );
+		}
+	}
+	else if ( messageName == "window_update" )
+	{
+		for ( auto context : m_contexts )
+		{
+			context.aardvarkObject->msgWindowUpdate( message );
 		}
 	}
 	return false;

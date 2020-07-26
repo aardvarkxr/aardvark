@@ -1,4 +1,4 @@
-import { AvVolume, EVolumeType } from '@aardvarkxr/aardvark-shared';
+import { AvVolume, EVolumeType, AvColor } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import { ActiveInterface, AvInterfaceEntity } from './aardvark_interface_entity';
@@ -21,6 +21,12 @@ interface GrabButtonProps
 	 * region for the button.
 	 */
 	modelUri?: string;
+
+	/** The color to apply to the model.
+	 * 
+	 * @default none
+	 */
+	color?: string | AvColor;
 
 	/** The radius of the sphere that defines the grabbable handle for this 
 	 * grab button. Exactly one of modelUri and radius must be specified.
@@ -93,7 +99,8 @@ export class AvGrabButton extends React.Component< GrabButtonProps, GrabButtonSt
 
 		return <>
 			<AvTransform uniformScale={ scale }>
-				{ this.props.modelUri && <AvModel uri={ this.props.modelUri }/> }
+				{ this.props.modelUri && <AvModel uri={ this.props.modelUri } 
+					color={ this.props.color }/> }
 				{ this.props.children }
 			</AvTransform>
 			<AvInterfaceEntity volume={ volume } priority={ 20 }
