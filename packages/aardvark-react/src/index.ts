@@ -11,6 +11,7 @@ export * from './aardvark_grab_button';
 export * from './aardvark_head_facing_transform';
 export * from './aardvark_highlight_transmitters';
 export * from './aardvark_line';
+export * from './aardvark_messagebox';
 export * from './aardvark_model';
 export * from './aardvark_origin';
 export * from './aardvark_panel';

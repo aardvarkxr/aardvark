@@ -106,5 +106,12 @@ traverser.init( )
 			uri: "http://localhost:23842/gadgets/default_hands", 
 			initialInterfaces: "", 
 		} );
+
+	// Provide messagebox services
+	Av().startGadget( 
+		{
+			uri: "http://localhost:23842/gadgets/messagebox", 
+			initialInterfaces: "", 
+		} );
 } );
 

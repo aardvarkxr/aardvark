@@ -559,22 +559,28 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 
 			let entityData = this.getNodeData( entityNode );
 			let volumes: TransformedVolume[] = [];
-			if( !universeFromEntity.getOriginPath() || !entityData.lastVisible )
-			{
-				// if this entity doesn't have an origin path, forbid anything
-				// from intersecting with it. It will still be able to participate in
-				// existing locks or initial locks
-				volumes.push(
-					{
-						type: EVolumeType.Empty,
-						universeFromVolume: mat4.identity,
-					} );
-			}
-			else
+
+			if( entityData.lastVisible )
 			{
 				// compute the transform to universe for each volume
 				for( let volume of entityNode.propVolumes ?? [] )
 				{
+					if( volume.type == EVolumeType.Infinite )
+					{
+						// infinite volumes don't care about the transform
+						volumes.push(
+							{
+								...volume,
+								universeFromVolume: mat4.identity,
+							} );
+						continue;
+					}
+
+					if( !universeFromEntity.getOriginPath() )
+					{
+						continue;
+					}
+
 					let matScale = volume.scale 
 						? scaleMat( new vec3( [ volume.scale, volume.scale, volume.scale ] ) )
 						: mat4.identity;
@@ -589,8 +595,20 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 							universeFromVolume,
 						} );
 				}
+
 			}
 
+			if( volumes.length == 0 )
+			{
+				// if this entity doesn't have an origin path or isn't visible, forbid anything
+				// from intersecting with it. It will still be able to participate in
+				// existing locks or initial locks
+				volumes.push(
+					{
+						type: EVolumeType.Empty,
+						universeFromVolume: mat4.identity,
+					} );
+			}
 
 			let initialLocks = entityNode.propInterfaceLocks ?? [];
 

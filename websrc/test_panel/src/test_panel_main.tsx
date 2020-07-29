@@ -1,4 +1,4 @@
-import { AvGadget, AvPanel, AvStandardGrabbable, AvTransform, HighlightType, DefaultLanding } from '@aardvarkxr/aardvark-react';
+import { AvGadget, AvPanel, AvStandardGrabbable, AvTransform, HighlightType, DefaultLanding, AvMessagebox } from '@aardvarkxr/aardvark-react';
 import { EAction, EHand, g_builtinModelBox, InitialInterfaceLock, Av } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
@@ -10,6 +10,7 @@ interface TestPanelState
 {
 	count: number;
 	grabbableHighlight: HighlightType;
+	lastMessageboxResponse?: string;
 }
 
 interface TestSettings
@@ -27,6 +28,7 @@ class TestPanel extends React.Component< {}, TestPanelState >
 {
 	private m_actionListeners: number[];
 	private m_grabbableRef = React.createRef<AvStandardGrabbable>();
+	private m_messageboxRef = React.createRef<AvMessagebox>();
 
 	constructor( props: any )
 	{
@@ -144,6 +146,19 @@ class TestPanel extends React.Component< {}, TestPanelState >
 			return <div className="Label">{ EAction[ action ] }: false</div>;
 	}
 
+	@bind
+	public async showMessagebox()
+	{
+		let res = await this.m_messageboxRef.current.showPrompt( "This is a caption", 
+		[
+			{ text: "Button A", name: "a" },
+			{ text: "Button B", name: "b" },
+			{ text: "Button C", name: "c" },
+			{ text: "Button D", name: "d" },
+		] );
+		this.setState( { lastMessageboxResponse: res } );
+	}
+
 	public renderRemote()
 	{
 		return (
@@ -170,6 +185,12 @@ class TestPanel extends React.Component< {}, TestPanelState >
 				{ this.renderActionStateLabel( EAction.Squeeze ) }
 				{ this.renderActionStateLabel( EAction.Grab ) }
 				{ this.renderActionStateLabel( EAction.Detach ) }
+				<div className="Button" onMouseDown={ this.showMessagebox }>
+					Show Messagebox
+				</div> 
+				{ this.state.lastMessageboxResponse && 
+					<div className="Label">{ this.state.lastMessageboxResponse }</div> }
+
 			</>
 	}
 
@@ -202,6 +223,7 @@ class TestPanel extends React.Component< {}, TestPanelState >
 					</AvStandardGrabbable>
 				</div>
 				{ AvGadget.instance().isRemote ? this.renderRemote() : this.renderLocal() }
+				<AvMessagebox ref={ this.m_messageboxRef }/>
 			</div> );
 	}
 

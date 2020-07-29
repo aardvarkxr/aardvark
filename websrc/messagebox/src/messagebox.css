@@ -1,0 +1,40 @@
+body, html
+{
+	background-color: transparent;
+}
+
+.Button 
+{
+	margin: 4px;
+	background-color: lightcoral;
+    font-size: 1.5rem;
+    padding: 6px;
+	border-radius: 12px;
+}
+
+.Caption
+{
+	font-size: 2rem;
+	text-align: center;
+}
+
+.Button:hover
+{
+	background-color: red;
+}
+
+.Messagebox
+{
+	width: 100%;
+	height: fit-content;
+	background-color: lightskyblue;
+}
+
+.ButtonList
+{
+	display: flex;
+	flex-direction: row;
+	margin-left: auto;
+    margin-right: auto;
+    width: fit-content;
+}

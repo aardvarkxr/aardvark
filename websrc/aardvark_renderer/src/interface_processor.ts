@@ -248,7 +248,9 @@ export class CInterfaceProcessor
 					continue;
 				}
 
-				if( transmitter.originPath == receiver.originPath && transmitter.originPath != "/space/stage" )
+				if( transmitter.originPath == receiver.originPath 
+					&& transmitter.originPath != "/space/stage" 
+					&& transmitter.originPath != null )
 				{
 					// right hand can't interface with stuff that's also 
 					// on the right hand, etc.
