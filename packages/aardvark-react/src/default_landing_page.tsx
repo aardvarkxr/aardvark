@@ -6,6 +6,7 @@ import { CUtilityEndpoint } from './aardvark_endpoint';
 import { GetGadgetUrlFromWindow } from './aardvark_gadget';
 import { findGltfIconFullUrl } from './aardvark_gadget_seed';
 import bind from 'bind-decorator';
+import { AvGadgetList } from './api_gadgetlist';
 
 export interface DefaultLandingProps
 {
@@ -23,6 +24,7 @@ export class DefaultLanding extends React.Component<DefaultLandingProps, Default
 {
 	private endpoint: CUtilityEndpoint;
 	private gadgetUrl: string;
+	private gadgetList = React.createRef<AvGadgetList>();
 
 	constructor( props: any )
 	{
@@ -58,13 +60,18 @@ export class DefaultLanding extends React.Component<DefaultLandingProps, Default
 	}
 
 	@bind
-	private onAddFavorite()
+	private async onAddFavorite()
 	{
-		let m: MsgInstallGadget =
+		try
 		{
-			gadgetUri: this.gadgetUrl,
+			let result = await this.gadgetList.current.addFavorite( this.gadgetUrl );
+			this.setState( { error: null } );
 		}
-		this.endpoint.sendMessage( MessageType.InstallGadget, m );
+		catch( e )
+		{
+			this.setState( { error: String( e ) } );
+		}
+
 	}
 
 	private renderFavorite()
@@ -100,13 +107,16 @@ export class DefaultLanding extends React.Component<DefaultLandingProps, Default
 					frameBorder={ 0 } style={ { "border": "none", margin: 0, overflow: "hidden" } }></iframe>
 			}
 	
-			return <div style={ { display: "flex", flexDirection: "column" }}>
-				<div style={ { fontSize: "large", fontStyle: "bold" }}>{ this.state.manifest.name }</div>
-				{ this.state.manifest.description && 
-					<div >{ this.state.manifest.description }</div> }
-				{ this.renderFavorite() }
-				{ icon }
-			</div>
+			return <>
+				<AvGadgetList ref={ this.gadgetList }/>
+				<div style={ { display: "flex", flexDirection: "column" }}>
+					<div style={ { fontSize: "large", fontStyle: "bold" }}>{ this.state.manifest.name }</div>
+					{ this.state.manifest.description && 
+						<div >{ this.state.manifest.description }</div> }
+					{ this.renderFavorite() }
+					{ icon }
+				</div>
+			</>
 		}	
 	}
 }

@@ -21,6 +21,7 @@ export * from './aardvark_primitive';
 export * from './aardvark_standard_grabbable';
 export * from './aardvark_transform';
 export * from './aardvark_utils';
+export * from './api_gadgetlist';
 export * from './component_moveable';
 export * from './component_networked_gadget';
 export * from './component_remote_gadget';

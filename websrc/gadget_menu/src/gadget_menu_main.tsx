@@ -1,5 +1,5 @@
-import { ActiveInterface, AvGadget, AvGadgetSeed, AvGrabButton, AvHeadFacingTransform, AvHighlightTransmitters, AvInterfaceEntity, AvLine, AvModel, AvOrigin, AvPanel, AvPrimitive, AvStandardGrabbable, AvTransform, GadgetInfoEvent, GadgetSeedHighlight, HiddenChildrenBehavior, k_GadgetInfoInterface, PrimitiveType, PrimitiveYOrigin, renderGadgetIcon, ShowGrabbableChildren } from '@aardvarkxr/aardvark-react';
-import { Av, WindowInfo, AardvarkManifest, AvNodeTransform, AvVector, emptyVolume, EndpointAddr, g_builtinModelBarcodeScanner, nodeTransformToMat4, nodeTransformFromMat4, g_builtinModelDropAttract, g_builtinModelNetwork, g_builtinModelHammerAndWrench, g_builtinModelStar, g_builtinModelTrashcan, MessageType, MsgDestroyGadget, rayVolume, MsgInstallGadget, g_builtinModelPanel, AvVolume, EVolumeType, g_builtinModelArrowFlat, g_builtinModelWindowIcon } from '@aardvarkxr/aardvark-shared';
+import { ActiveInterface, AvGadget, AvGadgetSeed, AvGrabButton, AvHeadFacingTransform, AvHighlightTransmitters, AvInterfaceEntity, AvLine, AvModel, AvOrigin, AvPanel, AvPrimitive, AvStandardGrabbable, AvTransform, GadgetInfoEvent, GadgetSeedHighlight, HiddenChildrenBehavior, k_GadgetInfoInterface, PrimitiveType, PrimitiveYOrigin, renderGadgetIcon, ShowGrabbableChildren, k_GadgetListInterface, GadgetListEvent, GadgetListEventType, AvMessagebox } from '@aardvarkxr/aardvark-react';
+import { Av, WindowInfo, AardvarkManifest, AvNodeTransform, AvVector, emptyVolume, EndpointAddr, g_builtinModelBarcodeScanner, nodeTransformToMat4, nodeTransformFromMat4, g_builtinModelDropAttract, g_builtinModelNetwork, g_builtinModelHammerAndWrench, g_builtinModelStar, g_builtinModelTrashcan, MessageType, MsgDestroyGadget, rayVolume, MsgInstallGadget, g_builtinModelPanel, AvVolume, EVolumeType, g_builtinModelArrowFlat, g_builtinModelWindowIcon, infiniteVolume, endpointAddrToString } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3, vec4 } from '@tlaukkan/tsm';
 import Axios from 'axios';
 import bind from 'bind-decorator';
@@ -228,6 +228,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 	readonly rays = [ rayVolume( k_rayStart, k_rayDir ) ];
 	private settings: GadgetMenuSettings = null;
 	private manifestsByUrl = new Map< string, AardvarkManifest >();
+	private messagebox = React.createRef<AvMessagebox>();
 
 	constructor( props: any )
 	{
@@ -862,13 +863,61 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 			{
 				this.forceUpdate();
 			}
+			return true;
 		}
 		else
 		{
 			console.log( `Favorites already contains: ${ gadgetUrl } ` );
+			return false;
 		}
 	}
 	
+	@bind
+	private onGadgetList( activeInterface: ActiveInterface )
+	{
+		console.log( `gadgetlist connection from ${ endpointAddrToString( activeInterface.peer ) } ` );
+		activeInterface.onEnded( () =>
+		{
+			console.log( `lost gadgetlist connection from ${ endpointAddrToString( activeInterface.peer ) } ` );
+		});
+
+		activeInterface.onEvent( async ( event: GadgetListEvent ) => 
+		{
+			switch( event.type )
+			{
+				case GadgetListEventType.AddFavorite:
+					// ask the user if they want this favorite
+					let answer = await this.messagebox.current.showPrompt( `Add gadget ${ event.gadgetUrl } to favorites?`, 
+						[
+							{
+								text: "No",
+								name: "no",
+							},
+							{
+								text: "Yes",
+								name: "yes",
+							}
+						] );
+
+					let result = false;
+					if( answer == "yes" )
+					{
+						result = this.addFavorite( event.gadgetUrl );
+					}
+
+					let resp: GadgetListEvent =
+					{
+						type: GadgetListEventType.AddFavoriteResponse,
+						requestId: event.requestId,
+						result,
+					};
+					
+					activeInterface.sendEvent( resp );
+					break;
+			}
+		} );
+	}
+
 
 	private renderGadgetScanner()
 	{
@@ -934,6 +983,16 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 	{
 		return (
 			<AvOrigin path="/space/stage">
+				<AvInterfaceEntity key="mbox" receives={
+					[
+						{
+							iface: k_GadgetListInterface,
+							processor: this.onGadgetList,
+						}
+					] }
+					volume={ infiniteVolume() }	/>
+				<AvMessagebox ref={ this.messagebox }/>
+
 				<AvInterfaceEntity volume={ emptyVolume() } transmits={
 					[
 						{ 
