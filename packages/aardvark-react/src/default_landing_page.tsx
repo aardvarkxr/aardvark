@@ -6,7 +6,7 @@ import { CUtilityEndpoint } from './aardvark_endpoint';
 import { GetGadgetUrlFromWindow } from './aardvark_gadget';
 import { findGltfIconFullUrl } from './aardvark_gadget_seed';
 import bind from 'bind-decorator';
-import { AvGadgetList } from './api_gadgetlist';
+import { AvGadgetList, GadgetListResult } from './api_gadgetlist';
 
 export interface DefaultLandingProps
 {
@@ -17,6 +17,7 @@ interface DefaultLandingState
 {
 	manifest?: AardvarkManifest;
 	error?: string;
+	addResult?: string;
 	connected: boolean;
 }
 
@@ -64,12 +65,39 @@ export class DefaultLanding extends React.Component<DefaultLandingProps, Default
 	{
 		try
 		{
-			let result = await this.gadgetList.current.addFavorite( this.gadgetUrl );
-			this.setState( { error: null } );
+			let promResult = this.gadgetList.current.addFavorite( this.gadgetUrl );
+			let result = await promResult;
+			let text: string;
+
+			switch( result )
+			{
+				case GadgetListResult.Success:
+					text = "Added";
+					break;
+
+				case GadgetListResult.NotConnected:
+					text = "Not connected";
+					break;
+				
+
+				case GadgetListResult.AlreadyAdded:
+					text = "Gadget was already a favorite";
+					break;
+
+				case GadgetListResult.UserDeniedRequest:
+					text = "User denied request";
+					break;
+
+				default:
+					text = "Unknown result " + result;
+					break;
+			}
+
+			this.setState( { addResult: text } );
 		}
 		catch( e )
 		{
-			this.setState( { error: String( e ) } );
+			this.setState( { addResult: String( e ) } );
 		}
 
 	}
@@ -82,7 +110,11 @@ export class DefaultLanding extends React.Component<DefaultLandingProps, Default
 				onClick={ this.onStartAardvark }>Start Aardvark</div>;
 		}
 
-		return <div className="LandingButton" onClick={ this.onAddFavorite }>Add to Favorites</div>;
+		return <>
+			<div className="LandingButton" onClick={ this.onAddFavorite }>Add to Favorites</div>
+			{ this.state.addResult &&
+				<div style={ { fontSize: "medium" }}>{ this.state.addResult }</div> }
+			</>;
 	}
 
 

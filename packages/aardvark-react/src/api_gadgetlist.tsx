@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { AvInterfaceEntity, ActiveInterface } from './aardvark_interface_entity';
 import bind from 'bind-decorator';
-import { infiniteVolume } from '@aardvarkxr/aardvark-shared';
+import { infiniteVolume, EndpointAddr } from '@aardvarkxr/aardvark-shared';
 
 
 export const k_GadgetListInterface = "api-gadgetlist@1";
@@ -12,32 +12,76 @@ export enum GadgetListEventType
 	AddFavoriteResponse = "add_favorite_response",
 }
 
-
-export interface GadgetListEvent
+export enum GadgetListResult
 {
-	type: GadgetListEventType;
-	requestId: number;
-	gadgetUrl?: string;
-	result?: boolean;
+	Success = 0,
+	AlreadyAdded = 1,
+	UserDeniedRequest = 2,
+	NotConnected = 3,
+}
+
+interface ApiEvent
+{
+	type: string;
+	requestId?: number;
+	parameters?: any[];
 }
 
 interface PromiseFunctions
 {
-	resolve: ( result: boolean ) => void;
+	resolve: ( result: ApiEvent ) => void;
 	reject: ( reason: any ) => void;
 }
 
-/** Causes a line to appear from the transform of this node's parent to the 
- * specified end point. */
-export class AvGadgetList extends React.Component< {}, {} >
+export interface ApiInterfaceSender
+{
+	readonly endpointAddr: EndpointAddr;
+}
+
+export interface ApiInterfaceHandler
+{
+	( sender: ApiInterfaceSender, parameters: any[] ): Promise< any[] | null >;
+}
+
+export interface ApiInterfaceProps
+{
+	/** Name of the API implemented by this object. This 
+	 * must be in the form <apiname>@<versionnumber>.
+	 */
+	apiName: string;
+
+	/** If this is true, this object is the singleton implementation
+	 * of the interface.
+	 * 
+	 * @default false
+	 */
+	implementation?: boolean;
+
+	/** Message type handlers for incoming messages. If an incoming
+	 * message is received of a type that is not present in this list,
+	 * it will be discarded.
+	 * 
+	 * The handler for each message type must return the parameters that
+	 * it wants to reply to the sender with. If 
+	 */
+	handlers?: { [ msgType:string ] : ApiInterfaceHandler };
+}
+
+
+export class AvApiInterface extends React.Component< ApiInterfaceProps, {} >
 {
 	private activeInterface: ActiveInterface = null;
 	private nextRequestId = 1;
 	private requestPromises = new Map<number, PromiseFunctions>();
 
-	public addFavorite( gadgetUrl: string )
+	public get connected(): boolean
 	{
-		return new Promise<boolean>( ( resolve, reject ) =>
+		return this.activeInterface != null;
+	}
+
+	sendRequestAndWaitForResponse<TResp>( msgType: string, expectResponse: boolean, ...args: any[] ) : Promise<TResp>
+	{
+		return new Promise<TResp>( ( resolve, reject ) =>
 		{
 			if( !this.activeInterface )
 			{
@@ -45,14 +89,28 @@ export class AvGadgetList extends React.Component< {}, {} >
 				return;
 			}
 
-			let event: GadgetListEvent =
+			let event: ApiEvent =
 			{
-				type: GadgetListEventType.AddFavorite,
-				requestId: this.nextRequestId++,
-				gadgetUrl,
+				type: msgType,
 			};
 
-			this.requestPromises.set( event.requestId, { resolve, reject } );
+			if( expectResponse )
+			{
+				event.requestId = this.nextRequestId++;
+				this.requestPromises.set( event.requestId, 
+					{ 
+						resolve: ( resp: ApiEvent ) =>
+						{
+							resolve( resp.parameters?.[0] as TResp );
+						}, 
+						reject 
+					} );
+			}
+
+			if( args && args.length )
+			{
+				event.parameters = args;
+			}
 
 			this.activeInterface.sendEvent( event );
 		} );
@@ -76,34 +134,105 @@ export class AvGadgetList extends React.Component< {}, {} >
 			this.requestPromises.clear();
 		} );
 
-		activeInterface.onEvent( ( event: GadgetListEvent )=>
+		activeInterface.onEvent( ( event: ApiEvent )=>
 		{
-			if( event.type == GadgetListEventType.AddFavoriteResponse )
+			let p = this.requestPromises.get( event.requestId );
+			if( p )
 			{
-				let p = this.requestPromises.get( event.requestId );
-				if( !p )
-				{
-					console.log( `Handling response for unknown request ${ event.requestId }` );
-					return;
-				}
-
-				p.resolve( event.result );
+				p.resolve( event );
 				this.requestPromises.delete( event.requestId );
+				return;
 			}
+
+			let h = this.props.handlers[ event.type ];
+			if( h )
+			{
+				h( { endpointAddr: activeInterface.peer }, event.parameters ?? [] )
+				.then( ( result: any[] | null ) =>
+				{
+					if( result )
+					{
+						if( event.requestId )
+						{
+							let respEvent: ApiEvent =
+							{
+								type: event.type,
+								requestId: event.requestId,
+								parameters: result as any[],
+							}
+							activeInterface.sendEvent( respEvent );
+						}
+						else
+						{
+							console.log( `return value provided for ${ event.type } event, which did not expect one` );
+						}
+					}
+				} )
+				.catch( (reason: any)=>
+				{
+					console.log( `Message handler ${ event.type } failed with ${ reason }` );
+					if( event.requestId )
+					{
+						let respEvent: ApiEvent =
+						{
+							type: event.type,
+							requestId: event.requestId,
+						}
+						activeInterface.sendEvent( respEvent );
+					}
+				} );
+				return;
+			}
+
+			console.log( `no handler for API event type=${ event.type } reqId=${ event.requestId }` );
 		} );
 	}
 
 	public render()
 	{
-		return <AvInterfaceEntity transmits={
-			[
-				{
-					iface: k_GadgetListInterface,
-					processor: this.onInterface,
-				}
-			] }
-			volume={ infiniteVolume() }
-			/>;
+		if( this.props.implementation )
+			return <AvInterfaceEntity receives={
+				[
+					{
+						iface: this.props.apiName,
+						processor: this.onInterface,
+					}
+				] }
+				volume={ infiniteVolume() }
+				/>;
+		else
+			return <AvInterfaceEntity transmits={
+				[
+					{
+						iface: this.props.apiName,
+						processor: this.onInterface,
+					}
+				] }
+				volume={ infiniteVolume() }
+				/>;
+
+	}
+}
+
+
+/** Causes a line to appear from the transform of this node's parent to the 
+ * specified end point. */
+export class AvGadgetList extends React.Component
+{
+	private apiInterface = React.createRef<AvApiInterface>();
+
+	public addFavorite( gadgetUrl: string )
+	{
+		if( !this.apiInterface.current || !this.apiInterface.current.connected )
+			return GadgetListResult.NotConnected;
+
+		return this.apiInterface.current.sendRequestAndWaitForResponse<GadgetListResult>( 
+			GadgetListEventType.AddFavorite, true, gadgetUrl );
+	}
+
+	public render()
+	{
+		return <AvApiInterface ref={ this.apiInterface } apiName={ k_GadgetListInterface }/>
 	}
 }
 
