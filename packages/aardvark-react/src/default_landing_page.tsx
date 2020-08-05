@@ -102,6 +102,48 @@ export class DefaultLanding extends React.Component<DefaultLandingProps, Default
 
 	}
 
+	@bind
+	private async onStartGadget()
+	{
+		try
+		{
+			let promResult = this.gadgetList.current.startGadget( this.gadgetUrl );
+			let result = await promResult;
+			let text: string;
+
+			switch( result )
+			{
+				case GadgetListResult.Success:
+					text = "Started";
+					break;
+
+				case GadgetListResult.NotConnected:
+					text = "Not connected";
+					break;
+				
+
+				case GadgetListResult.UserDeniedRequest:
+					text = "User denied request";
+					break;
+
+				case GadgetListResult.GadgetStartFailed:
+					text = "Gadget failed to start";
+					break;
+
+				default:
+					text = "Unknown result " + result;
+					break;
+			}
+
+			this.setState( { addResult: text } );
+		}
+		catch( e )
+		{
+			this.setState( { addResult: String( e ) } );
+		}
+
+	}
+
 	private renderFavorite()
 	{
 		if( !this.state.connected )
@@ -112,6 +154,7 @@ export class DefaultLanding extends React.Component<DefaultLandingProps, Default
 
 		return <>
 			<div className="LandingButton" onClick={ this.onAddFavorite }>Add to Favorites</div>
+			<div className="LandingButton" onClick={ this.onStartGadget }>Start Gadget</div>
 			{ this.state.addResult &&
 				<div style={ { fontSize: "medium" }}>{ this.state.addResult }</div> }
 			</>;

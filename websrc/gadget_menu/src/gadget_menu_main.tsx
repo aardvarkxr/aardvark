@@ -302,13 +302,17 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 
 	private requestManifest( url: string )
 	{
-		AvGadget.instance().loadManifest( url )
-		.then( ( manifest: AardvarkManifest ) =>
+		return new Promise<AardvarkManifest>( ( resolve, reject )=>
 		{
-			// all we do here is stuff the manifest into the map.
-			// This will be populated into the UI itself next time the UI is 
-			// rendered
-			this.manifestsByUrl.set( url, manifest );
+			AvGadget.instance().loadManifest( url )
+			.then( ( manifest: AardvarkManifest ) =>
+			{
+				// all we do here is stuff the manifest into the map.
+				// This will be populated into the UI itself next time the UI is 
+				// rendered
+				this.manifestsByUrl.set( url, manifest );
+				resolve( manifest );
+			} );	
 		} );
 	}
 
@@ -877,8 +881,10 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 	{
 		let [ gadgetUrl ] = args;
 
+		let manifest = await this.requestManifest( gadgetUrl );
+
 		// ask the user if they want this favorite
-		let answer = await this.messagebox.current.showPrompt( `Add gadget ${ gadgetUrl } to favorites?`, 
+		let answer = await this.messagebox.current.showPrompt( `Add gadget ${ manifest.name } (${ gadgetUrl }) to favorites?`, 
 		[
 			{
 				text: "No",
@@ -897,6 +903,59 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		}
 
 		return [ result ];
+	}
+
+	@bind
+	private async onGadgetList_StartGadget( sender: ApiInterfaceSender, args: any[] ) 
+		: Promise< [ GadgetListResult, number ] >
+	{
+		let [ gadgetUrl ] = args;
+
+		let manifest = await this.requestManifest( gadgetUrl );
+
+		// ask the user if they want this favorite
+		let key = "savedResponse:" + gadgetUrl;
+		let answer = localStorage.getItem( key );
+
+		if( !answer) 
+		{
+			answer = await this.messagebox.current.showPrompt( 
+				`Start gadget ${ manifest.name } (${ gadgetUrl })?`, 
+			[
+				{
+					text: "Never",
+					name: "never",
+				},
+				{
+					text: "No",
+					name: "no",
+				},
+				{
+					text: "Yes",
+					name: "yes",
+				},
+				{
+					text: "Always",
+					name: "always",
+				}
+			] );
+
+			if( answer == "always" || answer == "never" )
+			{
+				localStorage.setItem( key, answer );
+			}
+		}
+
+		let result = GadgetListResult.UserDeniedRequest;
+		let gadgetId: number;
+		if( answer == "yes" || answer == "always" )
+		{
+			let res = await AvGadget.instance().startGadget( gadgetUrl, [] );
+			result = res.success ? GadgetListResult.Success : GadgetListResult.GadgetStartFailed;
+			gadgetId = res.startedGadgetEndpointId;
+		}
+
+		return [ result, gadgetId ];
 	}
 
 	private renderGadgetScanner()
@@ -963,6 +1022,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 	{
 		let gadgetListHandlers:  { [ msgType:string ] : ApiInterfaceHandler } = {};
 		gadgetListHandlers[ GadgetListEventType.AddFavorite ] = this.onGadgetList_AddFavorite;
+		gadgetListHandlers[ GadgetListEventType.StartGadget ] = this.onGadgetList_StartGadget;
 
 		return (
 			<AvOrigin path="/space/stage">
