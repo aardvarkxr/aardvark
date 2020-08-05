@@ -9,7 +9,9 @@ body, html
 	margin: 4px;
 	background-color: lightcoral;
 	font-size: 8rem;
+	width: fit-content;
 }
+
 
 .Label
 {

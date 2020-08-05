@@ -1,13 +1,14 @@
-import { ActiveInterface, AvInterfaceEntity, AvOrigin, AvPanel, AvTransform, k_MessageboxInterface, MessageboxEvent, MessageboxEventType } from '@aardvarkxr/aardvark-react';
-import { endpointAddrToString, infiniteVolume } from '@aardvarkxr/aardvark-shared';
+import { ApiInterfaceHandler, ApiInterfaceSender, AvApiInterface, AvOrigin, AvPanel, AvTransform, k_MessageboxInterface, MessageboxEventType, Prompt } from '@aardvarkxr/aardvark-react';
+import { EndpointAddr, endpointAddrsMatch } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 
 interface QueuedPrompt
 {
-	activeInterface: ActiveInterface;
-	prompt: MessageboxEvent;
+	sender: EndpointAddr;
+	prompt: Prompt;
+	resolve: ( response: [ string ] ) => void;
 }
 
 interface MessageboxState
@@ -28,18 +29,18 @@ class Messagebox extends React.Component< {}, MessageboxState >
 		};
 	}
 
-	private clearEventsFromInterface( activeInterface: ActiveInterface )
+	private clearEventsFromSender( sender: EndpointAddr )
 	{
 		for( let i = 0; i < this.queue.length; i++ )
 		{
-			if( this.queue[i].activeInterface == activeInterface )
+			if( endpointAddrsMatch( this.queue[i].sender, sender) )
 			{
 				this.queue.splice( i, 1 );
 				break;
 			}
 		}
 
-		if( this.state.activePrompt?.activeInterface == activeInterface )
+		if( endpointAddrsMatch( this.state.activePrompt?.sender, sender ) )
 		{
 			this.popActivePrompt();
 		}
@@ -58,30 +59,25 @@ class Messagebox extends React.Component< {}, MessageboxState >
 	}
 
 	@bind
-	private onMessagebox( activeInterface: ActiveInterface )
+	private async onMessagebox_ShowPrompt( sender: ApiInterfaceSender, args: any[] ) : Promise< [ string ] >
 	{
-		console.log( `messagebox connection from ${ endpointAddrToString( activeInterface.peer ) } ` );
-		activeInterface.onEnded( () =>
+		return new Promise< [string] >( ( resolve, reject ) =>
 		{
-			console.log( `lost messagebox connection from ${ endpointAddrToString( activeInterface.peer ) } ` );
-			this.clearEventsFromInterface( activeInterface );
-		});
-
-		activeInterface.onEvent( ( prompt: MessageboxEvent ) => 
-		{
-			switch( prompt.type )
+			let [ prompt ] = args as [ Prompt ];
+			this.clearEventsFromSender( sender.endpointAddr );
+			this.queue.push( { sender: sender.endpointAddr, prompt, resolve });
+			if( !this.state.activePrompt )
 			{
-				case MessageboxEventType.CancelPrompt:
-					this.clearEventsFromInterface( activeInterface );
-					break;
-
-				case MessageboxEventType.ShowPrompt:
-					this.clearEventsFromInterface( activeInterface );
-					this.queue.push( { activeInterface, prompt });
-					this.setState( { activePrompt: this.queue.shift() } );
-					break;
+				this.setState( { activePrompt: this.queue.shift() } );	
 			}
 		} );
+	}
+
+	@bind
+	private async onMessagebox_CancelPrompt( sender: ApiInterfaceSender, args: any[] ) : Promise< null >
+	{
+		this.clearEventsFromSender( sender.endpointAddr );
+		return null;
 	}
 
 	private selectOption( optionName: string )
@@ -89,12 +85,7 @@ class Messagebox extends React.Component< {}, MessageboxState >
 		if( !this.state.activePrompt )
 			return;
 
-		let m: MessageboxEvent =
-		{
-			type: MessageboxEventType.UserResponse,
-			responseName: optionName,
-		};
-		this.state.activePrompt.activeInterface.sendEvent( m );
+		this.state.activePrompt.resolve( [ optionName ] );
 		this.popActivePrompt();
 	}
 
@@ -130,15 +121,14 @@ class Messagebox extends React.Component< {}, MessageboxState >
 
 	public render()
 	{
+		let messageboxHandlers:  { [ msgType:string ] : ApiInterfaceHandler } = {};
+		messageboxHandlers[ MessageboxEventType.ShowPrompt ] = this.onMessagebox_ShowPrompt;
+		messageboxHandlers[ MessageboxEventType.CancelPrompt ] = this.onMessagebox_CancelPrompt;
+
 		return <AvOrigin path="/user/head">
-			<AvInterfaceEntity key="mbox" receives={
-			[
-				{
-					iface: k_MessageboxInterface,
-					processor: this.onMessagebox,
-				}
-			] }
-			volume={ infiniteVolume() }	/>
+			<AvApiInterface apiName={ k_MessageboxInterface } implementation={ true }
+				handlers={ messageboxHandlers } 
+				onDisconnect={ ( sender: EndpointAddr ) => this.clearEventsFromSender( sender ) }/>
 			{ this.renderMessagebox() }
 		</AvOrigin>;
 	}

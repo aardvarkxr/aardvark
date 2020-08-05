@@ -49,6 +49,12 @@ export interface ApiInterfaceProps
 	 * it wants to reply to the sender with. If 
 	 */
 	handlers?: { [ msgType:string ] : ApiInterfaceHandler };
+
+	/** Called when the API interface connects. */
+	onConnect?: ( peer: EndpointAddr ) => void;
+
+	/** Called when the API interface disconnects. */
+	onDisconnect?: ( peer: EndpointAddr ) => void;
 }
 
 
@@ -104,6 +110,7 @@ export class AvApiInterface extends React.Component< ApiInterfaceProps, {} >
 	private onInterface( activeInterface: ActiveInterface )
 	{
 		this.activeInterface = activeInterface;
+		this.props.onConnect?.( activeInterface.peer );
 
 		activeInterface.onEnded( () =>
 		{
@@ -116,6 +123,8 @@ export class AvApiInterface extends React.Component< ApiInterfaceProps, {} >
 			}
 
 			this.requestPromises.clear();
+
+			this.props.onDisconnect?.( activeInterface.peer );
 		} );
 
 		activeInterface.onEvent( ( event: ApiEvent )=>

@@ -159,6 +159,12 @@ class TestPanel extends React.Component< {}, TestPanelState >
 		this.setState( { lastMessageboxResponse: res } );
 	}
 
+	@bind
+	public cancelMessagebox()
+	{
+		this.m_messageboxRef.current.cancelPrompt();
+	}
+
 	public renderRemote()
 	{
 		return (
@@ -180,13 +186,16 @@ class TestPanel extends React.Component< {}, TestPanelState >
 				<div className="Button" onMouseDown={ this.incrementCount }>
 					Increment count...
 				</div> 
-				{ this.renderActionStateLabel( EAction.A ) }
+				{/* { this.renderActionStateLabel( EAction.A ) }
 				{ this.renderActionStateLabel( EAction.B ) }
 				{ this.renderActionStateLabel( EAction.Squeeze ) }
 				{ this.renderActionStateLabel( EAction.Grab ) }
-				{ this.renderActionStateLabel( EAction.Detach ) }
+				{ this.renderActionStateLabel( EAction.Detach ) } */}
 				<div className="Button" onMouseDown={ this.showMessagebox }>
-					Show Messagebox
+					Show Mbox
+				</div> 
+				<div className="Button" onMouseDown={ this.cancelMessagebox }>
+					Cancel Mbox
 				</div> 
 				{ this.state.lastMessageboxResponse && 
 					<div className="Label">{ this.state.lastMessageboxResponse }</div> }

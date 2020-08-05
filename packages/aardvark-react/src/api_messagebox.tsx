@@ -3,6 +3,7 @@ import { AvInterfaceEntity, ActiveInterface } from './aardvark_interface_entity'
 import { InterfaceEntity } from 'aardvark_renderer/src/interface_processor';
 import bind from 'bind-decorator';
 import { infiniteVolume } from '@aardvarkxr/aardvark-shared';
+import { AvApiInterface } from './api_interface';
 
 
 export const k_MessageboxInterface = "messagebox@1";
@@ -21,21 +22,19 @@ export interface MessageboxOption
 	text: string; // Localized and displayed to user
 }
 
-export interface MessageboxEvent
+export interface Prompt
 {
-	type: MessageboxEventType;
-	caption?: string;
-	options?: MessageboxOption[];
-	responseName?: string;
+	caption: string;
+	options: MessageboxOption[];
 }
 
 /** Causes a line to appear from the transform of this node's parent to the 
  * specified end point. */
 export class AvMessagebox extends React.Component< {}, {} >
 {
-	private activeInterface: ActiveInterface = null;
-	private activePrompt: MessageboxEvent = null;
-	private activePromptResolve: (result: string)=>void = null;
+	private api = React.createRef<AvApiInterface>();
+
+	private activePrompt: Prompt = null;
 	private activePromptReject: (reason: any)=>void = null;
 
 	public showPrompt( caption: string, options: MessageboxOption[] ) 
@@ -47,24 +46,31 @@ export class AvMessagebox extends React.Component< {}, {} >
 
 		return new Promise<string>( ( resolve, reject ) =>
 		{
-
 			this.activePrompt = 
 			{
-				type: MessageboxEventType.ShowPrompt,
 				caption,
 				options,
 			};
-			this.activePromptResolve = resolve;
 			this.activePromptReject = reject;
 
-			if( this.activeInterface )
+			if( this.api.current && this.api.current.connected )
 			{
-				this.activeInterface.sendEvent( this.activePrompt );
+				this.api.current.sendRequestAndWaitForResponse<string>( MessageboxEventType.ShowPrompt, true,
+					this.activePrompt )
+				.then( ( response: string ) =>
+				{
+					this.clearActivePrompt();
+					resolve( response );
+				} )
+				.catch( (reason: any ) =>
+				{
+					// Just drop errors on the floor. We'll try again on reconnect
+				} );
 			}
 		})
 	}
 
-	public cancelPrompt( caption: string, options: MessageboxOption[] ) 
+	public cancelPrompt() 
 	{
 		if( !this.activePrompt )
 		{
@@ -75,62 +81,22 @@ export class AvMessagebox extends React.Component< {}, {} >
 
 		this.clearActivePrompt();
 
-		if( this.activeInterface )
-		{
-			this.activeInterface.sendEvent( { type: MessageboxEventType.CancelPrompt } );
-		}
-
 		// if there's no active interface there's no other end to cancel
+		if( this.api.current && this.api.current.connected )
+		{
+			this.api.current.sendRequestAndWaitForResponse<void>( MessageboxEventType.CancelPrompt, false );
+		}
 	}
 
 	private clearActivePrompt()
 	{
 		this.activePrompt = null;
-		this.activePromptResolve = null;
 		this.activePromptReject = null;
-	}
-
-	@bind
-	private onMessagebox( activeInterface: ActiveInterface )
-	{
-		this.activeInterface = activeInterface;
-
-		// send any initial prompt that's sitting around
-		if( this.activePrompt )
-		{
-			this.activeInterface.sendEvent( this.activePrompt );
-		}
-
-		activeInterface.onEnded( () =>
-		{
-			this.activeInterface = null;
-
-			// Don't null out the active prompt here so we'll send it again
-			// when the other end comes back
-		} );
-
-		activeInterface.onEvent( ( event: MessageboxEvent )=>
-		{
-			if( event.type == MessageboxEventType.UserResponse )
-			{
-				let resolve = this.activePromptResolve;
-				this.clearActivePrompt();
-				resolve( event.responseName );
-			}
-		} );
 	}
 
 	public render()
 	{
-		return <AvInterfaceEntity transmits={
-			[
-				{
-					iface: k_MessageboxInterface,
-					processor: this.onMessagebox,
-				}
-			] }
-			volume={ infiniteVolume() }
-			/>;
+		return <AvApiInterface apiName={ k_MessageboxInterface } ref={ this.api }/>
 	}
 }
 
