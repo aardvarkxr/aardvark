@@ -3,7 +3,7 @@ import axios from 'axios';
 import * as React from 'react';
 import './Landing.css';
 import { CUtilityEndpoint } from './aardvark_endpoint';
-import { GetGadgetUrlFromWindow } from './aardvark_gadget';
+import { GetGadgetUrlFromWindow, GetManifestUrlFromGadget } from './aardvark_gadget';
 import { findGltfIconFullUrl } from './aardvark_gadget_seed';
 import bind from 'bind-decorator';
 import { AvGadgetList, GadgetListResult } from './api_gadgetlist';
@@ -36,7 +36,7 @@ export class DefaultLanding extends React.Component<DefaultLandingProps, Default
 		this.endpoint = new CUtilityEndpoint( null, this.onConnectToServer );
 		this.gadgetUrl = GetGadgetUrlFromWindow();
 
-		axios.get( this.gadgetUrl + "/manifest.webmanifest" )
+		axios.get( GetManifestUrlFromGadget( this.gadgetUrl ) )
 		.then( ( response ) =>
 		{
 			this.setState( { manifest: response.data as AardvarkManifest } );

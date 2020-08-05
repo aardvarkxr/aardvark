@@ -80,6 +80,18 @@ export function GetGadgetUrlFromWindow()
 	}
 }
 
+export function GetManifestUrlFromGadget( gadgetUrl: string )
+{
+	if( gadgetUrl.endsWith( "/" ) )
+	{
+		return gadgetUrl + "manifest.webmanifest";
+	}
+	else
+	{
+		return gadgetUrl + "/manifest.webmanifest";
+	}
+}
+
 
 /** The singleton gadget object for the browser. */
 export class AvGadget
