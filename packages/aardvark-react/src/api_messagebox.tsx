@@ -1,8 +1,4 @@
 import * as React from 'react';
-import { AvInterfaceEntity, ActiveInterface } from './aardvark_interface_entity';
-import { InterfaceEntity } from 'aardvark_renderer/src/interface_processor';
-import bind from 'bind-decorator';
-import { infiniteVolume } from '@aardvarkxr/aardvark-shared';
 import { AvApiInterface } from './api_interface';
 
 
