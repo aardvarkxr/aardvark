@@ -3,7 +3,8 @@ import { vec3 } from '@tlaukkan/tsm';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 
 
-interface AvTransformProps extends AvBaseNodeProps
+/** Props for {@link AvTransform} */
+export interface AvTransformProps extends AvBaseNodeProps
 {
 	/** The uniform scale to apply to all children. If uniformScale is specified, 
 	 * scaleX, scaleY, and scaleZ must be undefined.

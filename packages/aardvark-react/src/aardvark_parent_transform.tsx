@@ -1,7 +1,8 @@
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 import { AvNodeType, EndpointAddr } from '@aardvarkxr/aardvark-shared';
 
-interface AvParentTransformProps extends AvBaseNodeProps
+/** Props for {@link AvParentTransform} */
+export interface AvParentTransformProps extends AvBaseNodeProps
 {
 	/** The endpoint address of the node that should be the parent of this 
 	 * node.

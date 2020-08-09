@@ -3,7 +3,7 @@
 <head>
 	<meta charset="utf-8">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
-	<title>PanelRequest | @aardvarkxr/aardvark-react</title>
+	<title>GrabButtonProps | @aardvarkxr/aardvark-react</title>
 	<meta name="description" content="">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<link rel="stylesheet" href="../assets/css/main.css">
@@ -54,24 +54,31 @@
 					<a href="../globals.html">Globals</a>
 				</li>
 				<li>
-					<a href="../modules/_aardvark_panel_.html">&quot;aardvark_panel&quot;</a>
+					<a href="../modules/_aardvark_grab_button_.html">&quot;aardvark_grab_button&quot;</a>
 				</li>
 				<li>
-					<a href="_aardvark_panel_.panelrequest.html">PanelRequest</a>
+					<a href="_aardvark_grab_button_.grabbuttonprops.html">GrabButtonProps</a>
 				</li>
 			</ul>
-			<h1>Interface PanelRequest</h1>
+			<h1>Interface GrabButtonProps</h1>
 		</div>
 	</div>
 </header>
 <div class="container container-main">
 	<div class="row">
 		<div class="col-8 col-content">
+			<section class="tsd-panel tsd-comment">
+				<div class="tsd-comment tsd-typography">
+					<div class="lead">
+						<p>Props for <a href="../classes/_aardvark_grab_button_.avgrabbutton.html">AvGrabButton</a></p>
+					</div>
+				</div>
+			</section>
 			<section class="tsd-panel tsd-hierarchy">
 				<h3>Hierarchy</h3>
 				<ul class="tsd-hierarchy">
 					<li>
-						<span class="target">PanelRequest</span>
+						<span class="target">GrabButtonProps</span>
 					</li>
 				</ul>
 			</section>
@@ -82,7 +89,11 @@
 						<section class="tsd-index-section ">
 							<h3>Properties</h3>
 							<ul class="tsd-index-list">
-								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_aardvark_panel_.panelrequest.html#type" class="tsd-kind-icon">type</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_aardvark_grab_button_.grabbuttonprops.html#color" class="tsd-kind-icon">color</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_aardvark_grab_button_.grabbuttonprops.html#modeluri" class="tsd-kind-icon">model<wbr>Uri</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_aardvark_grab_button_.grabbuttonprops.html#onclick" class="tsd-kind-icon">on<wbr>Click</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_aardvark_grab_button_.grabbuttonprops.html#onrelease" class="tsd-kind-icon">on<wbr>Release</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_aardvark_grab_button_.grabbuttonprops.html#radius" class="tsd-kind-icon">radius</a></li>
 							</ul>
 						</section>
 					</div>
@@ -91,14 +102,118 @@
 			<section class="tsd-panel-group tsd-member-group ">
 				<h2>Properties</h2>
 				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
-					<a name="type" class="tsd-anchor"></a>
-					<h3>type</h3>
-					<div class="tsd-signature tsd-kind-icon">type<span class="tsd-signature-symbol">:</span> <a href="../enums/_aardvark_panel_.panelrequesttype.html" class="tsd-signature-type">PanelRequestType</a></div>
+					<a name="color" class="tsd-anchor"></a>
+					<h3><span class="tsd-flag ts-flagOptional">Optional</span> color</h3>
+					<div class="tsd-signature tsd-kind-icon">color<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">AvColor</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/3c25888/packages/aardvark-react/src/aardvark_panel.tsx#L52">src/aardvark_panel.tsx:52</a></li>
+							<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/e784727/packages/aardvark-react/src/aardvark_grab_button.tsx#L30">src/aardvark_grab_button.tsx:30</a></li>
 						</ul>
 					</aside>
+					<div class="tsd-comment tsd-typography">
+						<div class="lead">
+							<p>The color to apply to the model.</p>
+						</div>
+						<dl class="tsd-comment-tags">
+							<dt>default</dt>
+							<dd><p>none</p>
+							</dd>
+						</dl>
+					</div>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
+					<a name="modeluri" class="tsd-anchor"></a>
+					<h3><span class="tsd-flag ts-flagOptional">Optional</span> model<wbr>Uri</h3>
+					<div class="tsd-signature tsd-kind-icon">model<wbr>Uri<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/e784727/packages/aardvark-react/src/aardvark_grab_button.tsx#L24">src/aardvark_grab_button.tsx:24</a></li>
+						</ul>
+					</aside>
+					<div class="tsd-comment tsd-typography">
+						<div class="lead">
+							<p>The URI of the GLTF model to use for this grab button. Exactly one
+								of modelUri and radius must be specified. If modelUri is specified,
+								the bounding box of the model will also be used as the grabbable
+							region for the button.</p>
+						</div>
+					</div>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
+					<a name="onclick" class="tsd-anchor"></a>
+					<h3><span class="tsd-flag ts-flagOptional">Optional</span> on<wbr>Click</h3>
+					<div class="tsd-signature tsd-kind-icon">on<wbr>Click<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/e784727/packages/aardvark-react/src/aardvark_grab_button.tsx#L14">src/aardvark_grab_button.tsx:14</a></li>
+						</ul>
+					</aside>
+					<div class="tsd-comment tsd-typography">
+						<div class="lead">
+							<p>The onTrigger callback is called when the grab button is grabbed.</p>
+						</div>
+					</div>
+					<div class="tsd-type-declaration">
+						<h4>Type declaration</h4>
+						<ul class="tsd-parameters">
+							<li class="tsd-parameter-signature">
+								<ul class="tsd-signatures tsd-kind-type-literal tsd-parent-kind-property">
+									<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+								</ul>
+								<ul class="tsd-descriptions">
+									<li class="tsd-description">
+										<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
+									</li>
+								</ul>
+							</li>
+						</ul>
+					</div>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
+					<a name="onrelease" class="tsd-anchor"></a>
+					<h3><span class="tsd-flag ts-flagOptional">Optional</span> on<wbr>Release</h3>
+					<div class="tsd-signature tsd-kind-icon">on<wbr>Release<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/e784727/packages/aardvark-react/src/aardvark_grab_button.tsx#L17">src/aardvark_grab_button.tsx:17</a></li>
+						</ul>
+					</aside>
+					<div class="tsd-comment tsd-typography">
+						<div class="lead">
+							<p>The onTrigger callback is called when the grab button is grabbed.</p>
+						</div>
+					</div>
+					<div class="tsd-type-declaration">
+						<h4>Type declaration</h4>
+						<ul class="tsd-parameters">
+							<li class="tsd-parameter-signature">
+								<ul class="tsd-signatures tsd-kind-type-literal tsd-parent-kind-property">
+									<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+								</ul>
+								<ul class="tsd-descriptions">
+									<li class="tsd-description">
+										<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
+									</li>
+								</ul>
+							</li>
+						</ul>
+					</div>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
+					<a name="radius" class="tsd-anchor"></a>
+					<h3><span class="tsd-flag ts-flagOptional">Optional</span> radius</h3>
+					<div class="tsd-signature tsd-kind-icon">radius<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/e784727/packages/aardvark-react/src/aardvark_grab_button.tsx#L35">src/aardvark_grab_button.tsx:35</a></li>
+						</ul>
+					</aside>
+					<div class="tsd-comment tsd-typography">
+						<div class="lead">
+							<p>The radius of the sphere that defines the grabbable handle for this
+							grab button. Exactly one of modelUri and radius must be specified.</p>
+						</div>
+					</div>
 				</section>
 			</section>
 		</div>
@@ -109,34 +224,34 @@
 						<a href="../globals.html"><em>Globals</em></a>
 					</li>
 					<li class="current tsd-kind-module">
-						<a href="../modules/_aardvark_panel_.html">&quot;aardvark_<wbr>panel&quot;</a>
+						<a href="../modules/_aardvark_grab_button_.html">&quot;aardvark_<wbr>grab_<wbr>button&quot;</a>
 					</li>
 				</ul>
 			</nav>
 			<nav class="tsd-navigation secondary menu-sticky">
 				<ul class="before-current">
-					<li class=" tsd-kind-enum tsd-parent-kind-module">
-						<a href="../enums/_aardvark_panel_.panelrequesttype.html" class="tsd-kind-icon">Panel<wbr>Request<wbr>Type</a>
-					</li>
 					<li class=" tsd-kind-class tsd-parent-kind-module tsd-has-type-parameter">
-						<a href="../classes/_aardvark_panel_.avpanel.html" class="tsd-kind-icon">Av<wbr>Panel</a>
-					</li>
-					<li class=" tsd-kind-interface tsd-parent-kind-module">
-						<a href="_aardvark_panel_.avpanelprops.html" class="tsd-kind-icon">Av<wbr>Panel<wbr>Props</a>
-					</li>
-					<li class=" tsd-kind-interface tsd-parent-kind-module">
-						<a href="_aardvark_panel_.panelhandler.html" class="tsd-kind-icon">Panel<wbr>Handler</a>
-					</li>
-					<li class=" tsd-kind-interface tsd-parent-kind-module">
-						<a href="_aardvark_panel_.panelmouseevent.html" class="tsd-kind-icon">Panel<wbr>Mouse<wbr>Event</a>
+						<a href="../classes/_aardvark_grab_button_.avgrabbutton.html" class="tsd-kind-icon">Av<wbr>Grab<wbr>Button</a>
 					</li>
 				</ul>
 				<ul class="current">
 					<li class="current tsd-kind-interface tsd-parent-kind-module">
-						<a href="_aardvark_panel_.panelrequest.html" class="tsd-kind-icon">Panel<wbr>Request</a>
+						<a href="_aardvark_grab_button_.grabbuttonprops.html" class="tsd-kind-icon">Grab<wbr>Button<wbr>Props</a>
 						<ul>
 							<li class=" tsd-kind-property tsd-parent-kind-interface">
-								<a href="_aardvark_panel_.panelrequest.html#type" class="tsd-kind-icon">type</a>
+								<a href="_aardvark_grab_button_.grabbuttonprops.html#color" class="tsd-kind-icon">color</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-interface">
+								<a href="_aardvark_grab_button_.grabbuttonprops.html#modeluri" class="tsd-kind-icon">model<wbr>Uri</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-interface">
+								<a href="_aardvark_grab_button_.grabbuttonprops.html#onclick" class="tsd-kind-icon">on<wbr>Click</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-interface">
+								<a href="_aardvark_grab_button_.grabbuttonprops.html#onrelease" class="tsd-kind-icon">on<wbr>Release</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-interface">
+								<a href="_aardvark_grab_button_.grabbuttonprops.html#radius" class="tsd-kind-icon">radius</a>
 							</li>
 						</ul>
 					</li>

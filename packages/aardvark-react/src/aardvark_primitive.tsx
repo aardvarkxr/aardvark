@@ -31,7 +31,8 @@ export enum PrimitiveZOrigin
 	Center = "center",
 }
 
-interface AvPrimitiveProps
+/** Props for {@link AvPrimitive} */
+export interface AvPrimitiveProps
 {
 	/** What kind of primitive to display */
 	type: PrimitiveType;

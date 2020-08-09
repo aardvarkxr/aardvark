@@ -3,6 +3,7 @@ import bind from 'bind-decorator';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 import { AvGadget } from './aardvark_gadget';
 
+/** Indicates the role of this {@link ActiveInterface} */
 export enum InterfaceRole
 {
 	Invalid,
@@ -10,21 +11,64 @@ export enum InterfaceRole
 	Receiver,
 };
 
+/** Represents an active interface with another node in this 
+ * or another gadget
+ */
 export interface ActiveInterface
 {
+	/** The local {@link AvInterfaceEntity} node's endpoint address */
 	readonly self: EndpointAddr;
+
+	/** The remote {@link AvInterfaceEntity} node's endpoint address */
 	readonly peer: EndpointAddr;
+
+	/** The name of the interface that triggered this active interface */
 	readonly interface: string;
+
+	/** Indicates whether this is the transmit or receive end of the interface */
 	readonly role: InterfaceRole;
+
+	/** The transform from the receiver's space to the transmitter's space */
 	readonly transmitterFromReceiver: AvNodeTransform;
+
+	/** The transform from the remote node's space to the local node's space */
 	readonly selfFromPeer: AvNodeTransform;
+
+	/** The params object, if any, that was provided when this interface was started */
 	readonly params: object;
+
+	/** Locks the interface so moving the two nodes apart will not cause it to end. */
 	lock():Promise<InterfaceLockResult>;
+
+	/** Unlocks the interface so it can be updated to higher priority collisions or
+	 * end if the nodes move apart.
+	 */
 	unlock():Promise<InterfaceLockResult>;
+
+	/** Atomically unlock the interface from one receiver and lock it to another */
 	relock( newReceiver: EndpointAddr ):Promise<InterfaceLockResult>;
+
+	/** Send an event object to the remote end. The interface name should define
+	 * the format of these objects.
+	 */
 	sendEvent( event: object ):Promise<void>;
+
+	/** Allows the local node to provide a callback that will be invoked when the 
+	 * interface ends. For locked interfaces, this will be called if the remote end
+	 * goes away.
+	 */
 	onEnded( endedCallback:() => void ): void;
+
+	/** Allows the local node to provide a callback that will be invoked when the
+	 * remote end sends an event. The interface name should define the format of
+	 * these objects.
+	 */
 	onEvent( eventCallback:( event: object ) => void ): void;
+
+	/** Allows the local node to provide a callback that will be invoked when the
+	 * transform between the local and remote node has changed. This will only
+	 * be called for interfaces with the wantsTransforms field set to true.
+	 */
 	onTransformUpdated( transformCallback:( entityFromPeer: AvNodeTransform ) => void ): void;
 }
 
@@ -207,18 +251,23 @@ class CActiveInterface implements ActiveInterface
 }
 
 
+/** Defines the function signature of an interface handler for {@link InterfaceProp} */
 export interface InterfaceEntityProcessor
 {
 	( iface: ActiveInterface ): void;
 }
 
+/** Represents a single interface in the transmit or receive list for an 
+ * {@link AvInterfaceEntity}
+ */
 export interface InterfaceProp
 {
 	iface: string;
 	processor?: InterfaceEntityProcessor;
 }
 
-interface AvInterfaceEntityProps extends AvBaseNodeProps
+/** Props for {@link AvInterfaceEntity} */
+export interface AvInterfaceEntityProps extends AvBaseNodeProps
 {
 	/** The address of the parent entity that will provide the transform
 	 * for this node. If this is not specified, this node must be under an
@@ -298,6 +347,7 @@ export class AvInterfaceEntity extends AvBaseNode< AvInterfaceEntityProps, {} >
 {
 	private activeInterfaces: CActiveInterface[] = [];
 
+	/** @hidden */
 	public buildNode()
 	{
 		let node = this.createNodeObject( AvNodeType.InterfaceEntity, this.m_nodeId );

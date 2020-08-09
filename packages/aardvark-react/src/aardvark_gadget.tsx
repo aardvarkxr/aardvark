@@ -98,25 +98,25 @@ export class AvGadget
 {
 	private static s_instance:AvGadget = null;
 
-	m_onSettingsReceived:( settings: any ) => void = null;
+	private m_onSettingsReceived:( settings: any ) => void = null;
 
-	m_nextNodeId = 1;
-	m_registeredNodes: {[nodeId:number]:IAvBaseNode } = {};
-	m_nextFrameRequest: number = 0;
-	m_traversedNodes: {[nodeId:number]:IAvBaseNode } = {};
-	m_endpoint: CGadgetEndpoint = null;
-	m_manifest: AardvarkManifest = null;
-	m_actualGadgetUri: string = null;
-	m_actionState: { [hand:number]: AvActionState } = {};
+	private m_nextNodeId = 1;
+	private m_registeredNodes: {[nodeId:number]:IAvBaseNode } = {};
+	private m_nextFrameRequest: number = 0;
+	private m_traversedNodes: {[nodeId:number]:IAvBaseNode } = {};
+	private m_endpoint: CGadgetEndpoint = null;
+	private m_manifest: AardvarkManifest = null;
+	private m_actualGadgetUri: string = null;
+	private m_actionState: { [hand:number]: AvActionState } = {};
 	private m_epToNotify: EndpointAddr = null;
 	private m_firstSceneGraph: boolean = true;
 	private m_initialInterfaces: InitialInterfaceLock[] = [];
 
-	m_interfaceEventProcessors: {[nodeId: number]: AvInterfaceEventProcessor } = {}
-	m_interfaceEntityProcessors = new Map<number, AvInterfaceEntityProcessor>();
-	m_startGadgetPromises: {[nodeId:number]: 
+	private m_interfaceEventProcessors: {[nodeId: number]: AvInterfaceEventProcessor } = {}
+	private m_interfaceEntityProcessors = new Map<number, AvInterfaceEntityProcessor>();
+	private m_startGadgetPromises: {[nodeId:number]: 
 		[ ( res: AvStartGadgetResult ) => void, ( reason: any ) => void ] } = {};
-	m_actionStateListeners: { [listenerId: number] : ActionStateListener } = {};
+	private m_actionStateListeners: { [listenerId: number] : ActionStateListener } = {};
 
 	constructor()
 	{

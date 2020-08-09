@@ -1,8 +1,11 @@
+/** Base class and props that other Aardvark components derive from.
+ * 
+ * @packageDocumentation
+ */
+import { AvNode, AvNodeType, EndpointAddr, EndpointType, ENodeFlags } from '@aardvarkxr/aardvark-shared';
 import * as React from 'react';
-
 import { AvGadget } from './aardvark_gadget';
-import { EndpointAddr, EndpointType, AvNode, 
-	AvNodeType, ENodeFlags } from '@aardvarkxr/aardvark-shared';
+
 
 declare global 
 {
@@ -16,6 +19,8 @@ declare global
 	}
 }
 
+
+/** Base props that are inherited by all Aardvark scene graph components. */
 export interface AvBaseNodeProps
 {
 	/** This is the ID of the DOM element that is created as the parent of the component.
@@ -51,6 +56,10 @@ export interface AvBaseNodeProps
 	editable?: boolean;
 }
 
+
+/** Interface that all Aardvark components must implement so AvGadget can generate
+ * the scene graph to render.
+ */
 export interface IAvBaseNode
 {
 	m_nodeId: number;
@@ -60,6 +69,7 @@ export interface IAvBaseNode
 }
 
 
+/** Base class for all Aardvark components. */
 export abstract class AvBaseNode<TProps, TState> extends React.Component<TProps, TState> 
 	implements IAvBaseNode
 {
@@ -78,13 +88,16 @@ export abstract class AvBaseNode<TProps, TState> extends React.Component<TProps,
 		}
 	}
 
+	/** @hidden */
 	public abstract buildNode( ): AvNode;
 
+	/** @hidden */
 	public grabInProgress( grabber: EndpointAddr ):void
 	{
 		// nothing to do here, but some node types will need to do work
 	}
 
+	/** @hidden */
 	public createNodeForNode(): AvNode
 	{
 		if( this.m_firstUpdate )
@@ -106,12 +119,14 @@ export abstract class AvBaseNode<TProps, TState> extends React.Component<TProps,
 		return { type: EndpointType.Node, endpointId: AvGadget.instance().getEndpointId(), nodeId: this.m_nodeId };
 	}
 
+	/** @hidden */
 	public componentWillUnmount()
 	{
 		AvGadget.instance().unregister( this );
 		this.m_firstUpdate = true;
 	}
 
+	/** @hidden */
 	protected createNodeObject( type: AvNodeType, nodeId: number ): AvNode
 	{
 		//console.log( `creating ${ AvNodeType[ type] } ${ nodeId }` );
@@ -155,6 +170,7 @@ export abstract class AvBaseNode<TProps, TState> extends React.Component<TProps,
 	}
 
 
+	/** @hidden */
 	public baseNodeRender( node: IAvBaseNode, children: React.ReactNode )
 	{
 		return (
@@ -164,6 +180,7 @@ export abstract class AvBaseNode<TProps, TState> extends React.Component<TProps,
 		) ;
 	}
 
+	/** @hidden */
 	public componentDidUpdate()
 	{
 		AvGadget.instance().markDirty();
@@ -178,6 +195,7 @@ export abstract class AvBaseNode<TProps, TState> extends React.Component<TProps,
 		}
 	}
 
+	/** @hidden */
 	public render()
 	{
 		let persistentName = this.baseProps?.persistentName;

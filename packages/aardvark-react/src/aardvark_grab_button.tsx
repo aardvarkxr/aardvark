@@ -7,7 +7,8 @@ import { PanelRequest, PanelRequestType } from './aardvark_panel';
 import { AvTransform } from './aardvark_transform';
 
 
-interface GrabButtonProps
+/** Props for {@link AvGrabButton} */
+export interface GrabButtonProps
 {
 	/** The onTrigger callback is called when the grab button is grabbed. */
 	onClick?: () => void;
@@ -39,7 +40,7 @@ interface GrabButtonState
 	pokerCount: number;
 }
 
-/** This node is a control that signals when it is grabbed. */
+/** A component that signals when it is grabbed. */
 export class AvGrabButton extends React.Component< GrabButtonProps, GrabButtonState >
 {
 	constructor( props: any )

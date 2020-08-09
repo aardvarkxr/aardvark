@@ -4,7 +4,8 @@ import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 import { AvNodeType, AvColor, AvVector, AvSharedTextureInfo, Av, ENodeFlags } from '@aardvarkxr/aardvark-shared';
 import { AvGadget } from './aardvark_gadget';
 
-interface AvModelProps extends AvBaseNodeProps
+/** Props for {@link AvModel} */
+export interface AvModelProps extends AvBaseNodeProps
 {
 	/** The URI of the GLTF model to use for this model. */
 	uri: string;

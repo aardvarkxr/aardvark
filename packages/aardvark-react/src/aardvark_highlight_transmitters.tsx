@@ -9,7 +9,8 @@ import { AvTransform } from './aardvark_transform';
 import { AvHeadFacingTransform } from './aardvark_head_facing_transform';
 import { AvModel } from './aardvark_model';
 
-interface AvHighlightTransmittersProps
+/** Props for {@link AvHighlightTransmitters} */
+export interface AvHighlightTransmittersProps
 {
 	/** This callback will be called to render the highlight nodes. */
 	highlightContentCallback: () => JSX.Element;
@@ -19,8 +20,10 @@ interface AvHighlightTransmittersProps
 }
 
 
-/** Causes a line to appear from the transform of this node's parent to the 
- * specified end point. */
+/** This component allows its parent to render a parent-specified bit of scene graph at
+ * the location of any specified interface. It is used internally for gadget indicators,
+ * but could be appropriate whenever a gadget just wants to render some content at an interface.
+ */
 export class AvHighlightTransmitters extends React.Component< AvHighlightTransmittersProps, {} >
 {
 	private activeTransmitters = new Map< string, ActiveInterface>();

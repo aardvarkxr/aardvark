@@ -3,6 +3,10 @@
 	"mode": "modules",
 	"excludeNotExported": true,
 	"excludePrivate": true,
-	"exclude": ["./src/index.ts"],
+	"exclude": 
+	[
+		"./src/aardvark_drop_indicator.tsx",
+		"./src/index.ts"
+	],
 	"out": "../../docs/aardvark-react"
 }

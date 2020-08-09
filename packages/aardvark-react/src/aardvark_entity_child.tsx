@@ -1,9 +1,16 @@
+/**
+ * Contains the node that {@link AvInterfaceEntity} objects
+ * must provide for all their children.
+ * @packageDocumentation
+ * 
+ */
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 import { AvNodeType, EndpointAddr } from '@aardvarkxr/aardvark-shared';
 
-interface AvEntityChildProps extends AvBaseNodeProps
+/** Props for {@link AvEntityChild}. */
+export interface AvEntityChildProps extends AvBaseNodeProps
 {
-	/** The address of the child node for which this is providing
+	/** The endpoint address of the child node for which this is providing
 	 * the transform.
 	 */
 	child: EndpointAddr;

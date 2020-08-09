@@ -10,6 +10,7 @@ import { AvPrimitive, PrimitiveType } from './aardvark_primitive';
 import { AvTransform } from './aardvark_transform';
 
 
+/** "Mouse" event for custom panel handlers */
 export interface PanelMouseEvent
 {
 	type: PanelMouseEventType;
@@ -18,11 +19,13 @@ export interface PanelMouseEvent
 	pokerEpa: EndpointAddr;
 };
 
+/** Function signature for the  {@link AvPanelProps} customMouseHandler */
 export interface PanelHandler
 {
 	( event: PanelMouseEvent ): void;
 }
 
+/** Props for {@link AvPanel} */
 export interface AvPanelProps extends AvBaseNodeProps
 {
 	/** Set this to true to cause the panel to be interacted with by pokers. 
@@ -41,12 +44,14 @@ export interface AvPanelProps extends AvBaseNodeProps
 	widthInMeters: number;
 }
 
+/** @hidden */
 export enum PanelRequestType
 {
 	Down = "down",
 	Up = "up",
 };
 
+/** @hidden */
 export interface PanelRequest
 {
 	type: PanelRequestType;
@@ -76,7 +81,8 @@ export class AvPanel extends React.Component< AvPanelProps, AvPanelState >
 		Av().subscribeToBrowserTexture( this.onUpdateBrowserTexture );
 	}
 
-	@bind onUpdateBrowserTexture( info: AvSharedTextureInfo )
+	@bind
+	private onUpdateBrowserTexture( info: AvSharedTextureInfo )
 	{
 		this.m_sharedTextureInfo = info;
 		AvGadget.instance().markDirty();
@@ -182,6 +188,7 @@ export class AvPanel extends React.Component< AvPanelProps, AvPanelState >
 		return window.innerHeight * this.props.widthInMeters / window.innerWidth;
 	}
 	
+	/* @hidden */
 	render()
 	{
 		let volume: AvVolume =

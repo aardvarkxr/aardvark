@@ -1,7 +1,8 @@
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 import { AvNodeType } from '@aardvarkxr/aardvark-shared';
 
-interface AvOriginProps extends AvBaseNodeProps
+/** Props for {@link AvOrigin} */
+export interface AvOriginProps extends AvBaseNodeProps
 {
 	/** The path to reparent any children to. 
 	 * 

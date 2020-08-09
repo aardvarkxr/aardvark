@@ -1,3 +1,6 @@
+/** @packageDocumentation
+ * @hidden
+ */
 import { AardvarkManifest, AardvarkPort, EndpointAddr, EndpointType, Envelope, MessageType, MsgGeAardvarkManifestResponse, MsgGetAardvarkManifest, MsgSetEndpointType, MsgSetEndpointTypeResponse, parseEnvelope, WebSocketCloseCodes } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 

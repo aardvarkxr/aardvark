@@ -1,9 +1,16 @@
+/** Component that allows interface entities to be built out of other component classes.
+ * 
+ * @packageDocumentation
+ */
 import { AvVolume, EndpointAddr, EndpointType, InitialInterfaceLock, AvConstraint } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import { AvInterfaceEntity, InterfaceProp } from './aardvark_interface_entity';
 import { AvGadget } from './aardvark_gadget';
 
+/** Any class that wants to function as an interface entity handler for an 
+ * { @link AvComposedEntity } component must implement this interface.
+ */
 export interface EntityComponent
 {
 	readonly transmits?: InterfaceProp[];
@@ -17,6 +24,7 @@ export interface EntityComponent
 }
 
 
+/** Props for {@link AvComposedEntity} component. */
 export interface AvComposedEntityProps
 {
 	/** The list of components of which this entity is composed. The order of the components

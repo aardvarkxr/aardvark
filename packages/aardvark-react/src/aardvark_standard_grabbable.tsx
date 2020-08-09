@@ -55,7 +55,8 @@ export enum HiddenChildrenBehavior
 	Omit = 1,
 }
 
-interface StandardGrabbableProps
+/** Props for {@link AvStandardGrabbable} */
+export interface StandardGrabbableProps
 {
 	/** The model to use for the grab handle of this grabbable. */
 	modelUri: string;

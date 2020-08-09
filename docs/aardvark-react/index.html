@@ -66,10 +66,12 @@
 				<p>To get started, cd to an empty directory and type: </p>
 				<pre><code><span class="hljs-built_in">npm</span> init @aardvarkxr</code></pre><p>This will install the @aardvarkxr/create script and then run it. Answer the prompts to set up your gadget.</p>
 				<p>Then run:</p>
-				<p>  npm install
-				npm run build</p>
-				<p>After that you probably want to install your gadget with: (You probably want &quot;npm install -g avcmd&quot; first.)</p>
-				<p>  avcmd install dist</p>
+				<pre><code><span class="hljs-built_in">npm</span> install
+<span class="hljs-built_in">npm</span> run build</code></pre><p>After that you probably want to start up a dev server to host your gadget during development. <code>http-dev-server</code> works for that.</p>
+				<pre><code>npm <span class="hljs-keyword">install</span> -g <span class="hljs-keyword">http</span>-dev-<span class="hljs-keyword">server</span>
+<span class="hljs-keyword">http</span>-dev-<span class="hljs-keyword">server</span> <span class="hljs-comment">--cors &lt;path to gadget&gt;</span></code></pre><p>Then open your gadget in a local browser to get an &quot;add to favorites&quot; button that will let you see it in Aardvark&#39;s gadget menu. 
+					Once you have the gadget in your favorites you can just rebuild and reload it without needing to tell Aardvark anything new about the gadget.
+				It just stores a link to the gadget, not any of the built &quot;binaries&quot;.</p>
 				<p>You can open your gadget directory in Visual Studio Code to aid in react/aardvark development.</p>
 			</div>
 		</div>
@@ -84,12 +86,6 @@
 					</li>
 					<li class=" tsd-kind-module">
 						<a href="modules/_aardvark_composed_entity_.html">&quot;aardvark_<wbr>composed_<wbr>entity&quot;</a>
-					</li>
-					<li class=" tsd-kind-module">
-						<a href="modules/_aardvark_drop_indicator_.html">&quot;aardvark_<wbr>drop_<wbr>indicator&quot;</a>
-					</li>
-					<li class=" tsd-kind-module">
-						<a href="modules/_aardvark_endpoint_.html">&quot;aardvark_<wbr>endpoint&quot;</a>
 					</li>
 					<li class=" tsd-kind-module">
 						<a href="modules/_aardvark_entity_child_.html">&quot;aardvark_<wbr>entity_<wbr>child&quot;</a>

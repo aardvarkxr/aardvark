@@ -3,7 +3,8 @@ import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 import { AvNodeType, AvColor, EndpointAddr } from '@aardvarkxr/aardvark-shared';
 import { AvGadget } from './aardvark_gadget';
 
-interface AvLineProps extends AvBaseNodeProps
+/** Props for {@link AvLine} */
+export interface AvLineProps extends AvBaseNodeProps
 {
 	/** The color tint to apply to this model when it is
 	 * displayed.

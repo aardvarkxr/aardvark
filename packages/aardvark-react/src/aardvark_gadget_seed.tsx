@@ -12,6 +12,7 @@ import { AvModel } from './aardvark_model';
 import { AvTransform } from './aardvark_transform';
 import { ContainerRequest, ContainerRequestType, MoveableComponent, MoveableComponentState } from './component_moveable';
 
+/** Represents the possible highlight states of an {@link AvGadgetSeed} */
 export enum GadgetSeedHighlight
 {
 	Idle,
@@ -20,6 +21,7 @@ export enum GadgetSeedHighlight
 }
 
 
+/** Props for {@link AvGadgetSeed} */
 export interface AvGadgetSeedProps extends AvBaseNodeProps
 {
 	/** The manifest object for this gadget. These can be loaded from
@@ -85,6 +87,7 @@ interface AvGadgetSeedState
 const k_seedFromGadgetQuat = quatFromAxisAngleDegrees( vec3.right, -90 );
 const k_seedFromGadget: AvNodeTransform = { rotation: { x: k_seedFromGadgetQuat.x, y: k_seedFromGadgetQuat.y, z: k_seedFromGadgetQuat.z, w: k_seedFromGadgetQuat.w } };
 
+/** @hidden */
 export class GadgetSeedContainerComponent implements EntityComponent
 {
 	private contentsEpa: EndpointAddr;
@@ -212,6 +215,7 @@ function findIconOfType( manifest: AardvarkManifest, mimeType: string )
 	return null;
 }
 
+/** Finds a gadget manifest's glTF model URL if there is one. */
 export function findGltfIconFullUrl( gadgetUrl: string, manifest: AardvarkManifest)
 {
 	let model = findIconOfType( manifest, "model/gltf-binary" );
@@ -227,6 +231,7 @@ export function findGltfIconFullUrl( gadgetUrl: string, manifest: AardvarkManife
 }
 
 
+/** Renders Aardvark components for a gadget's glTF model. */
 export function renderGadgetIcon( gadgetUrl: string, manifest: AardvarkManifest, radius: number )
 {
 	let modelUrl = findGltfIconFullUrl( gadgetUrl, manifest );
