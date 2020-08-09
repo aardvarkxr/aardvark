@@ -1,0 +1,8 @@
+{
+	"inputFiles": ["./src/index.ts"],
+	"mode": "modules",
+	"excludeNotExported": true,
+	"excludePrivate": true,
+	"exclude": ["./src/index.ts"],
+	"out": "../../docs/aardvark-react"
+}

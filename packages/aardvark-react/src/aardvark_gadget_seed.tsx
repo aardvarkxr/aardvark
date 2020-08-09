@@ -20,7 +20,7 @@ export enum GadgetSeedHighlight
 }
 
 
-interface AvGadgetSeedProps extends AvBaseNodeProps
+export interface AvGadgetSeedProps extends AvBaseNodeProps
 {
 	/** The manifest object for this gadget. These can be loaded from
 	 * gadget URLs with AvGadget.instance().loadManifest(...).
