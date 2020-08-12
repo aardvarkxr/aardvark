@@ -1,2 +1,4 @@
 encoding: UTF-8
 
+include: aardvark-react/_modules
+
