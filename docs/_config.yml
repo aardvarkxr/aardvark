@@ -3,4 +3,5 @@ encoding: UTF-8
 include:
   - _*_.html
   - _*_.*.html
+  - _aardvark_gadget_.html
 
