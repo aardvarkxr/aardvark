@@ -1,5 +1,6 @@
 encoding: UTF-8
 
 include:
-  - aardvark-react/modules/_aardvark_gadget_.html
+  - _*_.html
+  - _*_.*.html
 
