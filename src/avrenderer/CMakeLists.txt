@@ -33,6 +33,7 @@ add_executable(avrenderer
 target_link_libraries(avrenderer ${Vulkan_LIBRARY} ${WINLIBS})
 target_link_libraries( avrenderer aardvark )
 target_link_libraries( avrenderer tools )
+target_link_libraries( avrenderer sentry )
 target_link_libraries( avrenderer ${OpenVR_LIB_DIR}/openvr_api.lib )
 target_link_libraries( avrenderer DXGI.lib )
 

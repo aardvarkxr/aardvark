@@ -18,6 +18,11 @@ public:
 
 namespace tools
 {
+	std::filesystem::path getDefaultLogPath()
+	{
+		return GetLogDirectory() / "aardvark.txt";
+	}
+
 	void initLogs()
 	{
 		el::Configurations defaultConf;

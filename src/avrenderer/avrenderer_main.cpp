@@ -14,6 +14,7 @@
 #include <tools/systools.h>
 #include <tools/pathtools.h>
 #include <tools/stringtools.h>
+#include <sentry.h>
 
 // OS specific macros for the example main entry points
 int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR cmdLine, int)
@@ -54,6 +55,12 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR cmdLine, int)
 	  // Enable High-DPI support on Windows 7 or newer.
 	CefEnableHighDPISupport();
 
+	sentry_options_t* sentryOptions = sentry_options_new();
+	sentry_options_add_attachmentw( sentryOptions, tools::getDefaultLogPath().generic_wstring().c_str() );
+	sentry_options_set_dsn( sentryOptions, "https://62a3c9d1c98341d0bd0757904a2e11aa@o433321.ingest.sentry.io/5388214" );
+
+	sentry_init( sentryOptions );
+
 	void* sandbox_info = NULL;
 
 #if defined(CEF_USE_SANDBOX)
@@ -76,6 +83,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR cmdLine, int)
 	// if this is a sub-process, executes the appropriate logic.
 	int exit_code = CefExecuteProcess( mainArgs, app, sandbox_info );
 	if ( exit_code >= 0 ) {
+		sentry_shutdown();
+
 		// The sub-process has completed so return here.
 		return exit_code;
 	}
@@ -94,6 +103,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR cmdLine, int)
 	if ( !StartServer( hInstance ) )
 	{
 		LOG( FATAL ) << "Failed to start the server";
+
+		sentry_shutdown();
+
 		return -57;
 	}
 
@@ -124,6 +136,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR cmdLine, int)
 	CefShutdown();
 
 	StopServer();
+
+	sentry_shutdown();
 
 	return 0;
 }
