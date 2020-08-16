@@ -8,6 +8,7 @@ import * as WebSocket from 'ws';
 import { persistence } from './persistence';
 import { getJSONFromUri, g_localInstallPath, g_localInstallPathUri } from './serverutils';
 import * as Sentry from '@sentry/node';
+import { k_AardvarkVersion } from 'common/version';
 
 console.log( "Data directory is", g_localInstallPathUri );
 
@@ -1056,6 +1057,7 @@ class CServer
 	{
 		this.m_dispatcher.addPendingEndpoint( 
 			new CEndpoint( ws, request.headers.origin, this.m_nextEndpointId++, this.m_dispatcher ) );
+		laskdjflahhhhhhhhsdjflksd();
 	}
 }
 
@@ -1075,7 +1077,11 @@ async function startup()
 	server.init();
 }
 
-Sentry.init( { dsn: 'https://36b174a5c5634e989d1786a04fbab535@o433321.ingest.sentry.io/5392342' });
+Sentry.init( 
+	{ 
+		dsn: 'https://36b174a5c5634e989d1786a04fbab535@o433321.ingest.sentry.io/5392342',
+		release: 'aardvark-server@' + k_AardvarkVersion,
+	});
 
 startup();
 
