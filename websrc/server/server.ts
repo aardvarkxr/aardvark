@@ -1057,7 +1057,6 @@ class CServer
 	{
 		this.m_dispatcher.addPendingEndpoint( 
 			new CEndpoint( ws, request.headers.origin, this.m_nextEndpointId++, this.m_dispatcher ) );
-		laskdjflahhhhhhhhsdjflksd();
 	}
 }
 
