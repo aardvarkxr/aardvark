@@ -54,10 +54,16 @@ if(RESOURCE_INSTALL_DIR)
 endif()
 
 # configure_file( ${OpenVR_BIN_DIR}/openvr_api.dll ${CMAKE_CURRENT_BINARY_DIR}/openvr_api.dll COPYONLY )
-message ( "in" ${OpenVR_BIN_DIR}/openvr_api.dll )
-message ( "out" ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/openvr_api.dll )
 add_custom_command(TARGET avrenderer POST_BUILD
                    COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${OpenVR_BIN_DIR}/openvr_api.dll" "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/"
+)
+
+#message ( "in " ${CMAKE_BINARY_DIR}/thirdparty/sentry-native/crashpad_build/handler/$<CONFIG> )
+#message ( "out " "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/" )
+add_custom_command(TARGET avrenderer POST_BUILD
+                   COMMAND "${CMAKE_COMMAND}" -E copy_if_different 
+						"${CMAKE_BINARY_DIR}/thirdparty/sentry-native/crashpad_build/handler/$<CONFIG>/crashpad_handler.exe"
+						"${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/"
 )
 
 target_link_libraries( avrenderer Dwmapi.lib )
