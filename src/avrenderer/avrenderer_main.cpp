@@ -59,6 +59,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR cmdLine, int)
 	sentry_options_add_attachmentw( sentryOptions, tools::getDefaultLogPath().generic_wstring().c_str() );
 	sentry_options_set_dsn( sentryOptions, "https://62a3c9d1c98341d0bd0757904a2e11aa@o433321.ingest.sentry.io/5388214" );
 
+	std::string sRelease = "aardvarkxr@" AARDVARK_VERSION;
+	sentry_options_set_release( sentryOptions, sRelease.c_str() );
+
 	sentry_init( sentryOptions );
 
 	void* sandbox_info = NULL;

@@ -4,6 +4,8 @@ SET(EXAMPLE_NAME "avrenderer")
 file(GLOB SHADERS "${AV_DATA}/shaders/*.vert" "${AV_DATA}/shaders/*.frag" "${AV_DATA}/shaders/*.comp" "${AV_DATA}/shaders/*.geom" "${AV_DATA}/shaders/*.tesc" "${AV_DATA}/shaders/*.tese")
 source_group("Shaders" FILES ${SHADERS})
 
+SET( AARDVARK_VERSION "0.0.1234" CACHE STRING "Version string" )
+
 add_executable(avrenderer 
 	aardvark_renderer.cpp
 	aardvark_renderer.h
@@ -45,6 +47,7 @@ target_compile_definitions(avrenderer PRIVATE
 	_USE_MATH_DEFINES
 	_SILENCE_CXX17_OLD_ALLOCATOR_MEMBERS_DEPRECATION_WARNING
 	NOMINMAX
+	AARDVARK_VERSION="${AARDVARK_VERSION}"
 	)
 
 target_link_directories( avrenderer PRIVATE ${CEF_BINARY_DIR} )
