@@ -5,7 +5,9 @@ import Axios from 'axios';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
+import { initSentryForBrowser } from 'common/sentry_utils';
 
+initSentryForBrowser();
 
 const k_gadgetRegistryUI = "aardvark-gadget-registry@1";
 

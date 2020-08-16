@@ -3,6 +3,9 @@ import { EndpointAddr, endpointAddrsMatch } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
+import { initSentryForBrowser } from 'common/sentry_utils';
+
+initSentryForBrowser();
 
 interface QueuedPrompt
 {
