@@ -118,7 +118,7 @@ async function cppBuild()
 
 	if( buildVersion )
 	{
-		ars.push( `-DAARDVARK_VERSION:STRING=${buildVersion}` );
+		args.push( `-DAARDVARK_VERSION:STRING=${buildVersion}` );
 	}
 
 	args.push( ".." );
@@ -243,7 +243,7 @@ async function runBuild()
 		console.log( `== Writing build version` );
 
 		let jsVersion = path.resolve( __dirname, "websrc/common/version.ts" );
-		fs.writeSync( jsVersion, `export const k_AardvarkVersion = "${buildVersion}";\n` 
+		fs.writeFileSync( jsVersion, `export const k_AardvarkVersion = "${buildVersion}";\n`  );
 		console.log( `    ${jsVersion}` );
 	}
 
