@@ -114,8 +114,17 @@ async function cppBuild()
 {
 	ensureDirExists( bldDir );
 
+	let args = ["-G", "\"Visual Studio 16 2019\"", "-A", "x64"];
+
+	if( buildVersion )
+	{
+		args.push( `-DAARDVARK_VERSION:STRING=${buildVersion}` );
+	}
+
+	args.push( ".." );
+
 	runCommand( "cmake", 
-		["-G", "\"Visual Studio 16 2019\"", "-A", "x64", ".."],
+		args,
 		bldDir, 10, "Creating Projects" );
 
 	let vsWherePath = path.resolve( __dirname, "build_helpers/vswhere.exe" );
@@ -229,6 +238,14 @@ async function buildArchive()
 
 async function runBuild()
 {
+	if( buildVersion )
+	{
+		console.log( `== Writing build version` );
+
+		let jsVersion = path.resolve( __dirname, "websrc/common/version.ts" );
+		fs.writeFileSync( jsVersion, `export const k_AardvarkVersion = "${buildVersion}";\n`  );
+		console.log( `    ${jsVersion}` );
+	}
 
 	runCommand( "npm", ["install"], webDir, 60, "npm install" );
 	runCommand( "npm", ["run", "build"], webDir, 30, "web build" );

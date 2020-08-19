@@ -6,6 +6,9 @@ import * as ReactDOM from 'react-dom';
 import { makeEmpty } from 'aardvark_renderer/src/volume_test_utils';
 import { InterfaceEntity } from 'aardvark_renderer/src/interface_processor';
 import { vec3 } from '@tlaukkan/tsm';
+import { initSentryForBrowser } from 'common/sentry_utils';
+
+initSentryForBrowser();
 
 const k_gadgetRegistryUI = "aardvark-gadget-registry@1";
 

@@ -2,7 +2,9 @@ import { CRendererEndpoint } from '@aardvarkxr/aardvark-react';
 import { Av, AvRendererConfig, MessageType, MsgUpdateSceneGraph, Envelope, MsgLostEndpoint, MsgNodeHaptic, EHand, MsgInterfaceSendEvent, MsgInterfaceSendEventResponse, EndpointType, MsgInterfaceLock, MsgInterfaceLockResponse, MsgInterfaceUnlockResponse, MsgInterfaceRelock, MsgInterfaceRelockResponse } from '@aardvarkxr/aardvark-shared';
 import { AvDefaultTraverser } from './aardvark_traverser';
 import { TraverserCallbacks } from './traverser_interface';
+import { initSentryForBrowser } from 'common/sentry_utils';
 
+initSentryForBrowser();
 
 let rendererEndpoint = new CRendererEndpoint( ( config: AvRendererConfig ) =>
 	{

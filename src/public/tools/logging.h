@@ -7,6 +7,7 @@
 namespace tools
 {
 	inline el::Logger *LogDefault() { return el::Loggers::getLogger( "default" ); }
+	std::filesystem::path getDefaultLogPath();
 
 	void initLogs();
 

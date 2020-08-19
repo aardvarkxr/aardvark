@@ -45,4 +45,7 @@ add_subdirectory(avrenderer)
 add_subdirectory(thirdparty/cef_binary_78/libcef_dll )
 add_subdirectory(thirdparty/tiny-process-library )
 
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "disable shared libs" )
+add_subdirectory(thirdparty/sentry-native )
+
 

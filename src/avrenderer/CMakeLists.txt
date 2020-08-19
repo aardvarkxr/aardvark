@@ -4,6 +4,8 @@ SET(EXAMPLE_NAME "avrenderer")
 file(GLOB SHADERS "${AV_DATA}/shaders/*.vert" "${AV_DATA}/shaders/*.frag" "${AV_DATA}/shaders/*.comp" "${AV_DATA}/shaders/*.geom" "${AV_DATA}/shaders/*.tesc" "${AV_DATA}/shaders/*.tese")
 source_group("Shaders" FILES ${SHADERS})
 
+SET( AARDVARK_VERSION "0.0.1234" CACHE STRING "Version string" )
+
 add_executable(avrenderer 
 	aardvark_renderer.cpp
 	aardvark_renderer.h
@@ -33,6 +35,7 @@ add_executable(avrenderer
 target_link_libraries(avrenderer ${Vulkan_LIBRARY} ${WINLIBS})
 target_link_libraries( avrenderer aardvark )
 target_link_libraries( avrenderer tools )
+target_link_libraries( avrenderer sentry )
 target_link_libraries( avrenderer ${OpenVR_LIB_DIR}/openvr_api.lib )
 target_link_libraries( avrenderer DXGI.lib )
 
@@ -44,6 +47,7 @@ target_compile_definitions(avrenderer PRIVATE
 	_USE_MATH_DEFINES
 	_SILENCE_CXX17_OLD_ALLOCATOR_MEMBERS_DEPRECATION_WARNING
 	NOMINMAX
+	AARDVARK_VERSION="${AARDVARK_VERSION}"
 	)
 
 target_link_directories( avrenderer PRIVATE ${CEF_BINARY_DIR} )
@@ -53,10 +57,16 @@ if(RESOURCE_INSTALL_DIR)
 endif()
 
 # configure_file( ${OpenVR_BIN_DIR}/openvr_api.dll ${CMAKE_CURRENT_BINARY_DIR}/openvr_api.dll COPYONLY )
-message ( "in" ${OpenVR_BIN_DIR}/openvr_api.dll )
-message ( "out" ${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/openvr_api.dll )
 add_custom_command(TARGET avrenderer POST_BUILD
                    COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${OpenVR_BIN_DIR}/openvr_api.dll" "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/"
+)
+
+#message ( "in " ${CMAKE_BINARY_DIR}/thirdparty/sentry-native/crashpad_build/handler/$<CONFIG> )
+#message ( "out " "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/" )
+add_custom_command(TARGET avrenderer POST_BUILD
+                   COMMAND "${CMAKE_COMMAND}" -E copy_if_different 
+						"${CMAKE_BINARY_DIR}/thirdparty/sentry-native/crashpad_build/handler/$<CONFIG>/crashpad_handler.exe"
+						"${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/"
 )
 
 target_link_libraries( avrenderer Dwmapi.lib )
