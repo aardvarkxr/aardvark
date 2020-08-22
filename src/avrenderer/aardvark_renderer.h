@@ -116,7 +116,7 @@ public:
 	void submitEyeBuffers();
 
 	// ----------- IRenderer implementation -------------
-	virtual void init( HINSTANCE hInstance, IVrManager *vrManager ) override;
+	virtual void init( HINSTANCE hInstance, IVrManager *vrManager, const aardvark::AardvarkConfig_t& config ) override;
 	virtual void runFrame( bool *shouldQuit, double frameTime ) override;
 	virtual void setRenderingConfiguration(const CAardvarkRendererConfig& cRendererConfig) override;
 	virtual std::unique_ptr<IModelInstance> createModelInstance( const std::string & uri, const void* modelData, size_t modelDataSize, std::string *psError) override;

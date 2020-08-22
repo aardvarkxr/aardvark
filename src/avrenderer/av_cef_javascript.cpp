@@ -410,6 +410,10 @@ bool CAardvarkRenderProcessHandler::OnProcessMessageReceived( CefRefPtr<CefBrows
 			j = nlohmann::json::parse( manifestData.begin(), manifestData.end() );
 			m_gadgetManifest = std::make_unique<CWebAppManifest>( j.get<CWebAppManifest>() );
 			
+			std::string configData = message->GetArgumentList()->GetString( 2 );
+			j = nlohmann::json::parse( configData.begin(), configData.end() );
+			m_config = j.get<aardvark::AardvarkConfig_t>();
+
 			for ( auto & contextInfo : m_contexts )
 			{
 				InitAardvarkForContext( contextInfo );

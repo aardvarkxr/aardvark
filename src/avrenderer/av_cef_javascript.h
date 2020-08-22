@@ -42,6 +42,7 @@ public:
 	void requestUri( const std::string & uri, std::function<void( CUriRequestHandler::Result_t & result ) > callback );
 	void requestTextureInfo();
 	void requestClose();
+	const aardvark::AardvarkConfig_t & getConfig() const { return m_config; }
 
 	void runFrame();
 private:
@@ -57,6 +58,7 @@ private:
 
 	aardvark::GadgetParams_t m_params;
 	std::unique_ptr<CWebAppManifest> m_gadgetManifest;
+	aardvark::AardvarkConfig_t m_config;
 	CUriRequestHandler m_uriRequestHandler;
 	bool m_needRunFrame = true;
 

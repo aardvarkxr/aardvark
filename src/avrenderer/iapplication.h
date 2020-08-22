@@ -1,6 +1,7 @@
 #pragma once
 
 #include "include/cef_app.h"
+#include <aardvark/aardvark_scene_graph.h>
 
 class IApplication
 {
@@ -15,5 +16,7 @@ public:
 	virtual void unsubscribeFromWindowList( CAardvarkCefHandler* handler ) = 0;
 	virtual void subscribeToWindow( CAardvarkCefHandler* handler, const std::string & windowHandle ) = 0;
 	virtual void unsubscribeFromWindow( CAardvarkCefHandler* handler, const std::string& windowHandle ) = 0;
+
+	virtual const aardvark::AardvarkConfig_t& getConfig() const = 0;
 };
 

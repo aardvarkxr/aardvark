@@ -762,7 +762,7 @@ LRESULT CALLBACK WndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 	return ( DefWindowProc( hWnd, uMsg, wParam, lParam ) );
 }
 
-HWND VulkanExampleBase::setupWindow( HINSTANCE hinstance )
+HWND VulkanExampleBase::setupWindow( HINSTANCE hinstance, bool showWindow )
 {
 	this->windowInstance = hinstance;
 
@@ -853,9 +853,12 @@ HWND VulkanExampleBase::setupWindow( HINSTANCE hinstance )
 
 	SetWindowLongPtr( window, GWLP_USERDATA, (LONG_PTR)this );
 
-	ShowWindow(window, SW_SHOW);
-	SetForegroundWindow(window);
-	SetFocus(window);
+	if ( showWindow )
+	{
+		ShowWindow( window, SW_SHOW );
+		SetForegroundWindow( window );
+		SetFocus( window );
+	}
 
 	return window;
 }

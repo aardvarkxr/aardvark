@@ -73,9 +73,10 @@ private:
 
 }  // namespace
 
-CAardvarkCefApp::CAardvarkCefApp() 
+CAardvarkCefApp::CAardvarkCefApp( const aardvark::AardvarkConfig_t& config )
 {
 	g_instance = this;
+	m_config = config;
 }
 
 CAardvarkCefApp::~CAardvarkCefApp()

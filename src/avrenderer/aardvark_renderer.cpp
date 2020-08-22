@@ -2182,6 +2182,7 @@ void VulkanExample::processRenderList()
 
 void VulkanExample::submitEyeBuffers()
 {
+	//memset( (void*)1, 0, 500 );
 	// Submit to OpenVR
 	vr::VRTextureBounds_t bounds;
 	bounds.uMin = 0.0f;
@@ -2352,11 +2353,11 @@ void VulkanExample::runFrame( bool *shouldQuit, double frameTime )
 	updateFrameTime( frameTime );
 }
 
-void VulkanExample::init( HINSTANCE hInstance, IVrManager *vrManager )
+void VulkanExample::init( HINSTANCE hInstance, IVrManager *vrManager, const aardvark::AardvarkConfig_t& config )
 {
 	m_vrManager = vrManager;
 
 	initVulkan();
-	setupWindow( hInstance );
+	setupWindow( hInstance, config.showWindow );
 	prepare();
 }

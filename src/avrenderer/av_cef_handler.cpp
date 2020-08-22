@@ -156,6 +156,7 @@ void CAardvarkCefHandler::OnAfterCreated(CefRefPtr<CefBrowser> browser)
 	CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "gadget_info" );
 	msg->GetArgumentList()->SetString( 0, nlohmann::json( m_params ).dump() );
 	msg->GetArgumentList()->SetString( 1, m_gadgetManifestString );
+	msg->GetArgumentList()->SetString( 2, nlohmann::json( m_application->getConfig() ).dump() );
 
 	m_browser->GetFocusedFrame()->SendProcessMessage( PID_RENDERER, msg );
 	

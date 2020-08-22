@@ -6,6 +6,14 @@
 
 namespace aardvark
 {
+	struct AardvarkConfig_t
+	{
+		bool showWindow = false;
+	};
+
+	void to_json( nlohmann::json& j, const AardvarkConfig_t& config );
+	void from_json( const nlohmann::json& j, AardvarkConfig_t& config );
+
 	enum class EAvSceneGraphResult
 	{
 		Success = 0,

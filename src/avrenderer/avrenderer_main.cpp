@@ -17,7 +17,7 @@
 #include <sentry.h>
 
 // OS specific macros for the example main entry points
-int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR cmdLine, int)
+int APIENTRY WinMain( HINSTANCE hInstance, HINSTANCE, LPSTR cmdLine, int )
 {
 	tools::initLogs();
 
@@ -46,9 +46,19 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR cmdLine, int)
 	}
 
 	std::vector< std::string > vecArgs = tools::tokenizeString( cmdLine );
-	if ( vecArgs.size() == 2 && vecArgs[0] == "handleurl" )
+	if ( vecArgs.size() == 2 && vecArgs[ 0 ] == "handleurl" )
 	{
-		tools::LogDefault()->info( "started from URL %s", vecArgs[1].c_str() );
+		tools::LogDefault()->info( "started from URL %s", vecArgs[ 1 ].c_str() );
+	}
+
+	aardvark::AardvarkConfig_t aardvarkConfig;
+
+	for ( auto& arg : vecArgs )
+	{
+		if ( arg == "-showWindow" )
+		{
+			aardvarkConfig.showWindow = true;
+		}
 	}
 
 	// give the CEF subprocess the first crack
@@ -79,7 +89,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR cmdLine, int)
 	// CAardvarkCefApp implements application-level callbacks for the browser process.
 	// It will create the first browser instance in OnContextInitialized() after
 	// CEF has initialized.
-	CefRefPtr<CAardvarkCefApp> app( new CAardvarkCefApp( ) );
+	CefRefPtr<CAardvarkCefApp> app( new CAardvarkCefApp( aardvarkConfig ) );
 
 	// CEF applications have multiple sub-processes (render, plugin, GPU, etc)
 	// that share the same executable. This function checks the command-line and,

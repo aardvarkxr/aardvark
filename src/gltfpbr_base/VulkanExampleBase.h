@@ -172,7 +172,7 @@ public:
 #endif
 
 #if defined(_WIN32)
-	HWND setupWindow(HINSTANCE hinstance );
+	HWND setupWindow(HINSTANCE hinstance, bool showWindow );
 	void handleMessages(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 #elif defined(VK_USE_PLATFORM_ANDROID_KHR)
 	static int32_t handleAppInput(struct android_app* app, AInputEvent* event);

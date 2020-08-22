@@ -15,7 +15,7 @@
 class CAardvarkCefApp : public CefApp, public CefBrowserProcessHandler , IApplication
 {
 public:
-	CAardvarkCefApp();
+	CAardvarkCefApp( const aardvark::AardvarkConfig_t & config );
 	virtual ~CAardvarkCefApp();
 
 	static CAardvarkCefApp* instance();
@@ -45,6 +45,7 @@ public:
 	virtual void unsubscribeFromWindowList( CAardvarkCefHandler* handler ) override;
 	virtual void subscribeToWindow( CAardvarkCefHandler* handler, const std::string& windowHandle ) override;
 	virtual void unsubscribeFromWindow( CAardvarkCefHandler* handler, const std::string& windowHandle ) override;
+	virtual const aardvark::AardvarkConfig_t& getConfig() const override { return m_config; }
 
 
 	bool wantsToQuit();
@@ -61,6 +62,7 @@ private:
 	ID3D11Device *m_pD3D11Device = nullptr;
 	ID3D11DeviceContext *m_pD3D11ImmediateContext = nullptr;
 	std::mutex m_graphicsMutex;
+	aardvark::AardvarkConfig_t m_config;
 
 	std::map<void *, ID3D11Texture2D *> m_browserTextures;
 

@@ -7,6 +7,18 @@
 namespace aardvark
 {
 
+	void to_json( nlohmann::json& j, const AardvarkConfig_t& config )
+	{
+		j = nlohmann::json {
+			{ "showWindow", config.showWindow },
+		};
+	}
+
+	void from_json( const nlohmann::json& j, AardvarkConfig_t& config )
+	{
+		j.at( "showWindow" ).get_to( config.showWindow );
+	}
+
 	std::string endpointAddrToString( const EndpointAddr_t & epa )
 	{
 		std::string res;

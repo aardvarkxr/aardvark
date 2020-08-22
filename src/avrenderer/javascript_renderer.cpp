@@ -296,7 +296,7 @@ bool gadgetParamsFromJs( CefRefPtr< CefV8Value > obj, aardvark::GadgetParams_t *
 bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 {
 	m_vrManager->init();
-	m_renderer->init( nullptr, m_vrManager.get() );
+	m_renderer->init( nullptr, m_vrManager.get(), m_handler->getConfig() );
 
 	RegisterFunction( container, "setRendererConfig", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 	{
