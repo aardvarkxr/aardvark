@@ -20,5 +20,6 @@ packages/aardvark-react/lib
 packages/aardvark-shared/lib
 node_modules
 .sentry-native
+myeasylog.log
 
 
