@@ -165,7 +165,8 @@ void CJavascriptRenderer::runFrame()
 
 	auto tStart = std::chrono::high_resolution_clock::now();
 
-	m_vrManager->runFrame();
+	bool shouldQuitVr = false;
+	m_vrManager->runFrame( &shouldQuitVr );
 
 	if ( m_jsTraverser )
 	{
@@ -179,10 +180,10 @@ void CJavascriptRenderer::runFrame()
 	auto tDiff = std::chrono::duration<double, std::milli>( tEnd - tStart ).count();
 
 
-	bool shouldQuit = false;
-	m_renderer->runFrame( &shouldQuit, tDiff / 1000.0f );
+	bool shouldQuitWindow = false;
+	m_renderer->runFrame( &shouldQuitWindow, tDiff / 1000.0f );
 
-	if ( shouldQuit )
+	if ( shouldQuitWindow || shouldQuitVr )
 	{
 		m_quitting = true;
 		CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "quit" );

@@ -2,6 +2,8 @@
 
 #include <iostream>
 #include <tools/pathtools.h>
+
+
 void CVRManager::init()
 {
 	initOpenVR();
@@ -69,11 +71,22 @@ glm::mat4 CVRManager::glmMatFromVrMat( const vr::HmdMatrix34_t & mat )
 	return matrixObj;
 }
 
-void CVRManager::runFrame()
+void CVRManager::runFrame( bool *shouldQuit )
 {
 	updateOpenVrPoses();
 	doInputWork();
 	updateCameraActionPose();
+
+	vr::VREvent_t e;
+	while ( vr::VRSystem()->PollNextEvent( &e, sizeof( e ) ) )
+	{
+		switch ( e.eventType )
+		{
+		case vr::VREvent_Quit:
+			*shouldQuit = true;
+			break;
+		}
+	}
 }
 
 void CVRManager::updateOpenVrPoses()

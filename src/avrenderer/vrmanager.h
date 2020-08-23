@@ -12,7 +12,7 @@ public:
 	virtual bool getUniverseFromOrigin( const std::string & originPath, glm::mat4 *universeFromOrigin ) override;
 	virtual ActionState_t getCurrentActionState( EHand eHand ) const override;
 	virtual void sentHapticEventForHand( EHand hand, float amplitude, float frequency, float duration ) override;
-	virtual void runFrame() override;
+	virtual void runFrame( bool* shouldQuit ) override;
 	virtual void setVargglesTexture(const vr::Texture_t *pTexture) override;
 	virtual glm::mat4 getHmdFromUniverse() override { return m_hmdFromUniverse; }
 	virtual void getVargglesLookRotation(glm::mat4 &horizontalLooktransform) override;
