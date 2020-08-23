@@ -29,6 +29,8 @@ add_executable(avrenderer
 	vrmanager.cpp
 	vrmanager.h
 
+	avrenderer.rc
+
 	${SHADERS}
 	)
 
