@@ -107,6 +107,8 @@ public:
 	{
 		return m_resourceRequestHandler;
 	}
+	virtual void OnRenderProcessTerminated( CefRefPtr<CefBrowser> browser,
+		TerminationStatus status ) override;
 
 	bool IsClosing() const { return m_isClosing; }
 

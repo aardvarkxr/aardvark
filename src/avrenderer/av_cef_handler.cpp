@@ -436,3 +436,14 @@ void CAardvarkCefHandler::windowUpdate( CefRefPtr<CefListValue> windowInfo )
 	m_browser->GetFocusedFrame()->SendProcessMessage( PID_RENDERER, msg );
 }
 
+
+// -----------------------------------------------------------------------------------------------------
+// Purpose: Called when a window info changes for a subscribed window
+// -----------------------------------------------------------------------------------------------------
+void CAardvarkCefHandler::OnRenderProcessTerminated( CefRefPtr<CefBrowser> browser,
+	TerminationStatus status )
+{
+	LOG( ERROR ) << "Exiting because process for " << this->m_params.uri << " crashed.";
+	m_application->quitRequested();
+}
+
