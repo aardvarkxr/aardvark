@@ -71,6 +71,13 @@ add_custom_command(TARGET avrenderer POST_BUILD
 						"${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/"
 )
 
+add_custom_command(TARGET avrenderer POST_BUILD
+                   COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/registerapp.bat" "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/"
+)
+add_custom_command(TARGET avrenderer POST_BUILD
+                   COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/unregisterapp.bat" "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/"
+)
+
 target_link_libraries( avrenderer Dwmapi.lib )
 
 set( CEF_TARGET_OUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/")

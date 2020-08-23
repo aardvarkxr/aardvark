@@ -1,0 +1,2 @@
+avrenderer.exe unregister
+

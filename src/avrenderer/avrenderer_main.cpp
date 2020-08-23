@@ -15,6 +15,7 @@
 #include <tools/pathtools.h>
 #include <tools/stringtools.h>
 #include <sentry.h>
+#include <openvr.h>
 
 // OS specific macros for the example main entry points
 int APIENTRY WinMain( HINSTANCE hInstance, HINSTANCE, LPSTR cmdLine, int )
@@ -51,6 +52,43 @@ int APIENTRY WinMain( HINSTANCE hInstance, HINSTANCE, LPSTR cmdLine, int )
 		tools::LogDefault()->info( "started from URL %s", vecArgs[ 1 ].c_str() );
 	}
 
+	if ( !vecArgs.empty() )
+	{
+		std::filesystem::path appManifestPath = cwd / "data" / "aardvark.vrmanifest";
+		if ( vecArgs[ 0 ] == "register" || vecArgs[0] == "unregister" )
+		{
+			// register the app manifest in data/aardvark.vrmanifest with SteamVR
+			vr::EVRInitError err;
+			vr::VR_Init( &err, vr::VRApplication_Utility, nullptr );
+			if ( err != vr::VRInitError_None )
+			{
+				tools::LogDefault()->error( "VR_Init failed when trying to [un]register app manifest: %s\n", vr::VR_GetVRInitErrorAsSymbol( err ) );
+				return -1;
+			}
+
+			if ( vecArgs[ 0 ] == "register" )
+			{
+				vr::EVRApplicationError appError = vr::VRApplications()->AddApplicationManifest( appManifestPath.u8string().c_str() );
+				if ( appError != vr::VRApplicationError_None )
+				{
+					tools::LogDefault()->error( "Failed to register app manifest %s with %s\n", appManifestPath.c_str(), vr::VRApplications()->GetApplicationsErrorNameFromEnum( appError ) );
+					return -1;
+				}
+			}
+			else
+			{
+				vr::EVRApplicationError appError = vr::VRApplications()->RemoveApplicationManifest( appManifestPath.u8string().c_str() );
+				if ( appError != vr::VRApplicationError_None )
+				{
+					tools::LogDefault()->error( "Failed to unregister app manifest %s with %s\n", appManifestPath.c_str(), vr::VRApplications()->GetApplicationsErrorNameFromEnum( appError ) );
+					return -1;
+				}
+			}
+
+			vr::VR_Shutdown();
+			return 0;
+		}
+	}
 	aardvark::AardvarkConfig_t aardvarkConfig;
 
 	for ( auto& arg : vecArgs )
