@@ -22,6 +22,8 @@ int APIENTRY WinMain( HINSTANCE hInstance, HINSTANCE, LPSTR cmdLine, int )
 {
 	tools::initLogs();
 
+	tools::LogDefault()->info( "---------- Starting avrenderer.exe" );
+
 	// make sure cwd is right
 	std::filesystem::path cwd = std::filesystem::current_path();
 	if ( !std::filesystem::exists( cwd / "data" ) )
@@ -36,20 +38,24 @@ int APIENTRY WinMain( HINSTANCE hInstance, HINSTANCE, LPSTR cmdLine, int )
 
 		if ( !std::filesystem::exists( cwd / "data" ) )
 		{
-			tools::LogDefault()->info( "failed to find data directory from exe path %s. Continuing, but this will probably fail",
+			tools::LogDefault()->info( "failed to find data directory from exe path %v. Continuing, but this will probably fail",
 				tools::GetExecutablePath().c_str() );
 		}
 		else
 		{
-			tools::LogDefault()->info( "Changing to data directory %s.", cwd.c_str() );
+			tools::LogDefault()->info( "Changing to data directory %v.", cwd.c_str() );
 			std::filesystem::current_path( cwd );
 		}
+	}
+	else
+	{
+		tools::LogDefault()->info( "Not changing working directory and starting from %v", cwd.c_str() );
 	}
 
 	std::vector< std::string > vecArgs = tools::tokenizeString( cmdLine );
 	if ( vecArgs.size() == 2 && vecArgs[ 0 ] == "handleurl" )
 	{
-		tools::LogDefault()->info( "started from URL %s", vecArgs[ 1 ].c_str() );
+		tools::LogDefault()->info( "started from URL %v", vecArgs[ 1 ].c_str() );
 	}
 
 	if ( !vecArgs.empty() )
@@ -62,7 +68,7 @@ int APIENTRY WinMain( HINSTANCE hInstance, HINSTANCE, LPSTR cmdLine, int )
 			vr::VR_Init( &err, vr::VRApplication_Utility, nullptr );
 			if ( err != vr::VRInitError_None )
 			{
-				tools::LogDefault()->error( "VR_Init failed when trying to [un]register app manifest: %s\n", vr::VR_GetVRInitErrorAsSymbol( err ) );
+				tools::LogDefault()->error( "VR_Init failed when trying to [un]register app manifest: %v\n", vr::VR_GetVRInitErrorAsSymbol( err ) );
 				return -1;
 			}
 
@@ -71,7 +77,7 @@ int APIENTRY WinMain( HINSTANCE hInstance, HINSTANCE, LPSTR cmdLine, int )
 				vr::EVRApplicationError appError = vr::VRApplications()->AddApplicationManifest( appManifestPath.u8string().c_str() );
 				if ( appError != vr::VRApplicationError_None )
 				{
-					tools::LogDefault()->error( "Failed to register app manifest %s with %s\n", appManifestPath.c_str(), vr::VRApplications()->GetApplicationsErrorNameFromEnum( appError ) );
+					tools::LogDefault()->error( "Failed to register app manifest %v with %v\n", appManifestPath.c_str(), vr::VRApplications()->GetApplicationsErrorNameFromEnum( appError ) );
 					return -1;
 				}
 			}
@@ -80,7 +86,7 @@ int APIENTRY WinMain( HINSTANCE hInstance, HINSTANCE, LPSTR cmdLine, int )
 				vr::EVRApplicationError appError = vr::VRApplications()->RemoveApplicationManifest( appManifestPath.u8string().c_str() );
 				if ( appError != vr::VRApplicationError_None )
 				{
-					tools::LogDefault()->error( "Failed to unregister app manifest %s with %s\n", appManifestPath.c_str(), vr::VRApplications()->GetApplicationsErrorNameFromEnum( appError ) );
+					tools::LogDefault()->error( "Failed to unregister app manifest %v with %v\n", appManifestPath.c_str(), vr::VRApplications()->GetApplicationsErrorNameFromEnum( appError ) );
 					return -1;
 				}
 			}
