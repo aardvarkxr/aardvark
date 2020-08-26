@@ -54,7 +54,11 @@ bool StartServer( HINSTANCE hInstance )
 		return true; // not an error to obey the command line
 
 	// start the server
-	std::vector<std::string> vecServerArgs = { getNodeExePath().u8string(), getServerJsPath().u8string() };
+	std::vector<std::string> vecServerArgs = 
+	{ 
+		getNodeExePath().u8string(), 
+		"\"" + getServerJsPath().u8string() + "\"" 
+	};
 
 	std::function< void( const char *, size_t )> fnToUse;
 	if ( !bShowConsole )
@@ -64,8 +68,8 @@ bool StartServer( HINSTANCE hInstance )
 			if ( n == 0 )
 				return;
 
-			//std::string sMessage( bytes, n - 1 );
-			//LOG( INFO ) << "Server: " << sMessage;
+			std::string sMessage( bytes, n - 1 );
+			LOG( INFO ) << "Server: " << sMessage;
 		};
 	}
 
