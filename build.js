@@ -235,6 +235,130 @@ async function buildArchive()
 	console.log(`-- finished build archive (Elapsed time ${elapsedTime} seconds)` );
 }
 
+function gatherDir( from )
+{
+	let dirs = [];
+	let files = [];
+
+	let fromDir = fs.opendirSync( from );
+	let ent
+	while( ent = fromDir.readSync() )
+	{
+		let fromPath = path.resolve( from, ent.name );
+		if( ent.isDirectory() )
+		{
+			const [ subDirs, subFiles ] = gatherDir( fromPath );
+			dirs = dirs.concat( subDirs );
+			files = files.concat( subFiles );
+		}
+		else if( ent.isFile() )
+		{
+			files.push( fromPath );
+		}
+	}
+	fromDir.closeSync();
+
+	dirs.push( from );
+
+	return [dirs, files];
+}
+
+
+function fileCmd( absPath, buildDir )
+{
+	let relPath = path.relative( buildDir, absPath );
+	return `File /oname=${ relPath } ${ absPath }`;
+}
+
+function rmDirCmd( relPath )
+{
+	if( relPath == "" )
+		return `RMDir $INSTDIR`;
+	else
+		return `RMDir $INSTDIR\\${ relPath }`;
+}
+
+	
+function installScript( buildDir )
+{
+	const [ dirs, files ] = gatherDir( buildDir );
+
+	let relFiles = files.map( ( absPath ) => path.relative( buildDir, absPath ) );
+	let relDirs = dirs.map( ( absPath ) => path.relative( buildDir, absPath ) );
+
+	let script = `
+Unicode True
+
+# define installer name
+OutFile "aardvarkinstaller_${ buildVersion }.exe"
+ 
+# set desktop as install directory
+InstallDir $PROGRAMFILES64\\Aardvark
+ 
+
+# default section start
+Section
+ 
+# define output path
+SetOutPath $INSTDIR
+ 
+# specify file to go in output path
+${ relDirs.map( ( dname) => `CreateDirectory "$INSTDIR\\${ dname }"` ).join('\n') }
+${ files.map( ( fname) => fileCmd( fname, buildDir ) ).join('\n') }
+
+# let node talk through windows firewall
+ExecWait 'netsh advfirewall firewall add rule name=AardvarkServer dir=in action=allow program="$INSTDIR\\data\\server\\bin\\node.exe" enable=yes profile=public,private'
+
+# Register the install with Aardvark
+ExecWait '$INSTDIR\\avrenderer.exe register'
+  
+# define uninstaller name
+WriteUninstaller $INSTDIR\\uninstaller.exe
+ 
+ 
+#-------
+# default section end
+SectionEnd
+ 
+# create a section to define what the uninstaller does.
+# the section will always be named "Uninstall"
+Section "Uninstall"
+
+# Unregister the install with Aardvark
+ExecWait '$INSTDIR\\avrenderer.exe unregister'
+ 
+# Remove firewall rule
+ExecWait 'netsh advfirewall firewall delete rule name=AardvarkServer'
+
+ 
+# Always delete uninstaller first
+Delete $INSTDIR\\uninstaller.exe
+
+# now delete installed files and directories
+${ relFiles.map( ( fname ) => `Delete $INSTDIR\\${ fname }` ).join( '\n' ) }
+${ relDirs.map( ( dname ) => rmDirCmd( dname ) ).join( '\n' ) }
+ 
+SectionEnd
+
+		`;
+	return script;
+}
+
+
+async function buildInstaller()
+{
+	if( !buildVersion )
+		return;
+
+	let script = installScript( path.resolve( __dirname, subDir ) );
+	fs.writeFileSync( path.resolve( __dirname, "installer.nsi" ), script );
+
+	runCommand( "makensis", 
+		[ "installer.nsi" ],
+		__dirname, 120, "Creating Installer" );
+	
+	
+}
 
 async function runBuild()
 {
@@ -254,7 +378,7 @@ async function runBuild()
 	await cppBuild();
 	await copyRelease();
 	await buildArchive();
-
+	await buildInstaller();
 
 	console.log( "build finished" );
 }
