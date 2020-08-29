@@ -12,6 +12,8 @@ let bldDir = path.resolve( srcDir, "build" );
 
 let verbose = false;
 let buildVersion = null;
+let certPath = null;
+let certPassword = null;
 
 for( let argIndex = 0; argIndex < process.argv.length;  )
 {
@@ -29,6 +31,16 @@ for( let argIndex = 0; argIndex < process.argv.length;  )
 		}
 		buildVersion = process.argv[ argIndex++ ];
 	}
+	else if( arg == "--sign" || arg == "-s" )
+	{
+		if( ( process.argv.length - argIndex ) < 2 )
+		{
+			console.log( "Usage: --sign|-s <cert file path> <password>" );
+			process.exit( 1 );
+		}
+		certPath = process.argv[ argIndex++ ];
+		certPassword = process.argv[ argIndex++ ];
+	}
 }
 
 if( verbose )
@@ -36,6 +48,7 @@ if( verbose )
 	console.log( "Web directory is", webDir );
 	console.log( "Src directory is", srcDir );
 	console.log( "data directory is", dataDir );
+	console.log( "cert path is", certPath );
 }
 
 function runCommand( command, args, cwd, expectedTime, name )
@@ -292,9 +305,17 @@ Unicode True
 # define installer name
 OutFile "aardvarkinstaller_${ buildVersion }.exe"
  
+LoadLanguageFile "\${NSISDIR}\\Contrib\\Language files\\English.nlf"
+
 # set desktop as install directory
 InstallDir $PROGRAMFILES64\\Aardvark
  
+VIProductVersion "${ buildVersion }.0"
+VIAddVersionKey /LANG=\${LANG_ENGLISH} "ProductName" "Aardvark Installer"
+VIAddVersionKey /LANG=\${LANG_ENGLISH} "CompanyName" "Aardvark Team"
+VIAddVersionKey /LANG=\${LANG_ENGLISH} "FileDescription" "Aardvark Installer"
+VIAddVersionKey /LANG=\${LANG_ENGLISH} "FileVersion" "${ buildVersion }"
+
 
 # default section start
 Section
@@ -360,6 +381,41 @@ async function buildInstaller()
 	
 }
 
+async function signFile( path )
+{
+	runCommand( 
+		"signtool", 
+		[ "sign", 
+			"/f", certPath, 
+			"/p", certPassword,  
+			"/t", "http://timestamp.digicert.com",
+			path], 
+		__dirname, 1, "Signing " + path );
+}
+
+
+async function signExes()
+{
+	if( !subDir || !certPath )
+		return;
+
+	let buildDir = path.resolve( __dirname, subDir );
+
+	await signFile( buildDir + "\\avrenderer.exe" );
+	await signFile( buildDir + "\\crashpad_handler.exe" );
+}
+
+
+async function signInstaller()
+{
+	if( !subDir || !certPath )
+		return;
+
+	let installerPath = path.resolve( __dirname, `aardvarkinstaller_${ buildVersion }.exe` );
+	await signFile( installerPath );
+}
+
+
 async function runBuild()
 {
 	if( buildVersion )
@@ -377,8 +433,10 @@ async function runBuild()
 	await unzipCef();
 	await cppBuild();
 	await copyRelease();
+	await signExes();
 	await buildArchive();
 	await buildInstaller();
+	await signInstaller();
 
 	console.log( "build finished" );
 }
