@@ -1,5 +1,5 @@
 import { EndpointAddr, endpointAddrsMatch, endpointAddrToString, EVolumeContext, InitialInterfaceLock, InterfaceLockResult } from '@aardvarkxr/aardvark-shared';
-import { mat4 } from '@tlaukkan/tsm';
+import { mat4, vec3 } from '@tlaukkan/tsm';
 import { TransformedVolume, volumesIntersect } from './volume_intersection';
 
 export interface InterfaceProcessorCallbacks
@@ -52,18 +52,20 @@ export function findBestInterface( transmitter: InterfaceEntity, receiver: Inter
 }
 
 
-function entitiesIntersect( transmitter: InterfaceEntity, receiver: InterfaceEntity, context: EVolumeContext )
+function entitiesIntersect( transmitter: InterfaceEntity, receiver: InterfaceEntity, context: EVolumeContext ):
+	[ boolean, null | vec3 ]
 {
 	for( let tv of transmitter.volumes )
 	{
 		for( let rv of receiver.volumes )
 		{
-			if( volumesIntersect( tv, rv, context ) )
-				return true;
+			const [ i, pt ] = volumesIntersect( tv, rv, context );
+			if( i )
+				return [i, pt ];
 		}
 	}
 
-	return false;
+	return [ false, null ];
 }
 
 class InterfaceEntityMap
@@ -189,7 +191,8 @@ export class CInterfaceProcessor
 			// intersect
 			if( !iip.locked )
 			{
-				if ( !entitiesIntersect( transmitter, receiver, EVolumeContext.ContinueOnly ) )
+				const [ int, pt ] = entitiesIntersect( transmitter, receiver, EVolumeContext.ContinueOnly );
+				if ( !int )
 				{
 					console.log( `interface end (no intersect) ${ endpointAddrToString( transmitter.epa ) } `
 						+` to ${ endpointAddrToString( receiver.epa ) } for ${ iip.iface }` );
@@ -240,6 +243,7 @@ export class CInterfaceProcessor
 
 			let bestReceiver: InterfaceEntity;
 			let bestIface: string;
+			let bestPt: vec3;
 			for( let receiver of entities )
 			{
 				if( transmitter == receiver )
@@ -268,7 +272,8 @@ export class CInterfaceProcessor
 					continue;
 				}
 
-				if( !entitiesIntersect( transmitter, receiver, EVolumeContext.StartOnly ) )
+				const [ int, pt ] = entitiesIntersect( transmitter, receiver, EVolumeContext.StartOnly );
+				if( !int )
 				{
 					continue;
 				}
@@ -277,6 +282,7 @@ export class CInterfaceProcessor
 				{
 					bestReceiver = receiver;
 					bestIface = iface;
+					bestPt = pt;
 				}
 			}
 

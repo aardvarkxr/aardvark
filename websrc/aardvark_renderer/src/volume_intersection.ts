@@ -1,5 +1,5 @@
 import { mat4, vec4, vec3, vec2 } from '@tlaukkan/tsm';
-import { AvVolume, EVolumeType, EVolumeContext } from '@aardvarkxr/aardvark-shared';
+import { AvVolume, EVolumeType, EVolumeContext, AABB } from '@aardvarkxr/aardvark-shared';
 const createRay = require( 'ray-aabb' );
 
 export interface TransformedVolume extends AvVolume
@@ -7,26 +7,56 @@ export interface TransformedVolume extends AvVolume
 	universeFromVolume: mat4;
 }
 
-function spheresIntersect( v1: TransformedVolume, v2: TransformedVolume )
+function closestPointWithinRadius( origin: vec3, dest: vec3, radius: number )
 {
-	let v1Center = v1.universeFromVolume.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) );
-	let v2Center = v2.universeFromVolume.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) );
+	let ray = vec3.sum( dest, origin.negate( new vec3() ), new vec3() );
+	ray = ray.normalize( new vec3() );
+	return origin.add( ray.scale( radius ) );
+}
+
+function matMultiplyPoint( m: mat4, pt: vec3 ): vec3
+{
+	let v4 = new vec4( [ pt.x, pt.y, pt.z, 1 ] );
+	return new vec3( m.multiplyVec4( v4, new vec4() ).xyz );
+}
+
+
+function spheresIntersect( v1: TransformedVolume, v2: TransformedVolume ) : [ boolean, vec3 | null ]
+{
+	let v1Center = new vec3( v1.universeFromVolume.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) ).xyz );
+	let v2Center = new vec3( v2.universeFromVolume.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) ).xyz );
 
 	let v1ScaledRadius = v1.universeFromVolume.multiplyVec4( new vec4( [ 1, 0, 0, 0 ] ) )
 		.length() * v1.radius;
 	let v2ScaledRadius = v2.universeFromVolume.multiplyVec4( new vec4( [ 1, 0, 0, 0 ] ) )
 		.length() * v2.radius;
 
-	let dist = vec3.distance( new vec3( v1Center.xyz ), new vec3( v2Center.xyz ) );
-	//console.log( v1ScaledRadius, v2ScaledRadius, dist );
-	return dist < ( v1ScaledRadius + v2ScaledRadius );
+	let dist = vec3.distance( v1Center, v2Center );
+	if( dist > ( v1ScaledRadius + v2ScaledRadius ) )
+	{
+		return [ false, null ];
+	}
+	else
+	{
+		return [ true, closestPointWithinRadius( v1Center, v2Center, v1ScaledRadius ) ];
+	}
 }
 
-function sphereBoxIntersect( sphere: TransformedVolume, box: TransformedVolume )
+function boxCenter( aabb: AABB )
+{
+	return new vec3( [
+		aabb.xMax - aabb.xMin, 
+		aabb.yMax - aabb.yMin, 
+		aabb.zMax - aabb.zMin, 
+	] );
+}
+
+
+function sphereBoxIntersect( sphere: TransformedVolume, box: TransformedVolume ) : [ boolean, vec3 | null ]
 {
 	if( !box.aabb )
 	{
-		return false;
+		return [ false, null ];
 	}
 	
 	let boxFromUniverse = box.universeFromVolume.copy( new mat4() ).inverse();
@@ -42,15 +72,24 @@ function sphereBoxIntersect( sphere: TransformedVolume, box: TransformedVolume )
 
 	// TODO: This is wrong in the face of non-uniform scale of the box. I think each axis needs
 	// to be compared indendently in that case.
-	return ( xDist * xDist + yDist * yDist + zDist * zDist ) <= ( sphereScaledRadius * sphereScaledRadius );
+	if ( ( xDist * xDist + yDist * yDist + zDist * zDist ) <= ( sphereScaledRadius * sphereScaledRadius ) )
+	{
+		let intersectionInBox = closestPointWithinRadius(new vec3( sphereCenter.xyz ), 
+			boxCenter( box.aabb ), sphereScaledRadius );
+		return [ true, matMultiplyPoint( box.universeFromVolume, intersectionInBox ) ];
+	}
+	else
+	{
+		return [ false, null ];
+	}
 }
 
 
-function boxBoxIntersect( box1: TransformedVolume, box2: TransformedVolume )
+function boxBoxIntersect( box1: TransformedVolume, box2: TransformedVolume ) : [ boolean, vec3 | null ]
 {
 	if( !box1.aabb || !box2.aabb )
 	{
-		return false;
+		return [ false, null ];
 	}
 
 	// TODO: For now do the rough "turn one box into an AABB in the other's space" approach.
@@ -87,13 +126,19 @@ function boxBoxIntersect( box1: TransformedVolume, box2: TransformedVolume )
 	};
 
 	//console.log( xMin, xMax, yMin, yMax, zMin, zMax, box1.aabb );
-	return !( xMax < box1.aabb.xMin || xMin > box1.aabb.xMax ||
+	if ( xMax < box1.aabb.xMin || xMin > box1.aabb.xMax ||
 		yMax < box1.aabb.yMin || yMin > box1.aabb.yMax ||
-		zMax < box1.aabb.zMin || zMin > box1.aabb.zMax );
+		zMax < box1.aabb.zMin || zMin > box1.aabb.zMax )
+	{
+		return [ false, null ];
+	}
+
+	return [ true, matMultiplyPoint( box1.universeFromVolume, 
+		new vec3( [ xMax - xMin, yMax - yMin, zMax - zMin ] ) ) ];
 }
 
 
-function sphereRayIntersect( s: TransformedVolume, r: TransformedVolume )
+function sphereRayIntersect( s: TransformedVolume, r: TransformedVolume ) : [ boolean, vec3 | null ]
 {
 	let rayFromUniverse = new mat4( r.universeFromVolume.all() ).inverse();
 	let rayFromSphere = mat4.product( rayFromUniverse, s.universeFromVolume, new mat4() );
@@ -102,25 +147,59 @@ function sphereRayIntersect( s: TransformedVolume, r: TransformedVolume )
 	let negCenter = new vec3( [ -center.x, -center.y, -center.z ] );
 
 
+	let rayDotCenter = vec3.dot( vec3.right, negCenter );
+	let centerDist2 = vec3.dot( negCenter, negCenter );
+
 	let a = 1; // vec3.right dotted with itself
 	let b = 2 * vec3.dot( vec3.right, negCenter );
 	let c = vec3.dot( negCenter, negCenter ) - s.radius * s.radius;
 
-	let dis = Math.sqrt( b * b - 4 * a * c );
-	return dis >= 0;
+	let disSq = rayDotCenter * rayDotCenter - ( centerDist2 - s.radius * s.radius );
+	if ( disSq < 0 )
+	{
+		return [ false, null ];
+	}
+	else
+	{
+		let dis = -rayDotCenter - Math.sqrt( disSq );
+		return [ true, matMultiplyPoint( r.universeFromVolume, new vec3( [ dis, 0, 0 ] ) ) ]
+	}
 }
 
 
-function boxRayIntersect( b: TransformedVolume, r: TransformedVolume )
+function boxRayIntersect( b: TransformedVolume, r: TransformedVolume ) : [ boolean, vec3 | null ]
 {
 	let boxFromUniverse = new mat4( b.universeFromVolume.all() ).inverse();
 	let boxFromRay = mat4.product( boxFromUniverse, r.universeFromVolume, new mat4() );
 	let start = new vec3( boxFromRay.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) ).xyz );
 	let dir = new vec3( boxFromRay.multiplyVec4( new vec4( [ 1, 0, 0, 0 ] ) ).xyz ).normalize();
 
+	if( start.x >= b.aabb.xMin && start.x <= b.aabb.xMax
+		&& start.y >= b.aabb.yMin && start.y <= b.aabb.yMax
+		&& start.z >= b.aabb.zMin && start.z <= b.aabb.zMax	)
+	{
+		// start point of the ray is inside the box. Intersection point
+		// is the ray origin in this case, rather than some random point on the edge
+		// of the box.
+		return [ true, matMultiplyPoint( b.universeFromVolume,  start ) ];	
+	}
+
+	let normal = [0, 0, 0 ];
 	let ray = createRay( start.xyz, dir.xyz );
-	return ray.intersects( [ [ b.aabb.xMin, b.aabb.yMin, b.aabb.zMin ],
-		[ b.aabb.xMax, b.aabb.yMax, b.aabb.zMax ] ] );
+	let res = ray.intersects( [ [ b.aabb.xMin, b.aabb.yMin, b.aabb.zMin ],
+		[ b.aabb.xMax, b.aabb.yMax, b.aabb.zMax ] ], normal );
+	if( res === false )
+	{
+		return [ false, null ];
+	}
+	else
+	{
+		let scaledDir =new vec3( [ dir.x * res, dir.y * res, dir.z * res ] );
+		let ptInBox = start.add( scaledDir );
+		let pt = matMultiplyPoint( b.universeFromVolume, ptInBox );
+
+		return [true, pt ];
+	}
 }
 
 export function rayFromMatrix( m: mat4 )
@@ -132,7 +211,7 @@ export function rayFromMatrix( m: mat4 )
 }
 
 
-function rayRayIntersect( r0: TransformedVolume, r1: TransformedVolume )
+function rayRayIntersect( r0: TransformedVolume, r1: TransformedVolume ) : [ boolean, vec3 | null ]
 {
 	let r0FromUniverse = new mat4( r0.universeFromVolume.all() ).inverse();
 	let r0FromR1 = mat4.product( r0FromUniverse, r1.universeFromVolume, new mat4() );
@@ -142,7 +221,7 @@ function rayRayIntersect( r0: TransformedVolume, r1: TransformedVolume )
 	if( d1.equals( vec3.right, 0.001 ) )
 	{
 		// lines are coincident.
-		return true;
+		return [ true, new vec3( r0.universeFromVolume.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) ).xyz ) ];
 	}
 
 	let s1_2d = new vec2( s1.xy );
@@ -153,7 +232,7 @@ function rayRayIntersect( r0: TransformedVolume, r1: TransformedVolume )
 	if( t1 < 0 )
 	{
 		// rays don't intersect in 2d because of r1
-		return false;
+		return [ false, null ];
 	}
 
 	let x = s1_2d.x + d1_2d.x * t1;
@@ -166,7 +245,14 @@ function rayRayIntersect( r0: TransformedVolume, r1: TransformedVolume )
 	// intersection for ray 1
 	let line = new vec3( [ d1.x * t1, d1.y * t1, d1.z * t1 ] );
 	let p1 = vec3.sum( s1, line, new vec3() );
-	return p1.x >= 0 && Math.abs( p1.y ) < 0.001 && Math.abs( p1.z ) < 0.001;
+	if( !( p1.x >= 0 && Math.abs( p1.y ) < 0.001 && Math.abs( p1.z ) < 0.001 ) )
+	{
+		return [false, null ];
+	}
+	else 
+	{
+		return [ true, matMultiplyPoint( r1.universeFromVolume, p1 ) ];
+	}
 }
 
 
@@ -179,21 +265,22 @@ function volumeMatchesContext( v: TransformedVolume, context: EVolumeContext )
 
 
 
-export function volumesIntersect( v1: TransformedVolume, v2: TransformedVolume, context: EVolumeContext )
+export function volumesIntersect( v1: TransformedVolume, v2: TransformedVolume, context: EVolumeContext ) 
+	: [ boolean, vec3 | null ]
 {
 	if( !volumeMatchesContext( v1, context ) || !volumeMatchesContext( v2, context ) )
 	{
-		return false;
+		return [ false, null ];
 	}
 
 	if( v1.type == EVolumeType.Empty || v2.type == EVolumeType.Empty )
 	{
 		// empty volumes don't intersect with anything, including infinite volumes
-		return false;
+		return [ false, null ];
 	}
 	if( v1.type == EVolumeType.Infinite || v2.type == EVolumeType.Infinite )
 	{
-		return true;
+		return [ true, new vec3( [ 0, 0, 0 ]) ];
 	}
 
 	let va: TransformedVolume, vb: TransformedVolume;
@@ -230,7 +317,7 @@ export function volumesIntersect( v1: TransformedVolume, v2: TransformedVolume, 
 					return sphereRayIntersect( va, vb );
 		
 				default:
-					return false;
+					return [ false, null ];
 			}
 
 		case EVolumeType.AABB:
@@ -243,7 +330,7 @@ export function volumesIntersect( v1: TransformedVolume, v2: TransformedVolume, 
 					return boxRayIntersect( va, vb );
 
 				default:
-					return false;
+					return [ false, null ];
 			}
 		
 		case EVolumeType.Ray:
@@ -253,10 +340,10 @@ export function volumesIntersect( v1: TransformedVolume, v2: TransformedVolume, 
 					return rayRayIntersect( va, vb );
 
 				default:
-					return false;
+					return [ false, null ];
 			}
 
 		default:
-			return false;
+			return [ false, null ];
 	}
 }
