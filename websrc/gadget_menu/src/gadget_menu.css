@@ -62,3 +62,9 @@ body, html
 {
 	color: darkorange;
 }
+
+.MenuTip
+{
+	font-size: medium;
+	color: rgb(43, 42, 42);
+}

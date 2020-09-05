@@ -18,6 +18,7 @@ export enum GadgetSeedHighlight
 	Idle,
 	GrabberNearby,
 	GadgetStarting,
+	Menu,
 }
 
 
@@ -76,6 +77,7 @@ enum GadgetSeedPhase
 	WaitingForGadgetStart,
 	WaitingForRegrab,
 	WaitingForRedropToFinish,
+	Menu,
 }
 
 interface AvGadgetSeedState
@@ -278,6 +280,9 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 			case GadgetSeedPhase.WaitingForRedropToFinish:
 			case GadgetSeedPhase.WaitingForRegrab:
 				return GadgetSeedHighlight.GadgetStarting;
+
+			case GadgetSeedPhase.Menu:
+				return GadgetSeedHighlight.Menu;
 		}
 	}
 
@@ -293,6 +298,14 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 		}
 	}
 
+	componentWillUnmount()
+	{
+		if( this.state.phase != GadgetSeedPhase.Idle )
+		{
+			this.props.highlightCallback?.( GadgetSeedHighlight.Idle );
+		}
+	}
+
 
 	@bind
 	private async onMoveableUpdate()
@@ -300,12 +313,18 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 		switch( this.state.phase )
 		{
 			case GadgetSeedPhase.Idle:
-				if( this.moveableComponent.state == MoveableComponentState.GrabberNearby)
+				switch( this.moveableComponent.state )
 				{
-					this.setState( { phase: GadgetSeedPhase.GrabberNearby } );
+					case MoveableComponentState.GrabberNearby:
+						this.setState( { phase: GadgetSeedPhase.GrabberNearby } );
+						break;
+					case MoveableComponentState.Menu:
+						this.setState( { phase: GadgetSeedPhase.Menu } );
+						break;
 				}
 				break;
 
+			case GadgetSeedPhase.Menu:
 			case GadgetSeedPhase.GrabberNearby:
 				switch( this.moveableComponent.state )
 				{
@@ -319,11 +338,15 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 						break;
 
 					case MoveableComponentState.GrabberNearby:
-						// do nothing. We're already in the right state
+						this.setState( { phase: GadgetSeedPhase.GrabberNearby } );
 						break;
 
 					case MoveableComponentState.InContainer: 
 						// This means we missed the grab and were already dropped?
+						break;
+
+					case MoveableComponentState.Menu: 
+						this.setState( { phase: GadgetSeedPhase.Menu } );
 						break;
 				}
 				break;

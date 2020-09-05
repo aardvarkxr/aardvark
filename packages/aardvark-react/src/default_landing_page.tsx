@@ -67,33 +67,57 @@ export class DefaultLanding extends React.Component<DefaultLandingProps, Default
 		{
 			let promResult = this.gadgetList.current.addFavorite( this.gadgetUrl );
 			let result = await promResult;
-			let text: string;
+			this.setGadgetListResult( result, "Added" );
+		}
+		catch( e )
+		{
+			this.setState( { addResult: String( e ) } );
+		}
 
-			switch( result )
-			{
-				case GadgetListResult.Success:
-					text = "Added";
-					break;
+	}
 
-				case GadgetListResult.NotConnected:
-					text = "Not connected";
-					break;
-				
+	private setGadgetListResult( result: GadgetListResult, successMessage: string )
+	{
+		let text: string;
 
-				case GadgetListResult.AlreadyAdded:
-					text = "Gadget was already a favorite";
-					break;
+		switch ( result )
+		{
+			case GadgetListResult.Success:
+				text = successMessage;
+				break;
 
-				case GadgetListResult.UserDeniedRequest:
-					text = "User denied request";
-					break;
+			case GadgetListResult.NotConnected:
+				text = "Not connected";
+				break;
 
-				default:
-					text = "Unknown result " + result;
-					break;
-			}
 
-			this.setState( { addResult: text } );
+			case GadgetListResult.AlreadyAdded:
+				text = "Gadget was already a favorite";
+				break;
+
+			case GadgetListResult.NoSuchFavorite:
+				text = "Gadget was not a favorite";
+				break;
+
+			case GadgetListResult.UserDeniedRequest:
+				text = "User denied request";
+				break;
+
+			default:
+				text = "Unknown result " + result;
+				break;
+		}
+
+		this.setState( { addResult: text } );
+	}
+
+	@bind
+	private async onRemoveFavorite()
+	{
+		try
+		{
+			let promResult = this.gadgetList.current.removeFavorite( this.gadgetUrl );
+			this.setGadgetListResult( await promResult, "Removed" );
 		}
 		catch( e )
 		{
@@ -108,34 +132,7 @@ export class DefaultLanding extends React.Component<DefaultLandingProps, Default
 		try
 		{
 			let promResult = this.gadgetList.current.startGadget( this.gadgetUrl );
-			let result = await promResult;
-			let text: string;
-
-			switch( result )
-			{
-				case GadgetListResult.Success:
-					text = "Started";
-					break;
-
-				case GadgetListResult.NotConnected:
-					text = "Not connected";
-					break;
-				
-
-				case GadgetListResult.UserDeniedRequest:
-					text = "User denied request";
-					break;
-
-				case GadgetListResult.GadgetStartFailed:
-					text = "Gadget failed to start";
-					break;
-
-				default:
-					text = "Unknown result " + result;
-					break;
-			}
-
-			this.setState( { addResult: text } );
+			this.setGadgetListResult( await promResult, "Started" );
 		}
 		catch( e )
 		{
@@ -154,6 +151,7 @@ export class DefaultLanding extends React.Component<DefaultLandingProps, Default
 
 		return <>
 			<div className="LandingButton" onClick={ this.onAddFavorite }>Add to Favorites</div>
+			<div className="LandingButton" onClick={ this.onRemoveFavorite }>Remove from Favorites</div>
 			<div className="LandingButton" onClick={ this.onStartGadget }>Start Gadget</div>
 			{ this.state.addResult &&
 				<div style={ { fontSize: "medium" }}>{ this.state.addResult }</div> }

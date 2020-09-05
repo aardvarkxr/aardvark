@@ -1,4 +1,4 @@
-import { ApiInterfaceSender, ActiveInterface, AvGadget, AvGadgetSeed, AvGrabButton, AvHeadFacingTransform, AvHighlightTransmitters, AvInterfaceEntity, AvLine, AvModel, AvOrigin, AvPanel, AvPrimitive, AvStandardGrabbable, AvTransform, GadgetInfoEvent, GadgetSeedHighlight, HiddenChildrenBehavior, k_GadgetInfoInterface, PrimitiveType, PrimitiveYOrigin, renderGadgetIcon, ShowGrabbableChildren, k_GadgetListInterface, GadgetListEventType, AvMessagebox, AvApiInterface, ApiInterfaceHandler, GadgetListResult } from '@aardvarkxr/aardvark-react';
+import { ApiInterfaceSender, ActiveInterface, AvGadget, AvGadgetSeed, AvGrabButton, AvHeadFacingTransform, AvHighlightTransmitters, AvInterfaceEntity, AvLine, AvModel, AvOrigin, AvPanel, AvPrimitive, AvStandardGrabbable, AvTransform, GadgetInfoEvent, GadgetSeedHighlight, HiddenChildrenBehavior, k_GadgetInfoInterface, PrimitiveType, PrimitiveYOrigin, renderGadgetIcon, ShowGrabbableChildren, k_GadgetListInterface, GadgetListEventType, AvMessagebox, AvApiInterface, ApiInterfaceHandler, GadgetListResult, AvMenuItem } from '@aardvarkxr/aardvark-react';
 import { Av, WindowInfo, AardvarkManifest, AvNodeTransform, AvVector, emptyVolume, EndpointAddr, g_builtinModelBarcodeScanner, nodeTransformToMat4, nodeTransformFromMat4, g_builtinModelDropAttract, g_builtinModelNetwork, g_builtinModelHammerAndWrench, g_builtinModelStar, g_builtinModelTrashcan, MessageType, MsgDestroyGadget, rayVolume, MsgInstallGadget, g_builtinModelPanel, AvVolume, EVolumeType, g_builtinModelArrowFlat, g_builtinModelWindowIcon, infiniteVolume, endpointAddrToString } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3, vec4 } from '@tlaukkan/tsm';
 import Axios from 'axios';
@@ -37,13 +37,15 @@ interface GadgetInfoPanelProps
 {
 	manifest: AardvarkManifest;
 	highlight?: GadgetSeedHighlight;
+	deleteCallback?: () => void;
 }
 
 const k_desktopWindowGadget = "http://localhost:23842/gadgets/desktop_window";
 
 function GadgetInfoPanel( props: GadgetInfoPanelProps )
 {
-	return <InfoPanel widthInMeters={ 0.2 } translation={ { x: 0.13, y: 0, z: 0.03 } }>
+	return <>
+		<InfoPanel widthInMeters={ 0.2 } translation={ { x: 0.13, y: 0, z: 0.03 } }>
 			<div className="GadgetName">{ props.manifest.name }</div>
 			<div className="GadgetDescription">{ props.manifest.description }</div>
 			{ props.manifest.categories && props.manifest.categories.length > 0 &&
@@ -52,7 +54,17 @@ function GadgetInfoPanel( props: GadgetInfoPanelProps )
 				</div> }
 			{ props.highlight == GadgetSeedHighlight.GadgetStarting &&
 				<div className="GadgetMessage">Loading...</div> }
+			{ props.highlight != GadgetSeedHighlight.Menu
+				&& <div className="MenuTip">Press A for more options</div> }
 		</InfoPanel>
+		{ props.deleteCallback && props.highlight == GadgetSeedHighlight.Menu && 
+			<AvTransform translateY={ 0.00 } translateX={ -0.065 } translateZ={ 0.03 } 
+							rotateX={ -90 }	uniformScale={ 0.2 }>
+							<AvMenuItem modelUri={ g_builtinModelTrashcan } 
+								onSelect={ props.deleteCallback }/>
+			</AvTransform>
+		}
+	</>;
 }
 
 function windowDimsToSize( widthInPixels: number, heightInPixels: number, constraintInMeters: number )
@@ -672,6 +684,12 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 			let col = gadgetIndex % 3;
 			let row = Math.floor( gadgetIndex / 3 );
 
+			let deleteFn = null;
+			if( this.state.tab == ControlPanelTab.Favorites && this.state.panel?.gadgetUrl == gadget.url )
+			{
+				deleteFn = () => { this.removeFavorite( gadget.url ); }
+			}
+
 			seeds.push( 
 				<AvTransform translateY = { k_bottomPadding + top - row * k_cellWidth } 
 					translateX = { ( col - 1 ) * k_cellWidth } 
@@ -689,7 +707,8 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 					{ this.state.panel?.gadgetUrl == gadget.url 
 						&& !this.state.scannerGadget &&
 						<GadgetInfoPanel manifest={ gadget.manifest } 
-							highlight={ this.state.panel.highlight } /> }
+							highlight={ this.state.panel.highlight } 
+							deleteCallback={ deleteFn } /> }
 				</AvTransform>);
 		}
 		return <>
@@ -828,6 +847,28 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		AvGadget.instance().sendMessage( MessageType.DestroyGadget, m );
 	}
 
+	private removeFavorite( gadgetUrl: string )
+	{
+		let i = this.settings.favorites.indexOf( gadgetUrl );
+		if( -1 != i )
+		{
+			console.log( `Removing from favorites: ${ gadgetUrl } ` );
+			this.settings.favorites.splice( i, 1 );
+			this.updateSettings();
+
+			if( this.state.tab == ControlPanelTab.Favorites )
+			{
+				this.forceUpdate();
+			}
+			return GadgetListResult.Success;
+		}
+		else
+		{
+			console.log( `Favorites does not contain: ${ gadgetUrl } ` );
+			return GadgetListResult.NoSuchFavorite;
+		}
+	}
+
 	@bind 
 	private onWebFavorite( m: MsgInstallGadget )
 	{
@@ -906,6 +947,42 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 
 		return [ result ];
 	}
+
+	@bind
+	private async onGadgetList_RemoveFavorite( sender: ApiInterfaceSender, args: any[] ) : Promise< [ GadgetListResult ] >
+	{
+		let [ gadgetUrl ] = args;
+
+		if( -1 == this.settings.favorites.indexOf( gadgetUrl ) )
+		{
+			return [ GadgetListResult.NoSuchFavorite ];
+		}
+
+		let manifest = await this.requestManifest( gadgetUrl );
+
+		// ask the user if they want this favorite
+		let answer = await this.messagebox.current.showPrompt( 
+			`Remove gadget ${ manifest.name } (${ gadgetUrl }) from favorites?`, 
+		[
+			{
+				text: "No",
+				name: "no",
+			},
+			{
+				text: "Yes",
+				name: "yes",
+			}
+		] );
+
+		let result = GadgetListResult.UserDeniedRequest;
+		if( answer == "yes" )
+		{
+			result = this.removeFavorite( gadgetUrl );
+		}
+
+		return [ result ];
+	}
+
 
 	@bind
 	private async onGadgetList_StartGadget( sender: ApiInterfaceSender, args: any[] ) 
@@ -1024,6 +1101,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 	{
 		let gadgetListHandlers:  { [ msgType:string ] : ApiInterfaceHandler } = {};
 		gadgetListHandlers[ GadgetListEventType.AddFavorite ] = this.onGadgetList_AddFavorite;
+		gadgetListHandlers[ GadgetListEventType.RemoveFavorite ] = this.onGadgetList_RemoveFavorite;
 		gadgetListHandlers[ GadgetListEventType.StartGadget ] = this.onGadgetList_StartGadget;
 
 		return (

@@ -10,6 +10,7 @@ export enum MoveableComponentState
 	InContainer,
 	GrabberNearby,
 	Grabbed,
+	Menu,
 }
 
 export enum ContainerRequestType
@@ -34,6 +35,8 @@ export enum GrabRequestType
 	ReleaseMe = "release_me",
 	RequestRegrab = "request_regrab",
 	OverrideTransform = "override_transform",
+	ShowMenu = "show_menu",
+	HideMenu = "hide_menu",
 }
 
 export interface GrabRequest
@@ -62,6 +65,7 @@ export class MoveableComponent implements EntityComponent
 	private waitingForRedropTransform: AvNodeTransform = null;
 	private canDropIntoContainers = true;
 	private forcedGrabberFromGrabbable: AvNodeTransform = null;
+	private shouldShowMenu = false;
 
 	constructor( callback: () => void, useInitialParent?: boolean, canDropIntoContainers?: boolean,
 		forcedGrabberFromGrabbable?: AvNodeTransform )
@@ -92,7 +96,14 @@ export class MoveableComponent implements EntityComponent
 		}
 		else if( this.activeGrabs.size > 0 )
 		{
-			return MoveableComponentState.GrabberNearby;
+			if( this.shouldShowMenu )
+			{
+				return MoveableComponentState.Menu;
+			}
+			else
+			{
+				return MoveableComponentState.GrabberNearby;
+			}
 		}
 		else if( this.activeContainer && this.wasEverDropped )
 		{
@@ -150,6 +161,16 @@ export class MoveableComponent implements EntityComponent
 				case GrabRequestType.DropYourself:
 					await this.dropIntoContainer( true );
 					activeGrab.sendEvent( { type: GrabRequestType.DropComplete } as GrabRequest );
+					break;
+
+				case GrabRequestType.ShowMenu:
+					this.shouldShowMenu = true;
+					this.updateListener();
+					break;
+
+				case GrabRequestType.HideMenu:
+					this.shouldShowMenu = false;
+					this.updateListener();
 					break;
 			}
 		} );

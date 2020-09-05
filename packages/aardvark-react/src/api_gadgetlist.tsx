@@ -7,6 +7,7 @@ export const k_GadgetListInterface = "api-gadgetlist@1";
 export enum GadgetListEventType
 {
 	AddFavorite = "add_favorite",
+	RemoveFavorite = "remove_favorite",
 	StartGadget = "start_gadget",
 }
 
@@ -17,6 +18,7 @@ export enum GadgetListResult
 	UserDeniedRequest = 2,
 	NotConnected = 3,
 	GadgetStartFailed = 4,
+	NoSuchFavorite = 5,
 }
 
 
@@ -33,6 +35,15 @@ export class AvGadgetList extends React.Component
 
 		return this.apiInterface.current.sendRequestAndWaitForResponse<GadgetListResult>( 
 			GadgetListEventType.AddFavorite, true, gadgetUrl );
+	}
+
+	public removeFavorite( gadgetUrl: string )
+	{
+		if( !this.apiInterface.current || !this.apiInterface.current.connected )
+			return GadgetListResult.NotConnected;
+
+		return this.apiInterface.current.sendRequestAndWaitForResponse<GadgetListResult>( 
+			GadgetListEventType.RemoveFavorite, true, gadgetUrl );
 	}
 
 	public startGadget( gadgetUrl: string )
