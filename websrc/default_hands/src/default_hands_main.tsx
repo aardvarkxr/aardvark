@@ -127,6 +127,11 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 	@bind
 	private onGrabShowRay()
 	{
+		// skip the ray when we already have something interesting going on.
+		if( this.state.state != GrabberState.Idle 
+			|| this.state.activePanel )
+			return;
+
 		this.setState( 
 			{ 
 				showRay: true
