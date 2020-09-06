@@ -1,4 +1,4 @@
-import { MinimalPose, AvNodeTransform } from './aardvark_protocol';
+import { MinimalPose, AvNodeTransform, AvVector } from './aardvark_protocol';
 import { vec3, mat4, vec4, mat3, quat } from '@tlaukkan/tsm';
 import * as Quaternion from 'quaternion';
 
@@ -274,4 +274,18 @@ export function matMultiplyPoint( m: mat4, pt: vec3 ): vec3
 {
 	let v4 = new vec4( [ pt.x, pt.y, pt.z, 1 ] );
 	return new vec3( m.multiplyVec4( v4, new vec4() ).xyz );
+}
+
+export function vecFromAvVector( v: AvVector ): vec3
+{
+	if( !v )
+		return null;
+	return new vec3( [ v.x, v.y, v.z ] );
+}
+
+export function vecToAvVector( v: vec3 ): AvVector
+{
+	if( !v )
+		return null;
+	return { x: v.x, y: v.y, z: v.z };
 }

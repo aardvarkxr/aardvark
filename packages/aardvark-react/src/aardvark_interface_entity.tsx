@@ -1,4 +1,4 @@
-import { AvNodeTransform, AvNodeType, AvVolume, EndpointAddr, endpointAddrsMatch, ENodeFlags, InitialInterfaceLock, InterfaceLockResult, invertNodeTransform, MessageType, MsgInterfaceLock, MsgInterfaceLockResponse, MsgInterfaceRelock, MsgInterfaceRelockResponse, MsgInterfaceSendEvent, MsgInterfaceSendEventResponse, MsgInterfaceUnlock, MsgInterfaceUnlockResponse, AvConstraint } from '@aardvarkxr/aardvark-shared';
+import { AvNodeTransform, AvNodeType, AvVolume, EndpointAddr, endpointAddrsMatch, ENodeFlags, InitialInterfaceLock, InterfaceLockResult, invertNodeTransform, MessageType, MsgInterfaceLock, MsgInterfaceLockResponse, MsgInterfaceRelock, MsgInterfaceRelockResponse, MsgInterfaceSendEvent, MsgInterfaceSendEventResponse, MsgInterfaceUnlock, MsgInterfaceUnlockResponse, AvConstraint, AvVector, matMultiplyPoint, nodeTransformToMat4, vecFromAvVector, vecToAvVector } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 import { AvGadget } from './aardvark_gadget';
@@ -33,6 +33,12 @@ export interface ActiveInterface
 
 	/** The transform from the remote node's space to the local node's space */
 	readonly selfFromPeer: AvNodeTransform;
+
+	/** The intersection point in the transmitter's space */
+	readonly transmitterIntersectionPoint: AvVector;
+
+	/** The intersection point in the local node's space */
+	readonly selfIntersectionPoint: AvVector;
 
 	/** The params object, if any, that was provided when this interface was started */
 	readonly params: object;
@@ -83,15 +89,17 @@ class CActiveInterface implements ActiveInterface
 	private eventCallback:( event: object ) => void;
 	private transformCallback:( entityFromPeer: AvNodeTransform ) => void;
 	private lastTransmitterFromReceiver: AvNodeTransform;
+	private lastTransmitterIntersectionPoint: AvVector;
 	public params: object;
 
 	constructor( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string, 
-		transmitterFromReceiver: AvNodeTransform, role: InterfaceRole, params?: object )
+		transmitterFromReceiver: AvNodeTransform, intersectionPoint: AvVector, role: InterfaceRole, params?: object )
 	{
 		this.transmitter = transmitter;
 		this.receiver = receiver;
 		this.iface = iface;
 		this.lastTransmitterFromReceiver = transmitterFromReceiver;
+		this.lastTransmitterIntersectionPoint = intersectionPoint;
 		this.role = role;
 		this.params = params;
 	}
@@ -177,6 +185,30 @@ class CActiveInterface implements ActiveInterface
 		}
 	}
 
+	public get transmitterIntersectionPoint() : AvVector
+	{
+		return this.lastTransmitterIntersectionPoint;
+	}
+
+	public get selfIntersectionPoint() : AvVector
+	{
+		if( this.role == InterfaceRole.Transmitter )
+		{
+			return this.lastTransmitterIntersectionPoint;
+		}
+		else if( this.lastTransmitterIntersectionPoint )
+		{
+			let matTransmitterFromReceiver = nodeTransformToMat4( this.selfFromPeer );
+			let receiverIntersectionPoint = matMultiplyPoint( matTransmitterFromReceiver, 
+				vecFromAvVector( this.lastTransmitterIntersectionPoint ) );
+			return vecToAvVector( receiverIntersectionPoint );
+		}
+		else
+		{
+			return null;
+		}
+	}
+
 	sendEvent( event: object ): Promise<void>
 	{
 		return new Promise<void>( async (resolve, reject ) =>
@@ -199,7 +231,7 @@ class CActiveInterface implements ActiveInterface
 		this.endedCallback = endedCallback;
 	}
 
-	end( transmitterFromReceiver : AvNodeTransform )
+	end( transmitterFromReceiver : AvNodeTransform, intersectionPoint: AvVector )
 	{
 		if( transmitterFromReceiver )
 		{
@@ -213,17 +245,29 @@ class CActiveInterface implements ActiveInterface
 		this.eventCallback = eventCallback;
 	}
 
-	event( event: object, destinationFromPeer: AvNodeTransform )
+	event( event: object, destinationFromPeer: AvNodeTransform, intersectionPoint: AvVector )
 	{
 		if( destinationFromPeer )
 		{
 			if( this.role == InterfaceRole.Transmitter )
 			{
 				this.lastTransmitterFromReceiver = destinationFromPeer;
+				this.lastTransmitterIntersectionPoint = intersectionPoint;
 			}
 			else
 			{
 				this.lastTransmitterFromReceiver = invertNodeTransform( destinationFromPeer );
+
+				if( intersectionPoint )
+				{
+					let matTransmitterFromReceiver = nodeTransformToMat4( this.lastTransmitterFromReceiver );
+					this.lastTransmitterIntersectionPoint = matMultiplyPoint( matTransmitterFromReceiver, 
+						vecFromAvVector( intersectionPoint ) );	
+				}
+				else
+				{
+					this.lastTransmitterIntersectionPoint = null;
+				}
 			}
 		}
 
@@ -235,19 +279,30 @@ class CActiveInterface implements ActiveInterface
 		this.transformCallback = transformCallback;
 	}
 
-	transformUpdated( entityFromPeer: AvNodeTransform )
+	transformUpdated( entityFromPeer: AvNodeTransform, intersectionPoint: AvVector )
 	{
 		if( this.role == InterfaceRole.Transmitter )
 		{
 			this.lastTransmitterFromReceiver = entityFromPeer;
+			this.lastTransmitterIntersectionPoint = intersectionPoint;
 		}
 		else
 		{
 			this.lastTransmitterFromReceiver = invertNodeTransform( entityFromPeer );
+
+			if( intersectionPoint )
+			{
+				let matTransmitterFromReceiver = nodeTransformToMat4( this.lastTransmitterFromReceiver );
+				this.lastTransmitterIntersectionPoint = matMultiplyPoint( matTransmitterFromReceiver, 
+					vecFromAvVector( intersectionPoint ) );
+			}
+			else
+			{
+				this.lastTransmitterIntersectionPoint = null;
+			}
 		}
-	this.transformCallback?.( entityFromPeer );
+		this.transformCallback?.( entityFromPeer );
 	}
-	
 }
 
 
@@ -451,13 +506,13 @@ export class AvInterfaceEntity extends AvBaseNode< AvInterfaceEntityProps, {} >
 
 	@bind
 	private onInterfaceStarted( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string,
-		transmitterFromReceiver: AvNodeTransform, params?: object  ): void
+		transmitterFromReceiver: AvNodeTransform, intersectionPoint?: AvVector, params?: object  ): void
 	{
 		let [ processor, role ] = this.getProcessor( transmitter, receiver, iface );
 		if( processor )
 		{
 			let newInterface = new CActiveInterface( transmitter, receiver, iface, transmitterFromReceiver, 
-				role, params );
+				intersectionPoint, role, params );
 			this.activeInterfaces.push( newInterface );
 			processor( newInterface );
 		}
@@ -495,12 +550,12 @@ export class AvInterfaceEntity extends AvBaseNode< AvInterfaceEntityProps, {} >
 
 	@bind
 	private onInterfaceEnded( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string,
-		transmitterFromReceiver: AvNodeTransform ): void
+		transmitterFromReceiver: AvNodeTransform, intersectionPoint?: AvVector ): void
 	{
 		let activeInterface = this.findActiveInterface(transmitter, receiver, iface);
 		if( activeInterface )
 		{
-			activeInterface.end( transmitterFromReceiver );
+			activeInterface.end( transmitterFromReceiver, intersectionPoint );
 
 			this.activeInterfaces.splice( this.activeInterfaces.indexOf( activeInterface ), 1 );
 		}
@@ -508,23 +563,23 @@ export class AvInterfaceEntity extends AvBaseNode< AvInterfaceEntityProps, {} >
 
 	@bind
 	private onInterfaceEvent( destination: EndpointAddr, peer: EndpointAddr, iface: string, data: object,
-		destinationFromPeer: AvNodeTransform ): void
+		destinationFromPeer: AvNodeTransform, intersectionPoint?: AvVector ): void
 	{
 		let activeInterface = this.findActiveInterfaceByDest(destination, peer, iface);
 		if( activeInterface )
 		{
-			activeInterface.event( data, destinationFromPeer );
+			activeInterface.event( data, destinationFromPeer, intersectionPoint );
 		}
 	}
 
 	@bind
 	private onTransformUpdated( destination: EndpointAddr, peer: EndpointAddr, iface: string, 
-		destinationFromPeer: AvNodeTransform ): void
+		destinationFromPeer: AvNodeTransform, intersectionPoint?: AvVector ): void
 	{
 		let activeInterface = this.findActiveInterfaceByDest(destination, peer, iface);
 		if( activeInterface )
 		{
-			activeInterface.transformUpdated( destinationFromPeer );
+			activeInterface.transformUpdated( destinationFromPeer, intersectionPoint );
 		}
 	}
 }

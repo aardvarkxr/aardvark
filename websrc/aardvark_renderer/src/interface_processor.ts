@@ -300,7 +300,8 @@ export class CInterfaceProcessor
 					}
 
 					// end the old interface before starting the new one
-					this.callbacks.interfaceEnded( transmitter.epa, oldReceiver.epa, bestIface );
+					this.callbacks.interfaceEnded( transmitter.epa, oldReceiver.epa, bestIface,
+						this.computeEntityTransform( transmitter, oldReceiver ) );
 					let oldIndex = newInterfacesInProgress.findIndex( ( iip: InterfaceInProgress ) => 
 						( iip == currentIip ) );
 					if( oldIndex != -1 )

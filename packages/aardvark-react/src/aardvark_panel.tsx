@@ -1,4 +1,4 @@
-import { Av, AvNodeTransform, AvSharedTextureInfo, AvVolume, EndpointAddr, EVolumeType, g_builtinModelPanel, nodeTransformToMat4, PanelMouseEventType } from '@aardvarkxr/aardvark-shared';
+import { Av, AvNodeTransform, AvSharedTextureInfo, AvVolume, EndpointAddr, EVolumeType, g_builtinModelPanel, nodeTransformToMat4, PanelMouseEventType, AvVector } from '@aardvarkxr/aardvark-shared';
 import { vec2, vec4 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
 import * as React from 'react';
@@ -91,53 +91,52 @@ export class AvPanel extends React.Component< AvPanelProps, AvPanelState >
 	@bind
 	private onPanel( activePoker: ActiveInterface )
 	{
-		this.deliverMouseEvent( PanelMouseEventType.Enter, activePoker.selfFromPeer, activePoker.peer );
+		this.deliverMouseEvent( PanelMouseEventType.Enter, activePoker.selfIntersectionPoint, activePoker.peer );
 
 		activePoker.onEvent( ( event: PanelRequest ) =>
 		{
 			switch( event.type )
 			{
 				case PanelRequestType.Down:
-					this.deliverMouseEvent( PanelMouseEventType.Down, activePoker.selfFromPeer, activePoker.peer );
+					this.deliverMouseEvent( PanelMouseEventType.Down, activePoker.selfIntersectionPoint, 
+						activePoker.peer );
 					break;
 
 				case PanelRequestType.Up:
-					this.deliverMouseEvent( PanelMouseEventType.Up, activePoker.selfFromPeer, activePoker.peer );
+					this.deliverMouseEvent( PanelMouseEventType.Up, activePoker.selfIntersectionPoint, 
+						activePoker.peer );
 					break;
 			}
 		} );
 
 		activePoker.onTransformUpdated( ( entityFromPeer: AvNodeTransform ) =>
 		{
-			this.deliverMouseEvent( PanelMouseEventType.Move, entityFromPeer, activePoker.peer );
+			this.deliverMouseEvent( PanelMouseEventType.Move, activePoker.selfIntersectionPoint, activePoker.peer );
 		} );
 
 		activePoker.onEnded( () =>
 		{
-			this.deliverMouseEvent( PanelMouseEventType.Leave, activePoker.selfFromPeer, activePoker.peer );
+			this.deliverMouseEvent( PanelMouseEventType.Leave, activePoker.selfIntersectionPoint, activePoker.peer );
 		} );
 	}
 
-	private deliverMouseEvent( eventType: PanelMouseEventType, panelFromPoker: AvNodeTransform, pokerEpa: EndpointAddr )
+	private deliverMouseEvent( eventType: PanelMouseEventType, panelFromPoker: AvVector, pokerEpa: EndpointAddr )
 	{
-		let panelFromPokerMat = nodeTransformToMat4( panelFromPoker );
-		let eventLocWorld = panelFromPokerMat.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) );
-
 		if( eventType == PanelMouseEventType.Leave )
 		{
 			this.setState( { mousePosition: null } );
 		}
 		else
 		{
-			this.setState( { mousePosition: new vec2( eventLocWorld.xy ) } );
+			this.setState( { mousePosition: new vec2( [ panelFromPoker.x, panelFromPoker.y ] ) } );
 		}
 
 		let event: PanelMouseEvent =
 		{
 			type: eventType,
 			pokerEpa,
-			x: eventLocWorld.x / this.width + 0.5,
-			y: 1.0 - ( eventLocWorld.y / this.height + 0.5 ),
+			x: panelFromPoker.x / this.width + 0.5,
+			y: 1.0 - ( panelFromPoker.y / this.height + 0.5 ),
 		};
 
 		if( eventType != PanelMouseEventType.Move )
@@ -198,9 +197,20 @@ export class AvPanel extends React.Component< AvPanelProps, AvPanelState >
 			{
 				xMin: -this.width/2, xMax: this.width/2,
 				yMin: -this.height/2, yMax: this.height/2,
+				zMin: 0, zMax: 0.0003,
+			}
+		};
+		let thickVolume: AvVolume =
+		{
+			type: EVolumeType.AABB,
+			aabb:
+			{
+				xMin: -this.width/2, xMax: this.width/2,
+				yMin: -this.height/2, yMax: this.height/2,
 				zMin: 0, zMax: 0.03,
 			}
 		};
+
 
 		return <>
 					<AvTransform scaleX={ this.width } scaleY={ this.height }>
@@ -214,7 +224,7 @@ export class AvPanel extends React.Component< AvPanelProps, AvPanelState >
 							<AvPrimitive type={ PrimitiveType.Sphere } radius={ 0.002 } color="yellow"/>
 						</AvTransform> }
 					{ this.props.interactive &&
-						<AvInterfaceEntity volume={ volume } priority={ 10 } wantsTransforms={ true }
+						<AvInterfaceEntity volume={ [ volume, thickVolume ] } priority={ 10 } wantsTransforms={ true }
 							receives={ [ { iface: "aardvark-panel@1", processor: this.onPanel } ] }/> }
 				</>
 	}

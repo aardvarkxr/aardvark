@@ -373,7 +373,7 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 	interfaceEnded( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string,
 		transmitterFromReceiver: [mat4, vec3|null] ):void
 	{
-		const [ transform, pt ] = transmitterFromReceiver;
+		const [ transform, pt ] = transmitterFromReceiver ?? [ undefined, null ];
 		let intersectionPoint:AvVector;
 		if( pt )
 		{

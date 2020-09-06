@@ -1,4 +1,4 @@
-import { AardvarkManifest, Av, AvActionState, AvInterfaceEventProcessor, AvNode, AvNodeTransform, AvNodeType, AvStartGadgetResult, EAction, EHand, EndpointAddr, endpointAddrToString, EndpointType, ENodeFlags, Envelope, InitialInterfaceLock, interfaceStringFromMsg, MessageType, MsgGadgetStarted, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgInterfaceEnded, MsgInterfaceEvent, MsgInterfaceReceiveEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgNodeHaptic, MsgResourceLoadFailed, MsgSaveSettings, MsgUpdateActionState, MsgUpdateSceneGraph, stringToEndpointAddr } from '@aardvarkxr/aardvark-shared';
+import { AardvarkManifest, Av, AvActionState, AvInterfaceEventProcessor, AvNode, AvNodeTransform, AvNodeType, AvStartGadgetResult, EAction, EHand, EndpointAddr, endpointAddrToString, EndpointType, ENodeFlags, Envelope, InitialInterfaceLock, interfaceStringFromMsg, MessageType, MsgGadgetStarted, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgInterfaceEnded, MsgInterfaceEvent, MsgInterfaceReceiveEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgNodeHaptic, MsgResourceLoadFailed, MsgSaveSettings, MsgUpdateActionState, MsgUpdateSceneGraph, stringToEndpointAddr, AvVector } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import { IAvBaseNode } from './aardvark_base_node';
@@ -10,13 +10,14 @@ const equal = require( 'fast-deep-equal' );
 export interface AvInterfaceEntityProcessor
 {
 	started( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string, 
-		transmitterFromReceiver: AvNodeTransform, params?: object ): void;
+		transmitterFromReceiver: AvNodeTransform, intersectionPoint?: AvVector,
+		params?: object ): void;
 	ended( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string, 
-		transmitterFromReceiver: AvNodeTransform ): void;
+		transmitterFromReceiver: AvNodeTransform, intersectionPoint?: AvVector ): void;
 	event( destination: EndpointAddr, peer: EndpointAddr, iface: string, data: object, 
-		destinationFromPeer: AvNodeTransform ): void;
+		destinationFromPeer: AvNodeTransform, intersectionPoint?: AvVector ): void;
 	transformUpdated( destination: EndpointAddr, peer: EndpointAddr, iface: string, 
-		destinationFromPeer: AvNodeTransform ): void;
+		destinationFromPeer: AvNodeTransform, intersectionPoint?: AvVector ): void;
 }
 
 
@@ -324,7 +325,8 @@ export class AvGadget
 		let processor = this.getInterfaceEntityProcessor( env.target );
 		if( processor )
 		{
-			processor.started(m.transmitter, m.receiver, m.iface, m.transmitterFromReceiver, m.params );
+			processor.started(m.transmitter, m.receiver, m.iface, m.transmitterFromReceiver, 
+				m.intersectionPoint, m.params );
 		}
 
 		if( !processor )
@@ -340,7 +342,8 @@ export class AvGadget
 		let processor = this.getInterfaceEntityProcessor( env.target );
 		if( processor )
 		{
-			processor.ended(m.transmitter, m.receiver, m.iface, m.transmitterFromReceiver );
+			processor.ended(m.transmitter, m.receiver, m.iface, m.transmitterFromReceiver, 
+				m.intersectionPoint );
 		}
 
 		if( !processor )
@@ -356,7 +359,8 @@ export class AvGadget
 		let processor = this.getInterfaceEntityProcessor( m.destination );
 		if( processor )
 		{
-			processor.event(m.destination, m.peer, m.iface, m.event, m.destinationFromPeer );
+			processor.event(m.destination, m.peer, m.iface, m.event, m.destinationFromPeer,
+				m.intersectionPoint );
 		}
 
 		if( !processor )
@@ -372,7 +376,8 @@ export class AvGadget
 		let processor = this.getInterfaceEntityProcessor( m.destination );
 		if( processor )
 		{
-			processor.transformUpdated( m.destination, m.peer, m.iface, m.destinationFromPeer );
+			processor.transformUpdated( m.destination, m.peer, m.iface, m.destinationFromPeer,
+				m.intersectionPoint );
 		}
 
 		if( !processor )
