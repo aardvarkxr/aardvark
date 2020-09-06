@@ -1,4 +1,3 @@
-import { AvTransform } from './../../aardvark-react/src/aardvark_transform';
 import { vec3, mat4 } from '@tlaukkan/tsm';
 import { WebAppManifest } from './web_app_manifest';
 import { AvActionState } from './aardvark';
