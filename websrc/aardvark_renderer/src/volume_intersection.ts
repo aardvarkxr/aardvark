@@ -70,8 +70,32 @@ function sphereBoxIntersect( sphere: TransformedVolume, box: TransformedVolume )
 	// to be compared indendently in that case.
 	if ( ( xDist * xDist + yDist * yDist + zDist * zDist ) <= ( sphereScaledRadius * sphereScaledRadius ) )
 	{
-		let intersectionInBox = closestPointWithinRadius(new vec3( sphereCenter.xyz ), 
-			boxCenter( box.aabb ), sphereScaledRadius );
+		let intersectionInBox = new vec3( sphereCenter.xyz );
+		if( sphereCenter.x < box.aabb.xMin )
+		{
+			intersectionInBox.x = box.aabb.xMin;
+		}
+		else if( sphereCenter.x > box.aabb.xMax )
+		{
+			intersectionInBox.x = box.aabb.xMax;
+		}
+		if( sphereCenter.y < box.aabb.yMin )
+		{
+			intersectionInBox.y = box.aabb.yMin;
+		}
+		else if( sphereCenter.y > box.aabb.yMax )
+		{
+			intersectionInBox.y = box.aabb.yMax;
+		}
+		if( sphereCenter.z < box.aabb.zMin )
+		{
+			intersectionInBox.z = box.aabb.zMin;
+		}
+		else if( sphereCenter.z > box.aabb.zMax )
+		{
+			intersectionInBox.z = box.aabb.zMax;
+		}
+		
 		return [ true, matMultiplyPoint( box.universeFromVolume, intersectionInBox ) ];
 	}
 	else
