@@ -197,9 +197,15 @@ export class AvPanel extends React.Component< AvPanelProps, AvPanelState >
 			{
 				xMin: -this.width/2, xMax: this.width/2,
 				yMin: -this.height/2, yMax: this.height/2,
-				zMin: 0, zMax: 0.0003,
+				zMin: 0, zMax: 0.0001,
 			}
 		};
+		// We use two volumes here, with the thin one first, to improve the quality of the intersection point.
+		// Ray intersections will almost always hit the thin volume if they would have hit the thick volume,
+		// so they generate an intersection point that's very close to the surface of the panel. Sphere 
+		// intersections (like the grabbers on the hands) will intersect with the thicker volume a few cm away
+		// from the panel, which makes the panel easier to use. 
+		// In both cases the intersection point is projected down to the surface of the panel.
 		let thickVolume: AvVolume =
 		{
 			type: EVolumeType.AABB,
