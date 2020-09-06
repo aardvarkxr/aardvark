@@ -1,4 +1,4 @@
-import { AABB, AvActionState, AvConstraint, AvModelInstance, AvNode, AvNodeTransform, AvNodeType, AvRenderer, EHand, emptyActionState, EndpointAddr, minIgnoringNulls, nodeTransformFromMat4, nodeTransformToMat4, scaleAxisToFit, scaleMat, vec3MultiplyAndAdd, computeUniverseFromLine, endpointAddrToString, EndpointType, ENodeFlags, EVolumeType, filterActionsForGadget, g_builtinModelError, MessageType, MsgInterfaceEnded, MsgInterfaceReceiveEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgResourceLoadFailed, MsgUpdateActionState, g_builtinModelCylinder } from '@aardvarkxr/aardvark-shared';
+import { AABB, AvActionState, AvConstraint, AvModelInstance, AvNode, AvNodeTransform, AvNodeType, AvRenderer, EHand, emptyActionState, EndpointAddr, minIgnoringNulls, nodeTransformFromMat4, nodeTransformToMat4, scaleAxisToFit, scaleMat, vec3MultiplyAndAdd, computeUniverseFromLine, endpointAddrToString, EndpointType, ENodeFlags, EVolumeType, filterActionsForGadget, g_builtinModelError, MessageType, MsgInterfaceEnded, MsgInterfaceReceiveEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgResourceLoadFailed, MsgUpdateActionState, g_builtinModelCylinder, AvVector } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3, vec4 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
 import { EndpointAddrMap } from './endpoint_addr_map';
@@ -351,52 +351,80 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 
 	
 	interfaceStarted( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string,
-		transmitterFromReceiver: mat4, params?: object ):void
+		transmitterFromReceiver: [mat4, vec3|null], params?: object ):void
 	{
+		const [ transform, pt ] = transmitterFromReceiver;
+		let intersectionPoint:AvVector;
+		if( pt )
+		{
+			intersectionPoint = { x: pt.x, y: pt.y, z: pt.z };
+		}
 		this.m_callbacks.sendMessage( MessageType.InterfaceStarted, 
 			{
 				transmitter,
 				receiver,
 				iface,
-				transmitterFromReceiver: nodeTransformFromMat4( transmitterFromReceiver ),
+				transmitterFromReceiver: nodeTransformFromMat4( transform ),
+				intersectionPoint,
 				params,
 			} as MsgInterfaceStarted );
 	}
 
 	interfaceEnded( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string,
-		transmitterFromReceiver: mat4 ):void
+		transmitterFromReceiver: [mat4, vec3|null] ):void
 	{
+		const [ transform, pt ] = transmitterFromReceiver;
+		let intersectionPoint:AvVector;
+		if( pt )
+		{
+			intersectionPoint = { x: pt.x, y: pt.y, z: pt.z };
+		}
 		this.m_callbacks.sendMessage( MessageType.InterfaceEnded, 
 			{
 				transmitter,
 				receiver,
 				iface,
-				transmitterFromReceiver: nodeTransformFromMat4( transmitterFromReceiver ),
+				transmitterFromReceiver: nodeTransformFromMat4( transform ),
+				intersectionPoint,
 			} as MsgInterfaceEnded );
 	}
 
 	interfaceTransformUpdated( destination: EndpointAddr, peer: EndpointAddr, iface: string, 
-		destinationFromPeer: mat4 ): void
+		destinationFromPeer: [mat4, vec3|null] ): void
 	{
+		const [ transform, pt ] = destinationFromPeer;
+		let intersectionPoint:AvVector;
+		if( pt )
+		{
+			intersectionPoint = { x: pt.x, y: pt.y, z: pt.z };
+		}
 		this.m_callbacks.sendMessage( MessageType.InterfaceTransformUpdated, 
 			{
 				destination,
 				peer,
 				iface,
-				destinationFromPeer: nodeTransformFromMat4( destinationFromPeer ),
+				destinationFromPeer: nodeTransformFromMat4( transform ),
+				intersectionPoint,
 			} as MsgInterfaceTransformUpdated );
 	}
 
 	interfaceEvent( destination: EndpointAddr, peer: EndpointAddr, iface: string, event: object,
-		destinationFromPeer: mat4 ): void
+		destinationFromPeer: [mat4, vec3|null] ): void
 	{
+		const [ transform, pt ] = destinationFromPeer;
+		let intersectionPoint:AvVector;
+		if( pt )
+		{
+			intersectionPoint = { x: pt.x, y: pt.y, z: pt.z };
+		}
 		this.m_callbacks.sendMessage( MessageType.InterfaceReceiveEvent, 
 			{
 				destination,
 				peer,
 				iface,
 				event,
-				destinationFromPeer: nodeTransformFromMat4( destinationFromPeer ),
+				destinationFromPeer: nodeTransformFromMat4( transform ),
+				intersectionPoint,
 			} as MsgInterfaceReceiveEvent );
 	}
 

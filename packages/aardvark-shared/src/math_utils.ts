@@ -269,3 +269,9 @@ export function multiplyTransforms( lhs: AvNodeTransform, rhs: AvNodeTransform )
 	let rm = nodeTransformToMat4( rhs );
 	return nodeTransformFromMat4( mat4.product( lm, rm, new mat4() ) );
 }
+
+export function matMultiplyPoint( m: mat4, pt: vec3 ): vec3
+{
+	let v4 = new vec4( [ pt.x, pt.y, pt.z, 1 ] );
+	return new vec3( m.multiplyVec4( v4, new vec4() ).xyz );
+}

@@ -1,5 +1,5 @@
 import { mat4, vec4, vec3, vec2 } from '@tlaukkan/tsm';
-import { AvVolume, EVolumeType, EVolumeContext, AABB } from '@aardvarkxr/aardvark-shared';
+import { AvVolume, EVolumeType, EVolumeContext, AABB, matMultiplyPoint } from '@aardvarkxr/aardvark-shared';
 const createRay = require( 'ray-aabb' );
 
 export interface TransformedVolume extends AvVolume
@@ -9,16 +9,11 @@ export interface TransformedVolume extends AvVolume
 
 function closestPointWithinRadius( origin: vec3, dest: vec3, radius: number )
 {
-	let ray = vec3.sum( dest, origin.negate( new vec3() ), new vec3() );
-	ray = ray.normalize( new vec3() );
-	return origin.add( ray.scale( radius ) );
+	let ray = new vec3( [ dest.x - origin.x, dest.y - origin.y, dest.z - origin.z ]);
+	ray = ray.normalize();
+	return new vec3( [ origin.x + ray.x * radius, origin.y + ray.y * radius, origin.z + ray.z * radius ] );
 }
 
-function matMultiplyPoint( m: mat4, pt: vec3 ): vec3
-{
-	let v4 = new vec4( [ pt.x, pt.y, pt.z, 1 ] );
-	return new vec3( m.multiplyVec4( v4, new vec4() ).xyz );
-}
 
 
 function spheresIntersect( v1: TransformedVolume, v2: TransformedVolume ) : [ boolean, vec3 | null ]
@@ -38,7 +33,8 @@ function spheresIntersect( v1: TransformedVolume, v2: TransformedVolume ) : [ bo
 	}
 	else
 	{
-		return [ true, closestPointWithinRadius( v1Center, v2Center, v1ScaledRadius ) ];
+		let range = Math.max( 0, Math.min( v1ScaledRadius, dist - v2ScaledRadius ) );
+		return [ true, closestPointWithinRadius( v1Center, v2Center, range ) ];
 	}
 }
 
@@ -284,7 +280,7 @@ export function volumesIntersect( v1: TransformedVolume, v2: TransformedVolume, 
 	}
 
 	let va: TransformedVolume, vb: TransformedVolume;
-	if( v1.type < v2.type )
+	if( v1.type <= v2.type )
 	{
 		va = v1;
 		vb = v2;

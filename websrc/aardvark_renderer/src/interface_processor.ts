@@ -1,16 +1,17 @@
-import { EndpointAddr, endpointAddrsMatch, endpointAddrToString, EVolumeContext, InitialInterfaceLock, InterfaceLockResult } from '@aardvarkxr/aardvark-shared';
+import { matMultiplyPoint, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EVolumeContext, InitialInterfaceLock, InterfaceLockResult } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3 } from '@tlaukkan/tsm';
 import { TransformedVolume, volumesIntersect } from './volume_intersection';
 
 export interface InterfaceProcessorCallbacks
 {
 	interfaceStarted( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string,
-		transmitterFromReceiver: mat4, params?: object ):void;
+		transmitterFromReceiver: [mat4, vec3], params?: object ):void;
 	interfaceEnded( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string,
-		transmitterFromReceiver?: mat4 ):void;
-	interfaceTransformUpdated( destination: EndpointAddr, peer: EndpointAddr, iface: string, destinationFromPeer: mat4 ): void;
+		transmitterFromReceiver?: [mat4, vec3] ):void;
+	interfaceTransformUpdated( destination: EndpointAddr, peer: EndpointAddr, iface: string, 
+		destinationFromPeer: [mat4, vec3] ): void;
 	interfaceEvent( destination: EndpointAddr, peer: EndpointAddr, iface: string, event: object,
-		destinationFromPeer: mat4 ): void;
+		destinationFromPeer: [mat4, vec3] ): void;
 }
 
 export interface InterfaceEntity
@@ -356,14 +357,23 @@ export class CInterfaceProcessor
 		this.lastEntityMap = entityMap;
 	}
 
-	computeEntityTransform( to: InterfaceEntity, from: InterfaceEntity )
+	computeEntityTransform( to: InterfaceEntity, from: InterfaceEntity ) : [ mat4, vec3 | null ]
 	{
 		if( !to || !from )
 		{
 			return undefined;
 		}
 
-		return mat4.product( to.universeFromEntity.copy().inverse(), from.universeFromEntity, new mat4() );
+		let toFromUniverse = to.universeFromEntity.copy().inverse();
+		let transform = mat4.product( toFromUniverse, from.universeFromEntity, new mat4() );
+		const [ int, pt ] = entitiesIntersect(to, from, EVolumeContext.Always );
+		let ptInTo: vec3;
+		if( pt )
+		{
+			// transform the point to be in "to" space
+			ptInTo = matMultiplyPoint( toFromUniverse, pt );
+		}
+		return [transform, ptInTo ];
 	}
 
 	public interfaceEvent( destEpa: EndpointAddr, peerEpa: EndpointAddr, iface: string, event: object ): void

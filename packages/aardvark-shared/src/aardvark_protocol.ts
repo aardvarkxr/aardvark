@@ -1,3 +1,4 @@
+import { AvTransform } from './../../aardvark-react/src/aardvark_transform';
 import { vec3, mat4 } from '@tlaukkan/tsm';
 import { WebAppManifest } from './web_app_manifest';
 import { AvActionState } from './aardvark';
@@ -347,6 +348,7 @@ export interface MsgInterfaceStarted
 	receiver: EndpointAddr;
 	iface: string;
 	transmitterFromReceiver: AvNodeTransform;
+	intersectionPoint?: AvVector;
 	params?: object; // This will only be set for initial interface locks
 }
 
@@ -356,6 +358,7 @@ export interface MsgInterfaceEnded
 	receiver: EndpointAddr;
 	iface: string;
 	transmitterFromReceiver?: AvNodeTransform;
+	intersectionPoint?: AvVector;
 }
 
 export interface MsgInterfaceLock
@@ -412,6 +415,7 @@ export interface MsgInterfaceTransformUpdated
 	peer: EndpointAddr;
 	iface: string;
 	destinationFromPeer: AvNodeTransform;
+	intersectionPoint?: AvVector;
 }
 
 export interface MsgInterfaceSendEvent
@@ -433,6 +437,7 @@ export interface MsgInterfaceReceiveEvent
 	iface: string;
 	event: object;
 	destinationFromPeer: AvNodeTransform;
+	intersectionPoint?: AvVector;
 }
 
 export enum AvNodeType

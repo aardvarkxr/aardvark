@@ -3,6 +3,7 @@ import { translateMat, nodeTransformToMat4, EndpointAddr, EndpointType, endpoint
 import { mat4, vec3, vec4 } from '@tlaukkan/tsm';
 import { CInterfaceProcessor, InterfaceProcessorCallbacks, InterfaceEntity } from './../interface_processor';
 import { makeSphere, makeInfinite, makeEmpty } from '../volume_test_utils';
+import 'common/testutils';
 
 beforeEach( async() =>
 {
@@ -28,6 +29,7 @@ interface TestCall
 	receiver: EndpointAddr;
 	iface: string;
 	destinationFromPeer?: mat4;
+	intersectionPoint?: vec3;
 	event?: object;
 }
 
@@ -57,8 +59,10 @@ class TestCallbacks implements InterfaceProcessorCallbacks
 			} );
 	}
 
-	interfaceTransformUpdated( destination: EndpointAddr, peer: EndpointAddr, iface: string, destinationFromPeer: mat4 ): void
+	interfaceTransformUpdated( destination: EndpointAddr, peer: EndpointAddr, iface: string, 
+		destFromPeer: [ mat4, null | vec3 ] ): void
 	{
+		const [ destinationFromPeer, intersectionPoint ] = destFromPeer;
 		this.calls.push( 
 			{
 				type: CallType.TransformUpdated,
@@ -66,6 +70,7 @@ class TestCallbacks implements InterfaceProcessorCallbacks
 				receiver: peer,
 				iface,
 				destinationFromPeer,
+				intersectionPoint,
 			} );
 	}
 
@@ -128,40 +133,6 @@ class CTestEntity implements InterfaceEntity
 }
 
 
-expect.extend({
-	toHavePosition( received: mat4, expected: vec3 )
-	{
-		let pos = received.multiplyVec4( new vec4( [0, 0, 0, 1] ) );
-		if( expected.equals( new vec3( pos.xyz ), 0.001 ) )
-		{
-			return (
-				{
-					message: () =>
-						`expected ${ pos.xyz } to be `
-							+`${ expected.xyz }`,
-					pass: true,
-				} );
-		}
-		else
-		{
-			return (
-				{
-					message: () =>
-						`expected ${ pos.xyz } to not be `
-							+`${ expected.xyz }`,
-					pass: false,
-				} );
-		}
-	}
-} );
-
-declare global {
-	namespace jest {
-	  interface Matchers<R> {
-		toHavePosition( expected: vec3 ): R;
-	  }
-	}
-  }
 
 describe( "interface processor", () =>
 {
@@ -542,6 +513,7 @@ describe( "interface processor", () =>
 				iface: "test@1",
 			});
 		expect( cb.calls[0].destinationFromPeer ).toHavePosition( new vec3( [ 0, -1, 0 ]));
+		expect( cb.calls[0].intersectionPoint ).toBeVec3( new vec3( [ 0, 0, 0 ]));
 		cb.calls = [];
 
 		t1.universeFromEntity = translateMat( new vec3( [ 0, 2, 0 ] ) );
@@ -556,6 +528,8 @@ describe( "interface processor", () =>
 				iface: "test@1",
 			});
 		expect( cb.calls[0].destinationFromPeer ).toHavePosition( new vec3( [ 0, -2, 0 ]));
+		expect( cb.calls[0].intersectionPoint ).toBeVec3( new vec3( [ 0, -1, 0 ]));
+		
 		expect( cb.calls[1] ).toMatchObject(
 			{
 				type: CallType.TransformUpdated,
@@ -564,6 +538,7 @@ describe( "interface processor", () =>
 				iface: "test@1",
 			});
 		expect( cb.calls[1].destinationFromPeer ).toHavePosition( new vec3( [ 0, 2, 0 ]));
+		expect( cb.calls[1].intersectionPoint ).toBeVec3( new vec3( [ 0, 0, 0 ]));
 		cb.calls = [];
 
 		r1.universeFromEntity = translateMat( new vec3( [ 0, 1, 0 ] ) );

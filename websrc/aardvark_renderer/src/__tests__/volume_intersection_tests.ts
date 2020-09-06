@@ -2,6 +2,7 @@ import { EVolumeContext, rotationMatFromEulerDegrees, scaleMat, translateMat } f
 import { mat4, vec3 } from '@tlaukkan/tsm';
 import { makeBox, makeEmpty, makeInfinite, makeRay, makeSphere } from '../volume_test_utils';
 import { rayFromMatrix, volumesIntersect } from './../volume_intersection';
+import 'common/testutils';
 
 beforeEach( async() =>
 {
@@ -11,42 +12,6 @@ afterEach( () =>
 {
 } );
 
-expect.extend({
-	toBeVec3( received: vec3, expected: vec3 )
-	{
-		if( expected.equals( received, 0.001 ) )
-		{
-			return (
-				{
-					message: () =>
-						`expected ${ received.xyz } to not be `
-							+`${ expected.xyz }`,
-					pass: true,
-				} );
-		}
-		else
-		{
-			return (
-				{
-					message: () =>
-						`received ${ received.xyz }, but expected `
-							+`${ expected.xyz }`,
-					pass: false,
-				} );
-		}
-	}
-} );
-
-declare global 
-{
-	namespace jest 
-	{
-		interface Matchers<R> 
-		{
-			toBeVec3( expected: vec3 ): R;
-		}
-	}
-}
 
 describe( "volume intersections ", () =>
 {
@@ -132,9 +97,31 @@ describe( "volume intersections ", () =>
 		let s3 = makeSphere( 0.05, new vec3( [ 0, -0.6, 0]));
 		let s4 = makeSphere( 1, new vec3( [ 0, -0.6, 0]), 0.05 );
 		let s5 = makeSphere( 0.05, new vec3( [ 0, -0.6, 0]), 10 );
+		let s6 = makeSphere( 10, new vec3( [0, 1, 0] ) );
+		let s7 = makeSphere( 10, new vec3( [0, 2, 0] ) );
 
-		expect( volumesIntersect( s1, s2, EVolumeContext.Always )[0] ).toBe( true );
-		expect( volumesIntersect( s2, s1, EVolumeContext.Always )[0] ).toBe( true );
+		{
+			const [ int, pt ] = volumesIntersect( s1, s2, EVolumeContext.Always );
+			expect( int ).toBe( true );
+			expect( pt ).toBeVec3( new vec3( [ 0, 0.5, 0 ] ) );
+
+		}
+		{
+			const [ int, pt ] = volumesIntersect( s2, s1, EVolumeContext.Always );
+			expect( int ).toBe( true );
+			expect( pt ).toBeVec3( new vec3( [ 0, 0, 0 ] ) );
+
+		}
+		{
+			const [ int, pt ] = volumesIntersect( s6, s2, EVolumeContext.Always );
+			expect( int ).toBe( true );
+			expect( pt ).toBeVec3( new vec3( [ 0, 1, 0 ] ) );
+		}
+		{
+			const [ int, pt ] = volumesIntersect( s7, s2, EVolumeContext.Always );
+			expect( int ).toBe( true );
+			expect( pt ).toBeVec3( new vec3( [ 0, 1, 0 ] ) );
+		}
 		expect( volumesIntersect( s3, s1, EVolumeContext.Always )[0] ).toBe( false );
 		expect( volumesIntersect( s4, s1, EVolumeContext.Always )[0] ).toBe( false );
 		expect( volumesIntersect( s5, s1, EVolumeContext.Always )[0] ).toBe( true );
@@ -179,8 +166,8 @@ describe( "volume intersections ", () =>
 		expect( volumesIntersect( b4, b1, EVolumeContext.Always )[0] ).toBe( false );
 		expect( volumesIntersect( b1, b5, EVolumeContext.Always )[0] ).toBe( false );
 
-		// TODO: Figure out why b5, b2 intersections, but b2, b5 does not.
-		expect( volumesIntersect( b5, b2, EVolumeContext.Always )[0] ).toBe( true );
+		// TODO: Figure out why b2, b5 intersects, but b5, b2 does not.
+		expect( volumesIntersect( b2, b5, EVolumeContext.Always )[0] ).toBe( true );
 	} );
 
 	it( "ray construction", () =>
