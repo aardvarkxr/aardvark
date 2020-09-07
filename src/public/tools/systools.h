@@ -14,4 +14,7 @@ namespace tools
 
 	/** exit this process if there's already an instance of the same exe */
 	void singletonProcess( const char* processKey );
+
+	/** Kills a process by name */
+	bool killProcessByName( const std::string& exeName );
 }

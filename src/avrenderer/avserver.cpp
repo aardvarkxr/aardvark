@@ -5,12 +5,13 @@
 #include <windows.h>
 #include <shellapi.h>
 #include <tools/logging.h>
+#include <tools/systools.h>
 
 static TinyProcessLib::Process *g_pServerProcess = nullptr;
 
 std::filesystem::path getNodeExePath()
 {
-	return tools::GetDataPath() / "server" / "bin" / "Node.exe";
+	return tools::GetDataPath() / "server" / "bin" / "aardvark_server.exe";
 }
 
 std::filesystem::path getServerJsPath()
@@ -52,6 +53,12 @@ bool StartServer( HINSTANCE hInstance )
 
 	if ( !bRunServer )
 		return true; // not an error to obey the command line
+
+	// if we're running the server we should also make sure an old server isn't already running
+	if ( tools::killProcessByName( "aardvark_server.exe" ) )
+	{
+		LOG( WARNING ) << "Killed existing server process";
+	}
 
 	// start the server
 	std::vector<std::string> vecServerArgs = 

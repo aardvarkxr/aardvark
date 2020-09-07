@@ -2,6 +2,10 @@
 
 #include <windows.h>
 #include <synchapi.h>
+#include <windows.h>
+#include <process.h>
+#include <Tlhelp32.h>
+#include <winbase.h>
 
 #include <tools/logging.h>
 #include <tools/stringtools.h>
@@ -83,6 +87,36 @@ namespace tools
 			// any other result is a failure and we need to exit
 			exit( 1 );
 		}
+	}
+
+
+	/** Kills a process by name */
+	bool killProcessByName( const std::string& exeName )
+	{
+		bool killedSomething = false;
+
+		HANDLE hSnapShot = CreateToolhelp32Snapshot( TH32CS_SNAPALL, NULL );
+		PROCESSENTRY32 pEntry;
+		pEntry.dwSize = sizeof( pEntry );
+		BOOL hRes = Process32First( hSnapShot, &pEntry );
+		while ( hRes )
+		{
+			if ( strcmp( pEntry.szExeFile, exeName.c_str() ) == 0 )
+			{
+				HANDLE hProcess = OpenProcess( PROCESS_TERMINATE, 0,
+					(DWORD)pEntry.th32ProcessID );
+				if ( hProcess != NULL )
+				{
+					TerminateProcess( hProcess, 9 );
+					CloseHandle( hProcess );
+					killedSomething = true;
+				}
+			}
+			hRes = Process32Next( hSnapShot, &pEntry );
+		}
+		CloseHandle( hSnapShot );
+
+		return killedSomething;
 	}
 
 }

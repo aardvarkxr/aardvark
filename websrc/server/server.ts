@@ -1018,7 +1018,17 @@ class CServer
 	constructor( port: number )
 	{
 		this.m_wss = new WebSocket.Server( { server: this.m_server } );
-		this.m_server.listen( port, () => 
+
+		this.m_server.on( 'error', ( e:NodeJS.ErrnoException ) =>
+		{
+			if( e.code === 'EADDRINUSE' )
+			{
+				console.log( `Can't listen on port ${port}. Exiting` );
+				process.exit( -100 );
+			}
+		} );
+
+		this.m_server.listen( port, '127.0.0.1', () => 
 		{
 			console.log(`Server started on port ${ port } :)`);
 

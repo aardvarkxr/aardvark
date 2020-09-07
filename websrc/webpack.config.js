@@ -176,7 +176,7 @@ module.exports =
 		[
 			new CopyPlugin(
 				[
-					{ from: './node_modules/node/bin/node.exe', to: 'bin/node.exe' },
+					{ from: './node_modules/node/bin/node.exe', to: 'bin/aardvark_server.exe' },
 				]
 				),
 	
