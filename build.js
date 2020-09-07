@@ -193,7 +193,7 @@ async function copyRelease()
 
 	let outDir = path.resolve( __dirname, subDir );
 
-	let inDir = path.resolve( bldDir, "avrenderer/Release" );
+	let inDir = path.resolve( bldDir, "aardvarkxr/Release" );
 	copyDir( inDir, outDir );
 	copyDir( dataDir, path.resolve( outDir, "data" ) );
 
@@ -331,7 +331,7 @@ ${ files.map( ( fname) => fileCmd( fname, buildDir ) ).join('\n') }
 ExecWait 'netsh advfirewall firewall add rule name=AardvarkServer dir=in action=allow program="$INSTDIR\\data\\server\\bin\\node.exe" enable=yes profile=public,private'
 
 # Register the install with Aardvark
-ExecWait '$INSTDIR\\avrenderer.exe register'
+ExecWait '$INSTDIR\\aardvarkxr.exe register'
   
 # define uninstaller name
 WriteUninstaller $INSTDIR\\uninstaller.exe
@@ -346,7 +346,7 @@ SectionEnd
 Section "Uninstall"
 
 # Unregister the install with Aardvark
-ExecWait '$INSTDIR\\avrenderer.exe unregister'
+ExecWait '$INSTDIR\\aardvarkxr.exe unregister'
  
 # Remove firewall rule
 ExecWait 'netsh advfirewall firewall delete rule name=AardvarkServer'
@@ -401,7 +401,7 @@ async function signExes()
 
 	let buildDir = path.resolve( __dirname, subDir );
 
-	await signFile( buildDir + "\\avrenderer.exe" );
+	await signFile( buildDir + "\\aardvarkxr.exe" );
 	await signFile( buildDir + "\\crashpad_handler.exe" );
 }
 

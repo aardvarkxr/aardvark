@@ -1,12 +1,12 @@
 find_package(Vulkan)
 
-SET(EXAMPLE_NAME "avrenderer")
+SET(EXAMPLE_NAME "aardvarkxr.exe")
 file(GLOB SHADERS "${AV_DATA}/shaders/*.vert" "${AV_DATA}/shaders/*.frag" "${AV_DATA}/shaders/*.comp" "${AV_DATA}/shaders/*.geom" "${AV_DATA}/shaders/*.tesc" "${AV_DATA}/shaders/*.tese")
 source_group("Shaders" FILES ${SHADERS})
 
 SET( AARDVARK_VERSION "0.0.1234" CACHE STRING "Version string" )
 
-add_executable(avrenderer 
+add_executable(aardvarkxr 
 	aardvark_renderer.cpp
 	aardvark_renderer.h
 	avrenderer_main.cpp
@@ -34,17 +34,17 @@ add_executable(avrenderer
 	${SHADERS}
 	)
 
-target_link_libraries(avrenderer ${Vulkan_LIBRARY} ${WINLIBS})
-target_link_libraries( avrenderer aardvark )
-target_link_libraries( avrenderer tools )
-target_link_libraries( avrenderer sentry )
-target_link_libraries( avrenderer ${OpenVR_LIB_DIR}/openvr_api.lib )
-target_link_libraries( avrenderer DXGI.lib )
+target_link_libraries(aardvarkxr ${Vulkan_LIBRARY} ${WINLIBS})
+target_link_libraries( aardvarkxr aardvark )
+target_link_libraries( aardvarkxr tools )
+target_link_libraries( aardvarkxr sentry )
+target_link_libraries( aardvarkxr ${OpenVR_LIB_DIR}/openvr_api.lib )
+target_link_libraries( aardvarkxr DXGI.lib )
 
-target_include_directories( avrenderer PUBLIC ${AV_SRC_THIRDPARTY} )
-target_include_directories( avrenderer PRIVATE ${OpenVR_INCLUDE_DIR} )
-target_link_libraries( avrenderer gltfpbr_base)
-target_compile_definitions(avrenderer PRIVATE 
+target_include_directories( aardvarkxr PUBLIC ${AV_SRC_THIRDPARTY} )
+target_include_directories( aardvarkxr PRIVATE ${OpenVR_INCLUDE_DIR} )
+target_link_libraries( aardvarkxr gltfpbr_base)
+target_compile_definitions(aardvarkxr PRIVATE 
 	_CRT_SECURE_NO_WARNINGS
 	_USE_MATH_DEFINES
 	_SILENCE_CXX17_OLD_ALLOCATOR_MEMBERS_DEPRECATION_WARNING
@@ -52,33 +52,33 @@ target_compile_definitions(avrenderer PRIVATE
 	AARDVARK_VERSION="${AARDVARK_VERSION}"
 	)
 
-target_link_directories( avrenderer PRIVATE ${CEF_BINARY_DIR} )
+target_link_directories( aardvarkxr PRIVATE ${CEF_BINARY_DIR} )
 
 if(RESOURCE_INSTALL_DIR)
-	install(TARGETS avrenderer DESTINATION ${CMAKE_INSTALL_BINDIR})
+	install(TARGETS aardvarkxr DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()
 
 # configure_file( ${OpenVR_BIN_DIR}/openvr_api.dll ${CMAKE_CURRENT_BINARY_DIR}/openvr_api.dll COPYONLY )
-add_custom_command(TARGET avrenderer POST_BUILD
+add_custom_command(TARGET aardvarkxr POST_BUILD
                    COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${OpenVR_BIN_DIR}/openvr_api.dll" "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/"
 )
 
 #message ( "in " ${CMAKE_BINARY_DIR}/thirdparty/sentry-native/crashpad_build/handler/$<CONFIG> )
 #message ( "out " "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/" )
-add_custom_command(TARGET avrenderer POST_BUILD
+add_custom_command(TARGET aardvarkxr POST_BUILD
                    COMMAND "${CMAKE_COMMAND}" -E copy_if_different 
 						"${CMAKE_BINARY_DIR}/thirdparty/sentry-native/crashpad_build/handler/$<CONFIG>/crashpad_handler.exe"
 						"${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/"
 )
 
-add_custom_command(TARGET avrenderer POST_BUILD
+add_custom_command(TARGET aardvarkxr POST_BUILD
                    COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/registerapp.bat" "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/"
 )
-add_custom_command(TARGET avrenderer POST_BUILD
+add_custom_command(TARGET aardvarkxr POST_BUILD
                    COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/unregisterapp.bat" "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/"
 )
 
-target_link_libraries( avrenderer Dwmapi.lib )
+target_link_libraries( aardvarkxr Dwmapi.lib )
 
 set( CEF_TARGET_OUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/")
 
@@ -88,9 +88,9 @@ set( CEF_TARGET_OUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/")
 
 if(OS_WINDOWS)
   # Executable target.
-  set( CEF_TARGET avrenderer )
+  set( CEF_TARGET aardvarkxr )
   SET_EXECUTABLE_TARGET_PROPERTIES(${CEF_TARGET})
-  target_link_libraries(avrenderer libcef libcef_dll_wrapper ${CEF_STANDARD_LIBS})
+  target_link_libraries(aardvarkxr libcef libcef_dll_wrapper ${CEF_STANDARD_LIBS})
 
   if(USE_SANDBOX)
     # Logical target used to link the cef_sandbox library.
@@ -106,7 +106,7 @@ if(OS_WINDOWS)
   COPY_FILES("${CEF_TARGET}" "${CEF_RESOURCE_FILES}" "${CEF_RESOURCE_DIR}" "${CEF_TARGET_OUT_DIR}")
 endif()
 
-target_include_directories( avrenderer PRIVATE ${TinyProcessLibrary_INCLUDE_DIR} )
-target_link_directories( avrenderer PRIVATE ${TinyProcessLibrary_LIB_DIR} )
-target_link_libraries( avrenderer tiny-process-library )
-target_link_libraries( avrenderer D3D11 )
+target_include_directories( aardvarkxr PRIVATE ${TinyProcessLibrary_INCLUDE_DIR} )
+target_link_directories( aardvarkxr PRIVATE ${TinyProcessLibrary_LIB_DIR} )
+target_link_libraries( aardvarkxr tiny-process-library )
+target_link_libraries( aardvarkxr D3D11 )

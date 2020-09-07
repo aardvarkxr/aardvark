@@ -1,2 +1,2 @@
-avrenderer.exe unregister
+aardvarkxr.exe unregister
 

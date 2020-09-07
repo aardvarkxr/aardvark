@@ -1,2 +1,2 @@
-avrenderer.exe register
+aardvarkxr.exe register
 
