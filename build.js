@@ -41,6 +41,28 @@ for( let argIndex = 0; argIndex < process.argv.length;  )
 		certPath = process.argv[ argIndex++ ];
 		certPassword = process.argv[ argIndex++ ];
 	}
+	else if( arg == "--config" || arg == "-c" )
+	{
+		if( argIndex == process.argv.length )
+		{
+			console.log( "Usage: --buildversion|-b x.y.z" );
+			process.exit( 1 );
+		}
+		let configFile = process.argv[ argIndex++ ];
+		console.log( "Loading config file", configFile );
+		
+		let rawJson = fs.readFileSync( configFile );
+		let config = JSON.parse( rawJson );
+		if( config[ "certPath" ] )
+		{
+			certPath = config[ "certPath" ]
+		}
+		if( config[ "certPassword" ] )
+		{
+			certPassword = config[ "certPassword" ]
+		}
+	}
+		
 }
 
 if( verbose )
@@ -193,7 +215,7 @@ async function copyRelease()
 
 	let outDir = path.resolve( __dirname, subDir );
 
-	let inDir = path.resolve( bldDir, "aardvarkxr/Release" );
+	let inDir = path.resolve( bldDir, "avrenderer/Release" );
 	copyDir( inDir, outDir );
 	copyDir( dataDir, path.resolve( outDir, "data" ) );
 
