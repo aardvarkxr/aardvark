@@ -115,6 +115,17 @@ Look at the commits to see a list of active participants.
 Most of us work at companies that are involved in the VR space.
 Aardvark is not associated with any of those companies.
 
+## How can you help?
+
+There are a bunch of ways you can pitch in and help with Aardvark:
+
+* You can build gadgets and post them for other people to use. If you're looking for ideas, there is an entire channel on the Slack that's full of them.
+* You can use Aardvark and tell us what you think, and how it could do more for you. Bug reports are a great way to do that. So is jumping on Slack and just talking to people.
+* You can write a tutorial for how to use Aardvark or how to build gadgets. You're welcome to post these on your own site or submit them as pull requests so we can include them in the core Aardvark docs.
+* You can create art assets (models, icons, and the like) for folks who are building gadgets or writing tutorials. The Slack would be a great place to find people to collaborate with.
+* You can submit pull requests to Aardvark itself. Pick an issue from the existing list of open issues, or suggest something new.
+* You can tell your friends!
+
 # Building the Aardvark Browser
 
 All of this has been tested on Windows 10 with VS2019.
@@ -139,11 +150,7 @@ Follow these steps:
       * VS 2017 will probably still work too: cmake -G "Visual Studio 15 2017 Win64" .. 
    5. Open Aardvark.sln 
    6. Build in debug
-5. Make symlinks from the Aardvark build to the data directory
-   1. Open an administrator command prompt
-   2. cd to d:\aardvark\src
-   3. makelinks.bat build
-6. Run it!
+5. Run it!
    1. Open a command prompt in d:\aardvark\data and run "node server\server_bundle.js"
    1. Pick "avrenderer" as the startup project in visual studio
    2. Start Debugging from the Debug menu
