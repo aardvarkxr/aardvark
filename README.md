@@ -7,6 +7,77 @@ You can attach these gadgets to your hands and bring them with you in your favor
 
 [![A short introduction to Aardvark](https://aardvarkxr.github.io/aardvark/images/Aardvark_intro_preview.png)](http://www.youtube.com/watch?v=pux6RbySUMU "A short introduction to Aardvark")
 
+# Getting Started
+
+## Installing Aardvark
+
+If you just want to make gadgets, your best bet is to use a <a href="https://github.com/JoeLudwig/aardvark/releases">released build</a>.
+Just download and run the latest released installer, then run aardvarkxr.exe from the install directory.
+Once you've installed you can also enable Aardvark to start automatically in the Startup/Shutdown settings in SteamVR.
+
+You can find more documentation on how to build gadgets [here](https://aardvarkxr.github.io/aardvark/).
+
+If you need to do any development work from the source, you can also [build from the source](#building-the-aardvark-browser).
+
+## How to use Aardvark
+
+Aardvark is made up of "gadgets". 
+These are 3D objects that do something useful, something fun, or maybe they just look cool.
+You can favorite any number of gadgets in the Aardvark browser and then use them in any SteamVR application.
+
+To spawn your first gadget, you first need to open the gadget menu. 
+That's the gear icon attached to your left hand. 
+Just move your right hand close enough to the gear for it to get a little bigger, and then pull the trigger. 
+
+The menu that appears has four tabs, but we'll start with the second one. 
+These are the built-in gadgets.
+Pick up the whiteboard icon and drag it somewhere in the world to spawn the whiteboard gadget. 
+
+![Grabbing the gadget controls](https://aardvarkxr.github.io/aardvark/images/grab_gadget_controls.webp)
+
+The left-most icon is the list of recommended gadgets.
+Right now this just contains a couple of the built-in gadgets again, but it will expand once more gadgets have been created.
+(If you have a gadget you would like to see in this list, see the [gadget registry](https://github.com/aardvarkxr/gadget-registry/blob/master/registry.json) repository.)
+
+The third tab is your favorites.
+This list appears empty, but when you find a gadget you like, you can mark it as a favorite to have it show up here.
+
+The fourth tab is a list of your desktop windows.
+This feature is somewhat limited at the moment, and doesn't allow you to resize or interact with the windows, but you can look at any window on your desktop.
+
+## Using Gadgets
+
+Every gadget is different, but most of them provide stuff to grab and interact with. 
+For example, the white board lets you grab the markers, dip them in the colored cylinders, and then draw on the board itself.
+
+![Interacting with Gadgets](https://aardvarkxr.github.io/aardvark/images/use_whiteboard.webp)
+
+There are some things you can do with anything you can grab from any gadget.
+The first is simply to pick it up with the trigger and move it around.
+
+![Simple Grabbing](https://aardvarkxr.github.io/aardvark/images/move_gadget_simple.webp)
+
+Aardvark also supports grabbing and moving gadgets and their bits at a distance.
+Pull lightly on the trigger and a ray will shoot out of your hand. 
+Point that at anything to pick it up and move it around.
+
+![Distance Grabbing](https://aardvarkxr.github.io/aardvark/images/move_gadget_ray.webp)
+
+Once you have grabbed anything, you can move it further away from you or close to use by pushing forward or pulling backward on the thumbstick on your controller.
+This is moving the entire whiteboard, but the same interaction would work with the markers, or anything else you can grab in a gadget.
+
+![Distance Grabbing](https://aardvarkxr.github.io/aardvark/images/move_gadget_ray.webp)
+
+## Multiuser gadgets
+
+Aardvark provides mechanisms that let a user share their local gadgets with other people they are interacting with in VR. 
+PlutoVR has provided the first example of this with their Aardvark gadget.
+Open [this gadget](http://aardvark.pluto-api.com/) in your desktop browser, then mark it as a favorite.
+Now you can spawn the Pluto gadget from the menu, and whenever you enter a Pluto call with another user that's also running Aardvark you can see each other's gadgets.
+
+If you have a multiuser VR application in which you would like users to share gadgets, ask around in the slack for help getting that up and running.
+It's straightforward to do, but there isn't any documentation on the topic yet. 
+
 # Project Status and Road Map
 
 ## Current Status
@@ -43,50 +114,6 @@ Look at the commits to see a list of active participants.
 
 Most of us work at companies that are involved in the VR space.
 Aardvark is not associated with any of those companies.
-
-# Getting Started
-
-## Use a released build
-
-If you just want to make gadgets, your best bet is to use a <a href="https://github.com/JoeLudwig/aardvark/releases">released build</a>.
-Just download the latest release, unzip it, and run avrenderer.exe.
-You may need to start SteamVR before you start avrenderer.exe.
-
-You can find more documentation on how to build gadgets [here](https://aardvarkxr.github.io/aardvark/).
-
-If you need to do any development work from the source, you can also [build from the source](#building-the-aardvark-browser).
-
-## How to use Aardvark
-
-Aardvark is made up of "gadgets". 
-These are 3D objects that do something useful (or are maybe just decorative.) 
-You can install any number of gadgets in the Aardvark browser and then use them in any SteamVR application.
-
-The main thing you can do with a gadget is touch it with the controller and pull the trigger to grab it. 
-For example, here we are grabbing the gadget control panel:
-
-![Grabbing the gadget controls](https://aardvarkxr.github.io/aardvark/images/grab_gadget_controls.webp)
-
-You can see that the controls expand to show more information when they're grabbed.
-Exactly what is shown in each state will vary from gadget to gadget, but this is pretty common.
-While holding a gadget, it may also support various operations with the A and B buttons, or by squeezing the grip. 
-Exactly what those buttons do will also vary from gadget to gadget.
-
-It also returns to the place where it was picked up whenever the trigger is released. 
-If you want to move a gadget from one place to another, you can press the trackpad (on Knuckles. Press up on the thumbstick on Oculus Touch.)
-This will untether the gadget from its starting point.
-Dropping most untethered gadgets in the world will throw them away.
-
-Using these basic controls, you can create any of the gadgets in the menu. 
-
-![Grabbing the gadget controls](https://aardvarkxr.github.io/aardvark/images/create_gadget_from_menu.webp)
-
-This test panel gadget shrinks in size when it is close to something it can attach to.
-It also supports the fine kind of interaction: clicking. 
-Any panel that supports clicking will show a line highlighting the click location when a hand gets close to it.
-
-At the moment, all the button presses you make in Aardvark will also be passed to the underlying application. 
-That is still a work in progress.
 
 # Building the Aardvark Browser
 
