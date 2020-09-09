@@ -37,7 +37,7 @@ Pick up the whiteboard icon and drag it somewhere in the world to spawn the whit
 
 The left-most icon is the list of recommended gadgets.
 Right now this just contains a couple of the built-in gadgets again, but it will expand once more gadgets have been created.
-(If you have a gadget you would like to see in this list, see the [gadget registry](https://github.com/aardvarkxr/gadget-registry/blob/master/registry.json) repository.)
+(If you have a gadget you would like to see in this list, see the [gadget registry](https://github.com/aardvarkxr/gadget-registry/) repository.)
 
 The third tab is your favorites.
 This list appears empty, but when you find a gadget you like, you can mark it as a favorite to have it show up here.
