@@ -33,7 +33,7 @@ The menu that appears has four tabs, but we'll start with the second one.
 These are the built-in gadgets.
 Pick up the whiteboard icon and drag it somewhere in the world to spawn the whiteboard gadget. 
 
-![Grabbing the gadget controls](https://aardvarkxr.github.io/aardvark/images/grab_gadget_controls.webp)
+![Grabbing the gadget controls](https://aardvarkxr.github.io/aardvark/images/create_gadget_from_menu.webp)
 
 The left-most icon is the list of recommended gadgets.
 Right now this just contains a couple of the built-in gadgets again, but it will expand once more gadgets have been created.
@@ -66,7 +66,7 @@ Point that at anything to pick it up and move it around.
 Once you have grabbed anything, you can move it further away from you or close to use by pushing forward or pulling backward on the thumbstick on your controller.
 This is moving the entire whiteboard, but the same interaction would work with the markers, or anything else you can grab in a gadget.
 
-![Distance Grabbing](https://aardvarkxr.github.io/aardvark/images/move_gadget_ray.webp)
+![Pushing/Pulling Grabbed Objects](https://aardvarkxr.github.io/aardvark/images/move_gadget_force.webp)
 
 ## Multiuser gadgets
 
