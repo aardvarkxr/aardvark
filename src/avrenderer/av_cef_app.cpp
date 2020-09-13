@@ -129,16 +129,26 @@ void CAardvarkCefApp::OnContextInitialized()
 
 	D3D_FEATURE_LEVEL featureLevel[] = { D3D_FEATURE_LEVEL_11_1 };
 	D3D_FEATURE_LEVEL createdFeatureLevel;
+	
+	UINT flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
+#if defined( _DEBUG )
+	flags |= D3D11_CREATE_DEVICE_DEBUG;
+#endif
 
-	D3D11CreateDevice( pAdapter, D3D_DRIVER_TYPE_HARDWARE, nullptr, 
-		D3D11_CREATE_DEVICE_DEBUG | D3D11_CREATE_DEVICE_BGRA_SUPPORT, 
-		featureLevel, 1, D3D11_SDK_VERSION,
+	HRESULT hres = D3D11CreateDevice( pAdapter, D3D_DRIVER_TYPE_HARDWARE, nullptr, 
+		flags, featureLevel, 1, D3D11_SDK_VERSION,
 		&m_pD3D11Device, &createdFeatureLevel, &m_pD3D11ImmediateContext );
 
 	if ( pAdapter )
 	{
 		pAdapter->Release();
 		pAdapter = nullptr;
+	}
+
+	if ( !SUCCEEDED( hres ) )
+	{
+		LOG( FATAL ) << "Failed to create D3D device" << std::hex << hres;
+		return;
 	}
 
 	aardvark::GadgetParams_t params = { "http://localhost:23842/gadgets/aardvark_renderer", "", aardvark::EndpointAddr_t() };
