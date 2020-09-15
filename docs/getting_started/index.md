@@ -26,7 +26,7 @@ Aardvark itself also currently only runs on Windows.
 The Aardvark init tool will help you create a mostly-blank project in the current directory.
 
 ```console
-E:\gettingstarted>npm init @aardvarkxr
+E:\gettingstarted>npm init "@aardvarkxr"
 Aardvark gadget project create script (0.10.9)
 ? What is the package name to use for your gadget? mygadget
 ? What is the package name to use for your gadget? mygadget
