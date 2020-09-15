@@ -16,6 +16,7 @@ public:
 	virtual void setVargglesTexture(const vr::Texture_t *pTexture) override;
 	virtual glm::mat4 getHmdFromUniverse() override { return m_hmdFromUniverse; }
 	virtual void getVargglesLookRotation(glm::mat4 &horizontalLooktransform) override;
+	virtual bool shouldRender() override;
 
 	vr::VRInputValueHandle_t getDeviceForHand( EHand hand );
 	glm::mat4 glmMatFromVrMat( const vr::HmdMatrix34_t & mat );

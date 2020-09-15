@@ -87,6 +87,11 @@ void CVRManager::runFrame( bool *shouldQuit )
 			break;
 		}
 	}
+
+	if ( !shouldRender() )
+	{
+		vr::VROverlay()->HideOverlay( m_vargglesOverlay );
+	}
 }
 
 void CVRManager::updateOpenVrPoses()
@@ -147,6 +152,12 @@ void CVRManager::updateOpenVrPoses()
 void CVRManager::getVargglesLookRotation(glm::mat4& horizontalLooktransform)
 {
 	horizontalLooktransform = m_vargglesLookRotation;
+}
+
+
+bool CVRManager::shouldRender()
+{
+	return !vr::VROverlay()->IsDashboardVisible();
 }
 
 bool GetAction( vr::VRActionHandle_t action, vr::VRInputValueHandle_t whichHand )

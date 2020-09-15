@@ -174,7 +174,10 @@ void CJavascriptRenderer::runFrame()
 
 	}
 
-	m_renderer->processRenderList();
+	if ( m_vrManager->shouldRender() )
+	{
+		m_renderer->processRenderList();
+	}
 
 	auto tEnd = std::chrono::high_resolution_clock::now();
 	auto tDiff = std::chrono::duration<double, std::milli>( tEnd - tStart ).count();
