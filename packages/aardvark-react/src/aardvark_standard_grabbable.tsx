@@ -1,4 +1,4 @@
-import { AvVolume, emptyVolume, EVolumeType, infiniteVolume, InitialInterfaceLock, AvNodeTransform, AvConstraint } from '@aardvarkxr/aardvark-shared';
+import { AvVolume, emptyVolume, EVolumeType, infiniteVolume, InitialInterfaceLock, AvNodeTransform, AvConstraint, g_builtinModelTrashcan, g_builtinModelStar } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import { AvComposedEntity, EntityComponent } from './aardvark_composed_entity';
@@ -9,6 +9,8 @@ import { MoveableComponent, MoveableComponentState } from './component_moveable'
 import { NetworkedGadgetComponent } from './component_networked_gadget';
 import { RemoteGadgetComponent } from './component_remote_gadget';
 import { AvGadgetInfo } from './aardvark_gadget_info';
+import { AvHeadFacingTransform } from './aardvark_head_facing_transform';
+import { AvMenuItem } from './aardvark_menu_item';
 const equal = require( 'fast-deep-equal' );
 
 /** This enum defines the possible highlight states of an AvGrabbable. 
@@ -26,6 +28,9 @@ export enum HighlightType
 
 	/** The grabbed grabbable is within drop range of a hook. */
 	InHookRange = 3,
+
+	/** The grabbable was in range and the user is holding the menu button. */
+	Menu = 4,
 }
 
 export enum ShowGrabbableChildren
@@ -53,6 +58,11 @@ export enum HiddenChildrenBehavior
 
 	/** Do not emit the child nodes. */
 	Omit = 1,
+}
+
+export interface StandardGrabbableDeleteCallback
+{
+	(): void;
 }
 
 /** Props for {@link AvStandardGrabbable} */
@@ -137,11 +147,22 @@ export interface StandardGrabbableProps
 	grabberFromGrabbable?: AvNodeTransform;
 
 	/** If this prop is true the grabbable will advertise gadget info for the gadget. This
-	 * allows users to destroy the gadget, share the gadget, etc. 
+	 * allows users to destroy the gadget, share the gadget, etc. If this is true, the 
+	 * user will be presented with a favorite option in the A menu when this gadget is 
+	 * highlighted.
 	 * 
 	 * @default: true
 	 */
 	advertiseGadgetInfo?: boolean;
+
+	/** If this prop is specified, the user will be presented with a delete option when they
+	 * activate the A menu while this gadget is highlighted. If a callback is provided,
+	 * the callback will be called when the user selects delete. If true is provided, the
+	 * gadget will be closed when the user selects delete.
+	 * 
+	 * @default: none
+	 */
+	showDelete?: true | StandardGrabbableDeleteCallback;
 
 	/** If this prop is true the grabbable will ignore all rotation other than yaw
 	 * from its parent so that it is always upright.
@@ -213,6 +234,10 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 			case MoveableComponentState.Grabbed:
 				highlight = HighlightType.Grabbed;
 				break;
+
+			case MoveableComponentState.Menu:
+				highlight = HighlightType.Menu;
+				break;
 		}
 
 		this.setState( ( oldState: StandardGrabbableState ) =>
@@ -263,6 +288,32 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 		}
 	}
 
+	@bind
+	private onFavoriteThisGadget()
+	{
+		console.log( "TODO: MAke favorite do the thing" );
+	}
+
+	private get showDelete(): boolean
+	{
+		return this.props.showDelete ? true : ( this.props.advertiseGadgetInfo ?? true );
+	}
+
+	@bind
+	private onDelete()
+	{
+		if( typeof this.props.showDelete === "function" )
+		{
+			console.log( "calling delete callback at the user's request from the A menu" );
+			this.props.showDelete();
+		}
+		else
+		{
+			console.log( "closing the gadget at the user's request from the A menu" );
+			window.close();
+		}
+	}
+	
 	public render()
 	{
 		let showChildren: boolean;
@@ -324,6 +375,34 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 			constraint = { gravityAligned: this.props.gravityAligned };
 		}
 
+		const advertizeGadgetInfo = this.props.advertiseGadgetInfo ?? true;
+
+		let menu: JSX.Element = null;
+		if( this.state.highlight == HighlightType.Menu 
+			&& ( this.showDelete || advertizeGadgetInfo ) )
+		{
+			let grabbableFromMenu = this.moveableComponent.menuSelfFromGrabber;
+			menu = <AvTransform transform={ grabbableFromMenu }>
+				<AvHeadFacingTransform>
+				{ 
+					advertizeGadgetInfo &&
+					<AvTransform translateX={-0.05 } translateZ={ 0.03 }
+						uniformScale={ 1.5 }>
+						<AvMenuItem modelUri={ g_builtinModelStar }
+							onSelect={ this.onFavoriteThisGadget }/>
+					</AvTransform>
+				}
+				{ 
+					this.showDelete &&
+					<AvTransform translateX={ 0.05 }  translateZ={ 0.03 }
+						rotateX={ -90 }	uniformScale={ 0.2 }>
+						<AvMenuItem modelUri={ g_builtinModelTrashcan }
+							onSelect={ this.onDelete }/>
+					</AvTransform>
+				}
+				</AvHeadFacingTransform>
+			</AvTransform>;
+		}
 		return (
 			<AvComposedEntity components={ components }	volume={ volume } constraint={ constraint }>
 				{ this.networkedComponent 
@@ -332,8 +411,9 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 					<AvModel uri={ this.props.modelUri} color={ this.props.modelColor }/>
 				</AvTransform>
 				{ children }
-				{ ( this.props.advertiseGadgetInfo ?? true ) &&
+				{ advertizeGadgetInfo &&
 					<AvGadgetInfo volume={ infoVolume } /> }
+				{ menu }
 			</AvComposedEntity> );
 	}
 }

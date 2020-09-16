@@ -88,6 +88,29 @@ export class MoveableComponent implements EntityComponent
 		this.entityCallback?.();
 	}
 
+	private get menuGrabberInterface(): ActiveInterface | null
+	{
+		if( this.state != MoveableComponentState.Menu )
+			return null;
+
+		// TODO: track menu per grabber
+		if( this.activeGrabs.size == 0 )
+			return null;
+			
+		let menu: ActiveInterface = this.activeGrabs.values().next().value;
+		return menu;
+	}
+
+	public get menuGrabber(): EndpointAddr | null
+	{
+		return this.menuGrabberInterface?.peer;
+	}
+
+	public get menuSelfFromGrabber(): AvNodeTransform | null
+	{
+		return this.menuGrabberInterface?.selfFromPeer;
+	}
+
 	public get state(): MoveableComponentState
 	{
 		if( this.grabber )
