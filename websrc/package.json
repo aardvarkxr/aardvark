@@ -8,7 +8,7 @@
     "test:watch": "jest --watch",
     "test:clean": "jest --clearCache",
     "build": "webpack --env=production",
-    "start": "webpack --env=dev --watch --progress",
+    "start": "node --max-old-space-size=4096 node_modules/webpack/bin/webpack.js --env=dev --watch --progress",
     "updatelicense": "node build_license_file.js"
   },
   "keywords": [],
