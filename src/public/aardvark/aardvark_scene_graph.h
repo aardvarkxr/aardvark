@@ -63,6 +63,7 @@ namespace aardvark
 
 	void to_json( nlohmann::json& j, const GadgetParams_t& gm );
 	void from_json( const nlohmann::json& j, GadgetParams_t& gm );
+	void sanitize( GadgetParams_t& gm);
 
 	// valid for poker nodes
 	struct PokerProximity_t

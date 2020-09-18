@@ -77,10 +77,14 @@ namespace aardvark
 		};
 	}
 
+	void sanitize(GadgetParams_t& params)
+	{
+		if(params.uri.back() == '/') params.uri.pop_back();
+	}
+
 	void from_json( const nlohmann::json& j, GadgetParams_t& params )
 	{
 		j.at( "uri" ).get_to( params.uri );
-		if(params.uri.back() == '/') params.uri.pop_back();
 		try
 		{
 			j.at( "initialInterfaces" ).get_to( params.initialInterfaces );
@@ -99,6 +103,8 @@ namespace aardvark
 			(void)e;
 			params.epToNotify.type = EEndpointType::Unknown;
 		}
+
+		sanitize( params );
 	}
 
 }
