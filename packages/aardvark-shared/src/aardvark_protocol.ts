@@ -790,3 +790,15 @@ export function gadgetDetailsToId( gadgetName: string, gadgetUri: string, gadget
 
 	return filteredName;
 }
+
+export function manifestUriFromGadgetUri( gadgetUri: string )
+{
+	if( gadgetUri.endsWith( "/" ) )
+	{
+		return gadgetUri + "manifest.webmanifest";
+	}
+	else
+	{
+		return gadgetUri + "/manifest.webmanifest";
+	}
+}

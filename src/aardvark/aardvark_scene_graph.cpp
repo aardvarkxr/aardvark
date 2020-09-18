@@ -80,6 +80,7 @@ namespace aardvark
 	void from_json( const nlohmann::json& j, GadgetParams_t& params )
 	{
 		j.at( "uri" ).get_to( params.uri );
+		if(params.uri.back() == '/') params.uri.pop_back();
 		try
 		{
 			j.at( "initialInterfaces" ).get_to( params.initialInterfaces );

@@ -1,4 +1,4 @@
-import { AardvarkManifest, AardvarkPort, AvNode, AvNodeTransform, AvNodeType, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, gadgetDetailsToId, MessageType, MsgDestroyGadget, MsgError, MsgGadgetStarted, MsgGeAardvarkManifestResponse, MsgGetAardvarkManifest, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgInstallGadget, MsgInterfaceEnded, MsgInterfaceEvent, MsgInterfaceReceiveEvent, MsgInterfaceSendEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgLostEndpoint, MsgNewEndpoint, MsgNodeHaptic, MsgOverrideTransform, MsgResourceLoadFailed, MsgSaveSettings, MsgSetEndpointType, MsgSetEndpointTypeResponse, MsgUpdateActionState, MsgUpdateSceneGraph, parseEnvelope, Permission, WebSocketCloseCodes } from '@aardvarkxr/aardvark-shared';
+import { AardvarkManifest, manifestUriFromGadgetUri, AardvarkPort, AvNode, AvNodeTransform, AvNodeType, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, gadgetDetailsToId, MessageType, MsgDestroyGadget, MsgError, MsgGadgetStarted, MsgGeAardvarkManifestResponse, MsgGetAardvarkManifest, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgInstallGadget, MsgInterfaceEnded, MsgInterfaceEvent, MsgInterfaceReceiveEvent, MsgInterfaceSendEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgLostEndpoint, MsgNewEndpoint, MsgNodeHaptic, MsgOverrideTransform, MsgResourceLoadFailed, MsgSaveSettings, MsgSetEndpointType, MsgSetEndpointTypeResponse, MsgUpdateActionState, MsgUpdateSceneGraph, parseEnvelope, Permission, WebSocketCloseCodes } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as express from 'express';
 import * as http from 'http';
@@ -332,7 +332,7 @@ class CGadgetData
 	{
 		try
 		{
-			let manifestJson = await getJSONFromUri( this.m_gadgetUri + "/manifest.webmanifest" );
+			let manifestJson = await getJSONFromUri( manifestUriFromGadgetUri( this.m_gadgetUri ) );
 			this.m_manifest = manifestJson as AardvarkManifest;
 			console.log( `Gadget ${ this.m_ep.getId() } is ${ this.getName() }` );
 		}
@@ -760,7 +760,7 @@ class CEndpoint
 
 	@bind private onGetGadgetManifest( env: Envelope, m: MsgGetAardvarkManifest )
 	{
-		getJSONFromUri( m.gadgetUri + "/manifest.webmanifest" )
+		getJSONFromUri( manifestUriFromGadgetUri( m.gadgetUri ) )
 		.then( ( jsonManifest: any ) =>
 		{
 			let response: MsgGeAardvarkManifestResponse =
