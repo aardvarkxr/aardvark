@@ -24,7 +24,7 @@ export interface ApiInterfaceSender
 
 export interface ApiInterfaceHandler
 {
-	( sender: ApiInterfaceSender, parameters: any[] ): Promise< any[] | null >;
+	( sender: ApiInterfaceSender, parameters: any[], origin: string, userAgent: string ): Promise< any[] | null >;
 }
 
 export interface ApiInterfaceProps
@@ -140,7 +140,8 @@ export class AvApiInterface extends React.Component< ApiInterfaceProps, {} >
 			let h = this.props.handlers[ event.type ];
 			if( h )
 			{
-				h( { endpointAddr: activeInterface.peer }, event.parameters ?? [] )
+				h( { endpointAddr: activeInterface.peer }, event.parameters ?? [], activeInterface.origin,
+					activeInterface.userAgent )
 				.then( ( result: any[] | null ) =>
 				{
 					if( result )

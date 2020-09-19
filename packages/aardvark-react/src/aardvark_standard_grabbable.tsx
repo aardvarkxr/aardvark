@@ -1,16 +1,17 @@
-import { AvVolume, emptyVolume, EVolumeType, infiniteVolume, InitialInterfaceLock, AvNodeTransform, AvConstraint, g_builtinModelTrashcan, g_builtinModelStar } from '@aardvarkxr/aardvark-shared';
+import { AvConstraint, AvNodeTransform, AvVolume, emptyVolume, EVolumeType, g_builtinModelStar, g_builtinModelTrashcan, infiniteVolume, InitialInterfaceLock } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
-import * as React from 'react';
+import React from 'react';
 import { AvComposedEntity, EntityComponent } from './aardvark_composed_entity';
 import { AvGadget } from './aardvark_gadget';
-import { AvModel } from './aardvark_model';
-import { AvTransform } from './aardvark_transform';
-import { MoveableComponent, MoveableComponentState } from './component_moveable';
-import { NetworkedGadgetComponent } from './component_networked_gadget';
-import { RemoteGadgetComponent } from './component_remote_gadget';
 import { AvGadgetInfo } from './aardvark_gadget_info';
 import { AvHeadFacingTransform } from './aardvark_head_facing_transform';
 import { AvMenuItem } from './aardvark_menu_item';
+import { AvModel } from './aardvark_model';
+import { AvTransform } from './aardvark_transform';
+import { AvGadgetList } from './api_gadgetlist';
+import { MoveableComponent, MoveableComponentState } from './component_moveable';
+import { NetworkedGadgetComponent } from './component_networked_gadget';
+import { RemoteGadgetComponent } from './component_remote_gadget';
 const equal = require( 'fast-deep-equal' );
 
 /** This enum defines the possible highlight states of an AvGrabbable. 
@@ -184,6 +185,7 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 	private moveableComponent: MoveableComponent;
 	private networkedComponent: NetworkedGadgetComponent;
 	private remoteComponent: RemoteGadgetComponent;
+	private gadgetListRef: React.RefObject<AvGadgetList> = React.createRef<AvGadgetList>();
 
 	constructor( props: any )
 	{
@@ -291,7 +293,8 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 	@bind
 	private onFavoriteThisGadget()
 	{
-		console.log( "TODO: MAke favorite do the thing" );
+		console.log( "Sending request to add this gadget to favorites" );
+		this.gadgetListRef.current?.addFavorite( AvGadget.instance().url );
 	}
 
 	private get showDelete(): boolean
@@ -401,6 +404,8 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 					</AvTransform>
 				}
 				</AvHeadFacingTransform>
+
+				<AvGadgetList ref={ this.gadgetListRef } />
 			</AvTransform>;
 		}
 		return (

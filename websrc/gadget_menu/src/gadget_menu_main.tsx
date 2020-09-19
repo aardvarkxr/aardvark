@@ -920,26 +920,32 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 	}
 	
 	@bind
-	private async onGadgetList_AddFavorite( sender: ApiInterfaceSender, args: any[] ) : Promise< [ GadgetListResult ] >
+	private async onGadgetList_AddFavorite( sender: ApiInterfaceSender, args: any[],
+		origin: string, userAgent: string ) : Promise< [ GadgetListResult ] >
 	{
 		let [ gadgetUrl ] = args;
 
 		let manifest = await this.requestManifest( gadgetUrl );
 
-		// ask the user if they want this favorite
-		let answer = await this.messagebox.current.showPrompt( `Add gadget ${ manifest.name } (${ gadgetUrl }) to favorites?`, 
-		[
-			{
-				text: "No",
-				name: "no",
-			},
-			{
-				text: "Yes",
-				name: "yes",
-			}
-		] );
-
 		let result = GadgetListResult.UserDeniedRequest;
+		let answer = "yes";
+		if( !userAgent.includes( "Aardvark" ) )
+		{
+			// ask the user if they want this favorite
+			answer = await this.messagebox.current.showPrompt( `Add gadget ${ manifest.name } (${ gadgetUrl }) to favorites?`, 
+			[
+				{
+					text: "No",
+					name: "no",
+				},
+				{
+					text: "Yes",
+					name: "yes",
+				}
+			] );
+
+		}
+
 		if( answer == "yes" )
 		{
 			result = this.addFavorite( gadgetUrl );
@@ -949,7 +955,8 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 	}
 
 	@bind
-	private async onGadgetList_RemoveFavorite( sender: ApiInterfaceSender, args: any[] ) : Promise< [ GadgetListResult ] >
+	private async onGadgetList_RemoveFavorite( sender: ApiInterfaceSender, args: any[],
+		origin: string, userAgent: string ) : Promise< [ GadgetListResult ] >
 	{
 		let [ gadgetUrl ] = args;
 
