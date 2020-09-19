@@ -1,4 +1,4 @@
-import { AardvarkManifest, AardvarkState, AvNodeTransform, AvRendererConfig, readPersistentState, StoredGadget } from '@aardvarkxr/aardvark-shared';
+import { AardvarkManifest, manifestUriFromGadgetUri, AardvarkState, AvNodeTransform, AvRendererConfig, readPersistentState, StoredGadget } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -156,7 +156,7 @@ class CPersistenceManager
 		{
 			try 
 			{
-				let manifest = await getJSONFromUri( installedGadget + "/manifest.webmanifest" ) as AardvarkManifest;
+				let manifest = await getJSONFromUri( manifestUriFromGadgetUri(installedGadget) ) as AardvarkManifest;
 				if( manifest.aardvark?.startAutomatically )
 				{
 					let foundOne = false;

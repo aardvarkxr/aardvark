@@ -69,30 +69,9 @@ interface ActionStateListener
 
 export function GetGadgetUrlFromWindow()
 {
-	if( window.location.pathname.lastIndexOf( ".html" ) == window.location.pathname.length - 5 )
-	{
-		return window.location.origin
-			+ window.location.pathname.slice( 0, window.location.pathname.lastIndexOf( "/" ) );
-		//console.log( "Stripping gadget URI down to", this.m_actualGadgetUri );
-	}
-	else
-	{
-		return window.location.origin + window.location.pathname;
-	}
+	return window.location.origin
+		+ window.location.pathname.slice( 0, window.location.pathname.lastIndexOf( "/" ) );
 }
-
-export function GetManifestUrlFromGadget( gadgetUrl: string )
-{
-	if( gadgetUrl.endsWith( "/" ) )
-	{
-		return gadgetUrl + "manifest.webmanifest";
-	}
-	else
-	{
-		return gadgetUrl + "/manifest.webmanifest";
-	}
-}
-
 
 /** The singleton gadget object for the browser. */
 export class AvGadget
