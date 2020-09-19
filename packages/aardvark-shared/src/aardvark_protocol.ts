@@ -248,6 +248,13 @@ export interface MsgUpdateSceneGraph
 {
 	root?: AvNode;
 	gadgetUrl?: string;
+	origin?: string;
+	userAgent?: string;
+}
+
+export function isUserAgentAardvark( userAgent: string )
+{
+	return userAgent.includes( "Aardvark" );
 }
 
 
@@ -344,7 +351,11 @@ export type MinimalPose = [ number, number, number, number, number, number, numb
 export interface MsgInterfaceStarted
 {
 	transmitter: EndpointAddr;
+	transmitterOrigin: string;
+	transmitterUserAgent: string;
 	receiver: EndpointAddr;
+	receiverOrigin: string;
+	receiverUserAgent: string;
 	iface: string;
 	transmitterFromReceiver: AvNodeTransform;
 	intersectionPoint?: AvVector;

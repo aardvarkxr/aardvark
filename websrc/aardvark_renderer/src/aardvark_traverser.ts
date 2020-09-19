@@ -259,6 +259,8 @@ interface AvNodeRoot
 	root: AvNode;
 	handIsRelevant: Set<EHand>;
 	wasGadgetDraggedLastFrame: boolean;
+	origin: string;
+	userAgent: string;
 }
 
 interface RemoteUniverse
@@ -359,10 +361,16 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 		{
 			intersectionPoint = { x: pt.x, y: pt.y, z: pt.z };
 		}
+		let transmitterRoot = this.m_roots[ transmitter.endpointId ];
+		let receiverRoot = this.m_roots[ receiver.endpointId ];
 		this.m_callbacks.sendMessage( MessageType.InterfaceStarted, 
 			{
 				transmitter,
+				transmitterOrigin: transmitterRoot?.origin,
+				transmitterUserAgent: transmitterRoot?.userAgent,
 				receiver,
+				receiverOrigin: receiverRoot?.origin,
+				receiverUserAgent: receiverRoot?.userAgent,
 				iface,
 				transmitterFromReceiver: nodeTransformFromMat4( transform ),
 				intersectionPoint,
@@ -428,7 +436,8 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 			} as MsgInterfaceReceiveEvent );
 	}
 
-	public updateSceneGraph( root: AvNode, gadgetUrl: string, gadgetId: number )
+	public updateSceneGraph( root: AvNode, gadgetUrl: string, origin: string, userAgent: string,
+		gadgetId: number )
 	{
 		this.updateGlobalIds( root, gadgetId );
 		let rootData = this.m_roots[ gadgetId ];
@@ -440,7 +449,9 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 				handIsRelevant: new Set<EHand>(),
 				wasGadgetDraggedLastFrame: false,
 				root: null,
-				gadgetUrl: gadgetUrl,
+				gadgetUrl,
+				origin,
+				userAgent,
 			};
 		}
 

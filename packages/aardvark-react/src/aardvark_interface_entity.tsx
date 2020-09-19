@@ -1,4 +1,4 @@
-import { AvNodeTransform, AvNodeType, AvVolume, EndpointAddr, endpointAddrsMatch, ENodeFlags, InitialInterfaceLock, InterfaceLockResult, invertNodeTransform, MessageType, MsgInterfaceLock, MsgInterfaceLockResponse, MsgInterfaceRelock, MsgInterfaceRelockResponse, MsgInterfaceSendEvent, MsgInterfaceSendEventResponse, MsgInterfaceUnlock, MsgInterfaceUnlockResponse, AvConstraint, AvVector, matMultiplyPoint, nodeTransformToMat4, vecFromAvVector, vecToAvVector } from '@aardvarkxr/aardvark-shared';
+import { AvNodeTransform, AvNodeType, AvVolume, EndpointAddr, endpointAddrsMatch, ENodeFlags, InitialInterfaceLock, InterfaceLockResult, invertNodeTransform, MessageType, MsgInterfaceLock, MsgInterfaceLockResponse, MsgInterfaceRelock, MsgInterfaceRelockResponse, MsgInterfaceSendEvent, MsgInterfaceSendEventResponse, MsgInterfaceUnlock, MsgInterfaceUnlockResponse, AvConstraint, AvVector, matMultiplyPoint, nodeTransformToMat4, vecFromAvVector, vecToAvVector, MsgInterfaceStarted } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
 import { AvGadget } from './aardvark_gadget';
@@ -76,6 +76,12 @@ export interface ActiveInterface
 	 * be called for interfaces with the wantsTransforms field set to true.
 	 */
 	onTransformUpdated( transformCallback:( entityFromPeer: AvNodeTransform ) => void ): void;
+
+	/** The origin of the gadget that provided the peer to this active interface. */
+	readonly origin: string;
+
+	/** The user agent of the gadget that provided the peer to this active interface. */
+	readonly userAgent: string;
 }
 
 
@@ -91,17 +97,28 @@ class CActiveInterface implements ActiveInterface
 	private lastTransmitterFromReceiver: AvNodeTransform;
 	private lastTransmitterIntersectionPoint: AvVector;
 	public params: object;
+	private peerOrigin: string;
+	private peerUserAgent: string;
 
-	constructor( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string, 
-		transmitterFromReceiver: AvNodeTransform, intersectionPoint: AvVector, role: InterfaceRole, params?: object )
+	constructor( m: MsgInterfaceStarted, role: InterfaceRole )
 	{
-		this.transmitter = transmitter;
-		this.receiver = receiver;
-		this.iface = iface;
-		this.lastTransmitterFromReceiver = transmitterFromReceiver;
-		this.lastTransmitterIntersectionPoint = intersectionPoint;
+		this.transmitter = m.transmitter;
+		this.receiver = m.receiver;
+		this.iface = m.iface;
+		this.lastTransmitterFromReceiver = m.transmitterFromReceiver;
+		this.lastTransmitterIntersectionPoint = m.intersectionPoint;
 		this.role = role;
-		this.params = params;
+		this.params = m.params;
+		if( this.role == InterfaceRole.Transmitter )
+		{
+			this.peerOrigin = m.receiverOrigin;
+			this.peerUserAgent = m.receiverUserAgent;
+		}
+		else
+		{
+			this.peerOrigin = m.transmitterOrigin;
+			this.peerUserAgent = m.transmitterUserAgent;
+		}
 	}
 
 	public lock(): Promise<InterfaceLockResult>
@@ -208,6 +225,17 @@ class CActiveInterface implements ActiveInterface
 			return null;
 		}
 	}
+
+	public get origin(): string
+	{
+		return this.peerOrigin;
+	}
+
+	public get userAgent(): string
+	{
+		return this.peerUserAgent;
+	}
+
 
 	sendEvent( event: object ): Promise<void>
 	{
@@ -505,14 +533,12 @@ export class AvInterfaceEntity extends AvBaseNode< AvInterfaceEntityProps, {} >
 	}
 
 	@bind
-	private onInterfaceStarted( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string,
-		transmitterFromReceiver: AvNodeTransform, intersectionPoint?: AvVector, params?: object  ): void
+	private onInterfaceStarted( m: MsgInterfaceStarted  ): void
 	{
-		let [ processor, role ] = this.getProcessor( transmitter, receiver, iface );
+		let [ processor, role ] = this.getProcessor( m.transmitter, m.receiver, m.iface );
 		if( processor )
 		{
-			let newInterface = new CActiveInterface( transmitter, receiver, iface, transmitterFromReceiver, 
-				intersectionPoint, role, params );
+			let newInterface = new CActiveInterface( m, role );
 			this.activeInterfaces.push( newInterface );
 			processor( newInterface );
 		}

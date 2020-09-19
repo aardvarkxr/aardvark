@@ -30,7 +30,8 @@ rendererEndpoint.registerHandler( MessageType.UpdateSceneGraph,
 		}
 		else
 		{
-			traverser.updateSceneGraph( m.root, m.gadgetUrl, env.sender.endpointId );
+			traverser.updateSceneGraph( m.root, m.gadgetUrl, m.origin, m.userAgent,
+				env.sender.endpointId );
 		}
 	} );
 

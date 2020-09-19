@@ -499,6 +499,8 @@ class CGadgetData
 		{
 			root: this.getRoot(),
 			gadgetUrl: this.getUri(),
+			userAgent: this.m_ep.userAgent,
+			origin: this.m_ep.origin,
 		};
 
 		return (
@@ -533,7 +535,8 @@ class CEndpoint
 {
 	private m_ws: WebSocket = null;
 	private m_id: number;
-	private m_origin: string| string[];
+	private m_origin: string;
+	private m_userAgent: string;
 	private m_type = EndpointType.Unknown;
 	private m_dispatcher: CDispatcher = null;
 	private m_gadgetData: CGadgetData = null;
@@ -549,13 +552,22 @@ class CEndpoint
 		
 	} = {};
 
-	constructor( ws: WebSocket, origin: string | string[], id: number, dispatcher: CDispatcher )
+	constructor( ws: WebSocket, origin: string | string[], userAgent: string, id: number, dispatcher: CDispatcher )
 	{
 		console.log( "new connection from ", origin );
 		this.m_ws = ws;
-		this.m_origin = origin;
+		this.m_userAgent = userAgent;
 		this.m_id = id;
 		this.m_dispatcher = dispatcher;
+
+		if( typeof origin === "string" )
+		{
+			this.m_origin = origin;
+		}
+		else
+		{
+			this.m_origin = origin[0];
+		}
 
 		ws.on( 'message', this.onMessage );
 		ws.on( 'close', this.onClose );
@@ -625,6 +637,16 @@ class CEndpoint
 	public getId() { return this.m_id; }
 	public getType() { return this.m_type; }
 	public getGadgetData() { return this.m_gadgetData; }
+
+	public get userAgent(): string
+	{
+		return this.m_userAgent;
+	}
+
+	public get origin() : string 
+	{
+		return this.m_origin;
+	}
 
 	private registerEnvelopeHandler( type: MessageType, handler: EnvelopeHandler )
 	{
@@ -1066,7 +1088,8 @@ class CServer
 	@bind onConnection( ws: WebSocket, request: http.IncomingMessage )
 	{
 		this.m_dispatcher.addPendingEndpoint( 
-			new CEndpoint( ws, request.headers.origin, this.m_nextEndpointId++, this.m_dispatcher ) );
+			new CEndpoint( ws, request.headers.origin, request.headers["user-agent"], 
+			this.m_nextEndpointId++, this.m_dispatcher ) );
 	}
 }
 

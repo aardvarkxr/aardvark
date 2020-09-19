@@ -9,9 +9,7 @@ import { CGadgetEndpoint } from './gadget_endpoint';
 const equal = require( 'fast-deep-equal' );
 export interface AvInterfaceEntityProcessor
 {
-	started( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string, 
-		transmitterFromReceiver: AvNodeTransform, intersectionPoint?: AvVector,
-		params?: object ): void;
+	started( startMsg: MsgInterfaceStarted ): void;
 	ended( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string, 
 		transmitterFromReceiver: AvNodeTransform, intersectionPoint?: AvVector ): void;
 	event( destination: EndpointAddr, peer: EndpointAddr, iface: string, data: object, 
@@ -304,8 +302,7 @@ export class AvGadget
 		let processor = this.getInterfaceEntityProcessor( env.target );
 		if( processor )
 		{
-			processor.started(m.transmitter, m.receiver, m.iface, m.transmitterFromReceiver, 
-				m.intersectionPoint, m.params );
+			processor.started( m );
 		}
 
 		if( !processor )

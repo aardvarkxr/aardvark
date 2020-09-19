@@ -153,7 +153,7 @@ describe( "AvDefaultTraverser ", () =>
 		let root = buildOrigin( "/space/stage" );
 		addChild( root, buildModel( k_testModelUrl ) );
 
-		traverser.updateSceneGraph( root, k_testGadgetUrl, currentGadgetId() );
+		traverser.updateSceneGraph( root, k_testGadgetUrl, "http://test.com/", "Aardvark", currentGadgetId() );
 		traverser.traverse();
 
 		expect( r.lastRenderList.length ).toBe( 1 );
@@ -172,7 +172,7 @@ describe( "AvDefaultTraverser ", () =>
 		addChild( root, buildModel( k_testModelUrl ) );
 		addChild( root, buildModel( k_testModelUrl ) );
 
-		traverser.updateSceneGraph( root, k_testGadgetUrl, currentGadgetId() );
+		traverser.updateSceneGraph( root, k_testGadgetUrl, "http://test.com/", "Aardvark", currentGadgetId() );
 		traverser.traverse();
 
 		expect( r.lastRenderList.length ).toBe( 2 );
@@ -185,7 +185,7 @@ describe( "AvDefaultTraverser ", () =>
 		addChild( root, buildModel( k_testModelUrl, "red" ) );
 		addChild( root, buildModel( k_testModelUrl, "blue" ) );
 
-		traverser.updateSceneGraph( root, k_testGadgetUrl, currentGadgetId() );
+		traverser.updateSceneGraph( root, k_testGadgetUrl,"http://test.com", "Aardvark",  currentGadgetId() );
 		traverser.traverse();
 
 		expect( r.lastRenderList.length ).toBe( 2 );
@@ -199,7 +199,7 @@ describe( "AvDefaultTraverser ", () =>
 		let trans = addChild( root, buildTransform( new vec3( [ 1, 2, 3 ] ) ) );
 		addChild( trans, buildModel( k_testModelUrl ) );
 
-		traverser.updateSceneGraph( root, k_testGadgetUrl, currentGadgetId() );
+		traverser.updateSceneGraph( root, k_testGadgetUrl, "http://test.com", "Aardvark", currentGadgetId() );
 		traverser.traverse();
 
 		expect( r.lastRenderList.length ).toBe( 1 );
@@ -216,7 +216,7 @@ describe( "AvDefaultTraverser ", () =>
 		transReparent.propParentAddr = transDeclaredParent.globalId;
 		addChild( transReparent, buildModel( k_testModelUrl ) );
 
-		traverser.updateSceneGraph( root, k_testGadgetUrl, currentGadgetId() );
+		traverser.updateSceneGraph( root, k_testGadgetUrl, "http://test.com", "Aardvark", currentGadgetId() );
 		traverser.traverse();
 
 		expect( r.lastRenderList.length ).toBe( 1 );
@@ -238,7 +238,7 @@ describe( "AvDefaultTraverser ", () =>
 		};
 		addChild( transReparent, buildModel( k_testModelUrl ) );
 
-		traverser.updateSceneGraph( root, k_testGadgetUrl, currentGadgetId() );
+		traverser.updateSceneGraph( root, k_testGadgetUrl, "http://test.com", "Aardvark", currentGadgetId() );
 		traverser.traverse();
 
 		expect( r.lastRenderList.length ).toBe( 1 );
@@ -265,7 +265,7 @@ describe( "AvDefaultTraverser ", () =>
 		};
 		addChild( transReparent, buildModel( k_testModelUrl ) );
 
-		traverser.updateSceneGraph( root, k_testGadgetUrl, currentGadgetId() );
+		traverser.updateSceneGraph( root, k_testGadgetUrl, "http://test.com", "Aardvark", currentGadgetId() );
 		traverser.traverse();
 
 		let expected: AvNodeTransform =
