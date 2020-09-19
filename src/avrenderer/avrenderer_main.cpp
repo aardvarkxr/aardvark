@@ -176,6 +176,9 @@ int APIENTRY WinMain( HINSTANCE hInstance, HINSTANCE, LPSTR cmdLine, int )
 	//settings.multi_threaded_message_loop = true;
 	settings.windowless_rendering_enabled = true;
 
+	static const wchar_t* k_userAgent = L"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.102 Safari/537.36 Aardvark";
+	cef_string_wide_to_utf16( k_userAgent, wcslen( k_userAgent ), &settings.user_agent );
+
 	std::wstring cachePath = tools::GetCacheDirectory().wstring();
 	cef_string_wide_to_utf16( cachePath.c_str(), cachePath.size(), &settings.cache_path );
 
