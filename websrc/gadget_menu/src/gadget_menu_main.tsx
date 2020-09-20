@@ -481,6 +481,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		{
 			buttons.push( [ g_builtinModelStar, ControlPanelTab.Favorites ] );
 		}
+		buttons.push( [ g_builtinModelHammerAndWrench, ControlPanelTab.Builtin ] );
 		buttons.push( [ g_builtinModelWindowIcon, ControlPanelTab.DesktopWindows ] );
 
 		const k_buttonGap = 0.07;
