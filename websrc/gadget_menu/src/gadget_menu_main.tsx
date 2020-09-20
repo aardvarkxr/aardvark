@@ -1,5 +1,5 @@
 import { ApiInterfaceSender, ActiveInterface, AvGadget, AvGadgetSeed, AvGrabButton, AvHeadFacingTransform, AvHighlightTransmitters, AvInterfaceEntity, AvLine, AvModel, AvOrigin, AvPanel, AvPrimitive, AvStandardGrabbable, AvTransform, GadgetInfoEvent, GadgetSeedHighlight, HiddenChildrenBehavior, k_GadgetInfoInterface, PrimitiveType, PrimitiveYOrigin, renderGadgetIcon, ShowGrabbableChildren, k_GadgetListInterface, GadgetListEventType, AvMessagebox, AvApiInterface, ApiInterfaceHandler, GadgetListResult, AvMenuItem } from '@aardvarkxr/aardvark-react';
-import { Av, WindowInfo, AardvarkManifest, AvNodeTransform, AvVector, emptyVolume, EndpointAddr, g_builtinModelBarcodeScanner, nodeTransformToMat4, nodeTransformFromMat4, g_builtinModelDropAttract, g_builtinModelNetwork, g_builtinModelHammerAndWrench, g_builtinModelStar, g_builtinModelTrashcan, MessageType, MsgDestroyGadget, rayVolume, MsgInstallGadget, g_builtinModelPanel, AvVolume, EVolumeType, g_builtinModelArrowFlat, g_builtinModelWindowIcon, infiniteVolume, endpointAddrToString } from '@aardvarkxr/aardvark-shared';
+import { Av, WindowInfo, AardvarkManifest, AvNodeTransform, AvVector, emptyVolume, EndpointAddr, g_builtinModelFlask, g_builtinModelBarcodeScanner, nodeTransformToMat4, nodeTransformFromMat4, g_builtinModelDropAttract, g_builtinModelNetwork, g_builtinModelHammerAndWrench, g_builtinModelStar, g_builtinModelTrashcan, MessageType, MsgDestroyGadget, rayVolume, MsgInstallGadget, g_builtinModelPanel, AvVolume, EVolumeType, g_builtinModelArrowFlat, g_builtinModelWindowIcon, infiniteVolume, endpointAddrToString } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3, vec4 } from '@tlaukkan/tsm';
 import Axios from 'axios';
 import bind from 'bind-decorator';
@@ -158,6 +158,7 @@ interface Registry
 {
 	minimumAardvarkVersion: string;
 	gadgets: RegistryEntry[];
+	labs: RegistryEntry[];
 }
 
 interface GadgetInfoPanel
@@ -182,6 +183,7 @@ interface ScannerGadget
 enum ControlPanelTab
 {
 	Main,
+	Labs,
 	Favorites,
 	Builtin,
 	DesktopWindows,
@@ -271,6 +273,10 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		{
 			this.registry = response.data as Registry;
 			for( let entry of this.registry.gadgets )
+			{
+				this.requestManifest( entry.url );
+			}
+			for( let entry of this.registry.labs )
 			{
 				this.requestManifest( entry.url );
 			}
@@ -413,6 +419,9 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 			case ControlPanelTab.Main:
 				return this.renderMainTab();
 
+			case ControlPanelTab.Labs:
+				return this.renderLabsTab();
+
 			case ControlPanelTab.Builtin:
 				return this.renderBuiltinTab();
 
@@ -435,6 +444,17 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		return this.renderRegistryEntries( loadedEntries );
 	}
 
+	private renderLabsTab()
+	{
+		let loadedEntries: string[] = [];
+		for( let entry of this.registry?.labs ?? [] )
+		{
+			loadedEntries.push( entry.url );
+		}
+
+		return this.renderRegistryEntries( loadedEntries );
+	}
+
 	private renderBuiltinTab()
 	{
 		return this.renderRegistryEntries( k_alwaysInstalledGadgets );
@@ -447,11 +467,34 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 
 	private renderFooter( canScrollUp?: boolean, canScrollDown?: boolean )
 	{
+		let buttons: [string, ControlPanelTab ][] = [];
+		
+		if( this.registry?.gadgets?.length > 0 )
+		{
+			buttons.push( [ g_builtinModelNetwork, ControlPanelTab.Main ] );
+		}
+		if( this.registry?.labs?.length > 0 )
+		{
+			buttons.push( [ g_builtinModelFlask, ControlPanelTab.Labs ] );
+		}
+		if( this.settings?.favorites?.length > 0 )
+		{
+			buttons.push( [ g_builtinModelStar, ControlPanelTab.Favorites ] );
+		}
+		buttons.push( [ g_builtinModelWindowIcon, ControlPanelTab.DesktopWindows ] );
+
+		const k_buttonGap = 0.07;
+		let start = -k_buttonGap * ( buttons.length / 2 );
+
+		let buttonElements: JSX.Element[] = [];
+		for( let buttonIndex = 0; buttonIndex < buttons.length; buttonIndex++ )
+		{
+			const [ icon, value ] = buttons[ buttonIndex ];
+			buttonElements.push( this.renderTabButton( start + k_buttonGap * buttonIndex, icon, value ) );
+		}
+
 		return <>
-			{ this.renderTabButton( -0.105, g_builtinModelNetwork, ControlPanelTab.Main ) }
-			{ this.renderTabButton(  -0.035, g_builtinModelHammerAndWrench, ControlPanelTab.Builtin ) }
-			{ this.renderTabButton(  0.035, g_builtinModelStar, ControlPanelTab.Favorites ) }
-			{ this.renderTabButton(  0.105, g_builtinModelWindowIcon, ControlPanelTab.DesktopWindows ) }
+			{ buttonElements }
 			
 			<AvTransform translateY={ 0.05} rotateZ={ 90 }>
 				<AvPrimitive type={ PrimitiveType.Cylinder } radius={ 0.003 } height={ 0.20 }/>

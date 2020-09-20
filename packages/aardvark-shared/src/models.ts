@@ -9,6 +9,7 @@ export const g_builtinModelBracelet = g_builtinModelPrefix + "bracelet.glb";
 export const g_builtinModelCylinder = g_builtinModelPrefix + "cylinder.glb";
 export const g_builtinModelDropAttract = g_builtinModelPrefix + "drop_attract.glb";
 export const g_builtinModelError = g_builtinModelPrefix + "error.glb";
+export const g_builtinModelFlask = g_builtinModelPrefix + "flask.glb";
 export const g_builtinModelGear = g_builtinModelPrefix + "gear.glb";
 export const g_builtinModelHammerAndWrench = g_builtinModelPrefix + "hammerwrench.glb";
 export const g_builtinModelHandLeft = g_builtinModelPrefix + "hand_left.glb";
