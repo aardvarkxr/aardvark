@@ -9,7 +9,8 @@
     "test:clean": "jest --clearCache",
     "build": "webpack --env=production",
     "start": "node --max-old-space-size=4096 node_modules/webpack/bin/webpack.js --env=dev --watch --progress",
-    "updatelicense": "node build_license_file.js"
+    "updatelicense": "node build_license_file.js",
+    "debug": "nodemon --inspect ../data/server/server_bundle.js"
   },
   "keywords": [],
   "author": "Aardvark Team",
@@ -34,7 +35,7 @@
     "license-checker": "^25.0.1",
     "mini-css-extract-plugin": "^0.7.0",
     "mock-socket": "^9.0.3",
-    "nodemon": "^2.0.2",
+    "nodemon": "^2.0.4",
     "npm": "^6.14.8",
     "shebang-loader": "0.0.1",
     "ts-jest": "^25.3.1",
