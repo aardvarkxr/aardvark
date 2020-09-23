@@ -1,6 +1,8 @@
+import * as React from 'react';
+import * as ReactDOM from 'react-dom';
+
 import { AvConstraint, AvNodeTransform, AvVolume, emptyVolume, EVolumeType, g_builtinModelStar, g_builtinModelTrashcan, infiniteVolume, InitialInterfaceLock } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
-import React from 'react';
 import { AvComposedEntity, EntityComponent } from './aardvark_composed_entity';
 import { AvGadget } from './aardvark_gadget';
 import { AvGadgetInfo } from './aardvark_gadget_info';

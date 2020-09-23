@@ -1,9 +1,8 @@
-import { AardvarkManifest, manifestUriFromGadgetUri, MessageType, MsgInstallGadget } from '@aardvarkxr/aardvark-shared';
+import { AardvarkManifest, manifestUriFromGadgetUri, gadgetUriFromWindow, MessageType, MsgInstallGadget } from '@aardvarkxr/aardvark-shared';
 import axios from 'axios';
 import * as React from 'react';
 import './Landing.css';
 import { CUtilityEndpoint } from './aardvark_endpoint';
-import { GetGadgetUrlFromWindow } from './aardvark_gadget';
 import { findGltfIconFullUrl } from './aardvark_gadget_seed';
 import bind from 'bind-decorator';
 import { AvGadgetList, GadgetListResult } from './api_gadgetlist';
@@ -34,7 +33,7 @@ export class DefaultLanding extends React.Component<DefaultLandingProps, Default
 		this.state = { connected: false };
 
 		this.endpoint = new CUtilityEndpoint( null, this.onConnectToServer );
-		this.gadgetUrl = GetGadgetUrlFromWindow();
+		this.gadgetUrl = gadgetUriFromWindow();
 
 		axios.get( manifestUriFromGadgetUri( this.gadgetUrl ) )
 		.then( ( response ) =>

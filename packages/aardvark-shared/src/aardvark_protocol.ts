@@ -813,3 +813,9 @@ export function manifestUriFromGadgetUri( gadgetUri: string )
 		return gadgetUri + "/manifest.webmanifest";
 	}
 }
+
+export function gadgetUriFromWindow()
+{
+	return window.location.origin
+		+ window.location.pathname.slice( 0, window.location.pathname.lastIndexOf( "/" ) );
+}
