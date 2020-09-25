@@ -185,7 +185,7 @@ Now that our gadget preview is all set up, let's add the watch to the gadget its
 
 Not _too_ much happening here. First, note that we've changed the model in `<AvStandardGrabbable>` to be our watch. We're using the `<AvTransform>` component to place the text (which will soon be the time/date) relatively to the model. The values are a result of trial and error - our main concern is having the watch in a reasonable place and setting the digits' size and location with the `<AvTransform>` values and the `.watch` class' CSS.
 
-# Step 4: _Time for Action_ - Making it interactive
+# Step 4: _Time for Action_ - Making things interactive
 
 Alright, so we've got a watch; time (heh) to make it tick!
 In the spirit of old school digital watches, let's have a `time` display and - when the screen is "clicked" with a VR controller - switch to a `date` display. We'll start by adding a "watchDisplay" string and an instance of a new `watchDisplayType` enum to our state interface, to manage the display state:
@@ -355,9 +355,29 @@ And here's our gadget in action:
 
 ![final](./media/final-opt.gif)
 
+
+# Step 5: _Our Time Together_ - sharing your gadget in a multiuser experience
+
+VR can feel lonely if you're all by yourself... Why not do it together?
+
+[PlutoVR](https://www.plutovr.com/) is a spatial computing communications service available on Steam. You can use it to hang out with friends or coworkers in VR, and With the addition of a single prop, you can share your gadget in PlutoVR conversations! 
+
+Add the prop `remoteInterfaceLocks={[]}` to your \<AvStandardGrabbable>:
+
+```tsx
+<AvStandardGrabbable modelUri={"./models/watch.glb"} modelScale={0.03} remoteInterfaceLocks={[]}>
+```
+Remote Interface Locks handle communication between networked gadgets - we're just defining an empty Remote Interface Lock to make the gadget appear across pluto conversations. You can learn more about them in the [docs](https://aardvarkxr.github.io/aardvark/aardvark-react/interfaces/_aardvark_standard_grabbable_.standardgrabbableprops.html#remoteinterfacelocks) and check out the default gadget (that gets created when you run `npm init @aardvarkxr`) for a sample use. In addition, [here](https://www.youtube.com/watch?v=SbX-fNB0SDc&list=PLQwVroDuDCRvbc04RzgSeJqTMUDB6L4J3&index=5&ab_channel=MichaelBoone) is a quick, helpful video on enabling Aardvark's multi-user functionality in Pluto.
+
+
+Now that you've enabled multiuser functionality in your gadget, you can show it off to a friend!
+
+![multiuser-opt.gif](./media/multiuser-opt.gif)
+
+
 There you have it. Your own Casio Watch gadget. Now go wander the metaverse in style!
 
-# Step 5: _Closing Time_ - a few tips for the road:
+# Step 6: _Closing Time_ - a few tips for the road:
 
 - Remember, Aardvark is designed as an overlay for **gadgets**. It's open source, built with the state of the art frameworks and standards, and can do quite a lot - but it's best thought of as a tool for making the _things_ in the **people-places-things** trifecta. While you could conceivably use it to make places (or, ahem, _people_?) - it is decidedly not its purpose or planned use case; _things_ are where it shines.
 - The [Aardvark React documentation](https://aardvarkxr.github.io/aardvark/aardvark-react/) is a great next step: it describes most of the available node types in Aardvark, as well as what their properties are.
