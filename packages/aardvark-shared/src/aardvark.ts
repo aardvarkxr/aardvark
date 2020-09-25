@@ -104,6 +104,9 @@ export interface Aardvark
 	// requires renderer permissions
 	renderer: AvRenderer;
 
+	// requires starturl permissions
+	startUrl( url: string ): void;
+
 	// requires screeencapture permissions
 	subscribeWindowList( callback: ( windows: WindowInfo[] ) => void ): void;
 	unsubscribeWindowList():void;

@@ -12,6 +12,7 @@
 #include <include/wrapper/cef_helpers.h>
 #include "javascript_object.h"
 #include "javascript_renderer.h"
+#include <tools/systools.h>
 
 using aardvark::EAvSceneGraphResult;
 using aardvark::GadgetParams_t;
@@ -156,6 +157,20 @@ bool CAardvarkObject::init( CefRefPtr<CefV8Value> container )
 			m_handler->requestStartGadget( params );
 		} );
 
+	}
+
+	if ( hasPermission( "starturl" ) )
+	{
+		RegisterFunction( container, "startUrl", [ this ]( const CefV8ValueList& arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+		{
+			if ( arguments.size() != 1 || !arguments[ 0 ]->IsString() )
+			{
+				exception = "Invalid arguments";
+				return;
+			}
+
+			tools::invokeURL( arguments[ 0 ]->GetStringValue() );
+		} );
 	}
 
 	if ( hasPermission( "screencapture" ) )
