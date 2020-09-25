@@ -63,7 +63,7 @@ namespace tools
 
 	void invokeURL( const std::string& url )
 	{
-		::ShellExecuteA( nullptr, url.c_str(), nullptr, nullptr, nullptr, SW_SHOW );
+		::ShellExecuteA( nullptr, nullptr, url.c_str(), nullptr, nullptr, SW_SHOW );
 	}
 
 	/** exit this process if there's already an instance of the process key */
