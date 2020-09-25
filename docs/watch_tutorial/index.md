@@ -118,7 +118,7 @@ html {
 
 .watch {
   font-family: "digital-7", monospace;
-  font-size: 2.8rem;
+	font-size: 2.65rem;
   color: #4af626;
   margin-top: 47%;
   margin-left: 48%;
@@ -168,7 +168,7 @@ Now that our gadget preview is all set up, let's add the watch to the gadget its
         <AvStandardGrabbable modelUri={"./models/watch.glb"} modelScale={0.03}>
           <AvTransform
             translateX={-0.012}
-            translateY={0.056}
+            translateY={0.063}
             translateZ={0.00375}
             rotateX={-90}
             uniformScale={0.2}
