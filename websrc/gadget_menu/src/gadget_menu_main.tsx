@@ -105,7 +105,7 @@ function WindowInfoPanel( props: WindowInfoPanelProps )
 		<AvTransform translateX={ 0.22 } translateZ={ 0.08 }
 			rotateX={ 90 } rotateZ={ 30 }
 			scaleX={ previewWidth } scaleZ={ previewHeight }>
-			<AvModel uri={ g_builtinModelPanel } sharedTexure={ props.window.texture }/>
+			<AvModel uri={ g_builtinModelPanel } sharedTexture={ props.window.texture }/>
 		</AvTransform>
 		</>
 }
@@ -620,7 +620,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 						<AvTransform translateY = { y } translateX = { x } 
 							key={ window.handle }>
 							<AvTransform rotateX={ 90 } scaleX={ width } scaleZ={ height }>
-								<AvModel uri={ g_builtinModelPanel } sharedTexure={ window.texture }
+								<AvModel uri={ g_builtinModelPanel } sharedTexture={ window.texture }
 									color="#FFFFFF77"/>
 							</AvTransform>
 						</AvTransform> );
@@ -650,7 +650,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 								customAppearance= 
 								{
 									<AvTransform rotateX={ 90 } scaleX={ width } scaleZ={ height }>
-										<AvModel uri={ g_builtinModelPanel } sharedTexure={ window.texture }/>
+										<AvModel uri={ g_builtinModelPanel } sharedTexture={ window.texture }/>
 									</AvTransform>
 								} 
 								customVolume={ volume }/>
