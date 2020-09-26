@@ -122,21 +122,23 @@ export class AvPanel extends React.Component< AvPanelProps, AvPanelState >
 
 	private deliverMouseEvent( eventType: PanelMouseEventType, panelFromPoker: AvVector, pokerEpa: EndpointAddr )
 	{
+		let mousePosition: vec2 = this.state.mousePosition;
 		if( eventType == PanelMouseEventType.Leave )
 		{
 			this.setState( { mousePosition: null } );
 		}
-		else
+		else if( panelFromPoker )
 		{
-			this.setState( { mousePosition: new vec2( [ panelFromPoker.x, panelFromPoker.y ] ) } );
+			mousePosition = new vec2( [ panelFromPoker.x, panelFromPoker.y ] );
+			this.setState( { mousePosition } );
 		}
 
 		let event: PanelMouseEvent =
 		{
 			type: eventType,
 			pokerEpa,
-			x: panelFromPoker.x / this.width + 0.5,
-			y: 1.0 - ( panelFromPoker.y / this.height + 0.5 ),
+			x: mousePosition.x / this.width + 0.5,
+			y: 1.0 - ( mousePosition.y / this.height + 0.5 ),
 		};
 
 		if( eventType != PanelMouseEventType.Move )
