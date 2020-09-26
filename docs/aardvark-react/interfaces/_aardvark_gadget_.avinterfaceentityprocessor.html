@@ -97,13 +97,13 @@
 					<a name="ended" class="tsd-anchor"></a>
 					<h3>ended</h3>
 					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface">
-						<li class="tsd-signature tsd-kind-icon">ended<span class="tsd-signature-symbol">(</span>transmitter<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">EndpointAddr</span>, receiver<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">EndpointAddr</span>, iface<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span>, transmitterFromReceiver<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">AvNodeTransform</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+						<li class="tsd-signature tsd-kind-icon">ended<span class="tsd-signature-symbol">(</span>transmitter<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">EndpointAddr</span>, receiver<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">EndpointAddr</span>, iface<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span>, transmitterFromReceiver<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">AvNodeTransform</span>, intersectionPoint<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">AvVector</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
 					</ul>
 					<ul class="tsd-descriptions">
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/e784727/packages/aardvark-react/src/aardvark_gadget.tsx#L14">src/aardvark_gadget.tsx:14</a></li>
+									<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/cdf02e43/packages/aardvark-react/src/aardvark_gadget.tsx#L13">src/aardvark_gadget.tsx:13</a></li>
 								</ul>
 							</aside>
 							<h4 class="tsd-parameters-title">Parameters</h4>
@@ -120,6 +120,9 @@
 								<li>
 									<h5>transmitterFromReceiver: <span class="tsd-signature-type">AvNodeTransform</span></h5>
 								</li>
+								<li>
+									<h5><span class="tsd-flag ts-flagOptional">Optional</span> intersectionPoint: <span class="tsd-signature-type">AvVector</span></h5>
+								</li>
 							</ul>
 							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
 						</li>
@@ -129,13 +132,13 @@
 					<a name="event" class="tsd-anchor"></a>
 					<h3>event</h3>
 					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface">
-						<li class="tsd-signature tsd-kind-icon">event<span class="tsd-signature-symbol">(</span>destination<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">EndpointAddr</span>, peer<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">EndpointAddr</span>, iface<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span>, data<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">object</span>, destinationFromPeer<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">AvNodeTransform</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+						<li class="tsd-signature tsd-kind-icon">event<span class="tsd-signature-symbol">(</span>destination<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">EndpointAddr</span>, peer<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">EndpointAddr</span>, iface<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span>, data<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">object</span>, destinationFromPeer<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">AvNodeTransform</span>, intersectionPoint<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">AvVector</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
 					</ul>
 					<ul class="tsd-descriptions">
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/e784727/packages/aardvark-react/src/aardvark_gadget.tsx#L16">src/aardvark_gadget.tsx:16</a></li>
+									<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/cdf02e43/packages/aardvark-react/src/aardvark_gadget.tsx#L15">src/aardvark_gadget.tsx:15</a></li>
 								</ul>
 							</aside>
 							<h4 class="tsd-parameters-title">Parameters</h4>
@@ -155,6 +158,9 @@
 								<li>
 									<h5>destinationFromPeer: <span class="tsd-signature-type">AvNodeTransform</span></h5>
 								</li>
+								<li>
+									<h5><span class="tsd-flag ts-flagOptional">Optional</span> intersectionPoint: <span class="tsd-signature-type">AvVector</span></h5>
+								</li>
 							</ul>
 							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
 						</li>
@@ -164,31 +170,19 @@
 					<a name="started" class="tsd-anchor"></a>
 					<h3>started</h3>
 					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface">
-						<li class="tsd-signature tsd-kind-icon">started<span class="tsd-signature-symbol">(</span>transmitter<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">EndpointAddr</span>, receiver<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">EndpointAddr</span>, iface<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span>, transmitterFromReceiver<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">AvNodeTransform</span>, params<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">object</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+						<li class="tsd-signature tsd-kind-icon">started<span class="tsd-signature-symbol">(</span>startMsg<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">MsgInterfaceStarted</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
 					</ul>
 					<ul class="tsd-descriptions">
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/e784727/packages/aardvark-react/src/aardvark_gadget.tsx#L12">src/aardvark_gadget.tsx:12</a></li>
+									<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/cdf02e43/packages/aardvark-react/src/aardvark_gadget.tsx#L12">src/aardvark_gadget.tsx:12</a></li>
 								</ul>
 							</aside>
 							<h4 class="tsd-parameters-title">Parameters</h4>
 							<ul class="tsd-parameters">
 								<li>
-									<h5>transmitter: <span class="tsd-signature-type">EndpointAddr</span></h5>
-								</li>
-								<li>
-									<h5>receiver: <span class="tsd-signature-type">EndpointAddr</span></h5>
-								</li>
-								<li>
-									<h5>iface: <span class="tsd-signature-type">string</span></h5>
-								</li>
-								<li>
-									<h5>transmitterFromReceiver: <span class="tsd-signature-type">AvNodeTransform</span></h5>
-								</li>
-								<li>
-									<h5><span class="tsd-flag ts-flagOptional">Optional</span> params: <span class="tsd-signature-type">object</span></h5>
+									<h5>startMsg: <span class="tsd-signature-type">MsgInterfaceStarted</span></h5>
 								</li>
 							</ul>
 							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
@@ -199,13 +193,13 @@
 					<a name="transformupdated" class="tsd-anchor"></a>
 					<h3>transform<wbr>Updated</h3>
 					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface">
-						<li class="tsd-signature tsd-kind-icon">transform<wbr>Updated<span class="tsd-signature-symbol">(</span>destination<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">EndpointAddr</span>, peer<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">EndpointAddr</span>, iface<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span>, destinationFromPeer<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">AvNodeTransform</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+						<li class="tsd-signature tsd-kind-icon">transform<wbr>Updated<span class="tsd-signature-symbol">(</span>destination<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">EndpointAddr</span>, peer<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">EndpointAddr</span>, iface<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span>, destinationFromPeer<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">AvNodeTransform</span>, intersectionPoint<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">AvVector</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
 					</ul>
 					<ul class="tsd-descriptions">
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/e784727/packages/aardvark-react/src/aardvark_gadget.tsx#L18">src/aardvark_gadget.tsx:18</a></li>
+									<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/cdf02e43/packages/aardvark-react/src/aardvark_gadget.tsx#L17">src/aardvark_gadget.tsx:17</a></li>
 								</ul>
 							</aside>
 							<h4 class="tsd-parameters-title">Parameters</h4>
@@ -221,6 +215,9 @@
 								</li>
 								<li>
 									<h5>destinationFromPeer: <span class="tsd-signature-type">AvNodeTransform</span></h5>
+								</li>
+								<li>
+									<h5><span class="tsd-flag ts-flagOptional">Optional</span> intersectionPoint: <span class="tsd-signature-type">AvVector</span></h5>
 								</li>
 							</ul>
 							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
@@ -268,9 +265,6 @@
 				<ul class="after-current">
 					<li class=" tsd-kind-function tsd-parent-kind-module">
 						<a href="../modules/_aardvark_gadget_.html#getgadgeturlfromwindow" class="tsd-kind-icon">Get<wbr>Gadget<wbr>Url<wbr>From<wbr>Window</a>
-					</li>
-					<li class=" tsd-kind-function tsd-parent-kind-module">
-						<a href="../modules/_aardvark_gadget_.html#getmanifesturlfromgadget" class="tsd-kind-icon">Get<wbr>Manifest<wbr>Url<wbr>From<wbr>Gadget</a>
 					</li>
 				</ul>
 			</nav>
