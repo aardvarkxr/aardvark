@@ -13,6 +13,10 @@ More details on initializing and building your first gadget below.
 Once you have the basics up and running, [here](watch_tutorial) is a more in-depth tutorial that will take you a little more deeply into a gadget.
 (Thanks to [Michael Hazani](https://github.com/MichaelHazani) for the excellent watch tutorial.)
 
+## Advanced Topics
+
+* [Interfaces](interfaces)
+
 ## Debugging
 
 You can use chrome dev tools on your gadgets by browsing to <a href="http://localhost:8042/">http://localhost:8042/</a> while Aardvark is running.
