@@ -1,7 +1,7 @@
 import bind from 'bind-decorator';
 import * as Color from 'color';
 import { AvBaseNode, AvBaseNodeProps } from './aardvark_base_node';
-import { AvNodeType, AvColor, AvVector, AvSharedTextureInfo, Av, ENodeFlags } from '@aardvarkxr/aardvark-shared';
+import { AvNodeType, AvColor, AvVector, AvSharedTextureInfo, Av, ENodeFlags, ETextureType, ETextureFormat } from '@aardvarkxr/aardvark-shared';
 import { AvGadget } from './aardvark_gadget';
 
 /** Props for {@link AvModel} */
@@ -34,6 +34,13 @@ export interface AvModelProps extends AvBaseNodeProps
 	 * @default false
 	 */
 	useBrowserTexture?: boolean;
+
+	/** Tells Aardvark to use the texture at the specified URL to override the
+	 * texture baked into the model.
+	 * 
+	 * @default none
+	 */
+	useTextureFromUrl?: string;
 
 	/** Tells Aardvark to use this texture to replace the texture
 	 * supplied by the model itself
@@ -99,6 +106,14 @@ export class AvModel extends AvBaseNode< AvModelProps, {} >
 				// it arrives
 				node.flags &= ~ENodeFlags.Visible;
 			}
+		}
+		else if( this.props.useTextureFromUrl )
+		{
+			node.propSharedTexture =
+			{ 
+				type: ETextureType.TextureUrl, format: ETextureFormat.R8G8B8A8,
+				url: this.props.useTextureFromUrl,
+			};
 		}
 		else if( this.props.sharedTexure )
 		{

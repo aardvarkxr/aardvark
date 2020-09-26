@@ -2254,7 +2254,7 @@ void CVulkanRendererModelInstance::setUniverseFromModel( const glm::mat4 & unive
 	m_modelParent.matParentFromNode = universeFromModel;
 }
 
-void CVulkanRendererModelInstance::setOverrideTexture( void *textureHandle, ETextureType type, ETextureFormat format,
+void CVulkanRendererModelInstance::setDxgiOverrideTexture( void* textureHandle, ETextureFormat format, 
 	uint32_t width, uint32_t height )
 {
 	void *pvNewDxgiHandle = textureHandle;
@@ -2296,6 +2296,45 @@ void CVulkanRendererModelInstance::setOverrideTexture( void *textureHandle, ETex
 	}
 
 }
+
+void CVulkanRendererModelInstance::setOverrideTexture( ETextureFormat format, const void *data, uint32_t width, uint32_t height )
+{
+	VkFormat textureFormat = VK_FORMAT_R8G8B8A8_UNORM;
+	switch ( format )
+	{
+	default:
+		assert( false );
+		break;
+
+	case ETextureFormat::R8G8B8A8:
+		textureFormat = VK_FORMAT_R8G8B8A8_UNORM;
+		break;
+
+	case ETextureFormat::B8G8R8A8:
+		textureFormat = VK_FORMAT_B8G8R8A8_UNORM;
+		break;
+	}
+
+	// maybe check a crc or something?
+//	if ( m_lastDxgiHandle != pvNewDxgiHandle )
+	{
+		m_overrideTexture = std::make_shared<vks::Texture2D>();
+		m_overrideTexture->loadFromBuffer( const_cast<void*>( data ), width * height * 4,
+			textureFormat, width, height,
+			m_renderer->vulkanDevice, m_renderer->queue );
+
+		for ( auto& material : m_model->materials )
+		{
+			material.baseColorTexture = m_overrideTexture;
+		}
+
+		m_renderer->setupDescriptorSetsForModel( m_model );
+
+		//m_lastDxgiHandle = pvNewDxgiHandle;
+	}
+
+}
+
 
 void CVulkanRendererModelInstance::setBaseColor( const glm::vec4 & color )
 {

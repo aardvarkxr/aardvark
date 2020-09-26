@@ -1,9 +1,10 @@
-import { QuaternionToEulerAngles, DegreesToRadians, EulerAnglesToQuaternion, AvTransform } from '@aardvarkxr/aardvark-react';
-import { AvColor, MessageType, translateMat, AvNodeTransform, nodeTransformToMat4 } from '@aardvarkxr/aardvark-shared';
+import { QuaternionToEulerAngles, DegreesToRadians, EulerAnglesToQuaternion } from '@aardvarkxr/aardvark-react';
+import { AvSharedTextureInfo, ETextureType, ETextureFormat, AvColor, MessageType, translateMat, AvNodeTransform, nodeTransformToMat4 } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3 } from '@tlaukkan/tsm';
 import { addChild, buildModel, buildOrigin, buildTransform, colorFromString, nextGadget, currentGadgetId } from '../scene_graph_test_utils';
 import { AvDefaultTraverser } from './../aardvark_traverser';
 import { modelCache, ModelInfo } from './../model_cache';
+import { textureCache, TextureInfo } from './../texture_cache';
 import { CTestModel, CTestRenderer } from './../test_renderer';
 import { Traverser, TraverserCallbacks } from './../traverser_interface';
 const equal = require( 'fast-deep-equal' );
@@ -24,6 +25,19 @@ mockedModelCache.queueModelLoad.mockImplementation(
 				yMin: -1, yMax: 1,
 				zMin: -1, zMax: 1,
 			},
+		}
+	} );
+
+jest.mock( '../texture_cache' );
+const mockedTextureCache = textureCache as jest.Mocked< typeof textureCache >;
+
+mockedTextureCache.queueTextureLoad.mockImplementation( 
+	( url: string ): TextureInfo =>
+	{
+		return 	{
+			binary: new ArrayBuffer( 123 ),
+			base64: "1234",
+			url,
 		}
 	} );
 
@@ -60,7 +74,8 @@ function colorToString( color : string | AvColor ): string
 
 expect.extend( 
 {
-	toContainModels( renderList: CTestModel[], expectedCount: number, url: string, color?: string | AvColor, universeFromModel?: mat4 )
+	toContainModels( renderList: CTestModel[], expectedCount: number, url: string, color?: string | AvColor, 
+		universeFromModel?: mat4, sharedTextureInfo?: AvSharedTextureInfo )
 	{
 		let foundCount = 0;
 		let reason = `model ${ url } not found`;
@@ -82,6 +97,12 @@ expect.extend(
 					continue;
 				}
 
+				if( sharedTextureInfo && !equal( sharedTextureInfo, model.overrideTexture ) )
+				{
+					reason = `expected overrideTexture ${ JSON.stringify( sharedTextureInfo ) } did not match `
+						+ `actual overrideTexture ${ JSON.stringify( model.overrideTexture ) }`;
+					continue;
+				}
 				foundCount++;
 			}
 		}
@@ -117,7 +138,8 @@ declare global
 	{
 		interface Matchers<R> 
 		{
-			toContainModels( expectedCount: number, url: string, color?: string | AvColor, universeFromModel?: mat4 ): R;
+			toContainModels( expectedCount: number, url: string, color?: string | AvColor, 
+				universeFromModel?: mat4, sharedTextureInfo?: AvSharedTextureInfo ): R;
 		}
 	}
 }
@@ -145,6 +167,17 @@ afterEach( async () =>
 
 const k_testModelUrl = "http://test.com/mymodel.glb";
 const k_testGadgetUrl = "http://test.com/mygadget";
+const k_testTextureUrl = "http://test.com/mytexture.png";
+
+function testUrlTextureInfo( ): AvSharedTextureInfo
+{
+	return (
+	{
+		url: k_testTextureUrl,
+		type: ETextureType.TextureUrl,
+		format: ETextureFormat.R8G8B8A8,
+	} );
+}
 
 describe( "AvDefaultTraverser ", () =>
 {
@@ -191,6 +224,20 @@ describe( "AvDefaultTraverser ", () =>
 		expect( r.lastRenderList.length ).toBe( 2 );
 		expect( r.lastRenderList ).toContainModels( 1, k_testModelUrl, "red" );
 		expect( r.lastRenderList ).toContainModels( 1, k_testModelUrl, "blue" );
+	} );
+
+	it( "override texture", async () =>
+	{
+		let root = buildOrigin( "/space/stage" );
+		addChild( root, buildModel( k_testModelUrl, "red", testUrlTextureInfo() ) );
+		addChild( root, buildModel( k_testModelUrl, null, testUrlTextureInfo() ) );
+
+		traverser.updateSceneGraph( root, k_testGadgetUrl,"http://test.com", "Aardvark",  currentGadgetId() );
+		traverser.traverse();
+
+		expect( r.lastRenderList.length ).toBe( 2 );
+		expect( r.lastRenderList ).toContainModels( 1, k_testModelUrl, "red", null, testUrlTextureInfo() );
+		expect( r.lastRenderList ).toContainModels( 1, k_testModelUrl, "blue", null, testUrlTextureInfo() );
 	} );
 
 	it( "transform", async () =>

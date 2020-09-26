@@ -6,6 +6,7 @@
 #include <aardvark/aardvark_renderer_config.h>
 #include <algorithm>
 #include <tools/base64.h>
+#include <stb_image.h>
 
 using aardvark::EEndpointType;
 using aardvark::EndpointAddr_t;
@@ -108,13 +109,36 @@ bool CJavascriptModelInstance::init( CefRefPtr<CefV8Value > container )
 		}
 
 		ETextureType type = (ETextureType)arguments[0]->GetValue( "type" )->GetIntValue();
-		ETextureFormat format = (ETextureFormat)arguments[0]->GetValue( "format" )->GetIntValue();
-		uint32_t width = arguments[0]->GetValue( "width" )->GetUIntValue();
-		uint32_t height = arguments[0]->GetValue( "height" )->GetUIntValue();
-		void *sharedTextureHandle = reinterpret_cast<void*>(
-			std::strtoull( std::string( arguments[0]->GetValue( "dxgiHandle" )->GetStringValue() ).c_str(), nullptr, 0 ) );
 
-		m_modelInstance->setOverrideTexture( sharedTextureHandle, type, format, width, height );
+		switch ( type )
+		{
+		case ETextureType::D3D11Texture2D:
+		{
+			ETextureFormat format = (ETextureFormat)arguments[ 0 ]->GetValue( "format" )->GetIntValue();
+			uint32_t width = arguments[ 0 ]->GetValue( "width" )->GetUIntValue();
+			uint32_t height = arguments[ 0 ]->GetValue( "height" )->GetUIntValue();
+			void* sharedTextureHandle = reinterpret_cast<void*>(
+				std::strtoull( std::string( arguments[ 0 ]->GetValue( "dxgiHandle" )->GetStringValue() ).c_str(), nullptr, 0 ) );
+			m_modelInstance->setDxgiOverrideTexture( sharedTextureHandle, format, width, height );
+		}
+		break;
+
+		case ETextureType::UrlTexture:
+		{
+			std::string url = arguments[ 0 ]->GetValue( "url" )->GetStringValue();
+			std::string modelData = base64_decode( arguments[ 0 ]->GetValue( "textureDataBase64" )->GetStringValue() );
+
+			int width, height, comp;
+			stbi_uc *parsed = stbi_load_from_memory( (const stbi_uc*)modelData.c_str(), (int)modelData.size(), 
+				&width, &height, &comp, 4 );
+
+			m_modelInstance->setOverrideTexture( ETextureFormat::R8G8B8A8, parsed, (uint32_t)width, (uint32_t)height );
+
+			stbi_image_free( parsed );
+		}
+		break;
+
+		}
 	} );
 
 	RegisterFunction( container, "setBaseColor", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )

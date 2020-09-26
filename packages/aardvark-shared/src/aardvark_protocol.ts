@@ -694,13 +694,14 @@ export enum EHand
 	Right = 1,
 };
 
-enum ETextureType
+export enum ETextureType
 {
 	Invalid = 0,
 	D3D11Texture2D = 1,
+	TextureUrl = 2,
 }
 
-enum ETextureFormat
+export enum ETextureFormat
 {
 	R8G8B8A8 = 1,
 	B8G8R8A8 = 2,
@@ -709,11 +710,13 @@ enum ETextureFormat
 export interface AvSharedTextureInfo
 {
 	dxgiHandle?: string;
+	textureDataBase64?: string;
+	url?: string;
 	type: ETextureType;
 	format: ETextureFormat;
 	invertY?: boolean;
-	width: number;
-	height: number;
+	width?: number;
+	height?: number;
 }
 
 export interface AvRendererConfig

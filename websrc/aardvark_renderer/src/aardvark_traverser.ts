@@ -1,3 +1,6 @@
+import { ipfsUtils } from './ipfs_utils';
+import { AvSharedTextureInfo } from '@aardvarkxr/aardvark-shared';
+import { textureCache, TextureInfo } from './texture_cache';
 import { AABB, AvActionState, AvConstraint, AvModelInstance, AvNode, AvNodeTransform, AvNodeType, AvRenderer, EHand, emptyActionState, EndpointAddr, minIgnoringNulls, nodeTransformFromMat4, nodeTransformToMat4, scaleAxisToFit, scaleMat, vec3MultiplyAndAdd, computeUniverseFromLine, endpointAddrToString, EndpointType, ENodeFlags, EVolumeType, filterActionsForGadget, g_builtinModelError, MessageType, MsgInterfaceEnded, MsgInterfaceReceiveEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgResourceLoadFailed, MsgUpdateActionState, g_builtinModelCylinder, AvVector } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3, vec4 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
@@ -13,6 +16,8 @@ interface NodeData
 {
 	lastModelUri?: string;
 	lastFailedModelUri?: string;
+	lastTextureUri?: string;
+	lastFailedTextureUri?: string;
 	modelInstance?: AvModelInstance;
 	lastParentFromNode?: mat4;
 	constraint?: AvConstraint;
@@ -318,7 +323,12 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 
 	public async init()
 	{
+		await ipfsUtils.init();
 		await modelCache.init(
+			{
+				negativeCaching: false,
+			} );
+		await textureCache.init(
 			{
 				negativeCaching: false,
 			} );
@@ -1058,20 +1068,51 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 				nodeData.modelInstance.setBaseColor( 
 					[ node.propColor.r, node.propColor.g, node.propColor.b, alpha ] );
 			}
-			try
+
+			if( node.propSharedTexture?.url )
 			{
-				if( node.propSharedTexture )
+				const [ filteredTextureUrl, urlType ] = this.fixupUrlForCurrentNode( node.propSharedTexture.url );
+				if( filteredTextureUrl != nodeData.lastTextureUri )
 				{
-					nodeData.modelInstance.setOverrideTexture( node.propSharedTexture );
+					let textureInfo = this.tryLoadTextureForNode( node, filteredTextureUrl );
+					if( textureInfo )
+					{
+						let sharedTexture: AvSharedTextureInfo = 
+						{ 
+							...node.propSharedTexture,
+							textureDataBase64: textureInfo.base64,
+						};
+						try
+						{
+							nodeData.modelInstance.setOverrideTexture( sharedTexture );
+							nodeData.lastTextureUri = filteredTextureUrl;
+						}
+						catch( e )
+						{
+							// just eat these and don't add the panel. Sometimes we find out about a panel 
+							// before we find out about its texture
+							return;
+						}	
+					}
 				}
 			}
-			catch( e )
+			else
 			{
-				// just eat these and don't add the panel. Sometimes we find out about a panel 
-				// before we find out about its texture
-				return;
+				try
+				{
+					if( node.propSharedTexture )
+					{
+						nodeData.modelInstance.setOverrideTexture( node.propSharedTexture );
+					}
+				}
+				catch( e )
+				{
+					// just eat these and don't add the panel. Sometimes we find out about a panel 
+					// before we find out about its texture
+					return;
+				}	
 			}
-
+	
 			let internalScale = 1;
 			if( node.propScaleToFit )
 			{
@@ -1216,6 +1257,31 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 				{
 					nodeId: node.globalId,
 					resourceUri: modelUrl,
+					error: e.message,
+				};
+
+				this.m_callbacks.sendMessage( MessageType.ResourceLoadFailed, m );
+			}
+		}
+	}
+
+	private tryLoadTextureForNode( node: AvNode, textureUrl: string ): TextureInfo
+	{
+		try
+		{
+			return textureCache.queueTextureLoad( textureUrl );
+		}
+		catch( e )
+		{
+			let nodeData = this.getNodeData( node );
+			if( nodeData.lastFailedTextureUri != textureUrl )
+			{
+				nodeData.lastFailedTextureUri = textureUrl;
+
+				let m: MsgResourceLoadFailed =
+				{
+					nodeId: node.globalId,
+					resourceUri: textureUrl,
 					error: e.message,
 				};
 

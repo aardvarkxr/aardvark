@@ -37,8 +37,8 @@ public:
 	virtual ~CVulkanRendererModelInstance();
 	virtual void setUniverseFromModel( const glm::mat4 & universeFromModel ) override;
 
-	virtual void setOverrideTexture( void *textureHandle, ETextureType type, ETextureFormat format,
-		uint32_t width, uint32_t height ) override;
+	virtual void setDxgiOverrideTexture( void* textureHandle, ETextureFormat format, uint32_t width, uint32_t height ) override;
+	virtual void setOverrideTexture( ETextureFormat format, const void* data, uint32_t width, uint32_t height ) override;
 	virtual void setBaseColor( const glm::vec4 & color ) override;
 
 	void animate( float animationTimeElapsed );

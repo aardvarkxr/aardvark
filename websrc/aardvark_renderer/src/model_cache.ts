@@ -1,3 +1,4 @@
+import { ipfsUtils } from './ipfs_utils';
 import { AABB, AvNodeTransform, nodeTransformToMat4, stringToEndpointAddr } from '@aardvarkxr/aardvark-shared';
 import * as core from "@loaders.gl/core";
 import * as gltf from "@loaders.gl/gltf";
@@ -150,7 +151,6 @@ export interface ModelCacheOptions
 let models: Map<string, ModelInfo> = null;
 let failedModels: Set<string> = null;
 let loadsPending: Set<string> = null;
-let ipfsNode: any = null;
 let options: ModelCacheOptions = null;
 let negativeCaching = false;
 
@@ -159,10 +159,6 @@ async function init( optionsParam: ModelCacheOptions )
 	await cleanup();
 
 	options = optionsParam;
-	ipfsNode = await IPFS.create();
-	const version = await ipfsNode.version()
-
-	console.log('IPFS Version:', version.version );
 
 	models = new Map<string, ModelInfo>();
 	failedModels = new Set<string>();
@@ -172,8 +168,6 @@ async function init( optionsParam: ModelCacheOptions )
 
 async function cleanup()
 {
-	await ipfsNode?.stop();
-	ipfsNode = null;
 	models = null;
 	failedModels = null;
 	loadsPending = null;
@@ -211,8 +205,14 @@ function loadModel( url: string ): Promise< ModelInfo >
 
 				case UrlType.IPFS:
 					{
+						if( !ipfsUtils.instance() )
+						{
+							reject("IPFS not initialized" );
+							return;
+						}
+						
 						let chunks: Uint8Array[] = [];
-						for await( let chunk of ipfsNode.cat( fixedUrl ) )
+						for await( let chunk of ipfsUtils.instance().cat( fixedUrl ) )
 						{
 							chunks.push( chunk );
 						}
