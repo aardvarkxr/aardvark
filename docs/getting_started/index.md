@@ -217,7 +217,7 @@ E:\gettingstarted>npm install -g http-server
 
 Then run it on the dist directory of your gadget:
 ```console
-E:\gettingstarted>http-server --cors dist
+E:\gettingstarted>http-server dist --cors -c-1
 Starting up http-server, serving dist
 Available on:
   http://<your IP address>:8080
@@ -231,6 +231,8 @@ See the output from the command to check which port it is actually using.
 The --cors option allows all the served content to be loaded by any script in any page via the `Access-Control-Allow-Origin` header.
 This is necessary for the manifest.webmanifest and any model files so that the various parts of Aardvark can load these resources. 
 You will need to ensure that wherever you host your gadget also returns `Access-Control-Allow-Origin: *` for the web manifest file and any model files.
+
+The -c-1 option disables the cache, which is likely what you want in a dev environment.
 
 Now you can open your gadget in a browser to get a favorite button.
 [http://localhost:8080/](http://localhost:8080) is the default link, but you may need to adjust that URL to use whatever port the HTTP server ended up listening on.
