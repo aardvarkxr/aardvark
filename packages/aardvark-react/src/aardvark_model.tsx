@@ -45,7 +45,7 @@ export interface AvModelProps extends AvBaseNodeProps
 	/** Tells Aardvark to use this texture to replace the texture
 	 * supplied by the model itself
 	 */
-	sharedTexure?: AvSharedTextureInfo;
+	sharedTexture?: AvSharedTextureInfo;
 }
 
 /** Causes a GLTF model to be drawn at the specified location in the transform hierarchy. */
@@ -115,9 +115,9 @@ export class AvModel extends AvBaseNode< AvModelProps, {} >
 				url: this.props.useTextureFromUrl,
 			};
 		}
-		else if( this.props.sharedTexure )
+		else if( this.props.sharedTexture )
 		{
-			node.propSharedTexture = this.props.sharedTexure;
+			node.propSharedTexture = this.props.sharedTexture;
 		}
 
 		return node;
