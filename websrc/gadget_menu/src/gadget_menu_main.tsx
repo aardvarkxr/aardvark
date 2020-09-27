@@ -222,6 +222,7 @@ const k_alwaysInstalledGadgets =
 	"http://localhost:23842/gadgets/hand_mirror",
 	"http://localhost:23842/gadgets/control_test",
 	"http://localhost:23842/gadgets/whiteboard",
+	"http://localhost:23842/gadgets/dev_tools",
 ];
 
 function subscribeWindowList(): Promise<WindowInfo[]>

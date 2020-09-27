@@ -121,6 +121,7 @@ module.exports =
 	createConfig( 'aardvark_renderer', 'Renderer', 'ts' ),
 	createConfig( 'default_hands', 'Default Hands', 'tsx' ),
 	createConfig( 'desktop_window', 'Desktop Window', 'tsx' ),
+	createConfig( 'dev_tools', 'Developer Tools', 'tsx' ),
 	createConfig( 'messagebox', 'Messagebox', 'tsx' ),
 	createConfig( 'test_panel', 'Test Panel', 'tsx' ),
 	createConfig( 'gadget_menu', 'Gadget Menu', 'tsx' ),
