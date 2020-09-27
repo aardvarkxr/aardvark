@@ -4,6 +4,11 @@ src/build
 !docs/aardvark-react/build
 !build.js
 
+aardvark_[0-9].*.*/
+aardvark_[0-9].*.*.zip
+aardvarkinstaller_*.exe
+installer.nsi
+
 Debug
 Release
 .vs
