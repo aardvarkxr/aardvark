@@ -1,4 +1,4 @@
-import { AardvarkManifest, AvNodeTransform, AvVolume, EndpointAddr, endpointAddrToString, EVolumeType, g_builtinModelError, InitialInterfaceLock, quatFromAxisAngleDegrees } from '@aardvarkxr/aardvark-shared';
+import { AardvarkManifest, AvNodeTransform, AvVolume, EndpointAddr, endpointAddrToString, EVolumeType, g_builtinModelError, InitialInterfaceLock, quatFromAxisAngleDegrees, ResourceRotation } from '@aardvarkxr/aardvark-shared';
 import { vec3 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
 import isUrl from 'is-url';
@@ -218,13 +218,13 @@ function findIconOfType( manifest: AardvarkManifest, mimeType: string )
 }
 
 /** Finds a gadget manifest's glTF model URL if there is one. */
-export function findGltfIconFullUrl( gadgetUrl: string, manifest: AardvarkManifest)
+export function findGltfIconFullUrl( gadgetUrl: string, manifest: AardvarkManifest) : null | [ string, ResourceRotation]
 {
 	let model = findIconOfType( manifest, "model/gltf-binary" );
 	if( model )
 	{
-		return isUrl( model.src ) ? model.src : gadgetUrl + 
-			"/" + model.src;
+		return [ isUrl( model.src ) ? model.src 
+			: gadgetUrl + "/" + model.src, model.rotation ];
 	}
 	else
 	{
@@ -236,10 +236,13 @@ export function findGltfIconFullUrl( gadgetUrl: string, manifest: AardvarkManife
 /** Renders Aardvark components for a gadget's glTF model. */
 export function renderGadgetIcon( gadgetUrl: string, manifest: AardvarkManifest, radius: number )
 {
-	let modelUrl = findGltfIconFullUrl( gadgetUrl, manifest );
-	if( modelUrl )
+	let modelInfo = findGltfIconFullUrl( gadgetUrl, manifest );
+	if( modelInfo )
 	{
-		return <AvModel uri= { modelUrl } scaleToFit={ { x: radius, y: radius, z: radius } }/>;
+		const [ modelUrl, rotation ] = modelInfo;
+		return <AvTransform rotateX={ rotation?.x } rotateY={ rotation?.y } rotateZ={ rotation?.z }>
+				<AvModel uri= { modelUrl } scaleToFit={ { x: radius, y: radius, z: radius } }/>
+			</AvTransform>;
 	}
 	else
 	{

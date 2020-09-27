@@ -172,7 +172,8 @@ export class DefaultLanding extends React.Component<DefaultLandingProps, Default
 		else
 		{
 			let icon: JSX.Element = null;
-			let iconUrl = findGltfIconFullUrl( this.gadgetUrl, this.state.manifest );
+			let modelInfo = findGltfIconFullUrl( this.gadgetUrl, this.state.manifest );
+			let [ iconUrl, rotation ] = modelInfo;
 	
 			if( iconUrl )
 			{

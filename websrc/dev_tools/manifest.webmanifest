@@ -5,7 +5,8 @@
 	[
 		{
 			"src": "http://localhost:23842/models/hammerwrench.glb",
-			"type": "model/gltf-binary"
+			"type": "model/gltf-binary",
+			"rotation": { "x": -90 }
 		}
 	],
 	"aardvark":

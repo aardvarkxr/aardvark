@@ -6,12 +6,20 @@ export enum WebAppManifestResourcePurpose
 	Any = "any",
 }
 
+export interface ResourceRotation
+{
+	x?: number;
+	y?: number;
+	z?: number;
+}
+
 export interface WebAppManifestResource
 {
 	src: string;
 	sizes?: string;
 	type: string;
 	purpose?: WebAppManifestResourcePurpose;
+	rotation?: ResourceRotation;
 }
 
 export enum WebAppManifestTextDir
