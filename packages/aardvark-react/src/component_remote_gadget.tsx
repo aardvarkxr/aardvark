@@ -9,6 +9,7 @@ export enum RemoteGadgetEventType
 	ReceiveEventFromMaster = "receive_event_from_master",
 	SendEventToMaster = "send_event_to_master",
 	DestroyGadget = "destroy_gadget",
+	SetItemInfo = "set_item_info",
 }
 
 export interface RemoteGadgetEvent
@@ -20,6 +21,11 @@ export interface RGESendEvent extends RemoteGadgetEvent
 {
 	event: object;
 	reliable?: boolean;
+}
+
+export interface RGESetItemInfo extends RemoteGadgetEvent
+{
+	itemId: string;
 }
 
 export class RemoteGadgetComponent implements EntityComponent
@@ -124,3 +130,122 @@ export class RemoteGadgetComponent implements EntityComponent
 		this.activeRemote?.sendEvent( eventEvent );
 	}
 }
+
+export class RemoteItemComponent implements EntityComponent
+{
+	private entityCallback: () => void = null;
+	private masterCallback: ( event: object ) => void = null;
+	private activeRemote: ActiveInterface = null;
+	private itemId: string;
+
+	constructor( itemId: string, callback: ( event: object ) => void )
+	{
+		this.masterCallback = callback;
+		this.itemId = itemId;
+	}
+
+	private updateListener()
+	{
+		this.entityCallback?.();
+	}
+
+	private sendSetItemInfo()
+	{
+		// tell the other end how we want to be started on the remote end
+		let req: RGESetItemInfo =
+		{
+			type: RemoteGadgetEventType.SetItemInfo,
+			itemId: this.itemId,
+		};
+		this.activeRemote?.sendEvent( req );
+	}
+
+	@bind
+	private onRemoteStart( activeRemote: ActiveInterface )
+	{
+		activeRemote.onEvent( 
+			( event: RemoteGadgetEvent ) =>
+			{
+				switch( event.type )
+				{
+					case RemoteGadgetEventType.ReceiveEventFromMaster:
+					{
+						let masterEvent = event as RGESendEvent;
+						this.masterCallback?.( masterEvent.event );
+					}
+					break;
+
+					case RemoteGadgetEventType.DestroyGadget:
+					{
+						window.close();
+					}
+				}
+			}
+		)
+
+		activeRemote.onEnded( 
+			() =>
+			{
+				this.activeRemote = null;
+				this.updateListener();
+			} );
+
+		this.sendSetItemInfo();
+		this.activeRemote = activeRemote;
+		this.updateListener();
+	}
+
+	public get transmits(): InterfaceProp[]
+	{
+		return [ { iface: RemoteGadgetComponent.interfaceName, processor: this.onRemoteStart } ];
+	}
+
+	public get receives(): InterfaceProp[]
+	{
+		return [];
+	}
+
+	public get parent(): EndpointAddr
+	{
+		return this.activeRemote?.peer;
+	}
+	
+	public get wantsTransforms()
+	{
+		return false;
+	}
+
+	public get interfaceLocks(): InitialInterfaceLock[] 
+	{
+		let lock = AvGadget.instance().findInitialInterface( RemoteGadgetComponent.interfaceName );
+		if( !lock )
+			return [];
+
+		let itemLock = {...lock };
+		itemLock.params = {...lock.params, itemId: this.itemId };
+		return [ itemLock ];
+	}
+	
+	
+	public onUpdate( callback: () => void ): void
+	{
+		this.entityCallback = callback;
+	}
+	
+	public render(): JSX.Element
+	{
+		return null;
+	}
+
+	public sendEventToMaster( event: object, reliable: boolean )
+	{
+		let eventEvent: RGESendEvent =
+		{
+			type: RemoteGadgetEventType.SendEventToMaster,
+			event,
+			reliable,
+		};
+		this.activeRemote?.sendEvent( eventEvent );
+	}
+}
+

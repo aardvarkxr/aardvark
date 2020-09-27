@@ -3,7 +3,7 @@ import bind from 'bind-decorator';
 import * as React from 'react';
 import { NetworkUniverseEvent, NetworkUniverseEventType, UniverseInitInfo } from './network_universe';
 import { ActiveInterface, AvInterfaceEntity, InterfaceProp } from './aardvark_interface_entity';
-import { RemoteGadgetEvent, RemoteGadgetEventType, RGESendEvent, RemoteGadgetComponent } from './component_remote_gadget';
+import { RemoteGadgetEvent, RemoteGadgetEventType, RGESendEvent, RemoteGadgetComponent, RGESetItemInfo } from './component_remote_gadget';
 import { AvTransform } from './aardvark_transform';
 import { AvEntityChild } from './aardvark_entity_child';
 import { AvGadget } from './aardvark_gadget';
@@ -28,6 +28,13 @@ interface RemoteUniverseProps
 	initInfo: object;
 }
 
+interface RemoteItemInfo
+{
+	itemId: string;
+	iface: ActiveInterface;
+	universeFromItem: MinimalPose;
+}
+
 interface RemoteGadgetInfo
 {
 	remoteGadgetId: number;
@@ -35,11 +42,13 @@ interface RemoteGadgetInfo
 	remoteLocks: InitialInterfaceLock[];
 	iface: ActiveInterface;
 	universeFromGadget: MinimalPose;
+	items: Map<string, RemoteItemInfo>;
 }
 
 interface RemoteUniverseParams
 {
 	remoteGadgetId: number;
+	itemId?: string;
 }
 
 export class RemoteUniverseComponent implements EntityComponent
@@ -91,12 +100,37 @@ export class RemoteUniverseComponent implements EntityComponent
 		}
 	}
 
+	public findOrAddItemInfo( gadgetInfo: RemoteGadgetInfo, itemId: string )
+	{
+		let itemInfo = gadgetInfo.items.get( itemId );
+		if( !itemInfo )
+		{
+			itemInfo = 
+			{
+				itemId,
+				iface: null,
+				universeFromItem: null,
+			};
+			gadgetInfo.items.set( itemId, itemInfo );
+		}
+		return itemInfo;
+	}
+
 	@bind
 	private onRemoteInterface( activeRemoteGadget: ActiveInterface )
 	{
 		let remoteParams = activeRemoteGadget.params as RemoteUniverseParams;
 		let gadgetInfo = this.remoteGadgets.get( remoteParams.remoteGadgetId );
-		gadgetInfo.iface = activeRemoteGadget;
+		let itemInfo: RemoteItemInfo;
+		if( remoteParams.itemId )
+		{
+			itemInfo = this.findOrAddItemInfo( gadgetInfo, remoteParams.itemId );
+			itemInfo.iface = activeRemoteGadget;
+		}
+		else
+		{
+			gadgetInfo.iface = activeRemoteGadget;
+		}
 		this.entityCallback?.();
 		console.log( `Connection from remote gadget id ${ gadgetInfo.remoteGadgetId }` );
 
@@ -111,6 +145,7 @@ export class RemoteUniverseComponent implements EntityComponent
 						{ 
 							type: NetworkUniverseEventType.SendMasterGadgetEvent, 
 							remoteGadgetId: gadgetInfo.remoteGadgetId,
+							itemId: remoteParams.itemId,
 							event: sendEvent.event 
 						} as NetworkUniverseEvent, sendEvent.reliable );
 				}
@@ -122,7 +157,14 @@ export class RemoteUniverseComponent implements EntityComponent
 		{
 			if( gadgetInfo )
 			{
-				this.remoteGadgets.delete( gadgetInfo.remoteGadgetId );
+				if( !remoteParams.itemId )
+				{
+					this.remoteGadgets.delete( gadgetInfo.remoteGadgetId );
+				}
+				else
+				{
+					gadgetInfo.items.delete( remoteParams.itemId );
+				}
 			}
 		} );
 	}
@@ -151,7 +193,7 @@ export class RemoteUniverseComponent implements EntityComponent
 				break;
 
 			case NetworkUniverseEventType.UpdateRemoteGadgetTransform:
-				this.updateGadgetTransform( e.remoteGadgetId, e.universeFromGadget );
+				this.updateGadgetTransform( e.remoteGadgetId, e.itemId, e.universeFromGadget );
 				break;
 
 			case NetworkUniverseEventType.BroadcastRemoteGadgetEvent:
@@ -179,6 +221,7 @@ export class RemoteUniverseComponent implements EntityComponent
 				remoteLocks: remoteInterfaceLocks,
 				iface: null,
 				universeFromGadget,
+				items: new Map<string, RemoteItemInfo>(),
 			} );
 
 		let fullLockList = [ ...remoteInterfaceLocks,
@@ -203,12 +246,20 @@ export class RemoteUniverseComponent implements EntityComponent
 		gadgetInfo?.iface?.sendEvent( event );
 	}
 
-	private updateGadgetTransform( remoteGadgetId: number, universeFromGadget: MinimalPose )
+	private updateGadgetTransform( remoteGadgetId: number, itemId: string, universeFromGadget: MinimalPose )
 	{
 		let gadgetInfo = this.remoteGadgets.get( remoteGadgetId );
 		if( gadgetInfo )
 		{
-			gadgetInfo.universeFromGadget = universeFromGadget;
+			if( itemId )
+			{
+				let itemInfo = this.findOrAddItemInfo( gadgetInfo, itemId );
+				itemInfo.universeFromItem = universeFromGadget;
+			}
+			else
+			{
+				gadgetInfo.universeFromGadget = universeFromGadget;
+			}
 			this.entityCallback?.();
 		}
 	}
@@ -237,6 +288,19 @@ export class RemoteUniverseComponent implements EntityComponent
 			children.push( <AvTransform transform={ gadget.universeFromGadget } key={ gadget.remoteGadgetId }>
 					<AvEntityChild child={ gadget.iface.peer } key={ gadget.remoteGadgetId }/>
 				</AvTransform> );
+
+			for( let item of gadget.items.values() )
+			{
+				if( !item.iface || !item.universeFromItem )
+				{
+					continue;
+				}
+
+				let key = `${ gadget.remoteGadgetId }/${ item.itemId }`;
+				children.push( <AvTransform transform={ item.universeFromItem } key={ key }>
+					<AvEntityChild child={ item.iface.peer } key={ key }/>
+				</AvTransform> );
+			}
 		}
 
 		return <div key="remote_universe">

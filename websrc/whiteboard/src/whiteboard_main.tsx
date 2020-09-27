@@ -1,5 +1,5 @@
-import { ActiveInterface, AvComposedEntity, AvGadget, AvInterfaceEntity, AvLine, AvModel, AvPrimitive, AvStandardGrabbable, AvTransform, MoveableComponent, PrimitiveType, PrimitiveYOrigin, PrimitiveZOrigin, DefaultLanding } from '@aardvarkxr/aardvark-react';
-import { Av, AvNodeTransform, AvVector, AvVolume, endpointAddrToString, EVolumeType, g_builtinModelBox, InitialInterfaceLock } from '@aardvarkxr/aardvark-shared';
+import { NetworkedItemComponent, ActiveInterface, AvComposedEntity, AvGadget, AvInterfaceEntity, AvLine, AvModel, AvPrimitive, AvStandardGrabbable, AvTransform, MoveableComponent, PrimitiveType, PrimitiveYOrigin, PrimitiveZOrigin, DefaultLanding, RemoteItemComponent } from '@aardvarkxr/aardvark-react';
+import { Av, AvNodeTransform, AvVector, AvVolume, endpointAddrToString, EVolumeType, g_builtinModelBox, InitialInterfaceLock, infiniteVolume } from '@aardvarkxr/aardvark-shared';
 import { vec2 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
 import * as IPFS from 'ipfs';
@@ -80,11 +80,58 @@ interface MarkerProps
 	thickness: number;
 }
 
+interface AvRemoteGrabbableProps
+{
+	itemId: string;
+	volume: AvVolume | AvVolume[];
+}
+
+class AvNetworkedGrabbable extends React.Component< AvRemoteGrabbableProps, {} >
+{
+	private moveableComponent = new MoveableComponent( () => {}, false, false );
+	private remoteComponent: RemoteItemComponent = null;
+	private networkComponent: NetworkedItemComponent = null
+
+	constructor( props: any )
+	{
+		super( props );
+
+		if( AvGadget.instance().isRemote )
+		{
+			this.remoteComponent = new RemoteItemComponent( this.props.itemId, () => {} );
+		}
+		else
+		{
+			this.networkComponent = new NetworkedItemComponent( this.props.itemId, () => {} );
+		}
+	}
+
+	render()
+	{
+		if( AvGadget.instance().isRemote )
+		{
+			return 	<AvComposedEntity components={ [ this.remoteComponent ]} volume={ this.props.volume }>
+					<AvComposedEntity components={ [ this.moveableComponent ]} volume={ this.props.volume }>
+						{ this.props.children }
+					</AvComposedEntity>
+				</AvComposedEntity>;
+
+		}
+		else
+		{
+			return 	<AvComposedEntity components={ [ this.moveableComponent ]} volume={ this.props.volume }>
+					<AvComposedEntity components={ [ this.networkComponent ] } volume={ infiniteVolume() }>
+						{ this.props.children }
+					</AvComposedEntity>
+				</AvComposedEntity>;
+		}
+	}
+}
+
+
 function Marker( props: MarkerProps )
 {
 	const [ color, setColor ] = React.useState( props.initialColor );
-	const [ moveable, setMoveable ] = React.useState( new MoveableComponent( () => {}, false, false ) );
-
 	let onColorPicker = ( activeColorPicker: ActiveInterface ) =>
 	{
 		activeColorPicker.onEvent( (colorPicker: IEColorPicker ) =>
@@ -121,7 +168,7 @@ function Marker( props: MarkerProps )
 	} as AvVolume;
 
 	return <AvTransform translateX={ props.initialXOffset } translateY={ 0.005 }>
-		<AvComposedEntity components={ [ moveable ]} volume={ k_grabVolume }>
+		<AvNetworkedGrabbable volume={ k_grabVolume } itemId = { "marker" + props.initialXOffset } >
 			<AvTransform translateY={ markerTipRadius } >
 				<AvPrimitive type={PrimitiveType.Cylinder} originY={ PrimitiveYOrigin.Bottom }
 					radius={ markerRadius } height={0.065 } color={ color } />
@@ -133,7 +180,7 @@ function Marker( props: MarkerProps )
 					{ iface: "color-picker@1", processor: onColorPicker },
 					{ iface: "surface-drawing@1", processor: onSurfaceDrawing },
 				] } volume={ k_tipVolume }/>
-			</AvComposedEntity>
+			</AvNetworkedGrabbable>
 		</AvTransform>;
 }
 

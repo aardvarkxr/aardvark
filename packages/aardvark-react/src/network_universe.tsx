@@ -1,8 +1,8 @@
-import { AvNodeTransform, InitialInterfaceLock, MinimalPose, minimalPoseFromTransform } from '@aardvarkxr/aardvark-shared';
+import { AvNodeTransform, InitialInterfaceLock, MinimalPose, minimalPoseFromTransform, EndpointAddr } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import { EntityComponent } from './aardvark_composed_entity';
 import { ActiveInterface } from './aardvark_interface_entity';
-import { NetworkedGadgetComponent, NetworkGadgetEvent, NetworkGadgetEventType, NGESendEvent, NGESetGadgetInfo } from './component_networked_gadget';
+import { NetworkedGadgetComponent, NetworkGadgetEvent, NetworkGadgetEventType, NGESendEvent, NGESetGadgetInfo, NGESetItemInfo } from './component_networked_gadget';
 
 
 export enum NetworkUniverseEventType
@@ -27,6 +27,7 @@ export interface NetworkUniverseEvent
 {
 	type: NetworkUniverseEventType;
 	remoteGadgetId: number;
+	itemId?: string;
 	gadgetUrl?: string;
 	remoteInterfaceLocks?: InitialInterfaceLock[];
 	universeFromGadget?: MinimalPose;
@@ -41,14 +42,20 @@ export interface NetworkedGadgetInfo
 	universeFromGadget: MinimalPose;
 }
 
-interface NetworkedGadgetInfoInternal
+interface NetworkedItemInfoInternal
 {
-	remoteGadgetId: number;
-	url: string;
-	remoteLocks: InitialInterfaceLock[];
+	itemId: string;
 	iface: ActiveInterface;
 }
 
+interface NetworkedGadgetInfoInternal
+{
+	remoteGadgetId?: number;
+	url?: string;
+	remoteLocks?: InitialInterfaceLock[];
+	iface: ActiveInterface;
+	items: Map< string, NetworkedItemInfoInternal >;
+}	
 
 export interface UniverseInitInfo
 {
@@ -65,7 +72,8 @@ export interface UniverseInitInfo
  */
 export class NetworkUniverseComponent implements EntityComponent
 {
-	private networkedGadgets = new Map< number, NetworkedGadgetInfoInternal >();
+	private networkedGadgetsByEndpointId = new Map< number, NetworkedGadgetInfoInternal >();
+	private networkedGadgetsByRemoteId = new Map< number, NetworkedGadgetInfoInternal >();
 	static nextRemoteGadgetId = 1;
 	private networkEventCallback: ( event: object, reliable: boolean ) => void;
 	private entityCallback: () => void = null;
@@ -83,7 +91,19 @@ export class NetworkUniverseComponent implements EntityComponent
 	@bind
 	private onNetworkInterface( activeNetworkedGadget: ActiveInterface )
 	{
-		let gadgetInfo: NetworkedGadgetInfoInternal;
+		let gadgetInfo: NetworkedGadgetInfoInternal = 
+			this.networkedGadgetsByEndpointId.get( activeNetworkedGadget.peer.endpointId );
+		if( !gadgetInfo )
+		{
+			gadgetInfo =
+			{
+				iface: activeNetworkedGadget,
+				items: new Map<string, NetworkedItemInfoInternal>(),
+			};
+			this.networkedGadgetsByEndpointId.set( activeNetworkedGadget.peer.endpointId, gadgetInfo );
+		}
+
+		let itemInfo: NetworkedItemInfoInternal;
 
 		activeNetworkedGadget.onEvent( ( event: NetworkGadgetEvent ) =>
 		{
@@ -93,37 +113,54 @@ export class NetworkUniverseComponent implements EntityComponent
 				{
 					let setInfo = event as NGESetGadgetInfo;
 					let universeFromGadget = minimalPoseFromTransform( activeNetworkedGadget.selfFromPeer );
-					let remoteGadgetId = NetworkUniverseComponent.nextRemoteGadgetId++;
 
-					if( gadgetInfo )
+					// some stuff we just always update
+					gadgetInfo.remoteLocks = setInfo.locks;
+					gadgetInfo.url = setInfo.url;
+
+					// if we haven't seen a gadget info for this gadget yet, assign it an ID and tell
+					// remote universes to spawn it
+					if( !gadgetInfo.remoteGadgetId )
 					{
-						// we already know the startup info for this gadget. This just
-						// updates us so the init info for any new remote universes will
-						// have the new state
-						gadgetInfo.remoteLocks = setInfo.locks;
-						gadgetInfo.url = setInfo.url;
-					}
-					else
-					{
-						gadgetInfo =
-						{
-							remoteGadgetId,
-							iface: activeNetworkedGadget,
-							remoteLocks: setInfo.locks,
-							url: setInfo.url,
-						};
-						this.networkedGadgets.set( remoteGadgetId, gadgetInfo );
+						gadgetInfo.remoteGadgetId = NetworkUniverseComponent.nextRemoteGadgetId++;
+						this.networkedGadgetsByRemoteId.set( gadgetInfo.remoteGadgetId, gadgetInfo );
 	
 						let createEvent: NetworkUniverseEvent =
 						{
 							type: NetworkUniverseEventType.CreateRemoteGadget,
-							remoteGadgetId, 
+							remoteGadgetId: gadgetInfo.remoteGadgetId, 
 							gadgetUrl: setInfo.url, 
 							remoteInterfaceLocks: setInfo.locks, 
 							universeFromGadget 
 						};
 						this.networkEventCallback( createEvent, true );	
+
+						// if any items showed up before the gadget did, update those transforms too
+						for( let itemId of gadgetInfo.items.keys() )
+						{
+							let itemInfo = gadgetInfo.items.get( itemId );
+							this.updateRemoteTransform( itemInfo.iface.selfFromPeer, gadgetInfo, itemInfo );
+						}
 					}
+				}
+				break;
+
+				case NetworkGadgetEventType.SetItemInfo:
+				{
+					let setInfo = event as NGESetItemInfo;
+
+					if( !itemInfo )
+					{
+						itemInfo =
+						{
+							iface: activeNetworkedGadget,
+							itemId: setInfo.itemId,
+						};
+
+						gadgetInfo.items.set( setInfo.itemId, itemInfo );
+					}
+
+					this.updateRemoteTransform( activeNetworkedGadget.selfFromPeer, gadgetInfo, itemInfo );
 				}
 				break;
 
@@ -136,6 +173,7 @@ export class NetworkUniverseComponent implements EntityComponent
 						{
 							type: NetworkUniverseEventType.BroadcastRemoteGadgetEvent,
 							remoteGadgetId: gadgetInfo.remoteGadgetId, 
+							itemId: itemInfo?.itemId,
 							event: sendEvent.event,
 						};
 						this.networkEventCallback( netEvent, sendEvent.reliable );
@@ -147,14 +185,32 @@ export class NetworkUniverseComponent implements EntityComponent
 
 		activeNetworkedGadget.onEnded( () =>
 		{
-			if( gadgetInfo )
+			if( itemInfo )
 			{
-				this.networkedGadgets.delete( gadgetInfo.remoteGadgetId );
-				this.networkEventCallback( 
-					{
-						type: NetworkUniverseEventType.DestroyRemoteGadget,
-						remoteGadgetId: gadgetInfo.remoteGadgetId, 
-					} as NetworkUniverseEvent, true );
+				// this is just an item in the gadget
+			}
+			else if( gadgetInfo.remoteGadgetId )
+			{
+				// this is the gadget itself
+				this.networkedGadgetsByEndpointId.delete( activeNetworkedGadget.peer.endpointId );
+				if( gadgetInfo.remoteGadgetId )
+				{
+					this.networkedGadgetsByRemoteId.delete( gadgetInfo.remoteGadgetId );
+					this.networkEventCallback( 
+						{
+							type: NetworkUniverseEventType.DestroyRemoteGadget,
+							remoteGadgetId: gadgetInfo.remoteGadgetId, 
+						} as NetworkUniverseEvent, true );
+				}
+			}
+			else
+			{
+				// this interface never identified itself as either an item or a gadget
+				// if it's the only reference we have to the endpoint Id, clean that up
+				if( gadgetInfo.items.size == 0 )
+				{
+					this.networkedGadgetsByEndpointId.delete( activeNetworkedGadget.peer.endpointId );
+				}
 			}
 		} );
 
@@ -162,15 +218,25 @@ export class NetworkUniverseComponent implements EntityComponent
 		{
 			if( gadgetInfo )
 			{
-				let universeFromGadget = minimalPoseFromTransform( entityFromPeer );
-				this.networkEventCallback( 
-					{
-						type: NetworkUniverseEventType.UpdateRemoteGadgetTransform,
-						remoteGadgetId: gadgetInfo.remoteGadgetId, 
-						universeFromGadget,
-					} as NetworkUniverseEvent, false );
+				this.updateRemoteTransform( entityFromPeer, gadgetInfo, itemInfo );
 			}
 		} );
+	}
+
+	private updateRemoteTransform( entityFromPeer: AvNodeTransform, gadgetInfo: NetworkedGadgetInfoInternal, 
+		itemInfo: NetworkedItemInfoInternal )
+	{
+		if( !gadgetInfo.remoteGadgetId )
+			return;
+
+		let universeFromGadget = minimalPoseFromTransform( entityFromPeer );
+		this.networkEventCallback(
+			{
+				type: NetworkUniverseEventType.UpdateRemoteGadgetTransform,
+				remoteGadgetId: gadgetInfo.remoteGadgetId,
+				itemId: itemInfo?.itemId,
+				universeFromGadget,
+			} as NetworkUniverseEvent, false );
 	}
 
 	public get receives()
@@ -189,22 +255,35 @@ export class NetworkUniverseComponent implements EntityComponent
 		switch( e.type )
 		{
 			case NetworkUniverseEventType.SendMasterGadgetEvent:
-				this.masterEvent( e.remoteGadgetId, e.event );
+				this.masterEvent( e.remoteGadgetId, e.itemId, e.event );
 				break;
 		}
 	}
 
-	private masterEvent( remoteGadgetId: number, event: object )
+	private masterEvent( remoteGadgetId: number, itemId: string, event: object )
 	{
-		let gadgetInfo = this.networkedGadgets.get( remoteGadgetId );
+		let gadgetInfo = this.networkedGadgetsByRemoteId.get( remoteGadgetId );
+		if( !gadgetInfo )
+		{
+			console.log( "Received master event for unknown remote gadget ", remoteGadgetId );
+			return;
+		}
 
 		let sendEvent: NGESendEvent =
 		{
 			type: NetworkGadgetEventType.ReceiveEventFromRemote,
 			event,
 		};
-	
-		gadgetInfo?.iface?.sendEvent( sendEvent );
+
+		if( itemId )
+		{
+			let itemInfo = gadgetInfo.items.get( itemId );
+			itemInfo?.iface?.sendEvent( sendEvent );
+		}
+		else
+		{
+			gadgetInfo?.iface?.sendEvent( sendEvent );
+		}	
 	}
 
 
@@ -214,7 +293,7 @@ export class NetworkUniverseComponent implements EntityComponent
 	public get initInfo(): object
 	{
 		let gadgets: NetworkedGadgetInfo[] = [];
-		for( let internalInfo of this.networkedGadgets.values() )
+		for( let internalInfo of this.networkedGadgetsByRemoteId.values() )
 		{
 			gadgets.push( 
 				{

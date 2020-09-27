@@ -12,6 +12,7 @@ import { AvGadget } from './aardvark_gadget';
 export enum NetworkGadgetEventType
 {
 	SetGadgetInfo = "set_gadget_info",
+	SetItemInfo = "set_item_info",
 	SendEventToAllRemotes = "send_event_to_remotes",
 	ReceiveEventFromRemote = "receive_event_from_remote",
 }
@@ -25,6 +26,11 @@ export interface NGESetGadgetInfo extends NetworkGadgetEvent
 {
 	locks: InitialInterfaceLock[];
 	url: string;
+}
+
+export interface NGESetItemInfo extends NetworkGadgetEvent
+{
+	itemId: string;
 }
 
 export interface NGESendEvent extends NetworkGadgetEvent
@@ -76,6 +82,108 @@ export class NetworkedGadgetComponent implements EntityComponent
 	{
 		this.networkProvider = networkProvider;
 		this.sendSetGadgetInfo();
+
+		networkProvider.onEnded( ()=>
+			{
+				this.networkProvider = null;
+			} );
+		
+		networkProvider.onEvent( ( event: NetworkGadgetEvent ) =>
+		{
+			switch( event.type )
+			{
+				case NetworkGadgetEventType.ReceiveEventFromRemote:
+				{
+					let remoteEvent = event as NGESendEvent;
+					this.remoteEventCallback?.( remoteEvent.event );
+				}
+				break;
+			}
+		} );
+	}
+
+	public get transmits(): InterfaceProp[]
+	{
+		return [ { iface: NetworkedGadgetComponent.interfaceName, processor: this.onNetworkedGadgetStart } ];
+	}
+
+	public get receives(): InterfaceProp[]
+	{
+		return [];
+	}
+
+	public get parent(): EndpointAddr
+	{
+		return null;
+	}
+	
+	public get wantsTransforms()
+	{
+		return false;
+	}
+
+
+	public get interfaceLocks(): InitialInterfaceLock[] { return []; }
+	
+	public onUpdate( callback: () => void ): void
+	{
+		this.entityCallback = callback;
+	}
+
+
+	public render(): JSX.Element
+	{
+		return null;
+	}
+
+	public sendEventToAllRemotes( event: object, reliable: boolean )
+	{
+		let evt: NGESendEvent =
+		{
+			type: NetworkGadgetEventType.SendEventToAllRemotes,
+			event,
+			reliable,
+		};
+		this.networkProvider?.sendEvent( evt );
+	}
+}
+
+export class NetworkedItemComponent implements EntityComponent
+{
+	private entityCallback: () => void = null;
+	private networkProvider: ActiveInterface = null;
+	private itemId: string;
+	private remoteEventCallback: ( event: object ) => void;
+
+	constructor( itemId: string, remoteEventCallback: ( event: object ) => void )
+	{
+		this.itemId = itemId;
+		this.remoteEventCallback = remoteEventCallback;
+	}
+
+	static readonly interfaceName= "aardvark-networked-gadget@1";
+
+	private updateListener()
+	{
+		this.entityCallback?.();
+	}
+
+	private sendSetItemInfo()
+	{
+		// tell the other end how we want to be started on the remote end
+		let req: NGESetItemInfo =
+		{
+			type: NetworkGadgetEventType.SetItemInfo,
+			itemId: this.itemId,
+		};
+		this.networkProvider?.sendEvent( req );
+	}
+
+	@bind
+	private onNetworkedGadgetStart( networkProvider: ActiveInterface )
+	{
+		this.networkProvider = networkProvider;
+		this.sendSetItemInfo();
 
 		networkProvider.onEnded( ()=>
 			{
