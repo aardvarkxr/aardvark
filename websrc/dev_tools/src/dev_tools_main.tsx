@@ -1,4 +1,4 @@
-import { AvGadget, AvMessagebox, AvPanel, AvStandardGrabbable, AvTransform, AvModel } from '@aardvarkxr/aardvark-react';
+import { AvGadget, AvMessagebox, AvPanel, AvStandardGrabbable, AvTransform, AvModel, GrabbableStyle } from '@aardvarkxr/aardvark-react';
 import { Av, EndpointType, g_builtinModelBox, MessageType, MsgDestroyGadget, g_builtinModelHammerAndWrench, modelBoxVolume } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import { CMonitorStore } from 'common/monitor_store';
@@ -102,7 +102,7 @@ class DevToolPanel extends React.Component< {}, DevToolPanelState >
 							</AvTransform>
 						}
 						volume={ modelBoxVolume( g_builtinModelHammerAndWrench, scale ) }
-						 useInitialParent={ true } ref={ this.m_grabbableRef }>
+						style={ GrabbableStyle.Gadget } ref={ this.m_grabbableRef }>
 						<AvTransform translateY={ 0.08 } >
 							<AvPanel interactive={true} widthInMeters={ 0.1 }/>
 						</AvTransform>

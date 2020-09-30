@@ -235,6 +235,11 @@ export class NetworkedItemComponent implements EntityComponent
 		return [];
 	}
 
+	public get transformOverridden()
+	{
+		return this.transformState == NetworkItemTransform.Override;
+	}
+	
 	public get parent(): EndpointAddr
 	{
 		switch( this.transformState )

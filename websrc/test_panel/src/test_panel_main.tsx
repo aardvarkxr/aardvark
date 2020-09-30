@@ -1,4 +1,4 @@
-import { AvGadget, AvMessagebox, AvPanel, AvStandardGrabbable, AvTransform, DefaultLanding } from '@aardvarkxr/aardvark-react';
+import { AvGadget, AvMessagebox, AvPanel, AvStandardGrabbable, AvTransform, DefaultLanding, GrabbableStyle } from '@aardvarkxr/aardvark-react';
 import { Av, EAction, EHand, g_builtinModelBox, InitialInterfaceLock } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
@@ -223,7 +223,7 @@ class TestPanel extends React.Component< {}, TestPanelState >
 			<div className={ sDivClasses } >
 				<div>
 					<AvStandardGrabbable modelUri={ g_builtinModelBox } modelScale={ 0.03 } remoteGadgetCallback={ this.onRemoteEvent }
-						modelColor="lightblue" useInitialParent={ true } remoteInterfaceLocks={ remoteInitLocks } ref={ this.m_grabbableRef }>
+						modelColor="lightblue" style={ GrabbableStyle.Gadget } remoteInterfaceLocks={ remoteInitLocks } ref={ this.m_grabbableRef }>
 						<AvTransform translateY={ 0.08 } >
 							<AvPanel interactive={true} widthInMeters={ 0.1 }/>
 						</AvTransform>

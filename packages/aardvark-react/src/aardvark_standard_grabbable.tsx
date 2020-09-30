@@ -10,8 +10,9 @@ import { AvModel } from './aardvark_model';
 import { AvTransform } from './aardvark_transform';
 import { AvGadgetList } from './api_gadgetlist';
 import { MoveableComponent, MoveableComponentState } from './component_moveable';
-import { NetworkedGadgetComponent } from './component_networked_gadget';
-import { RemoteGadgetComponent } from './component_remote_gadget';
+import { NetworkedGadgetComponent, NetworkedItemComponent } from './component_networked_gadget';
+import { RemoteGadgetComponent, RemoteItemComponent, k_remoteGrabbableInterface } from './component_remote_gadget';
+import { AvInterfaceEntity } from './aardvark_interface_entity';
 const equal = require( 'fast-deep-equal' );
 
 /** This enum defines the possible highlight states of an AvGrabbable. 
@@ -71,6 +72,26 @@ export enum HiddenChildrenBehavior
 export interface StandardGrabbableDeleteCallback
 {
 	(): void;
+}
+
+export enum GrabbableStyle
+{
+	/** This grabbable is the top level of a gadget. It will
+	 * advertize gadget info, have an A menu, etc.
+	 */
+	Gadget = 1,
+
+	/** This grabbable is a subcomponent of a gadget that is not
+	 * only grabbable on the primary instance. It will not advertise
+	 * gadget info or have an A menu.
+	 */
+	LocalItem = 2,
+
+	/** This grabbable is a subcomponent of a gadget that is grabbable
+	 * on the primary instance and on networked instances. It will not 
+	 * advertise gadget info or have an A menu.
+	 */
+	NetworkedItem = 3,
 }
 
 /** Props for {@link AvStandardGrabbable} */
@@ -135,12 +156,6 @@ export interface StandardGrabbableProps
 	*/
 	onEndGrab?: () => void;
 
-	/** Allows the grabbable to be automatically added to a container when it is first created.
-	 * 
-	 * @default true
-	 */
-	useInitialParent?: boolean;
-
 	/** If this property is defined, the gadget will be shared with remote users that are in the 
 	 * same room as the owner. Any remote instance of this gadget will be started with provided
 	 * initial interface locks.
@@ -172,14 +187,17 @@ export interface StandardGrabbableProps
 	 */
 	grabberFromGrabbable?: AvNodeTransform;
 
-	/** If this prop is true the grabbable will advertise gadget info for the gadget. This
-	 * allows users to destroy the gadget, share the gadget, etc. If this is true, the 
-	 * user will be presented with a favorite option in the A menu when this gadget is 
-	 * highlighted.
-	 * 
-	 * @default: true
+	/** Defines when the grabbable can be grabbed, and whether or not
+	 * it counts as the topmost grabbable in the gadget.
 	 */
-	advertiseGadgetInfo?: boolean;
+	style: GrabbableStyle;
+
+	/** The unique-to-the-gadget id to use to link up this item with its counterparts in remote
+	 * gadgets. This must be specified if the grabbable is using the NetworkedItem style.
+	 * 
+	 * @default none
+	 */
+	itemId?: string;
 
 	/** If this prop is specified, the user will be presented with a delete option when they
 	 * activate the A menu while this gadget is highlighted. If a callback is provided,
@@ -211,6 +229,8 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 	private networkedComponent: NetworkedGadgetComponent;
 	private remoteComponent: RemoteGadgetComponent;
 	private gadgetListRef: React.RefObject<AvGadgetList> = React.createRef<AvGadgetList>();
+	private remoteItemComponent: RemoteItemComponent = null;
+	private networkedItemComponent: NetworkedItemComponent = null
 
 	constructor( props: any )
 	{
@@ -221,23 +241,38 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 			throw new Error( "Either modelUri or appearance must be provided" );
 		}
 
-		let remoteLock = AvGadget.instance().initialInterfaces.find( ( value ) => 
-			value.iface == RemoteGadgetComponent.interfaceName );
+		if( this.props.style == GrabbableStyle.NetworkedItem && !this.props.itemId )
+		{
+			throw new Error( "itemId is required for networked items" );
+		}
+
+		this.moveableComponent = new MoveableComponent( this.onMoveableUpdate, 
+			this.props.style == GrabbableStyle.Gadget, this.props.canDropIntoContainers,
+			this.props.grabberFromGrabbable );
+
+		let remoteLock = AvGadget.instance().findInitialInterface( RemoteGadgetComponent.interfaceName );
 		if( remoteLock )
 		{
 			// this gadget is remote
 			this.remoteComponent = new RemoteGadgetComponent( this.props.remoteGadgetCallback );
+
+			if( this.props.style == GrabbableStyle.NetworkedItem )
+			{
+				this.remoteItemComponent = new RemoteItemComponent( this.props.itemId, null );
+			}
 		}
 		else
 		{
-			this.moveableComponent = new MoveableComponent( this.onMoveableUpdate, 
-				this.props.useInitialParent ?? true, this.props.canDropIntoContainers,
-				this.props.grabberFromGrabbable );
 
 			if( this.props.remoteInterfaceLocks )
 			{
 				// this gadget is master, or will be if the user enters a room
 				this.networkedComponent = new NetworkedGadgetComponent( this.props.remoteInterfaceLocks, this.props.remoteGadgetCallback );
+			}
+
+			if( this.props.style == GrabbableStyle.NetworkedItem )
+			{
+				this.networkedItemComponent = new NetworkedItemComponent( this.props.itemId, null );
 			}
 		} 
 
@@ -264,7 +299,14 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 				break;
 
 			case MoveableComponentState.Grabbed:
-				highlight = HighlightType.Grabbed;
+				if( this.networkedItemComponent?.transformOverridden )
+				{
+					highlight = HighlightType.GrabbedByRemote;
+				}
+				else
+				{
+					highlight = HighlightType.Grabbed;
+				}
 				break;
 
 			case MoveableComponentState.Menu:
@@ -329,7 +371,7 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 
 	private get showDelete(): boolean
 	{
-		return this.props.showDelete ? true : ( this.props.advertiseGadgetInfo ?? true );
+		return this.props.showDelete ? true : ( this.props.style == GrabbableStyle.Gadget );
 	}
 
 	@bind
@@ -412,7 +454,80 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 		}
 
 		let volume: AvVolume = this.remoteComponent ? emptyVolume() : infoVolume;
-		let components: EntityComponent[] = [ this.remoteComponent ?? this.moveableComponent ];
+		
+		let constraint: AvConstraint = null;
+		if( this.props.gravityAligned )
+		{
+			constraint = { gravityAligned: this.props.gravityAligned };
+		}
+
+		let outerComponent: EntityComponent;
+		let innerComponent: EntityComponent;
+		let locatorEntity: JSX.Element;
+
+		let outerVolume: AvVolume;
+		let innerVolume: AvVolume;
+
+		let outerConstraint: AvConstraint;
+		let innerConstraint: AvConstraint;
+
+		switch( this.props.style )
+		{
+			case GrabbableStyle.Gadget:
+				if( AvGadget.instance().isRemote )
+				{
+					outerComponent = this.remoteComponent;
+					outerVolume = emptyVolume();
+				}	
+				else
+				{
+					outerComponent = this.moveableComponent;
+					outerVolume = volume;
+					outerConstraint = constraint;
+
+					if( this.networkedComponent )
+					{
+						locatorEntity = <AvComposedEntity components={ [ this.networkedComponent ] } 
+							volume={ infiniteVolume() } />;
+					}
+				}		
+				break;
+
+			case GrabbableStyle.LocalItem:
+				outerComponent = this.moveableComponent;
+				outerVolume = volume;
+				outerConstraint = constraint;
+			break;
+
+			case GrabbableStyle.NetworkedItem:
+				if( AvGadget.instance().isRemote )
+				{
+					outerComponent = this.remoteItemComponent;
+					outerVolume = infoVolume;
+
+					innerComponent = this.moveableComponent;
+					innerVolume = volume;
+					innerConstraint = constraint;
+
+					if( this.moveableComponent.state == MoveableComponentState.Grabbed )
+					{
+						let lock = { ...this.remoteComponent.interfaceLocks[0] };
+						lock.iface = k_remoteGrabbableInterface;
+						locatorEntity = <AvInterfaceEntity volume={ emptyVolume() }
+							transmits={ [ { iface: k_remoteGrabbableInterface } ] }
+								interfaceLocks={ [ lock ] }/>
+					}			
+				}	
+				else
+				{
+					outerComponent = this.moveableComponent;
+					outerVolume = volume;
+					outerConstraint = constraint;
+
+					innerComponent = this.networkedItemComponent;
+				}	
+				break;
+		}		
 
 		let children = this.props.children;
 		if( !showChildren )
@@ -426,16 +541,10 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 
 				case HiddenChildrenBehavior.Omit:
 					children = null;
-			}
-		}
+			}		
+		}	
 
-		let constraint: AvConstraint = null;
-		if( this.props.gravityAligned )
-		{
-			constraint = { gravityAligned: this.props.gravityAligned };
-		}
-
-		const advertizeGadgetInfo = this.props.advertiseGadgetInfo ?? true;
+		const advertizeGadgetInfo = this.props.style == GrabbableStyle.Gadget;
 
 		let menu: JSX.Element = null;
 		if( this.state.highlight == HighlightType.Menu 
@@ -465,16 +574,30 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 				<AvGadgetList ref={ this.gadgetListRef } />
 			</AvTransform>;
 		}
-		return (
-			<AvComposedEntity components={ components }	volume={ volume } constraint={ constraint }>
-				{ this.networkedComponent 
-					&& <AvComposedEntity components={ [ this.networkedComponent ] } volume={ infiniteVolume() } /> }
-				{ appearance }
-				{ children }
-				{ advertizeGadgetInfo &&
-					<AvGadgetInfo volume={ infoVolume } /> }
-				{ menu }
-			</AvComposedEntity> );
+
+		let guts = <>
+			{ locatorEntity }
+			{ appearance }
+			{ children }
+			{ advertizeGadgetInfo &&
+				<AvGadgetInfo volume={ infoVolume } /> }
+			{ menu }
+			</>;
+
+		if( innerComponent )
+		{
+			return <AvComposedEntity components={ [ outerComponent ] } volume={ outerVolume } constraint={ outerConstraint }>
+				<AvComposedEntity components={ [ innerComponent ] } volume={ innerVolume } constraint={ innerConstraint }>				
+				{ guts }
+				</AvComposedEntity>
+			</AvComposedEntity>;
+		}
+		else
+		{
+			return <AvComposedEntity components={ [ outerComponent ] } volume={ outerVolume } constraint={ outerConstraint }>
+				{ guts }
+			</AvComposedEntity>;
+		}
 	}
 }
 

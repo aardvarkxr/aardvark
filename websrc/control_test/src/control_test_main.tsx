@@ -1,4 +1,4 @@
-import { AvGrabButton, AvPanel, AvPanelAnchor, AvStandardGrabbable, AvTransform, AvModel, DefaultLanding } from '@aardvarkxr/aardvark-react';
+import { AvGrabButton, AvPanel, AvPanelAnchor, AvStandardGrabbable, AvTransform, AvModel, DefaultLanding, GrabbableStyle } from '@aardvarkxr/aardvark-react';
 import { g_builtinModelAardvark, g_builtinModelPlus, Av } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
@@ -40,7 +40,7 @@ class ControlTest extends React.Component< {}, ControlTestState >
 		return (
 			<div className="FullPage" >
 				<AvStandardGrabbable modelUri={ g_builtinModelAardvark }
-					modelColor="lightblue" useInitialParent={ true } remoteInterfaceLocks={ [] } >
+					modelColor="lightblue" style={ GrabbableStyle.Gadget } remoteInterfaceLocks={ [] } >
 
 					<AvTransform translateY={ 0.12 }>
 						<AvPanel interactive={ false } widthInMeters={ 0.2 } >

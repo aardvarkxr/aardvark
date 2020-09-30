@@ -1,4 +1,4 @@
-import { AvGadget, AvModel, AvStandardGrabbable, AvTransform, DefaultLanding } from '@aardvarkxr/aardvark-react';
+import { AvGadget, AvModel, AvStandardGrabbable, AvTransform, DefaultLanding, GrabbableStyle } from '@aardvarkxr/aardvark-react';
 import { Av, g_builtinModelBox, g_builtinModelPanel, WindowInfo } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import { initSentryForBrowser } from 'common/sentry_utils';
@@ -76,7 +76,7 @@ class DesktopWindow extends React.Component< {}, DesktopWindowState >
 	{
 		return (
 			<AvStandardGrabbable modelUri={ g_builtinModelBox } modelScale={ 0.03 } 
-				modelColor="lightblue" useInitialParent={ true } ref={ this.m_grabbableRef }>
+				modelColor="lightblue" style={ GrabbableStyle.Gadget } ref={ this.m_grabbableRef }>
 				{ this.renderWindow() }
 			</AvStandardGrabbable> );
 	}

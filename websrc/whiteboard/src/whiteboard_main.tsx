@@ -1,4 +1,4 @@
-import { NetworkedItemComponent, ActiveInterface, AvComposedEntity, AvGadget, AvInterfaceEntity, AvLine, AvModel, AvPrimitive, AvStandardGrabbable, AvTransform, MoveableComponent, PrimitiveType, PrimitiveYOrigin, PrimitiveZOrigin, DefaultLanding, RemoteItemComponent, MoveableComponentState, k_remoteGrabbableInterface } from '@aardvarkxr/aardvark-react';
+import { NetworkedItemComponent, ActiveInterface, AvComposedEntity, AvGadget, AvInterfaceEntity, AvLine, AvModel, AvPrimitive, AvStandardGrabbable, AvTransform, MoveableComponent, PrimitiveType, PrimitiveYOrigin, PrimitiveZOrigin, DefaultLanding, RemoteItemComponent, MoveableComponentState, k_remoteGrabbableInterface, GrabbableStyle } from '@aardvarkxr/aardvark-react';
 import { Av, AvNodeTransform, AvVector, AvVolume, endpointAddrToString, EVolumeType, g_builtinModelBox, InitialInterfaceLock, infiniteVolume } from '@aardvarkxr/aardvark-shared';
 import { vec2 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
@@ -537,7 +537,7 @@ class Whiteboard extends React.Component< {}, WhiteboardState >
 
 		return (
 			<AvStandardGrabbable modelUri={ g_builtinModelBox } modelScale={ 0.1 } 
-				modelColor="lightblue" useInitialParent={ true } remoteInterfaceLocks={ remoteInitLocks }
+				modelColor="lightblue" style={ GrabbableStyle.Gadget } remoteInterfaceLocks={ remoteInitLocks }
 				ref={ this.m_grabbableRef } remoteGadgetCallback={ this.onRemoteEvent } 
 				gravityAligned={ true }>
 				<AvTransform translateY={0.2}>

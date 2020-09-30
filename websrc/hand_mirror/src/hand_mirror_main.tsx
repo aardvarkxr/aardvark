@@ -1,4 +1,4 @@
-import { AvOrigin, AvStandardGrabbable, AvTransform, RemoteUniverseComponent, NetworkUniverseComponent, AvComposedEntity, DefaultLanding } from '@aardvarkxr/aardvark-react';
+import { AvOrigin, AvStandardGrabbable, AvTransform, RemoteUniverseComponent, NetworkUniverseComponent, AvComposedEntity, DefaultLanding, GrabbableStyle } from '@aardvarkxr/aardvark-react';
 import { g_builtinModelHandMirror, infiniteVolume, emptyVolume, Av } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
@@ -41,7 +41,7 @@ class HandMirror extends React.Component< {}, HandMirrorState >
 
 		return <AvOrigin path="/space/stage">
 			<AvComposedEntity components={ [ this.networkUniverse ] }
-				volume={ infiniteVolume() }/> }
+				volume={ infiniteVolume() }/> 
 			<AvTransform translateX={ 0.5 }>
 				<AvComposedEntity components={ [ this.remoteUniverse ] }
 					volume={ emptyVolume() } />
@@ -53,7 +53,8 @@ class HandMirror extends React.Component< {}, HandMirrorState >
 	{
 		return <AvStandardGrabbable modelUri={ g_builtinModelHandMirror } 
 				onGrab={ () => { this.setState( { grabbed: true} );} } 
-				onEndGrab={ () => { this.setState( { grabbed: false } );} } >
+				onEndGrab={ () => { this.setState( { grabbed: false } );} } 
+				style={ GrabbableStyle.Gadget }>
 				{ this.renderUniverses() }
 			</AvStandardGrabbable>
 	}
