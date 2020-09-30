@@ -1,5 +1,5 @@
-import { AvGadget, AvMessagebox, AvPanel, AvStandardGrabbable, AvTransform } from '@aardvarkxr/aardvark-react';
-import { Av, EndpointType, g_builtinModelBox, MessageType, MsgDestroyGadget } from '@aardvarkxr/aardvark-shared';
+import { AvGadget, AvMessagebox, AvPanel, AvStandardGrabbable, AvTransform, AvModel } from '@aardvarkxr/aardvark-react';
+import { Av, EndpointType, g_builtinModelBox, MessageType, MsgDestroyGadget, g_builtinModelHammerAndWrench, modelBoxVolume } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import { CMonitorStore } from 'common/monitor_store';
 import { observer } from 'mobx-react';
@@ -90,11 +90,19 @@ class DevToolPanel extends React.Component< {}, DevToolPanelState >
 	{
 		let sDivClasses:string = "FullPage";
 
+		const scale = 1.1;
+
 		return (
 			<div className={ sDivClasses } >
 				<div>
-					<AvStandardGrabbable modelUri={ g_builtinModelBox } modelScale={ 0.03 }
-						modelColor="lightblue" useInitialParent={ true } ref={ this.m_grabbableRef }>
+					<AvStandardGrabbable appearance=
+						{
+							<AvTransform uniformScale={ scale }>
+								<AvModel uri={ g_builtinModelHammerAndWrench }/>
+							</AvTransform>
+						}
+						volume={ modelBoxVolume( g_builtinModelHammerAndWrench, scale ) }
+						 useInitialParent={ true } ref={ this.m_grabbableRef }>
 						<AvTransform translateY={ 0.08 } >
 							<AvPanel interactive={true} widthInMeters={ 0.1 }/>
 						</AvTransform>

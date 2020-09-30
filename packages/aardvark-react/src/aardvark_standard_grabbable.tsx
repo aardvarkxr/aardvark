@@ -32,6 +32,13 @@ export enum HighlightType
 
 	/** The grabbable was in range and the user is holding the menu button. */
 	Menu = 4,
+
+	/** The grabbable is being grabbed by the one of its networked copies. It's animated, but should
+	 * leave interactions to the remote entity itself.
+	 * 
+	 * This highlight type will only be reported by AvNetworkedGrabbable.
+	 */
+	GrabbedByRemote = 5,
 }
 
 export enum ShowGrabbableChildren
@@ -69,8 +76,26 @@ export interface StandardGrabbableDeleteCallback
 /** Props for {@link AvStandardGrabbable} */
 export interface StandardGrabbableProps
 {
-	/** The model to use for the grab handle of this grabbable. */
-	modelUri: string;
+	/** The model to use for the grab handle of this grabbable. Either
+	 * this prop or appearance and volume must be specified.
+	 * 
+	 * @default none
+	*/
+	modelUri?: string;
+
+	/** The scene graph nodes to use for this grabbable's appearance. Either this and volume 
+	 * or modelUri must be specified
+	 * 
+	 * @default none
+	 */
+	appearance?: JSX.Element;
+
+	/** The intersection volume to use in conjunction with appearance to determine when the 
+	 * user is intersecting the grabbable.
+	 * 
+	 * @default none
+	 */
+	volume?: AvVolume;
 
 	/** Tells the standard grabbable when to show its children. 
 	 * 
@@ -190,6 +215,11 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 	constructor( props: any )
 	{
 		super( props );
+
+		if( !props.modelUri && !props.appearance )
+		{
+			throw new Error( "Either modelUri or appearance must be provided" );
+		}
 
 		let remoteLock = AvGadget.instance().initialInterfaces.find( ( value ) => 
 			value.iface == RemoteGadgetComponent.interfaceName );
@@ -338,21 +368,48 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 				break;
 		}
 
-		let scale = this.state.highlight == HighlightType.InRange ? 1.1 : 1.0;
-		if( this.props.modelScale )
-		{
-			scale *= this.props.modelScale;
-		}
+		let highlightScale = this.state.highlight == HighlightType.InRange ? 1.1 : 1.0;
 
-		let infoVolume: AvVolume = 
+		let appearance:JSX.Element;
+		let infoVolume: AvVolume;
+		if( this.props.modelUri )
 		{
-			type: EVolumeType.ModelBox, 
-			uri: this.props.modelUri, 
-			nodeFromVolume:
-			{ 
-				scale: { x: scale, y: scale, z: scale }
-			},
-		};
+			let scale = highlightScale * ( this.props.modelScale ?? 1.0 );
+			appearance = <AvTransform uniformScale={ scale }>
+					<AvModel uri={ this.props.modelUri} color={ this.props.modelColor }/>
+				</AvTransform>;
+
+			infoVolume = 
+			{
+				type: EVolumeType.ModelBox, 
+				uri: this.props.modelUri, 
+				nodeFromVolume:
+				{ 
+					scale: { x: scale, y: scale, z: scale }
+				},
+			};
+		}
+		else
+		{
+			appearance = <AvTransform uniformScale={ highlightScale }>
+					{ this.props.appearance }
+				</AvTransform>;
+
+			infoVolume = { ...this.props.volume };
+
+			if( !infoVolume.nodeFromVolume )
+			{
+				infoVolume.nodeFromVolume = {};
+			}
+			if( !infoVolume.nodeFromVolume.scale )
+			{
+				infoVolume.nodeFromVolume.scale = { x: 1.0, y: 1.0, z: 1.0 };
+			}
+
+			infoVolume.nodeFromVolume.scale.x *= highlightScale;
+			infoVolume.nodeFromVolume.scale.y *= highlightScale;
+			infoVolume.nodeFromVolume.scale.z *= highlightScale;
+		}
 
 		let volume: AvVolume = this.remoteComponent ? emptyVolume() : infoVolume;
 		let components: EntityComponent[] = [ this.remoteComponent ?? this.moveableComponent ];
@@ -412,9 +469,7 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 			<AvComposedEntity components={ components }	volume={ volume } constraint={ constraint }>
 				{ this.networkedComponent 
 					&& <AvComposedEntity components={ [ this.networkedComponent ] } volume={ infiniteVolume() } /> }
-				<AvTransform uniformScale={ scale }>
-					<AvModel uri={ this.props.modelUri} color={ this.props.modelColor }/>
-				</AvTransform>
+				{ appearance }
 				{ children }
 				{ advertizeGadgetInfo &&
 					<AvGadgetInfo volume={ infoVolume } /> }

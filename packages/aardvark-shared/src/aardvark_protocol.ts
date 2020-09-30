@@ -570,6 +570,16 @@ export function infiniteVolume(): AvVolume
 	return { type: EVolumeType.Infinite };
 }
 
+export function modelBoxVolume( uri: string, scale?: number )
+{
+	return (
+		{
+			type: EVolumeType.ModelBox,
+			uri,
+			scale
+		} );
+};
+
 export function rayVolume( start: vec3, dir: vec3 )
 {
 	let nodeFromVolume: mat4;
