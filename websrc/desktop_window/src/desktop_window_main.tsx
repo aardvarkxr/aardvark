@@ -1,9 +1,9 @@
-import { AvGadget, AvPanel, AvStandardGrabbable, AvTransform, HighlightType, DefaultLanding, AvModel } from '@aardvarkxr/aardvark-react';
-import { EAction, EHand, g_builtinModelBox, InitialInterfaceLock, Av, WindowInfo, g_builtinModelPanel } from '@aardvarkxr/aardvark-shared';
+import { AvGadget, AvModel, AvStandardGrabbable, AvTransform, DefaultLanding } from '@aardvarkxr/aardvark-react';
+import { Av, g_builtinModelBox, g_builtinModelPanel, WindowInfo } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
+import { initSentryForBrowser } from 'common/sentry_utils';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
-import { initSentryForBrowser } from 'common/sentry_utils';
 
 initSentryForBrowser();
 

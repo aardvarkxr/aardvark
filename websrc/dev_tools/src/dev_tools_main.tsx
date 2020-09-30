@@ -1,10 +1,10 @@
-import { AvGadget, AvPanel, AvStandardGrabbable, AvTransform, HighlightType, DefaultLanding, AvMessagebox } from '@aardvarkxr/aardvark-react';
-import { EAction, EHand, g_builtinModelBox, InitialInterfaceLock, Av, EndpointType, MsgDestroyGadget, MessageType } from '@aardvarkxr/aardvark-shared';
-import { CMonitorStore } from 'common/monitor_store';
+import { AvGadget, AvMessagebox, AvPanel, AvStandardGrabbable, AvTransform } from '@aardvarkxr/aardvark-react';
+import { Av, EndpointType, g_builtinModelBox, MessageType, MsgDestroyGadget } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
+import { CMonitorStore } from 'common/monitor_store';
+import { observer } from 'mobx-react';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
-import { observer } from 'mobx-react';
 
 const k_TestPanelInterface = "test_panel_counter@1";
 

@@ -1,5 +1,5 @@
-import { AvGadget, AvPanel, AvStandardGrabbable, AvTransform, HighlightType, DefaultLanding, AvMessagebox } from '@aardvarkxr/aardvark-react';
-import { EAction, EHand, g_builtinModelBox, InitialInterfaceLock, Av } from '@aardvarkxr/aardvark-shared';
+import { AvGadget, AvMessagebox, AvPanel, AvStandardGrabbable, AvTransform, DefaultLanding } from '@aardvarkxr/aardvark-react';
+import { Av, EAction, EHand, g_builtinModelBox, InitialInterfaceLock } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
@@ -9,7 +9,6 @@ const k_TestPanelInterface = "test_panel_counter@1";
 interface TestPanelState
 {
 	count: number;
-	grabbableHighlight: HighlightType;
 	lastMessageboxResponse?: string;
 }
 
@@ -36,7 +35,6 @@ class TestPanel extends React.Component< {}, TestPanelState >
 		this.state = 
 		{ 
 			count: 0,
-			grabbableHighlight: HighlightType.None,
 		};
 	}
 
