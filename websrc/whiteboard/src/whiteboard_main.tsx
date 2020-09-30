@@ -1,4 +1,4 @@
-import { NetworkedItemComponent, ActiveInterface, AvComposedEntity, AvGadget, AvInterfaceEntity, AvLine, AvModel, AvPrimitive, AvStandardGrabbable, AvTransform, MoveableComponent, PrimitiveType, PrimitiveYOrigin, PrimitiveZOrigin, DefaultLanding, RemoteItemComponent } from '@aardvarkxr/aardvark-react';
+import { NetworkedItemComponent, ActiveInterface, AvComposedEntity, AvGadget, AvInterfaceEntity, AvLine, AvModel, AvPrimitive, AvStandardGrabbable, AvTransform, MoveableComponent, PrimitiveType, PrimitiveYOrigin, PrimitiveZOrigin, DefaultLanding, RemoteItemComponent, MoveableComponentState, k_remoteGrabbableInterface } from '@aardvarkxr/aardvark-react';
 import { Av, AvNodeTransform, AvVector, AvVolume, endpointAddrToString, EVolumeType, g_builtinModelBox, InitialInterfaceLock, infiniteVolume } from '@aardvarkxr/aardvark-shared';
 import { vec2 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
@@ -86,15 +86,25 @@ interface AvRemoteGrabbableProps
 	volume: AvVolume | AvVolume[];
 }
 
-class AvNetworkedGrabbable extends React.Component< AvRemoteGrabbableProps, {} >
+interface AvRemoteGrabbableState
 {
-	private moveableComponent = new MoveableComponent( () => {}, false, false );
+	moveableState: MoveableComponentState;
+}
+
+class AvNetworkedGrabbable extends React.Component< AvRemoteGrabbableProps, AvRemoteGrabbableState >
+{
+	private moveableComponent = new MoveableComponent( this.onMoveableUpdate, false, false );
 	private remoteComponent: RemoteItemComponent = null;
 	private networkComponent: NetworkedItemComponent = null
 
 	constructor( props: any )
 	{
 		super( props );
+
+		this.state = 
+		{
+			moveableState: MoveableComponentState.Idle,
+		};
 
 		if( AvGadget.instance().isRemote )
 		{
@@ -106,16 +116,30 @@ class AvNetworkedGrabbable extends React.Component< AvRemoteGrabbableProps, {} >
 		}
 	}
 
+	@bind
+	private onMoveableUpdate()
+	{
+		this.setState( { moveableState: this.moveableComponent.state } );
+	}
+
 	render()
 	{
 		if( AvGadget.instance().isRemote )
 		{
+			let lock = { ...this.remoteComponent.interfaceLocks[0] };
+			lock.iface = k_remoteGrabbableInterface;
 			return 	<AvComposedEntity components={ [ this.remoteComponent ]} volume={ this.props.volume }>
 					<AvComposedEntity components={ [ this.moveableComponent ]} volume={ this.props.volume }>
+						{ 
+							
+							this.state.moveableState == MoveableComponentState.Grabbed &&
+								<AvInterfaceEntity volume={ this.props.volume }
+									transmits={ [ { iface: k_remoteGrabbableInterface } ] }
+									interfaceLocks={ [ lock ] }/>
+						}
 						{ this.props.children }
 					</AvComposedEntity>
 				</AvComposedEntity>;
-
 		}
 		else
 		{

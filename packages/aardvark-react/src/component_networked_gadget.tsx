@@ -15,6 +15,7 @@ export enum NetworkGadgetEventType
 	SetItemInfo = "set_item_info",
 	SendEventToAllRemotes = "send_event_to_remotes",
 	ReceiveEventFromRemote = "receive_event_from_remote",
+	SetTransformState = "set_transform_state",
 }
 
 export interface NetworkGadgetEvent
@@ -31,6 +32,17 @@ export interface NGESetGadgetInfo extends NetworkGadgetEvent
 export interface NGESetItemInfo extends NetworkGadgetEvent
 {
 	itemId: string;
+}
+
+export enum NetworkItemTransform
+{
+	Normal = 0,
+	Override = 1,
+};
+
+export interface NGESetTransformState extends NetworkGadgetEvent
+{
+	newState: NetworkItemTransform;
 }
 
 export interface NGESendEvent extends NetworkGadgetEvent
@@ -154,6 +166,7 @@ export class NetworkedItemComponent implements EntityComponent
 	private networkProvider: ActiveInterface = null;
 	private itemId: string;
 	private remoteEventCallback: ( event: object ) => void;
+	private transformState = NetworkItemTransform.Normal;
 
 	constructor( itemId: string, remoteEventCallback: ( event: object ) => void )
 	{
@@ -200,6 +213,14 @@ export class NetworkedItemComponent implements EntityComponent
 					this.remoteEventCallback?.( remoteEvent.event );
 				}
 				break;
+
+				case NetworkGadgetEventType.SetTransformState:
+				{
+					let setTransformState = event as NGESetTransformState;
+					this.transformState = setTransformState.newState;
+					this.updateListener();
+				}
+				break;
 			}
 		} );
 	}
@@ -216,7 +237,14 @@ export class NetworkedItemComponent implements EntityComponent
 
 	public get parent(): EndpointAddr
 	{
-		return null;
+		switch( this.transformState )
+		{
+			case NetworkItemTransform.Normal:
+				return null;
+
+			case NetworkItemTransform.Override:
+				return this.networkProvider.peer;
+		}
 	}
 	
 	public get wantsTransforms()

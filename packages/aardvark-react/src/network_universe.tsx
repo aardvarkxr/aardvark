@@ -2,7 +2,10 @@ import { AvNodeTransform, InitialInterfaceLock, MinimalPose, minimalPoseFromTran
 import bind from 'bind-decorator';
 import { EntityComponent } from './aardvark_composed_entity';
 import { ActiveInterface } from './aardvark_interface_entity';
-import { NetworkedGadgetComponent, NetworkGadgetEvent, NetworkGadgetEventType, NGESendEvent, NGESetGadgetInfo, NGESetItemInfo } from './component_networked_gadget';
+import { NetworkedGadgetComponent, NetworkGadgetEvent, NetworkGadgetEventType, NGESendEvent, NGESetGadgetInfo, NGESetItemInfo, NGESetTransformState, NetworkItemTransform } from './component_networked_gadget';
+import { AvEntityChild } from './aardvark_entity_child';
+import { AvTransform } from './aardvark_transform';
+import * as React from 'react';
 
 
 export enum NetworkUniverseEventType
@@ -21,6 +24,16 @@ export enum NetworkUniverseEventType
 
 	/** Sent when a remote universe is is conveying an even from a remote gadget to the networked gadget. */
 	SendMasterGadgetEvent = "send_master_gadget_event",
+
+	/** Sent when an item in a remote gadget is being moved around and wants to override the transform 
+	 * of the source gadget's item.
+	*/
+	UpdateNetworkItemTransform = "update_network_item_transform",
+
+	/** Clears any remote item transform that may exist to keep the original gadget from rendering a parent 
+	 * for that item.
+	*/
+	ClearNetworkItemTransform = "clear_network_item_transform",
 }
 
 export interface NetworkUniverseEvent
@@ -46,6 +59,7 @@ interface NetworkedItemInfoInternal
 {
 	itemId: string;
 	iface: ActiveInterface;
+	remoteUniverseFromItem?: MinimalPose;
 }
 
 interface NetworkedGadgetInfoInternal
@@ -257,6 +271,14 @@ export class NetworkUniverseComponent implements EntityComponent
 			case NetworkUniverseEventType.SendMasterGadgetEvent:
 				this.masterEvent( e.remoteGadgetId, e.itemId, e.event );
 				break;
+
+			case NetworkUniverseEventType.UpdateNetworkItemTransform:
+				this.updateNetworkItemTransform( e.remoteGadgetId, e.itemId, e.universeFromGadget );
+				break;
+
+			case NetworkUniverseEventType.ClearNetworkItemTransform:
+				this.clearNetworkItemTransform( e.remoteGadgetId, e.itemId );
+				break;
 		}
 	}
 
@@ -286,6 +308,50 @@ export class NetworkUniverseComponent implements EntityComponent
 		}	
 	}
 
+	private updateNetworkItemTransform( remoteGadgetId: number, itemId: string, universeFromItem: MinimalPose )
+	{
+		let gadgetInfo = this.networkedGadgetsByRemoteId.get( remoteGadgetId );
+		if( !gadgetInfo )
+			return;
+
+		let itemInfo = gadgetInfo.items.get( itemId );
+		if( !itemInfo )
+			return;
+
+		if( !itemInfo.remoteUniverseFromItem )
+		{
+			this.sendItemTransformState(gadgetInfo, itemInfo, NetworkItemTransform.Override );
+		}
+		
+		itemInfo.remoteUniverseFromItem = universeFromItem;	
+		this.entityCallback?.();
+	}
+
+	private clearNetworkItemTransform( remoteGadgetId: number, itemId: string )
+	{
+		let gadgetInfo = this.networkedGadgetsByRemoteId.get( remoteGadgetId );
+		if( !gadgetInfo )
+			return;
+
+		let itemInfo = gadgetInfo.items.get( itemId );
+		if( !itemInfo )
+			return;
+
+		itemInfo.remoteUniverseFromItem = undefined;	
+		this.sendItemTransformState(gadgetInfo, itemInfo, NetworkItemTransform.Normal )
+	}
+
+	private sendItemTransformState( gadgetInfo: NetworkedGadgetInfoInternal, 
+		itemInfo: NetworkedItemInfoInternal, newState: NetworkItemTransform )
+	{
+		let m: NGESetTransformState =
+		{
+			type: NetworkGadgetEventType.SetTransformState,
+			newState,
+		}
+		itemInfo.iface.sendEvent( m );
+	}
+
 
 	/** The initialization info packet that the room needs to communicate to
 	 * any remote universe it is starting up. 
@@ -310,7 +376,23 @@ export class NetworkUniverseComponent implements EntityComponent
 
 	public render(): JSX.Element
 	{
-		return null;
+		let childTransforms: JSX.Element[] = [];
+		for( let gadgetInfo of this.networkedGadgetsByRemoteId.values() )
+		{
+			for( let itemInfo of gadgetInfo.items.values() )
+			{
+				if( itemInfo.remoteUniverseFromItem && itemInfo.iface )
+				{
+					let key=`${ gadgetInfo.remoteGadgetId }/${ itemInfo.itemId }`;
+					childTransforms.push(
+						<AvTransform key={ key } transform={ itemInfo.remoteUniverseFromItem }>
+							<AvEntityChild child={ itemInfo.iface.peer }/>
+						</AvTransform> );
+				}
+			}
+		}
+
+		return <>{ childTransforms }</>;
 	}
 }
 

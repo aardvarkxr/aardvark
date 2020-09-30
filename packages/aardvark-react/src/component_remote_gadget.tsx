@@ -131,6 +131,8 @@ export class RemoteGadgetComponent implements EntityComponent
 	}
 }
 
+export const k_remoteGrabbableInterface ="aardvark-remote-grabbable@1";
+
 export class RemoteItemComponent implements EntityComponent
 {
 	private entityCallback: () => void = null;

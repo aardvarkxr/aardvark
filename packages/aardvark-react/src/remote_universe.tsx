@@ -1,9 +1,9 @@
-import { emptyVolume, InitialInterfaceLock, MinimalPose, EndpointAddr } from '@aardvarkxr/aardvark-shared';
+import { emptyVolume, InitialInterfaceLock, MinimalPose, minimalPoseFromTransform, EndpointAddr, AvNodeTransform } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import { NetworkUniverseEvent, NetworkUniverseEventType, UniverseInitInfo } from './network_universe';
 import { ActiveInterface, AvInterfaceEntity, InterfaceProp } from './aardvark_interface_entity';
-import { RemoteGadgetEvent, RemoteGadgetEventType, RGESendEvent, RemoteGadgetComponent, RGESetItemInfo } from './component_remote_gadget';
+import { RemoteGadgetEvent, RemoteGadgetEventType, RGESendEvent, RemoteGadgetComponent, RGESetItemInfo, k_remoteGrabbableInterface } from './component_remote_gadget';
 import { AvTransform } from './aardvark_transform';
 import { AvEntityChild } from './aardvark_entity_child';
 import { AvGadget } from './aardvark_gadget';
@@ -169,9 +169,48 @@ export class RemoteUniverseComponent implements EntityComponent
 		} );
 	}
 
+	private updateRemoteGrabbable( params: RemoteUniverseParams, universeFromItem: AvNodeTransform )
+	{
+		let m: NetworkUniverseEvent =
+		{
+			type: NetworkUniverseEventType.UpdateNetworkItemTransform,
+			remoteGadgetId: params.remoteGadgetId,
+			itemId: params.itemId,
+			universeFromGadget: minimalPoseFromTransform( universeFromItem ),
+		}
+		this.remoteEventCallback?.( m, false );
+	}
+
+	@bind
+	private onRemoteGrabbable( activeRemoteGadget: ActiveInterface )
+	{
+		let remoteParams = activeRemoteGadget.params as RemoteUniverseParams;
+		this.updateRemoteGrabbable( remoteParams, activeRemoteGadget.selfFromPeer );
+
+		activeRemoteGadget.onTransformUpdated( ( universeFromItem: AvNodeTransform ) =>
+		{
+			this.updateRemoteGrabbable( remoteParams, universeFromItem)
+		} );
+
+		activeRemoteGadget.onEnded( () =>
+		{
+			let m: NetworkUniverseEvent =
+			{
+				type: NetworkUniverseEventType.ClearNetworkItemTransform,
+				remoteGadgetId: remoteParams.remoteGadgetId,
+				itemId: remoteParams.itemId,
+			};
+
+			this.remoteEventCallback?.( m, true );
+		})
+	}
+
 	public get receives()
 	{
-		return [ { iface: RemoteGadgetComponent.interfaceName, processor: this.onRemoteInterface } ];
+		return [ 
+			{ iface: RemoteGadgetComponent.interfaceName, processor: this.onRemoteInterface },
+			{ iface: k_remoteGrabbableInterface, processor: this.onRemoteGrabbable },
+		];
 	}
 
 	public get wantsTransforms()
