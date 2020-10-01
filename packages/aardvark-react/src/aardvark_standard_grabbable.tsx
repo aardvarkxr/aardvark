@@ -453,8 +453,6 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 			infoVolume.nodeFromVolume.scale.z *= highlightScale;
 		}
 
-		let volume: AvVolume = this.remoteComponent ? emptyVolume() : infoVolume;
-		
 		let constraint: AvConstraint = null;
 		if( this.props.gravityAligned )
 		{
@@ -482,7 +480,7 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 				else
 				{
 					outerComponent = this.moveableComponent;
-					outerVolume = volume;
+					outerVolume = infoVolume;
 					outerConstraint = constraint;
 
 					if( this.networkedComponent )
@@ -495,7 +493,7 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 
 			case GrabbableStyle.LocalItem:
 				outerComponent = this.moveableComponent;
-				outerVolume = volume;
+				outerVolume = infoVolume;
 				outerConstraint = constraint;
 			break;
 
@@ -503,17 +501,17 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 				if( AvGadget.instance().isRemote )
 				{
 					outerComponent = this.remoteItemComponent;
-					outerVolume = infoVolume;
+					outerVolume = emptyVolume();
 
 					innerComponent = this.moveableComponent;
-					innerVolume = volume;
+					innerVolume = infoVolume;
 					innerConstraint = constraint;
 
 					if( this.moveableComponent.state == MoveableComponentState.Grabbed )
 					{
-						let lock = { ...this.remoteComponent.interfaceLocks[0] };
+						let lock = { ...this.remoteItemComponent.interfaceLocks[0] };
 						lock.iface = k_remoteGrabbableInterface;
-						locatorEntity = <AvInterfaceEntity volume={ emptyVolume() }
+						locatorEntity = <AvInterfaceEntity volume={ infoVolume }
 							transmits={ [ { iface: k_remoteGrabbableInterface } ] }
 								interfaceLocks={ [ lock ] }/>
 					}			
@@ -521,10 +519,11 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 				else
 				{
 					outerComponent = this.moveableComponent;
-					outerVolume = volume;
+					outerVolume = infoVolume;
 					outerConstraint = constraint;
 
 					innerComponent = this.networkedItemComponent;
+					innerVolume = infiniteVolume();
 				}	
 				break;
 		}		

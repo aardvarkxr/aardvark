@@ -1,4 +1,4 @@
-import { NetworkedItemComponent, ActiveInterface, AvComposedEntity, AvGadget, AvInterfaceEntity, AvLine, AvModel, AvPrimitive, AvStandardGrabbable, AvTransform, MoveableComponent, PrimitiveType, PrimitiveYOrigin, PrimitiveZOrigin, DefaultLanding, RemoteItemComponent, MoveableComponentState, k_remoteGrabbableInterface, GrabbableStyle } from '@aardvarkxr/aardvark-react';
+import { ShowGrabbableChildren, NetworkedItemComponent, ActiveInterface, AvComposedEntity, AvGadget, AvInterfaceEntity, AvLine, AvModel, AvPrimitive, AvStandardGrabbable, AvTransform, MoveableComponent, PrimitiveType, PrimitiveYOrigin, PrimitiveZOrigin, DefaultLanding, RemoteItemComponent, MoveableComponentState, k_remoteGrabbableInterface, GrabbableStyle } from '@aardvarkxr/aardvark-react';
 import { Av, AvNodeTransform, AvVector, AvVolume, endpointAddrToString, EVolumeType, g_builtinModelBox, InitialInterfaceLock, infiniteVolume } from '@aardvarkxr/aardvark-shared';
 import { vec2 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
@@ -80,78 +80,6 @@ interface MarkerProps
 	thickness: number;
 }
 
-interface AvRemoteGrabbableProps
-{
-	itemId: string;
-	volume: AvVolume | AvVolume[];
-}
-
-interface AvRemoteGrabbableState
-{
-	moveableState: MoveableComponentState;
-}
-
-class AvNetworkedGrabbable extends React.Component< AvRemoteGrabbableProps, AvRemoteGrabbableState >
-{
-	private moveableComponent = new MoveableComponent( this.onMoveableUpdate, false, false );
-	private remoteComponent: RemoteItemComponent = null;
-	private networkComponent: NetworkedItemComponent = null
-
-	constructor( props: any )
-	{
-		super( props );
-
-		this.state = 
-		{
-			moveableState: MoveableComponentState.Idle,
-		};
-
-		if( AvGadget.instance().isRemote )
-		{
-			this.remoteComponent = new RemoteItemComponent( this.props.itemId, () => {} );
-		}
-		else
-		{
-			this.networkComponent = new NetworkedItemComponent( this.props.itemId, () => {} );
-		}
-	}
-
-	@bind
-	private onMoveableUpdate()
-	{
-		this.setState( { moveableState: this.moveableComponent.state } );
-	}
-
-	render()
-	{
-		if( AvGadget.instance().isRemote )
-		{
-			let lock = { ...this.remoteComponent.interfaceLocks[0] };
-			lock.iface = k_remoteGrabbableInterface;
-			return 	<AvComposedEntity components={ [ this.remoteComponent ]} volume={ this.props.volume }>
-					<AvComposedEntity components={ [ this.moveableComponent ]} volume={ this.props.volume }>
-						{ 
-							
-							this.state.moveableState == MoveableComponentState.Grabbed &&
-								<AvInterfaceEntity volume={ this.props.volume }
-									transmits={ [ { iface: k_remoteGrabbableInterface } ] }
-									interfaceLocks={ [ lock ] }/>
-						}
-						{ this.props.children }
-					</AvComposedEntity>
-				</AvComposedEntity>;
-		}
-		else
-		{
-			return 	<AvComposedEntity components={ [ this.moveableComponent ]} volume={ this.props.volume }>
-					<AvComposedEntity components={ [ this.networkComponent ] } volume={ infiniteVolume() }>
-						{ this.props.children }
-					</AvComposedEntity>
-				</AvComposedEntity>;
-		}
-	}
-}
-
 
 function Marker( props: MarkerProps )
 {
@@ -192,19 +120,26 @@ function Marker( props: MarkerProps )
 	} as AvVolume;
 
 	return <AvTransform translateX={ props.initialXOffset } translateY={ 0.005 }>
-		<AvNetworkedGrabbable volume={ k_grabVolume } itemId = { "marker" + props.initialXOffset } >
-			<AvTransform translateY={ markerTipRadius } >
-				<AvPrimitive type={PrimitiveType.Cylinder} originY={ PrimitiveYOrigin.Bottom }
-					radius={ markerRadius } height={0.065 } color={ color } />
-			</AvTransform>
-			<AvPrimitive type={PrimitiveType.Sphere} width={ props.thickness } height={ props.thickness } 
-				depth={ props.thickness } color={props.initialColor }/>
+		<AvStandardGrabbable style={ GrabbableStyle.NetworkedItem } itemId = { "marker" + props.initialXOffset }
+			volume={ k_grabVolume } showChildren={ ShowGrabbableChildren.OnlyWhenGrabbed} 
+			canDropIntoContainers={ false }
+			appearance={
+			<>
+				<AvTransform translateY={ markerTipRadius } >
+					<AvPrimitive type={PrimitiveType.Cylinder} originY={ PrimitiveYOrigin.Bottom }
+						radius={ markerRadius } height={0.065 } color={ color } />
+				</AvTransform>
+				<AvPrimitive type={PrimitiveType.Sphere} width={ props.thickness } height={ props.thickness } 
+					depth={ props.thickness } color={props.initialColor }/>
+			</>
+			}>
 			<AvInterfaceEntity transmits={
 				[
 					{ iface: "color-picker@1", processor: onColorPicker },
 					{ iface: "surface-drawing@1", processor: onSurfaceDrawing },
 				] } volume={ k_tipVolume }/>
-			</AvNetworkedGrabbable>
+
+		</AvStandardGrabbable>
 		</AvTransform>;
 }
 
