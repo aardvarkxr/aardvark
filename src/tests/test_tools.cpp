@@ -6,6 +6,8 @@
 #include <tools/filetools.h>
 #include <tools/stringtools.h>
 
+#include <aardvark/aardvark_scene_graph.h>
+
 #include "testutils.h"
 
 using namespace tools;
@@ -42,5 +44,16 @@ TEST_CASE( "binary read/write", "[tools]" )
 	REQUIRE( vecTestData == vecLoaded );
 
 	std::filesystem::remove( pathUnique );
+}
+
+TEST_CASE("Gadget Uri Sanitizer", "[tools]")
+{
+	aardvark::GadgetParams_t no_trailing_slash = { "http://localhost:23842/gadgets/aardvark_renderer", "", aardvark::EndpointAddr_t() };
+	aardvark::sanitize(no_trailing_slash);
+	REQUIRE(no_trailing_slash.uri == "http://localhost:23842/gadgets/aardvark_renderer");
+
+	aardvark::GadgetParams_t trailing_slash = { "http://localhost:23842/", "", aardvark::EndpointAddr_t() };
+	aardvark::sanitize(trailing_slash);
+	REQUIRE(trailing_slash.uri == "http://localhost:23842");
 }
 

@@ -1,4 +1,4 @@
-import { AardvarkManifest, Av, AvActionState, AvInterfaceEventProcessor, AvNode, AvNodeTransform, AvNodeType, AvStartGadgetResult, EAction, EHand, EndpointAddr, endpointAddrToString, EndpointType, ENodeFlags, Envelope, InitialInterfaceLock, interfaceStringFromMsg, MessageType, MsgGadgetStarted, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgInterfaceEnded, MsgInterfaceEvent, MsgInterfaceReceiveEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgNodeHaptic, MsgResourceLoadFailed, MsgSaveSettings, MsgUpdateActionState, MsgUpdateSceneGraph, stringToEndpointAddr, AvVector } from '@aardvarkxr/aardvark-shared';
+import { AardvarkManifest, Av, AvActionState, AvInterfaceEventProcessor, AvNode, AvNodeTransform, AvNodeType, AvStartGadgetResult, EAction, EHand, EndpointAddr, endpointAddrToString, EndpointType, ENodeFlags, Envelope, InitialInterfaceLock, interfaceStringFromMsg, MessageType, MsgGadgetStarted, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgInterfaceEnded, MsgInterfaceEvent, MsgInterfaceReceiveEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgNodeHaptic, MsgResourceLoadFailed, MsgSaveSettings, MsgUpdateActionState, MsgUpdateSceneGraph, stringToEndpointAddr, AvVector, gadgetUriFromWindow } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import { IAvBaseNode } from './aardvark_base_node';
@@ -65,12 +65,6 @@ interface ActionStateListener
 	update?: ( newValue: [ number, number ] ) => void;
 }
 
-export function GetGadgetUrlFromWindow()
-{
-	return window.location.origin
-		+ window.location.pathname.slice( 0, window.location.pathname.lastIndexOf( "/" ) );
-}
-
 /** The singleton gadget object for the browser. */
 export class AvGadget
 {
@@ -98,7 +92,7 @@ export class AvGadget
 
 	constructor()
 	{
-		this.m_actualGadgetUri = GetGadgetUrlFromWindow();
+		this.m_actualGadgetUri = gadgetUriFromWindow();
 		let params = parseURL( window.location.href );
 
 		try
