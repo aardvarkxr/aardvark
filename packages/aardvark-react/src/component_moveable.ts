@@ -202,6 +202,11 @@ export class MoveableComponent implements EntityComponent
 		this.updateListener();
 	}
 
+	public async dropIntoCurrentContainer()
+	{
+		return this.dropIntoContainer( true );
+	}
+
 	private async dropIntoContainer( requestLock: boolean, moveableToReplace?: EndpointAddr, 
 		oldMoveableFromNewMoveable?: AvNodeTransform )
 	{

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { EndpointAddr, AvNodeTransform, endpointAddrToString, InitialInterfaceLock, endpointAddrsMatch } from '@aardvarkxr/aardvark-shared';
+import { EndpointAddr, AvNodeTransform, endpointAddrToString, InitialInterfaceLock, endpointAddrsMatch, MinimalPose } from '@aardvarkxr/aardvark-shared';
 import { EntityComponent } from './aardvark_composed_entity';
 import { InterfaceProp, ActiveInterface } from './aardvark_interface_entity';
 import bind from 'bind-decorator';
@@ -43,6 +43,7 @@ export enum NetworkItemTransform
 export interface NGESetTransformState extends NetworkGadgetEvent
 {
 	newState: NetworkItemTransform;
+	universeFromItem?: MinimalPose;
 }
 
 export interface NGESendEvent extends NetworkGadgetEvent
@@ -167,6 +168,7 @@ export class NetworkedItemComponent implements EntityComponent
 	private itemId: string;
 	private remoteEventCallback: ( event: object ) => void;
 	private transformState = NetworkItemTransform.Normal;
+	private lastUniverseFromItem: MinimalPose = null;
 
 	constructor( itemId: string, remoteEventCallback: ( event: object ) => void )
 	{
@@ -176,6 +178,11 @@ export class NetworkedItemComponent implements EntityComponent
 
 	static readonly interfaceName= "aardvark-networked-gadget@1";
 
+	public get universeFromItem() 
+	{
+		return this.lastUniverseFromItem;
+	}
+	
 	private updateListener()
 	{
 		this.entityCallback?.();
@@ -218,6 +225,12 @@ export class NetworkedItemComponent implements EntityComponent
 				{
 					let setTransformState = event as NGESetTransformState;
 					this.transformState = setTransformState.newState;
+
+					if( setTransformState.universeFromItem )
+					{
+						this.lastUniverseFromItem = setTransformState.universeFromItem;
+					}
+
 					this.updateListener();
 				}
 				break;
