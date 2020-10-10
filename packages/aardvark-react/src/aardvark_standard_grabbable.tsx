@@ -269,12 +269,14 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 			if( this.props.remoteInterfaceLocks )
 			{
 				// this gadget is master, or will be if the user enters a room
-				this.networkedComponent = new NetworkedGadgetComponent( this.props.remoteInterfaceLocks, this.props.remoteGadgetCallback );
+				this.networkedComponent = new NetworkedGadgetComponent( this.props.remoteInterfaceLocks, 
+					this.props.remoteGadgetCallback );
 			}
 
 			if( this.props.style == GrabbableStyle.NetworkedItem )
 			{
-				this.networkedItemComponent = new NetworkedItemComponent( this.props.itemId, null, this.onNetworkItemUpdate );
+				this.networkedItemComponent = new NetworkedItemComponent( this.props.itemId, null, 
+					this.onNetworkItemDrop );
 			}
 		} 
 
@@ -340,18 +342,9 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 	}
 
 	@bind
-	private onNetworkItemUpdate()
+	private async onNetworkItemDrop()
 	{
-		let transformOverridden = this.networkedItemComponent.transformOverridden;
-		this.setState( ( oldState: StandardGrabbableState ) =>
-		{
-			if( oldState.transformOverridden && !transformOverridden )
-			{
-				this.onRemoteDrop( this.networkedItemComponent.universeFromItem );
-			}
-			return { ...oldState, transformOverridden };
-		} );
-		this.onMoveableUpdate();
+		await this.moveableComponent.dropIntoCurrentContainer();
 	}
 
 	private onRemoteDrop( universeFromItem: MinimalPose )

@@ -16,6 +16,7 @@ export enum NetworkGadgetEventType
 	SendEventToAllRemotes = "send_event_to_remotes",
 	ReceiveEventFromRemote = "receive_event_from_remote",
 	SetTransformState = "set_transform_state",
+	DropComplete = "drop_complete",
 }
 
 export interface NetworkGadgetEvent
@@ -38,6 +39,7 @@ export enum NetworkItemTransform
 {
 	Normal = 0,
 	Override = 1,
+	Dropping = 2,
 };
 
 export interface NGESetTransformState extends NetworkGadgetEvent
@@ -169,14 +171,14 @@ export class NetworkedItemComponent implements EntityComponent
 	private remoteEventCallback: ( event: object ) => void;
 	private transformState = NetworkItemTransform.Normal;
 	private lastUniverseFromItem: MinimalPose = null;
-	private networkItemCallback: () => void;
+	private networkItemDropCallback: () => void;
 
 	constructor( itemId: string, remoteEventCallback: ( event: object ) => void,
-		networkItemCallback: () => void )
+	networkItemDropCallback: () => void )
 	{
 		this.itemId = itemId;
 		this.remoteEventCallback = remoteEventCallback;
-		this.networkItemCallback = networkItemCallback;
+		this.networkItemDropCallback = networkItemDropCallback;
 	}
 
 	static readonly interfaceName= "aardvark-networked-gadget@1";
@@ -189,7 +191,6 @@ export class NetworkedItemComponent implements EntityComponent
 	private updateListener()
 	{
 		this.entityCallback?.();
-		this.networkItemCallback?.();
 	}
 
 	private sendSetItemInfo()
@@ -215,7 +216,7 @@ export class NetworkedItemComponent implements EntityComponent
 				this.transformState = NetworkItemTransform.Normal;
 			} );
 		
-		networkProvider.onEvent( ( event: NetworkGadgetEvent ) =>
+		networkProvider.onEvent( async ( event: NetworkGadgetEvent ) =>
 		{
 			switch( event.type )
 			{
@@ -236,6 +237,15 @@ export class NetworkedItemComponent implements EntityComponent
 						this.lastUniverseFromItem = setTransformState.universeFromItem;
 					}
 
+					if( this.transformState == NetworkItemTransform.Dropping )
+					{
+						await this.networkItemDropCallback();
+						let resp: NetworkGadgetEvent =
+						{
+							type: NetworkGadgetEventType.DropComplete
+						}
+						this.networkProvider.sendEvent( resp );
+					}
 					this.updateListener();
 				}
 				break;
@@ -262,6 +272,7 @@ export class NetworkedItemComponent implements EntityComponent
 	{
 		switch( this.transformState )
 		{
+			case NetworkItemTransform.Dropping:
 			case NetworkItemTransform.Normal:
 				return null;
 

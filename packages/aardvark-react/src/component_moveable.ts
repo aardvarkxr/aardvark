@@ -204,7 +204,7 @@ export class MoveableComponent implements EntityComponent
 
 	public async dropIntoCurrentContainer()
 	{
-		return this.dropIntoContainer( true );
+		await this.dropIntoContainer( true );
 	}
 
 	private async dropIntoContainer( requestLock: boolean, moveableToReplace?: EndpointAddr, 

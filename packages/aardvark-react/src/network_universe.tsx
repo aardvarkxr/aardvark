@@ -72,6 +72,7 @@ enum NetworkedGrabState
 {
 	None,
 	Remote,
+	RemoteDropping,
 	Local,
 }
 
@@ -212,6 +213,12 @@ export class NetworkUniverseComponent implements EntityComponent
 						};
 						this.networkEventCallback( netEvent, sendEvent.reliable );
 					}
+				}
+				break;
+
+				case NetworkGadgetEventType.DropComplete:
+				{
+					this.itemDropComplete( gadgetInfo.remoteGadgetId, itemInfo.itemId );
 				}
 				break;
 			}
@@ -372,9 +379,23 @@ export class NetworkUniverseComponent implements EntityComponent
 		if( !itemInfo )
 			return;
 
+		itemInfo.grabState = NetworkedGrabState.RemoteDropping;
+		this.sendItemTransformState(gadgetInfo, itemInfo, NetworkItemTransform.Dropping, universeFromItem )
+	}
+
+	private itemDropComplete( remoteGadgetId: number, itemId: string )
+	{
+		let gadgetInfo = this.networkedGadgetsByRemoteId.get( remoteGadgetId );
+		if( !gadgetInfo )
+			return;
+
+		let itemInfo = gadgetInfo.items.get( itemId );
+		if( !itemInfo )
+			return;
+
 		itemInfo.remoteUniverseFromItem = null;	
 		itemInfo.grabState = NetworkedGrabState.None;
-		this.sendItemTransformState(gadgetInfo, itemInfo, NetworkItemTransform.Override, universeFromItem )
+		this.sendItemTransformState(gadgetInfo, itemInfo, NetworkItemTransform.Normal )
 		this.entityCallback?.();
 	}
 
