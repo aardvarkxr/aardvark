@@ -838,6 +838,12 @@ describe( "interface processor", () =>
 		r2.priority = 100;
 		r2.receives.push( "test@1" );
 
+		let r3 = new CTestEntity();
+		r3.addSphere( 1 );
+		r3.originPath = "/space/stage";
+		r3.priority = 100;
+		r3.receives.push( "fred@1" );
+
 		let t1 = new CTestEntity();
 		t1.addSphere( 1 );
 		t1.transmits.push( "fred@1" );
@@ -872,7 +878,7 @@ describe( "interface processor", () =>
 
 		// t1 should not switch interfaces to
 		// r2 because it's locked
-		ip.processFrame([r2, t1]);
+		ip.processFrame([r3, t1]);
 		expect( cb.calls.length ).toBe(0);
 		cb.calls = [];
 
@@ -1071,14 +1077,14 @@ describe( "interface processor", () =>
 
 		expect( ip.relockInterface(t1.epa, r2.epa, r1.epa, "test@1" ) ).toBe( InterfaceLockResult.NotLocked );
 
-		expect( ip.lockInterface(t1.epa, r1.epa, "test@1") ).toBe( InterfaceLockResult.Success );
-
-		expect( ip.relockInterface(t2.epa, r2.epa, r1.epa, "test@1" ) ).toBe( InterfaceLockResult.InterfaceNotFound );
-		expect( ip.relockInterface(t1.epa, r1.epa, r2.epa, "test@1" ) ).toBe( InterfaceLockResult.InterfaceReceiverMismatch );
-		expect( ip.relockInterface(t1.epa, r2.epa, r1.epa, "fred@1" ) ).toBe( InterfaceLockResult.InterfaceNameMismatch );
-		expect( ip.relockInterface(t1.epa, r2.epa, r3.epa, "test@1" ) ).toBe( InterfaceLockResult.NewReceiverNotFound );
+		expect( ip.lockInterface( t1.epa, r2.epa, "test@1" ) ).toBe( InterfaceLockResult.Success );
 
 		expect( ip.relockInterface(t1.epa, r2.epa, r1.epa, "test@1" ) ).toBe( InterfaceLockResult.Success );
+
+		expect( ip.relockInterface(t2.epa, r2.epa, r1.epa, "test@1" ) ).toBe( InterfaceLockResult.InterfaceNotFound );
+		expect( ip.relockInterface(t1.epa, r1.epa, r2.epa, "fred@1" ) ).toBe( InterfaceLockResult.InterfaceNameMismatch );
+		expect( ip.relockInterface(t1.epa, r1.epa, r3.epa, "test@1" ) ).toBe( InterfaceLockResult.NewReceiverNotFound );
+
 
 		expect( cb.calls.length ).toBe(2);
 		expect( cb.calls[0] ).toEqual(
@@ -1097,10 +1103,52 @@ describe( "interface processor", () =>
 			});
 		cb.calls = [];
 
-		expect( ip.unlockInterface(t1.epa, r2.epa, "test@1") ).toBe( InterfaceLockResult.InterfaceReceiverMismatch );
+		expect( ip.unlockInterface(t1.epa, r2.epa, "test@1") ).toBe( InterfaceLockResult.InterfaceNotFound );
 		expect( ip.unlockInterface(t1.epa, r1.epa, "test@1") ).toBe( InterfaceLockResult.Success );
 	} );
-} );
+
+	it( "two_receivers_for_transmitter", async () =>
+	{
+		let cb = new TestCallbacks();
+		let ip = new CInterfaceProcessor( cb );
+
+		let t1 = new CTestEntity();
+		t1.addSphere( 1 );
+		t1.transmits.push( "testA@1" );
+		t1.transmits.push( "testB@1" );
+
+		let rA = new CTestEntity();
+		rA.addSphere( 1 );
+		rA.originPath = "/space/stage";
+		rA.receives.push( "testA@1" );
+
+		let rB = new CTestEntity();
+		rB.addSphere( 1 );
+		rB.originPath = "/space/stage";
+		rB.priority = 100;
+		rB.receives.push( "testB@1" );
+
+		ip.processFrame([rA, rB, t1]);
+		expect( cb.calls.length ).toBe(2);
+		expect( cb.calls[0] ).toEqual(
+			{
+				type: CallType.Start,
+				transmitter: t1.epa,
+				receiver: rA.epa,
+				iface: "testA@1",
+			});
+		expect( cb.calls[1] ).toEqual(
+			{
+				type: CallType.Start,
+				transmitter: t1.epa,
+				receiver: rB.epa,
+				iface: "testB@1",
+			});
+		cb.calls = [];
+
+		let lockRes = ip.lockInterface( t1.epa, rB.epa, "testB@1" );
+		expect( lockRes ).toBe( InterfaceLockResult.Success );
+	} );} );
 
 
 

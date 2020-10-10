@@ -67,7 +67,7 @@ class PendingTransform
 
 		if( this.m_needsUpdate )
 		{
-			console.log( "Pending transform needs an update in resolve");
+			console.log( `Pending transform ${ this.m_id } needs an update in resolve` );
 			this.m_parentFromNode = mat4.identity;
 		}
 		
@@ -365,7 +365,7 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 	interfaceStarted( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string,
 		transmitterFromReceiver: [mat4, vec3|null], params?: object ):void
 	{
-		const [ transform, pt ] = transmitterFromReceiver;
+		const [ transform, pt ] = transmitterFromReceiver ?? [ null, null ];
 		let intersectionPoint:AvVector;
 		if( pt )
 		{
