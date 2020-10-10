@@ -227,7 +227,7 @@ export class RemoteItemComponent implements EntityComponent
 
 	public get parent(): EndpointAddr
 	{
-		return this.activeRemote?.peer;
+		return !this.isGrabbed && this.activeRemote?.peer;
 	}
 	
 	public get wantsTransforms()

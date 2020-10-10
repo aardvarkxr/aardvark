@@ -359,6 +359,7 @@ export class NetworkUniverseComponent implements EntityComponent
 		itemInfo.remoteUniverseFromItem = universeFromItem;	
 		itemInfo.grabState = NetworkedGrabState.Remote;
 		this.sendItemTransformState(gadgetInfo, itemInfo, NetworkItemTransform.Override  )
+		this.entityCallback?.();
 	}
 
 	private endItemGrab( remoteGadgetId: number, itemId: string, universeFromItem: MinimalPose )
@@ -374,6 +375,7 @@ export class NetworkUniverseComponent implements EntityComponent
 		itemInfo.remoteUniverseFromItem = null;	
 		itemInfo.grabState = NetworkedGrabState.None;
 		this.sendItemTransformState(gadgetInfo, itemInfo, NetworkItemTransform.Override, universeFromItem )
+		this.entityCallback?.();
 	}
 
 	private sendItemTransformState( gadgetInfo: NetworkedGadgetInfoInternal, 

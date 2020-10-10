@@ -169,11 +169,14 @@ export class NetworkedItemComponent implements EntityComponent
 	private remoteEventCallback: ( event: object ) => void;
 	private transformState = NetworkItemTransform.Normal;
 	private lastUniverseFromItem: MinimalPose = null;
+	private networkItemCallback: () => void;
 
-	constructor( itemId: string, remoteEventCallback: ( event: object ) => void )
+	constructor( itemId: string, remoteEventCallback: ( event: object ) => void,
+		networkItemCallback: () => void )
 	{
 		this.itemId = itemId;
 		this.remoteEventCallback = remoteEventCallback;
+		this.networkItemCallback = networkItemCallback;
 	}
 
 	static readonly interfaceName= "aardvark-networked-gadget@1";
@@ -186,6 +189,7 @@ export class NetworkedItemComponent implements EntityComponent
 	private updateListener()
 	{
 		this.entityCallback?.();
+		this.networkItemCallback?.();
 	}
 
 	private sendSetItemInfo()
@@ -208,6 +212,7 @@ export class NetworkedItemComponent implements EntityComponent
 		networkProvider.onEnded( ()=>
 			{
 				this.networkProvider = null;
+				this.transformState = NetworkItemTransform.Normal;
 			} );
 		
 		networkProvider.onEvent( ( event: NetworkGadgetEvent ) =>
@@ -261,7 +266,7 @@ export class NetworkedItemComponent implements EntityComponent
 				return null;
 
 			case NetworkItemTransform.Override:
-				return this.networkProvider.peer;
+				return this.networkProvider?.peer;
 		}
 	}
 	

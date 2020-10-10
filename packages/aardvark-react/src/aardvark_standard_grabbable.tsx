@@ -248,7 +248,8 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 		}
 
 		this.moveableComponent = new MoveableComponent( this.onMoveableUpdate, 
-			this.props.style == GrabbableStyle.Gadget, this.props.canDropIntoContainers,
+			this.props.style == GrabbableStyle.Gadget, 
+			this.props.canDropIntoContainers && !AvGadget.instance().isRemote,
 			this.props.grabberFromGrabbable );
 
 		let remoteLock = AvGadget.instance().findInitialInterface( RemoteGadgetComponent.interfaceName );
@@ -273,7 +274,7 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 
 			if( this.props.style == GrabbableStyle.NetworkedItem )
 			{
-				this.networkedItemComponent = new NetworkedItemComponent( this.props.itemId, this.onNetworkItemUpdate );
+				this.networkedItemComponent = new NetworkedItemComponent( this.props.itemId, null, this.onNetworkItemUpdate );
 			}
 		} 
 
@@ -382,6 +383,8 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 		{
 			this.networkedComponent?.setInitialInterfaceLocks( this.props.remoteInterfaceLocks );
 		}
+
+		this.remoteItemComponent?.setIsGrabbed( this.isGrabbed );
 	}
 
 	@bind

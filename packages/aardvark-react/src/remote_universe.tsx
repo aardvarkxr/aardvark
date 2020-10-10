@@ -398,7 +398,7 @@ export class RemoteUniverseComponent implements EntityComponent
 
 			for( let item of gadget.items.values() )
 			{
-				if( !item.iface || !item.universeFromItem )
+				if( !item.iface || !item.universeFromItem || item.grabbed )
 				{
 					continue;
 				}
