@@ -349,7 +349,10 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 
 	private onRemoteDrop( universeFromItem: MinimalPose )
 	{
-		this.moveableComponent.dropIntoCurrentContainer();
+		if( this.props.canDropIntoContainers )
+		{
+			this.moveableComponent.dropIntoCurrentContainer();
+		}
 	}
 
 	public get isGrabbed()
