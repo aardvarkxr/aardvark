@@ -78,6 +78,7 @@ interface MarkerProps
 	initialColor: string;
 	initialXOffset: number;
 	thickness: number;
+	itemId: string;
 }
 
 
@@ -120,7 +121,7 @@ function Marker( props: MarkerProps )
 	} as AvVolume;
 
 	return <AvTransform translateX={ props.initialXOffset } translateY={ 0.005 }>
-		<AvStandardGrabbable style={ GrabbableStyle.NetworkedItem } itemId = { "marker" + props.initialXOffset }
+		<AvStandardGrabbable style={ GrabbableStyle.NetworkedItem } itemId = { props.itemId }
 			volume={ k_grabVolume } showChildren={ ShowGrabbableChildren.OnlyWhenGrabbed} 
 			canDropIntoContainers={ false }
 			appearance={
@@ -137,7 +138,8 @@ function Marker( props: MarkerProps )
 				[
 					{ iface: "color-picker@1", processor: onColorPicker },
 					{ iface: "surface-drawing@1", processor: onSurfaceDrawing },
-				] } volume={ k_tipVolume }/>
+				] } volume={ k_tipVolume }
+				debugName={ props.itemId + "/nib" }/>
 
 		</AvStandardGrabbable>
 		</AvTransform>;
@@ -497,10 +499,14 @@ class Whiteboard extends React.Component< {}, WhiteboardState >
 							<PaintBucket color="purple"/>
 						</AvTransform>
 
-						<Marker initialColor="blue" initialXOffset={-0.450 } thickness={ 0.003 }/>
-						<Marker initialColor="red" initialXOffset={-0.200 } thickness={ 0.003 }/>
-						<Marker initialColor="green" initialXOffset={ 0.050 } thickness={ 0.006 }/>
-						<Marker initialColor="purple" initialXOffset={ 0.300 } thickness={ 0.009 }/>
+						<Marker initialColor="blue" initialXOffset={-0.450 } thickness={ 0.003 }
+							itemId="marker_blue0"/>
+						<Marker initialColor="red" initialXOffset={-0.200 } thickness={ 0.003 }
+							itemId="marker_red1"/>
+						<Marker initialColor="green" initialXOffset={ 0.050 } thickness={ 0.006 }
+							itemId="marker_green2"/>
+						<Marker initialColor="purple" initialXOffset={ 0.300 } thickness={ 0.009 }
+							itemId="marker_purple3"/>
 					</AvTransform>
 				</AvTransform>
 			</AvStandardGrabbable>

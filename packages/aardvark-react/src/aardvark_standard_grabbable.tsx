@@ -344,14 +344,9 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 	@bind
 	private async onNetworkItemDrop()
 	{
-		await this.moveableComponent.dropIntoCurrentContainer();
-	}
-
-	private onRemoteDrop( universeFromItem: MinimalPose )
-	{
 		if( this.props.canDropIntoContainers )
 		{
-			this.moveableComponent.dropIntoCurrentContainer();
+			await this.moveableComponent.dropIntoCurrentContainer();
 		}
 	}
 
@@ -484,6 +479,8 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 
 		let entityVolume: AvVolume;
 
+		let debugName = `${ AvGadget.instance().getName() }/${ this.props.itemId ?? "" }`;
+
 		let components: EntityComponent[] = [];
 		switch( this.props.style )
 		{
@@ -501,7 +498,7 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 					if( this.networkedComponent )
 					{
 						locatorEntity = <AvComposedEntity components={ [ this.networkedComponent ] } 
-							volume={ infiniteVolume() } />;
+							volume={ infiniteVolume() } debugName={ debugName + "/network_gadget" }/>;
 					}
 				}		
 				break;
@@ -524,7 +521,8 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 						lock.iface = k_remoteGrabbableInterface;
 						locatorEntity = <AvInterfaceEntity volume={ infoVolume }
 							transmits={ [ { iface: k_remoteGrabbableInterface } ] }
-								interfaceLocks={ [ lock ] }/>
+								interfaceLocks={ [ lock ] }
+							debugName={ debugName + "/remote_item" }/>
 					}			
 				}	
 				else
@@ -543,6 +541,11 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 				}	
 				break;
 		}		
+
+		if( AvGadget.instance().isRemote )
+		{
+			debugName += "/remote";
+		}
 
 		let children = this.props.children;
 		if( !showChildren )
@@ -591,7 +594,7 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 		}
 
 		return <AvComposedEntity components={ components } volume={ entityVolume } 
-			constraint={ constraint }>
+			constraint={ constraint } debugName={ debugName }>
 			{ locatorEntity }
 			{ appearance }
 			{ children }

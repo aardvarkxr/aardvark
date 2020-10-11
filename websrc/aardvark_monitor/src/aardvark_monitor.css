@@ -214,3 +214,10 @@ body, html
 	margin-bottom: 5px;
 }
 
+
+.AvNodeName
+{
+	display: inline;
+	margin-left: 1rem;
+	font-weight: bold;
+}

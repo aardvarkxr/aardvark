@@ -214,6 +214,7 @@ export class NetworkedItemComponent implements EntityComponent
 			{
 				this.networkProvider = null;
 				this.transformState = NetworkItemTransform.Normal;
+				this.updateListener();
 			} );
 		
 		networkProvider.onEvent( async ( event: NetworkGadgetEvent ) =>

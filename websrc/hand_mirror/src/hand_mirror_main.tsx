@@ -1,5 +1,5 @@
 import { AvOrigin, AvStandardGrabbable, AvTransform, RemoteUniverseComponent, NetworkUniverseComponent, AvComposedEntity, DefaultLanding, GrabbableStyle, AvGrabButton } from '@aardvarkxr/aardvark-react';
-import { g_builtinModelHandMirror, infiniteVolume, emptyVolume, Av, g_builtinModelPlus } from '@aardvarkxr/aardvark-shared';
+import { g_builtinModelHandMirror, infiniteVolume, emptyVolume, Av, g_builtinModelPlus, g_builtinModelMinus } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
@@ -62,7 +62,7 @@ class HandMirror extends React.Component< {}, HandMirrorState >
 		return <AvOrigin path="/space/stage">
 			<AvTransform translateX={ 0.5 }>
 				<AvComposedEntity components={ [ this.remoteUniverse ] }
-					volume={ emptyVolume() } />
+					volume={ emptyVolume() } debugName="Hand mirror remote universe"/>
 			</AvTransform>
 		</AvOrigin>;
 	}
@@ -74,12 +74,13 @@ class HandMirror extends React.Component< {}, HandMirrorState >
 				onEndGrab={ () => { this.setState( { grabbed: false } );} } 
 				style={ GrabbableStyle.Gadget }>
 					<AvTransform translateX={0.05}>
-						<AvGrabButton onClick={ this.onToggleMirror } modelUri={ g_builtinModelPlus }/>
+						<AvGrabButton onClick={ this.onToggleMirror } 
+							modelUri={ this.state.turnedOn ? g_builtinModelMinus : g_builtinModelPlus }/>
 					</AvTransform>
 				{ this.renderUniverses() }
 				<AvOrigin path="/space/stage">
 					<AvComposedEntity components={ [ this.networkUniverse ] }
-						volume={ infiniteVolume() }/> 
+						volume={ infiniteVolume() } debugName="Hand mirror network universe"/> 
 				</AvOrigin>
 			</AvStandardGrabbable>
 	}
