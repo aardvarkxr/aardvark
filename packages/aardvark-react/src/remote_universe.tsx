@@ -32,8 +32,10 @@ interface RemoteItemInfo
 {
 	itemId: string;
 	iface: ActiveInterface;
+	remoteGrabbableIface: ActiveInterface;
 	universeFromItem: MinimalPose;
 	grabbed: boolean;
+	grabSent: boolean;
 }
 
 interface RemoteGadgetInfo
@@ -109,8 +111,10 @@ export class RemoteUniverseComponent implements EntityComponent
 			{
 				itemId,
 				iface: null,
+				remoteGrabbableIface: null,
 				universeFromItem: null,
 				grabbed: false,
+				grabSent: false,
 			};
 			gadgetInfo.items.set( itemId, itemInfo );
 		}
@@ -155,30 +159,14 @@ export class RemoteUniverseComponent implements EntityComponent
 				case RemoteGadgetEventType.StartGrab:
 				{
 					itemInfo.grabbed = true;
-
-					let evt: NetworkUniverseEvent =
-					{
-						type: NetworkUniverseEventType.StartItemGrab,
-						remoteGadgetId: gadgetInfo.remoteGadgetId,
-						itemId: itemInfo.itemId,
-					};
-
-					this.remoteEventCallback( evt, true );
+					this.updateGrabState( gadgetInfo, itemInfo );
 				}
 				break;
 
 				case RemoteGadgetEventType.EndGrab:
 				{
 					itemInfo.grabbed = false;
-
-					let evt: NetworkUniverseEvent =
-					{
-						type: NetworkUniverseEventType.EndItemGrab,
-						remoteGadgetId: gadgetInfo.remoteGadgetId,
-						itemId: itemInfo.itemId,
-					};
-
-					this.remoteEventCallback( evt, true );
+					this.updateGrabState( gadgetInfo, itemInfo );
 				}
 				break;
 			}
@@ -198,6 +186,41 @@ export class RemoteUniverseComponent implements EntityComponent
 				}
 			}
 		} );
+	}
+
+	private updateGrabState( gadgetInfo: RemoteGadgetInfo, itemInfo: RemoteItemInfo )
+	{
+		let shouldBeGrabbing = itemInfo.grabbed && itemInfo.remoteGrabbableIface != null;
+
+		if( shouldBeGrabbing != itemInfo.grabSent )
+		{
+
+			if( shouldBeGrabbing )
+			{
+				let evt: NetworkUniverseEvent =
+				{
+					type: NetworkUniverseEventType.StartItemGrab,
+					remoteGadgetId: gadgetInfo.remoteGadgetId,
+					itemId: itemInfo.itemId,
+				};
+		
+				this.remoteEventCallback( evt, true );
+			}
+			else
+			{
+
+				let evt: NetworkUniverseEvent =
+				{
+					type: NetworkUniverseEventType.EndItemGrab,
+					remoteGadgetId: gadgetInfo.remoteGadgetId,
+					itemId: itemInfo.itemId,
+				};
+
+				this.remoteEventCallback( evt, true );
+			}
+
+			itemInfo.grabSent = shouldBeGrabbing;
+		}
 	}
 
 	private updateRemoteGrabbable( params: RemoteUniverseParams, universeFromItem: AvNodeTransform )
@@ -224,39 +247,33 @@ export class RemoteUniverseComponent implements EntityComponent
 	}
 
 	@bind
-	private onRemoteGrabbable( activeRemoteGadget: ActiveInterface )
+	private onRemoteGrabbable( activeRemoteGrabbable: ActiveInterface )
 	{
-		let remoteParams = activeRemoteGadget.params as RemoteUniverseParams;
-		this.updateRemoteGrabbable( remoteParams, activeRemoteGadget.selfFromPeer );
+		let remoteParams = activeRemoteGrabbable.params as RemoteUniverseParams;
 
-		activeRemoteGadget.onTransformUpdated( ( universeFromItem: AvNodeTransform ) =>
+		let gadgetInfo = this.remoteGadgets.get( remoteParams.remoteGadgetId );
+		if( !gadgetInfo )
+			return;
+		
+		let itemInfo = gadgetInfo.items.get( remoteParams.itemId );
+		if( !itemInfo )
+			return;
+
+		this.updateRemoteGrabbable( remoteParams, activeRemoteGrabbable.selfFromPeer );
+		itemInfo.remoteGrabbableIface = activeRemoteGrabbable;
+		this.updateGrabState( gadgetInfo, itemInfo );
+
+
+
+		activeRemoteGrabbable.onTransformUpdated( ( universeFromItem: AvNodeTransform ) =>
 		{
 			this.updateRemoteGrabbable( remoteParams, universeFromItem)
 		} );
 
-		activeRemoteGadget.onEnded( () =>
+		activeRemoteGrabbable.onEnded( () =>
 		{
-			let gadgetInfo = this.remoteGadgets.get( remoteParams.remoteGadgetId );
-			if( !gadgetInfo )
-				return;
-
-			let itemInfo = gadgetInfo.items.get( remoteParams.itemId );
-			if( !itemInfo )
-				return;
-
-			if( !itemInfo.grabbed )
-				return;
-
-			itemInfo.grabbed = false;
-
-			let evt: NetworkUniverseEvent =
-			{
-				type: NetworkUniverseEventType.EndItemGrab,
-				remoteGadgetId: gadgetInfo.remoteGadgetId,
-				itemId: itemInfo.itemId,
-			};
-
-			this.remoteEventCallback( evt, true );
+			itemInfo.remoteGrabbableIface = null;
+			this.updateGrabState( gadgetInfo, itemInfo );
 		} )
 	}
 
@@ -324,8 +341,10 @@ export class RemoteUniverseComponent implements EntityComponent
 				{
 					itemId: item.itemId,
 					iface: null,
+					remoteGrabbableIface: null,
 					universeFromItem: item.remoteUniverseFromItem,
 					grabbed: false,
+					grabSent: false,
 				} );
 		}
 

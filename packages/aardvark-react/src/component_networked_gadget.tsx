@@ -231,6 +231,11 @@ export class NetworkedItemComponent implements EntityComponent
 				case NetworkGadgetEventType.SetTransformState:
 				{
 					let setTransformState = event as NGESetTransformState;
+					if( setTransformState.newState == NetworkItemTransform.Override )
+					{
+						await networkProvider.lock();
+					}
+
 					this.transformState = setTransformState.newState;
 
 					if( setTransformState.universeFromItem )
@@ -241,6 +246,7 @@ export class NetworkedItemComponent implements EntityComponent
 					if( this.transformState == NetworkItemTransform.Dropping )
 					{
 						await this.networkItemDropCallback();
+						await networkProvider.unlock();
 						let resp: NetworkGadgetEvent =
 						{
 							type: NetworkGadgetEventType.DropComplete
