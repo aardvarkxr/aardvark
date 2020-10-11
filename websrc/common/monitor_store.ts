@@ -50,28 +50,36 @@ export class CMonitorStore
 	@bind
 	private logMessage( msg: object, env: Envelope )
 	{
-		console.log( `Msg: ${ this.decodeMessageForDebug( msg, env ) }`,
-			msg );
+		let decodedMsg = this.decodeMessageForDebug( msg, env );
+		if( !decodedMsg )
+			return;
+
+		console.log( `Msg: ${ decodedMsg }` );
 	}
 
 	public decodeMessageForDebug( msg: object, env: Envelope )
 	{
 		switch( env.type )
 		{
+			// Some event types are too spammy to be useful
+			case MessageType.InterfaceSendEventResponse:
+			case MessageType.InterfaceReceiveEvent:
+				return null;
+
 			case MessageType.InterfaceStarted:
 			{
 				let m = msg as MsgInterfaceStarted;
 				return `InterfaceStarted ${ this.epaDisplayText( m.transmitter ) } -> `
 					+ `${ this.epaDisplayText( m.receiver ) } (${ m.iface })`;
 
-			}
+			}		
 
 			case MessageType.InterfaceEnded:
 			{
 				let m = msg as MsgInterfaceEnded;
 				return `InterfaceEnded ${ this.epaDisplayText( m.transmitter ) } -> `
 					+ `${ this.epaDisplayText( m.receiver ) } (${ m.iface })`;
-			}
+			}		
 
 			case MessageType.InterfaceSendEvent:
 			{
@@ -79,7 +87,7 @@ export class CMonitorStore
 				return `InterfaceSendEvent ${ this.epaDisplayText( m.peer ) } -> `
 					+ `${ this.epaDisplayText( m.destination ) } (${ m.iface }): `
 					+ JSON.stringify( m.event );
-			}
+			}		
 
 			case MessageType.InterfaceLock:
 			{
@@ -123,7 +131,7 @@ export class CMonitorStore
 
 			default:
 				return `${ MessageType[ env.type ] } ${ this.epaDisplayText( env.sender ) } `
-					+ `-> ${ this.epaDisplayText( env.target )} `;
+					+ `-> ${ this.epaDisplayText( env.target )}: ${ JSON.stringify( msg )}`;
 		}
 	}
 
