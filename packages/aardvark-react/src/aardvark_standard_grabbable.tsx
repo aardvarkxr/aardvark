@@ -1,4 +1,4 @@
-import { AvConstraint, AvNodeTransform, AvVolume, emptyVolume, EVolumeType, g_builtinModelStar, g_builtinModelTrashcan, infiniteVolume, InitialInterfaceLock, MinimalPose } from '@aardvarkxr/aardvark-shared';
+import { AvConstraint, AvNodeTransform, AvVolume, emptyVolume, EndpointAddr, EVolumeType, g_builtinModelStar, g_builtinModelTrashcan, infiniteVolume, InitialInterfaceLock, MinimalPose } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import React from 'react';
 import { AvComposedEntity, EntityComponent } from './aardvark_composed_entity';
@@ -232,6 +232,7 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 	private gadgetListRef: React.RefObject<AvGadgetList> = React.createRef<AvGadgetList>();
 	private remoteItemComponent: RemoteItemComponent = null;
 	private networkedItemComponent: NetworkedItemComponent = null
+	private grabbableRef = React.createRef< AvComposedEntity >();
 
 	constructor( props: any )
 	{
@@ -405,6 +406,12 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 		}
 	}
 	
+	/** Returns the global ID if the grabbable within the AvStandardGrabbable. */
+	public get globalId() : EndpointAddr
+	{
+		return this.grabbableRef.current?.globalId;
+	}
+
 	public render()
 	{
 		let showChildren: boolean;
@@ -594,7 +601,7 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 		}
 
 		return <AvComposedEntity components={ components } volume={ entityVolume } 
-			constraint={ constraint } debugName={ debugName }>
+			constraint={ constraint } debugName={ debugName } ref={ this.grabbableRef }>
 			{ locatorEntity }
 			{ appearance }
 			{ children }
