@@ -89,11 +89,12 @@
 						<section class="tsd-index-section ">
 							<h3>Properties</h3>
 							<ul class="tsd-index-list">
-								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_aardvark_standard_grabbable_.standardgrabbableprops.html#advertisegadgetinfo" class="tsd-kind-icon">advertise<wbr>Gadget<wbr>Info</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_aardvark_standard_grabbable_.standardgrabbableprops.html#appearance" class="tsd-kind-icon">appearance</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_aardvark_standard_grabbable_.standardgrabbableprops.html#candropintocontainers" class="tsd-kind-icon">can<wbr>Drop<wbr>Into<wbr>Containers</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_aardvark_standard_grabbable_.standardgrabbableprops.html#grabberfromgrabbable" class="tsd-kind-icon">grabber<wbr>From<wbr>Grabbable</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_aardvark_standard_grabbable_.standardgrabbableprops.html#gravityaligned" class="tsd-kind-icon">gravity<wbr>Aligned</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_aardvark_standard_grabbable_.standardgrabbableprops.html#hiddenchildrenbehavior" class="tsd-kind-icon">hidden<wbr>Children<wbr>Behavior</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_aardvark_standard_grabbable_.standardgrabbableprops.html#itemid" class="tsd-kind-icon">item<wbr>Id</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_aardvark_standard_grabbable_.standardgrabbableprops.html#modelcolor" class="tsd-kind-icon">model<wbr>Color</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_aardvark_standard_grabbable_.standardgrabbableprops.html#modelscale" class="tsd-kind-icon">model<wbr>Scale</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_aardvark_standard_grabbable_.standardgrabbableprops.html#modeluri" class="tsd-kind-icon">model<wbr>Uri</a></li>
@@ -103,7 +104,8 @@
 								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_aardvark_standard_grabbable_.standardgrabbableprops.html#remoteinterfacelocks" class="tsd-kind-icon">remote<wbr>Interface<wbr>Locks</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_aardvark_standard_grabbable_.standardgrabbableprops.html#showchildren" class="tsd-kind-icon">show<wbr>Children</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_aardvark_standard_grabbable_.standardgrabbableprops.html#showdelete" class="tsd-kind-icon">show<wbr>Delete</a></li>
-								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_aardvark_standard_grabbable_.standardgrabbableprops.html#useinitialparent" class="tsd-kind-icon">use<wbr>Initial<wbr>Parent</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_aardvark_standard_grabbable_.standardgrabbableprops.html#style" class="tsd-kind-icon">style</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_aardvark_standard_grabbable_.standardgrabbableprops.html#volume" class="tsd-kind-icon">volume</a></li>
 							</ul>
 						</section>
 					</div>
@@ -112,24 +114,22 @@
 			<section class="tsd-panel-group tsd-member-group ">
 				<h2>Properties</h2>
 				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
-					<a name="advertisegadgetinfo" class="tsd-anchor"></a>
-					<h3><span class="tsd-flag ts-flagOptional">Optional</span> advertise<wbr>Gadget<wbr>Info</h3>
-					<div class="tsd-signature tsd-kind-icon">advertise<wbr>Gadget<wbr>Info<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span></div>
+					<a name="appearance" class="tsd-anchor"></a>
+					<h3><span class="tsd-flag ts-flagOptional">Optional</span> appearance</h3>
+					<div class="tsd-signature tsd-kind-icon">appearance<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Element</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/cdf02e43/packages/aardvark-react/src/aardvark_standard_grabbable.tsx#L157">src/aardvark_standard_grabbable.tsx:157</a></li>
+							<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/d787adc4/packages/aardvark-react/src/aardvark_standard_grabbable.tsx#L112">src/aardvark_standard_grabbable.tsx:112</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
 						<div class="lead">
-							<p>If this prop is true the grabbable will advertise gadget info for the gadget. This
-								allows users to destroy the gadget, share the gadget, etc. If this is true, the
-								user will be presented with a favorite option in the A menu when this gadget is
-							highlighted.</p>
+							<p>The scene graph nodes to use for this grabbable&#39;s appearance. Either this and volume
+							or modelUri must be specified</p>
 						</div>
 						<dl class="tsd-comment-tags">
-							<dt>default:</dt>
-							<dd><p>true</p>
+							<dt>default</dt>
+							<dd><p>none</p>
 							</dd>
 						</dl>
 					</div>
@@ -140,7 +140,7 @@
 					<div class="tsd-signature tsd-kind-icon">can<wbr>Drop<wbr>Into<wbr>Containers<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/cdf02e43/packages/aardvark-react/src/aardvark_standard_grabbable.tsx#L142">src/aardvark_standard_grabbable.tsx:142</a></li>
+							<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/d787adc4/packages/aardvark-react/src/aardvark_standard_grabbable.tsx#L182">src/aardvark_standard_grabbable.tsx:182</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -162,7 +162,7 @@
 					<div class="tsd-signature tsd-kind-icon">grabber<wbr>From<wbr>Grabbable<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">AvNodeTransform</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/cdf02e43/packages/aardvark-react/src/aardvark_standard_grabbable.tsx#L148">src/aardvark_standard_grabbable.tsx:148</a></li>
+							<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/d787adc4/packages/aardvark-react/src/aardvark_standard_grabbable.tsx#L188">src/aardvark_standard_grabbable.tsx:188</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -182,7 +182,7 @@
 					<div class="tsd-signature tsd-kind-icon">gravity<wbr>Aligned<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/cdf02e43/packages/aardvark-react/src/aardvark_standard_grabbable.tsx#L173">src/aardvark_standard_grabbable.tsx:173</a></li>
+							<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/d787adc4/packages/aardvark-react/src/aardvark_standard_grabbable.tsx#L216">src/aardvark_standard_grabbable.tsx:216</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -203,7 +203,7 @@
 					<div class="tsd-signature tsd-kind-icon">hidden<wbr>Children<wbr>Behavior<span class="tsd-signature-symbol">:</span> <a href="../enums/_aardvark_standard_grabbable_.hiddenchildrenbehavior.html" class="tsd-signature-type">HiddenChildrenBehavior</a></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/cdf02e43/packages/aardvark-react/src/aardvark_standard_grabbable.tsx#L87">src/aardvark_standard_grabbable.tsx:87</a></li>
+							<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/d787adc4/packages/aardvark-react/src/aardvark_standard_grabbable.tsx#L133">src/aardvark_standard_grabbable.tsx:133</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -220,12 +220,33 @@
 					</div>
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
+					<a name="itemid" class="tsd-anchor"></a>
+					<h3><span class="tsd-flag ts-flagOptional">Optional</span> item<wbr>Id</h3>
+					<div class="tsd-signature tsd-kind-icon">item<wbr>Id<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/d787adc4/packages/aardvark-react/src/aardvark_standard_grabbable.tsx#L200">src/aardvark_standard_grabbable.tsx:200</a></li>
+						</ul>
+					</aside>
+					<div class="tsd-comment tsd-typography">
+						<div class="lead">
+							<p>The unique-to-the-gadget id to use to link up this item with its counterparts in remote
+							gadgets. This must be specified if the grabbable is using the NetworkedItem style.</p>
+						</div>
+						<dl class="tsd-comment-tags">
+							<dt>default</dt>
+							<dd><p>none</p>
+							</dd>
+						</dl>
+					</div>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
 					<a name="modelcolor" class="tsd-anchor"></a>
 					<h3><span class="tsd-flag ts-flagOptional">Optional</span> model<wbr>Color</h3>
 					<div class="tsd-signature tsd-kind-icon">model<wbr>Color<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/cdf02e43/packages/aardvark-react/src/aardvark_standard_grabbable.tsx#L99">src/aardvark_standard_grabbable.tsx:99</a></li>
+							<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/d787adc4/packages/aardvark-react/src/aardvark_standard_grabbable.tsx#L145">src/aardvark_standard_grabbable.tsx:145</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -245,7 +266,7 @@
 					<div class="tsd-signature tsd-kind-icon">model<wbr>Scale<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/cdf02e43/packages/aardvark-react/src/aardvark_standard_grabbable.tsx#L93">src/aardvark_standard_grabbable.tsx:93</a></li>
+							<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/d787adc4/packages/aardvark-react/src/aardvark_standard_grabbable.tsx#L139">src/aardvark_standard_grabbable.tsx:139</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -261,17 +282,23 @@
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
 					<a name="modeluri" class="tsd-anchor"></a>
-					<h3>model<wbr>Uri</h3>
+					<h3><span class="tsd-flag ts-flagOptional">Optional</span> model<wbr>Uri</h3>
 					<div class="tsd-signature tsd-kind-icon">model<wbr>Uri<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/cdf02e43/packages/aardvark-react/src/aardvark_standard_grabbable.tsx#L73">src/aardvark_standard_grabbable.tsx:73</a></li>
+							<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/d787adc4/packages/aardvark-react/src/aardvark_standard_grabbable.tsx#L105">src/aardvark_standard_grabbable.tsx:105</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
 						<div class="lead">
-							<p>The model to use for the grab handle of this grabbable.</p>
+							<p>The model to use for the grab handle of this grabbable. Either
+							this prop or appearance and volume must be specified.</p>
 						</div>
+						<dl class="tsd-comment-tags">
+							<dt>default</dt>
+							<dd><p>none</p>
+							</dd>
+						</dl>
 					</div>
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
@@ -280,7 +307,7 @@
 					<div class="tsd-signature tsd-kind-icon">on<wbr>End<wbr>Grab<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/cdf02e43/packages/aardvark-react/src/aardvark_standard_grabbable.tsx#L111">src/aardvark_standard_grabbable.tsx:111</a></li>
+							<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/d787adc4/packages/aardvark-react/src/aardvark_standard_grabbable.tsx#L157">src/aardvark_standard_grabbable.tsx:157</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -315,7 +342,7 @@
 					<div class="tsd-signature tsd-kind-icon">on<wbr>Grab<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/cdf02e43/packages/aardvark-react/src/aardvark_standard_grabbable.tsx#L105">src/aardvark_standard_grabbable.tsx:105</a></li>
+							<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/d787adc4/packages/aardvark-react/src/aardvark_standard_grabbable.tsx#L151">src/aardvark_standard_grabbable.tsx:151</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -350,7 +377,7 @@
 					<div class="tsd-signature tsd-kind-icon">remote<wbr>Gadget<wbr>Callback<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">(</span>event<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">object</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type">void</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/cdf02e43/packages/aardvark-react/src/aardvark_standard_grabbable.tsx#L134">src/aardvark_standard_grabbable.tsx:134</a></li>
+							<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/d787adc4/packages/aardvark-react/src/aardvark_standard_grabbable.tsx#L174">src/aardvark_standard_grabbable.tsx:174</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -394,7 +421,7 @@
 					<div class="tsd-signature tsd-kind-icon">remote<wbr>Interface<wbr>Locks<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">InitialInterfaceLock</span><span class="tsd-signature-symbol">[]</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/cdf02e43/packages/aardvark-react/src/aardvark_standard_grabbable.tsx#L125">src/aardvark_standard_grabbable.tsx:125</a></li>
+							<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/d787adc4/packages/aardvark-react/src/aardvark_standard_grabbable.tsx#L165">src/aardvark_standard_grabbable.tsx:165</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -416,7 +443,7 @@
 					<div class="tsd-signature tsd-kind-icon">show<wbr>Children<span class="tsd-signature-symbol">:</span> <a href="../enums/_aardvark_standard_grabbable_.showgrabbablechildren.html" class="tsd-signature-type">ShowGrabbableChildren</a></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/cdf02e43/packages/aardvark-react/src/aardvark_standard_grabbable.tsx#L79">src/aardvark_standard_grabbable.tsx:79</a></li>
+							<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/d787adc4/packages/aardvark-react/src/aardvark_standard_grabbable.tsx#L125">src/aardvark_standard_grabbable.tsx:125</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -436,7 +463,7 @@
 					<div class="tsd-signature tsd-kind-icon">show<wbr>Delete<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">true</span><span class="tsd-signature-symbol"> | </span><a href="_aardvark_standard_grabbable_.standardgrabbabledeletecallback.html" class="tsd-signature-type">StandardGrabbableDeleteCallback</a></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/cdf02e43/packages/aardvark-react/src/aardvark_standard_grabbable.tsx#L166">src/aardvark_standard_grabbable.tsx:166</a></li>
+							<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/d787adc4/packages/aardvark-react/src/aardvark_standard_grabbable.tsx#L209">src/aardvark_standard_grabbable.tsx:209</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
@@ -454,21 +481,38 @@
 					</div>
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
-					<a name="useinitialparent" class="tsd-anchor"></a>
-					<h3><span class="tsd-flag ts-flagOptional">Optional</span> use<wbr>Initial<wbr>Parent</h3>
-					<div class="tsd-signature tsd-kind-icon">use<wbr>Initial<wbr>Parent<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span></div>
+					<a name="style" class="tsd-anchor"></a>
+					<h3>style</h3>
+					<div class="tsd-signature tsd-kind-icon">style<span class="tsd-signature-symbol">:</span> <a href="../enums/_aardvark_standard_grabbable_.grabbablestyle.html" class="tsd-signature-type">GrabbableStyle</a></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/cdf02e43/packages/aardvark-react/src/aardvark_standard_grabbable.tsx#L117">src/aardvark_standard_grabbable.tsx:117</a></li>
+							<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/d787adc4/packages/aardvark-react/src/aardvark_standard_grabbable.tsx#L193">src/aardvark_standard_grabbable.tsx:193</a></li>
 						</ul>
 					</aside>
 					<div class="tsd-comment tsd-typography">
 						<div class="lead">
-							<p>Allows the grabbable to be automatically added to a container when it is first created.</p>
+							<p>Defines when the grabbable can be grabbed, and whether or not
+							it counts as the topmost grabbable in the gadget.</p>
+						</div>
+					</div>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
+					<a name="volume" class="tsd-anchor"></a>
+					<h3><span class="tsd-flag ts-flagOptional">Optional</span> volume</h3>
+					<div class="tsd-signature tsd-kind-icon">volume<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">AvVolume</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/d787adc4/packages/aardvark-react/src/aardvark_standard_grabbable.tsx#L119">src/aardvark_standard_grabbable.tsx:119</a></li>
+						</ul>
+					</aside>
+					<div class="tsd-comment tsd-typography">
+						<div class="lead">
+							<p>The intersection volume to use in conjunction with appearance to determine when the
+							user is intersecting the grabbable.</p>
 						</div>
 						<dl class="tsd-comment-tags">
 							<dt>default</dt>
-							<dd><p>true</p>
+							<dd><p>none</p>
 							</dd>
 						</dl>
 					</div>
@@ -488,6 +532,9 @@
 			</nav>
 			<nav class="tsd-navigation secondary menu-sticky">
 				<ul class="before-current">
+					<li class=" tsd-kind-enum tsd-parent-kind-module">
+						<a href="../enums/_aardvark_standard_grabbable_.grabbablestyle.html" class="tsd-kind-icon">Grabbable<wbr>Style</a>
+					</li>
 					<li class=" tsd-kind-enum tsd-parent-kind-module">
 						<a href="../enums/_aardvark_standard_grabbable_.hiddenchildrenbehavior.html" class="tsd-kind-icon">Hidden<wbr>Children<wbr>Behavior</a>
 					</li>
@@ -509,7 +556,7 @@
 						<a href="_aardvark_standard_grabbable_.standardgrabbableprops.html" class="tsd-kind-icon">Standard<wbr>Grabbable<wbr>Props</a>
 						<ul>
 							<li class=" tsd-kind-property tsd-parent-kind-interface">
-								<a href="_aardvark_standard_grabbable_.standardgrabbableprops.html#advertisegadgetinfo" class="tsd-kind-icon">advertise<wbr>Gadget<wbr>Info</a>
+								<a href="_aardvark_standard_grabbable_.standardgrabbableprops.html#appearance" class="tsd-kind-icon">appearance</a>
 							</li>
 							<li class=" tsd-kind-property tsd-parent-kind-interface">
 								<a href="_aardvark_standard_grabbable_.standardgrabbableprops.html#candropintocontainers" class="tsd-kind-icon">can<wbr>Drop<wbr>Into<wbr>Containers</a>
@@ -522,6 +569,9 @@
 							</li>
 							<li class=" tsd-kind-property tsd-parent-kind-interface">
 								<a href="_aardvark_standard_grabbable_.standardgrabbableprops.html#hiddenchildrenbehavior" class="tsd-kind-icon">hidden<wbr>Children<wbr>Behavior</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-interface">
+								<a href="_aardvark_standard_grabbable_.standardgrabbableprops.html#itemid" class="tsd-kind-icon">item<wbr>Id</a>
 							</li>
 							<li class=" tsd-kind-property tsd-parent-kind-interface">
 								<a href="_aardvark_standard_grabbable_.standardgrabbableprops.html#modelcolor" class="tsd-kind-icon">model<wbr>Color</a>
@@ -551,7 +601,10 @@
 								<a href="_aardvark_standard_grabbable_.standardgrabbableprops.html#showdelete" class="tsd-kind-icon">show<wbr>Delete</a>
 							</li>
 							<li class=" tsd-kind-property tsd-parent-kind-interface">
-								<a href="_aardvark_standard_grabbable_.standardgrabbableprops.html#useinitialparent" class="tsd-kind-icon">use<wbr>Initial<wbr>Parent</a>
+								<a href="_aardvark_standard_grabbable_.standardgrabbableprops.html#style" class="tsd-kind-icon">style</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-interface">
+								<a href="_aardvark_standard_grabbable_.standardgrabbableprops.html#volume" class="tsd-kind-icon">volume</a>
 							</li>
 						</ul>
 					</li>
