@@ -113,7 +113,7 @@ class GrabSpawner extends React.Component< {}, GrabSpawnerState >
 			} );
 	}
 
-	private renderSpawn( spawn: VisibleSpawn, ref?: ( node: AvStandardGrabbable ) )
+	private renderSpawn( spawn: VisibleSpawn, ref?: ( node: AvStandardGrabbable ) => void )
 	{
 		return <AvStandardGrabbable modelUri={ spawn.uri } key={ spawn.id } 
 			modelScale={ spawn.scale } style={ GrabbableStyle.LocalItem }
@@ -136,7 +136,7 @@ class GrabSpawner extends React.Component< {}, GrabSpawnerState >
 
 		if( this.state.newSpawn )
 		{
-			spawns.push( this.renderSpawn( this.state.newSpawn, this.onNewSpawn );
+			spawns.push( this.renderSpawn( this.state.newSpawn, this.onNewSpawn ) );
 		}
 
 		return <>
