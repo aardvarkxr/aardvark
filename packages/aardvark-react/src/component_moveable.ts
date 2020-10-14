@@ -145,6 +145,13 @@ export class MoveableComponent implements EntityComponent
 		{
 			this.activeGrabs.delete( activeGrab );
 			this.updateListener();
+
+			if( this.grabber == activeGrab )
+			{
+				console.log( "This shouldn't have happened. Somehow we lost our active grabber",
+					endpointAddrToString( this.grabber.peer ) );
+				this.dropIntoContainer( true );
+			}
 		} );
 
 		activeGrab.onEvent( async ( event: GrabRequest ) =>
