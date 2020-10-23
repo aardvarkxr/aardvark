@@ -1,4 +1,4 @@
-import { AardvarkManifest, manifestUriFromGadgetUri, MessageType, MsgInstallGadget } from '@aardvarkxr/aardvark-shared';
+import { AardvarkManifest, manifestUriFromGadgetUri, MessageType, MsgInstallGadget, AvGadgetSettings } from '@aardvarkxr/aardvark-shared';
 import axios from 'axios';
 import * as React from 'react';
 import './Landing.css';
@@ -19,6 +19,7 @@ interface DefaultLandingState
 	error?: string;
 	addResult?: string;
 	connected: boolean;
+	hostSettings?: AvGadgetSettings;
 }
 
 export class DefaultLanding extends React.Component<DefaultLandingProps, DefaultLandingState >
@@ -45,13 +46,13 @@ export class DefaultLanding extends React.Component<DefaultLandingProps, Default
 		{
 			this.setState( { error: "Failed to load manifest" } );
 		} );	
-
 	}
 
 	@bind
 	private onConnectToServer() 
 	{
 		this.setState( { connected: true } );
+		this.getSettingsForGadget();
 	}
 
 	@bind
@@ -84,6 +85,7 @@ export class DefaultLanding extends React.Component<DefaultLandingProps, Default
 		{
 			case GadgetListResult.Success:
 				text = successMessage;
+				this.getSettingsForGadget();
 				break;
 
 			case GadgetListResult.NotConnected:
@@ -92,7 +94,11 @@ export class DefaultLanding extends React.Component<DefaultLandingProps, Default
 
 
 			case GadgetListResult.AlreadyAdded:
-				text = "Gadget was already a favorite";
+				text = "Gadget setting was already active";
+				break;
+
+			case GadgetListResult.NoSuchAutoLaunch:
+				text = "Gadget was not set to auto launch";
 				break;
 
 			case GadgetListResult.NoSuchFavorite:
@@ -101,6 +107,10 @@ export class DefaultLanding extends React.Component<DefaultLandingProps, Default
 
 			case GadgetListResult.UserDeniedRequest:
 				text = "User denied request";
+				break;
+
+			case GadgetListResult.NotImplemented:
+				text = "not implemented";
 				break;
 
 			default:
@@ -127,6 +137,51 @@ export class DefaultLanding extends React.Component<DefaultLandingProps, Default
 	}
 
 	@bind
+	private async onRemoveAutoLaunch()
+	{
+		try
+		{
+			let promResult = this.gadgetList.current.removeAutoLaunch( this.gadgetUrl );
+			this.setGadgetListResult( await promResult, "Removed" );
+		}
+		catch( e )
+		{
+			this.setState( { addResult: String( e ) } );
+		}
+
+	}
+
+	@bind
+	private async onSetAutoLaunch()
+	{
+		try
+		{
+			let promResult = this.gadgetList.current.setAutoLaunch( this.gadgetUrl );
+			this.setGadgetListResult( await promResult, "Removed" );
+		}
+		catch( e )
+		{
+			this.setState( { addResult: String( e ) } );
+		}
+
+	}
+
+	//MOOSE: Wip
+	@bind
+	private async getSettingsForGadget()
+	{
+		try
+		{
+			let promResult: AvGadgetSettings = await this.gadgetList.current.getSettingsForGadget( this.gadgetUrl );
+			this.setState( { hostSettings: promResult } );
+		}
+		catch( e )
+		{
+			this.setState( { addResult: String( e ) } );
+		}
+	}
+
+	@bind
 	private async onStartGadget()
 	{
 		try
@@ -149,9 +204,30 @@ export class DefaultLanding extends React.Component<DefaultLandingProps, Default
 				onClick={ this.onStartAardvark }>Start Aardvark</div>;
 		}
 
+		if( this.state.hostSettings && this.state.manifest)
+		{
+			return <>
+				{ this.state.hostSettings.favorited &&
+					<div className="LandingButton" onClick={ this.onAddFavorite }>Add to Favorites</div> }
+				{ !this.state.hostSettings.favorited &&
+					<div className="LandingButton" onClick={ this.onRemoveFavorite }>Remove from Favorites</div> }
+				{ this.state.hostSettings.favorited &&
+					<div className="LandingButton" onClick={ this.onRemoveFavorite }>Remove from Favorites</div> }
+				{ !this.state.hostSettings.markedForAutoLaunch && this.state.manifest.aardvark.startAutomatically &&
+					<div className="LandingButton" onClick={ this.onSetAutoLaunch}>Set to Auto Launch</div> }
+				{ this.state.hostSettings.markedForAutoLaunch && this.state.manifest.aardvark.startAutomatically &&
+					<div className="LandingButton" onClick={ this.onRemoveAutoLaunch}>Remove from Auto Launch Gadgets</div> }
+				<div className="LandingButton" onClick={ this.onStartGadget }>Start Gadget</div>
+				{ this.state.addResult &&
+					<div style={ { fontSize: "medium" }}>{ this.state.addResult }</div> }
+				</>;
+		}
+
 		return <>
 			<div className="LandingButton" onClick={ this.onAddFavorite }>Add to Favorites</div>
 			<div className="LandingButton" onClick={ this.onRemoveFavorite }>Remove from Favorites</div>
+			<div className="LandingButton" onClick={ this.onSetAutoLaunch}>Set to Auto Launch</div>
+			<div className="LandingButton" onClick={ this.onRemoveAutoLaunch}>Remove from Auto Launch Gadgets</div>
 			<div className="LandingButton" onClick={ this.onStartGadget }>Start Gadget</div>
 			{ this.state.addResult &&
 				<div style={ { fontSize: "medium" }}>{ this.state.addResult }</div> }

@@ -760,6 +760,12 @@ export interface AardvarkManifest extends WebAppManifest
 	aardvark: AardvarkManifestExtension;
 }
 
+export interface AvGadgetSettings
+{
+	favorited: boolean,
+	markedForAutoLaunch: boolean
+}
+
 
 
 export enum EAction
