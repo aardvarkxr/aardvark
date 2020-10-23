@@ -1,4 +1,4 @@
-import { AvConstraint, AvNodeTransform, AvVolume, emptyVolume, EVolumeType, g_builtinModelStar, g_builtinModelTrashcan, infiniteVolume, InitialInterfaceLock } from '@aardvarkxr/aardvark-shared';
+import { AvConstraint, AvNodeTransform, AvVolume, emptyVolume, EndpointAddr, EVolumeType, g_builtinModelStar, g_builtinModelTrashcan, infiniteVolume, InitialInterfaceLock, MinimalPose } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import React from 'react';
 import { AvComposedEntity, EntityComponent } from './aardvark_composed_entity';
@@ -220,6 +220,7 @@ export interface StandardGrabbableProps
 interface StandardGrabbableState
 {
 	highlight: HighlightType;
+	transformOverridden: boolean;
 }
 
 /** A grabbable that shows a model for its handle and highlights automatically. */
@@ -231,6 +232,7 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 	private gadgetListRef: React.RefObject<AvGadgetList> = React.createRef<AvGadgetList>();
 	private remoteItemComponent: RemoteItemComponent = null;
 	private networkedItemComponent: NetworkedItemComponent = null
+	private grabbableRef = React.createRef< AvComposedEntity >();
 
 	constructor( props: any )
 	{
@@ -247,7 +249,8 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 		}
 
 		this.moveableComponent = new MoveableComponent( this.onMoveableUpdate, 
-			this.props.style == GrabbableStyle.Gadget, this.props.canDropIntoContainers,
+			this.props.style == GrabbableStyle.Gadget, 
+			this.props.canDropIntoContainers && !AvGadget.instance().isRemote,
 			this.props.grabberFromGrabbable );
 
 		let remoteLock = AvGadget.instance().findInitialInterface( RemoteGadgetComponent.interfaceName );
@@ -267,18 +270,21 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 			if( this.props.remoteInterfaceLocks )
 			{
 				// this gadget is master, or will be if the user enters a room
-				this.networkedComponent = new NetworkedGadgetComponent( this.props.remoteInterfaceLocks, this.props.remoteGadgetCallback );
+				this.networkedComponent = new NetworkedGadgetComponent( this.props.remoteInterfaceLocks, 
+					this.props.remoteGadgetCallback );
 			}
 
 			if( this.props.style == GrabbableStyle.NetworkedItem )
 			{
-				this.networkedItemComponent = new NetworkedItemComponent( this.props.itemId, null );
+				this.networkedItemComponent = new NetworkedItemComponent( this.props.itemId, null, 
+					this.onNetworkItemDrop );
 			}
 		} 
 
 		this.state = 
 		{ 
-			highlight: HighlightType.None
+			highlight: HighlightType.None,
+			transformOverridden: false,
 		};
 	}
 
@@ -336,6 +342,15 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 		} );
 	}
 
+	@bind
+	private async onNetworkItemDrop()
+	{
+		if( this.props.canDropIntoContainers )
+		{
+			await this.moveableComponent.dropIntoCurrentContainer();
+		}
+	}
+
 	public get isGrabbed()
 	{
 		return this.state.highlight == HighlightType.Grabbed 
@@ -360,6 +375,8 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 		{
 			this.networkedComponent?.setInitialInterfaceLocks( this.props.remoteInterfaceLocks );
 		}
+
+		this.remoteItemComponent?.setIsGrabbed( this.isGrabbed );
 	}
 
 	@bind
@@ -389,6 +406,12 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 		}
 	}
 	
+	/** Returns the global ID if the grabbable within the AvStandardGrabbable. */
+	public get globalId() : EndpointAddr
+	{
+		return this.grabbableRef.current?.globalId;
+	}
+
 	public render()
 	{
 		let showChildren: boolean;
@@ -459,53 +482,45 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 			constraint = { gravityAligned: this.props.gravityAligned };
 		}
 
-		let outerComponent: EntityComponent;
-		let innerComponent: EntityComponent;
 		let locatorEntity: JSX.Element;
 
-		let outerVolume: AvVolume;
-		let innerVolume: AvVolume;
+		let entityVolume: AvVolume;
 
-		let outerConstraint: AvConstraint;
-		let innerConstraint: AvConstraint;
+		let debugName = `${ AvGadget.instance().getName() }/${ this.props.itemId ?? "" }`;
 
+		let components: EntityComponent[] = [];
 		switch( this.props.style )
 		{
 			case GrabbableStyle.Gadget:
 				if( AvGadget.instance().isRemote )
 				{
-					outerComponent = this.remoteComponent;
-					outerVolume = emptyVolume();
+					components.push( this.remoteComponent );
+					entityVolume = emptyVolume();
 				}	
 				else
 				{
-					outerComponent = this.moveableComponent;
-					outerVolume = infoVolume;
-					outerConstraint = constraint;
+					components.push( this.moveableComponent );
+					entityVolume = infoVolume;
 
 					if( this.networkedComponent )
 					{
 						locatorEntity = <AvComposedEntity components={ [ this.networkedComponent ] } 
-							volume={ infiniteVolume() } />;
+							volume={ infiniteVolume() } debugName={ debugName + "/network_gadget" }/>;
 					}
 				}		
 				break;
 
 			case GrabbableStyle.LocalItem:
-				outerComponent = this.moveableComponent;
-				outerVolume = infoVolume;
-				outerConstraint = constraint;
+				components.push( this.moveableComponent );
+				entityVolume = infoVolume;
 			break;
 
 			case GrabbableStyle.NetworkedItem:
 				if( AvGadget.instance().isRemote )
 				{
-					outerComponent = this.remoteItemComponent;
-					outerVolume = emptyVolume();
-
-					innerComponent = this.moveableComponent;
-					innerVolume = infoVolume;
-					innerConstraint = constraint;
+					components.push( this.remoteItemComponent );
+					components.push( this.moveableComponent );
+					entityVolume = infoVolume;
 
 					if( this.moveableComponent.state == MoveableComponentState.Grabbed )
 					{
@@ -513,20 +528,31 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 						lock.iface = k_remoteGrabbableInterface;
 						locatorEntity = <AvInterfaceEntity volume={ infoVolume }
 							transmits={ [ { iface: k_remoteGrabbableInterface } ] }
-								interfaceLocks={ [ lock ] }/>
+								interfaceLocks={ [ lock ] }
+							debugName={ debugName + "/remote_item" }/>
 					}			
 				}	
 				else
 				{
-					outerComponent = this.moveableComponent;
-					outerVolume = infoVolume;
-					outerConstraint = constraint;
-
-					innerComponent = this.networkedItemComponent;
-					innerVolume = infiniteVolume();
+					if( this.networkedItemComponent.transformOverridden )
+					{
+						// if transforms are overridden, we want the networked item first so its parent
+						// will be used instead of whatever container we were in.
+						components.push( this.networkedItemComponent, this.moveableComponent );
+					}
+					else
+					{
+						components.push( this.moveableComponent, this.networkedItemComponent );
+					}
+					entityVolume = infoVolume;
 				}	
 				break;
 		}		
+
+		if( AvGadget.instance().isRemote )
+		{
+			debugName += "/remote";
+		}
 
 		let children = this.props.children;
 		if( !showChildren )
@@ -574,29 +600,15 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 			</AvTransform>;
 		}
 
-		let guts = <>
+		return <AvComposedEntity components={ components } volume={ entityVolume } 
+			constraint={ constraint } debugName={ debugName } ref={ this.grabbableRef }>
 			{ locatorEntity }
 			{ appearance }
 			{ children }
 			{ advertizeGadgetInfo &&
 				<AvGadgetInfo volume={ infoVolume } /> }
 			{ menu }
-			</>;
-
-		if( innerComponent )
-		{
-			return <AvComposedEntity components={ [ outerComponent ] } volume={ outerVolume } constraint={ outerConstraint }>
-				<AvComposedEntity components={ [ innerComponent ] } volume={ innerVolume } constraint={ innerConstraint }>				
-				{ guts }
-				</AvComposedEntity>
-			</AvComposedEntity>;
-		}
-		else
-		{
-			return <AvComposedEntity components={ [ outerComponent ] } volume={ outerVolume } constraint={ outerConstraint }>
-				{ guts }
-			</AvComposedEntity>;
-		}
+		</AvComposedEntity>;
 	}
 }
 

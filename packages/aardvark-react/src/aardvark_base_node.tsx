@@ -41,11 +41,16 @@ export interface AvBaseNodeProps
 	 */
 	visible?: boolean;
 
-	/** The persistent name of this node when saving the user's state. 
-	 * For AvHook and AvGrabbable nodes, this is required to associate persistent
-	 * state with the same hook or grabbable from run to run.
+	/** An alias for debugName.
+	 * 
+	 * @deprecated
 	 */
 	persistentName?: string;
+
+	/** A name that's applied to the node in the monitor and other tools. This name has no effect
+	 * at runtime.
+	 */
+	debugName?: string;
 
 	/** Set this prop to be notified when the node is assigned its endpoint address.
 	 * This is not necessary for most nodes.
@@ -137,10 +142,7 @@ export abstract class AvBaseNode<TProps, TState> extends React.Component<TProps,
 			flags: this.getNodeFlags(),
 		};
 
-		if( this.baseProps.persistentName )
-		{
-			obj.persistentName = this.baseProps.persistentName;
-		}
+		obj.persistentName = this.baseProps.debugName ?? this.baseProps.persistentName;
 
 		return obj;
 	}

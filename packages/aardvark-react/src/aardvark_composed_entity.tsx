@@ -49,6 +49,13 @@ export interface AvComposedEntityProps
 	 * @default none
 	 */
 	constraint?: AvConstraint;
+
+	/** Sets the debug name of the entity. This isn't used for anything at runtime, but can
+	 * make development easier by showing names in the monitor and other tools.
+	 * 
+	 * @default none
+	 */
+	debugName?: string;
 }
 
 /** Allows for the construction of interface entities out of reusable interface components.
@@ -131,7 +138,8 @@ export class AvComposedEntity extends React.Component< AvComposedEntityProps, {}
 		return <AvInterfaceEntity transmits={transmits} receives={ receives } wantsTransforms={ wantsTransforms }
 					parent={ parent } volume={ this.props.volume } ref={ this.onEntityRef } 
 					priority={ this.props.priority } interfaceLocks={ interfaceLocks }
-					constraint={ this.props.constraint }>
+					constraint={ this.props.constraint }
+					persistentName={ this.props.debugName } >
 					{ this.props.children }
 					{ this.props.components.map( ( value: EntityComponent ) => value.render() ) }
 				</AvInterfaceEntity>;

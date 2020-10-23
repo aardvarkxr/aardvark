@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { EndpointAddr, AvNodeTransform, endpointAddrToString, InitialInterfaceLock, endpointAddrsMatch } from '@aardvarkxr/aardvark-shared';
+import { EndpointAddr, AvNodeTransform, endpointAddrToString, InitialInterfaceLock, endpointAddrsMatch, MinimalPose } from '@aardvarkxr/aardvark-shared';
 import { EntityComponent } from './aardvark_composed_entity';
 import { InterfaceProp, ActiveInterface } from './aardvark_interface_entity';
 import bind from 'bind-decorator';
@@ -16,6 +16,7 @@ export enum NetworkGadgetEventType
 	SendEventToAllRemotes = "send_event_to_remotes",
 	ReceiveEventFromRemote = "receive_event_from_remote",
 	SetTransformState = "set_transform_state",
+	DropComplete = "drop_complete",
 }
 
 export interface NetworkGadgetEvent
@@ -38,11 +39,13 @@ export enum NetworkItemTransform
 {
 	Normal = 0,
 	Override = 1,
+	Dropping = 2,
 };
 
 export interface NGESetTransformState extends NetworkGadgetEvent
 {
 	newState: NetworkItemTransform;
+	universeFromItem?: MinimalPose;
 }
 
 export interface NGESendEvent extends NetworkGadgetEvent
@@ -167,15 +170,24 @@ export class NetworkedItemComponent implements EntityComponent
 	private itemId: string;
 	private remoteEventCallback: ( event: object ) => void;
 	private transformState = NetworkItemTransform.Normal;
+	private lastUniverseFromItem: MinimalPose = null;
+	private networkItemDropCallback: () => void;
 
-	constructor( itemId: string, remoteEventCallback: ( event: object ) => void )
+	constructor( itemId: string, remoteEventCallback: ( event: object ) => void,
+	networkItemDropCallback: () => void )
 	{
 		this.itemId = itemId;
 		this.remoteEventCallback = remoteEventCallback;
+		this.networkItemDropCallback = networkItemDropCallback;
 	}
 
 	static readonly interfaceName= "aardvark-networked-gadget@1";
 
+	public get universeFromItem() 
+	{
+		return this.lastUniverseFromItem;
+	}
+	
 	private updateListener()
 	{
 		this.entityCallback?.();
@@ -201,9 +213,11 @@ export class NetworkedItemComponent implements EntityComponent
 		networkProvider.onEnded( ()=>
 			{
 				this.networkProvider = null;
+				this.transformState = NetworkItemTransform.Normal;
+				this.updateListener();
 			} );
 		
-		networkProvider.onEvent( ( event: NetworkGadgetEvent ) =>
+		networkProvider.onEvent( async ( event: NetworkGadgetEvent ) =>
 		{
 			switch( event.type )
 			{
@@ -217,7 +231,28 @@ export class NetworkedItemComponent implements EntityComponent
 				case NetworkGadgetEventType.SetTransformState:
 				{
 					let setTransformState = event as NGESetTransformState;
+					if( setTransformState.newState == NetworkItemTransform.Override )
+					{
+						await networkProvider.lock();
+					}
+
 					this.transformState = setTransformState.newState;
+
+					if( setTransformState.universeFromItem )
+					{
+						this.lastUniverseFromItem = setTransformState.universeFromItem;
+					}
+
+					if( this.transformState == NetworkItemTransform.Dropping )
+					{
+						await this.networkItemDropCallback();
+						await networkProvider.unlock();
+						let resp: NetworkGadgetEvent =
+						{
+							type: NetworkGadgetEventType.DropComplete
+						}
+						this.networkProvider.sendEvent( resp );
+					}
 					this.updateListener();
 				}
 				break;
@@ -244,11 +279,12 @@ export class NetworkedItemComponent implements EntityComponent
 	{
 		switch( this.transformState )
 		{
+			case NetworkItemTransform.Dropping:
 			case NetworkItemTransform.Normal:
 				return null;
 
 			case NetworkItemTransform.Override:
-				return this.networkProvider.peer;
+				return this.networkProvider?.peer;
 		}
 	}
 	

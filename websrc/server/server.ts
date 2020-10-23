@@ -598,11 +598,11 @@ class CEndpoint
 
 		this.registerForwardHandler( MessageType.InterfaceStarted, ( m: MsgInterfaceStarted ) =>
 		{
-			return [ m.transmitter, m.receiver ];
+			return [ m.transmitter, m.receiver, EndpointType.Monitor ];
 		} );
 		this.registerForwardHandler( MessageType.InterfaceEnded, ( m: MsgInterfaceEnded ) =>
 		{
-			return [ m.transmitter, m.receiver ];
+			return [ m.transmitter, m.receiver, EndpointType.Monitor ];
 		} );
 		this.registerForwardHandler( MessageType.InterfaceTransformUpdated, ( m: MsgInterfaceTransformUpdated ) =>
 		{
@@ -610,11 +610,7 @@ class CEndpoint
 		} );
 		this.registerForwardHandler( MessageType.InterfaceReceiveEvent, ( m: MsgInterfaceReceiveEvent ) =>
 		{
-			return [ m.destination ];
-		} );
-		this.registerForwardHandler( MessageType.InterfaceSendEvent, ( m: MsgInterfaceSendEvent ) =>
-		{
-			return [ EndpointType.Monitor, EndpointType.Renderer ];
+			return [ m.destination, EndpointType.Monitor ];
 		} );
 		this.registerForwardHandlerWithReply( MessageType.InterfaceLock, 
 			MessageType.InterfaceLockResponse,
@@ -736,15 +732,26 @@ class CEndpoint
 	}
 
 	private registerForwardHandlerWithReply( msgType: MessageType, replyType: MessageType, 
-		handlerEpt: EndpointType )
+		handlerEpt: EndpointType, sendToMonitor?: boolean )
 	{
+		let reallySendToMonitor = sendToMonitor ?? true;
 		this.registerEnvelopeHandler( msgType, 
 			async ( env: Envelope, m: any ) =>
 			{
-				let replyMsg = await this.m_dispatcher.forwardMessageAndWaitForResponse(
+				if( reallySendToMonitor )
+				{
+					this.m_dispatcher.sendToAllEndpointsOfType( EndpointType.Monitor, env );
+				}
+
+				let [ replyMsg, replyEnv ] = await this.m_dispatcher.forwardMessageAndWaitForResponse(
 					handlerEpt, msgType, m, 
 					replyType );
 
+				if( reallySendToMonitor )
+				{
+					this.m_dispatcher.sendToAllEndpointsOfType( EndpointType.Monitor, replyEnv );
+				}
+				
 				this.sendReply( replyType, replyMsg, env );
 			} );
 	}

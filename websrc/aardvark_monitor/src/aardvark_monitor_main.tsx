@@ -526,7 +526,7 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 					let start = matRay.multiplyVec4( new vec4( [ 0, 0, 0, 1 ] ) )
 					let dir = matRay.multiplyVec4( new vec4( [ 1, 0, 0, 0 ] ) )
 					return <div className="AvNodeProperty">volume{ contextName }: Ray( 
-						{ start.x.toFixed( 3 ) }, { start.y.toFixed( 3 ) }, { start.z.toFixed( 3 ) } ->
+						{ start.x.toFixed( 3 ) }, { start.y.toFixed( 3 ) }, { start.z.toFixed( 3 ) } -&gt;
 						{ dir.x.toFixed( 3 ) }, { dir.y.toFixed( 3 ) }, { dir.z.toFixed( 3 ) }</div>
 				}
 
@@ -544,7 +544,7 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 
 		return <div className="AvNodeProperty">Interface Locks: 
 				{ interfaceLocks.map( ( value ) => (
-					<div> { value.iface } -> { endpointAddrToString( value.receiver ) } 
+					<div> { value.iface } -&gt; { MonitorStore.epaDisplayText( value.receiver ) } 
 						{ value.params ? JSON.stringify( value.params ) : "" }
 					</div> ) ) }
 			</div>;
@@ -568,7 +568,7 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 
 		return <div className="AvNode" key={node.id }>
 			<div className="AvNodeType">{AvNodeType[ node.type ] } @{ node.id }
-				{ node.persistentName ? `" ${ node.persistentName }"` : "" }
+				<div className="AvNodeName">{ MonitorStore.epaDisplayText( node.globalId ) }</div>
 				{ this.renderFlags( node.flags ) } 
 			</div>
 			{ node.propUniverseName && <div className="AvNodeProperty">remote: {node.propUniverseName }</div> }
@@ -604,9 +604,9 @@ class GadgetMonitor extends React.Component< GadgetMonitorProps, GadgetMonitorSt
 				&& <div className="AvNodeProperty">Receives: { node.propReceives.join( ", " ) }</div> }
 			{ this.renderInitialInterfaceLocks( node.propInterfaceLocks ) }
 			{ node.propParentAddr 
-				&& <div className="AvNodeProperty">Parent: { endpointAddrToString( node.propParentAddr ) }</div> }
+				&& <div className="AvNodeProperty">Parent: { MonitorStore.epaDisplayText( node.propParentAddr ) }</div> }
 			{ node.propChildAddr 
-				&& <div className="AvNodeProperty">Child: { endpointAddrToString( node.propChildAddr ) }</div> }
+				&& <div className="AvNodeProperty">Child: { MonitorStore.epaDisplayText( node.propChildAddr ) }</div> }
 			{ childElements }
 		</div>
 	}
@@ -671,7 +671,7 @@ class GrabEventMonitor extends React.Component< GrabEventProps, {} >
 	{
 		return <div className="GrabEventField">
 			{ label } :
-			{ epa && endpointAddrToString( epa ) }
+			{ epa && MonitorStore.epaDisplayText( epa ) }
 		</div>
 	}
 
@@ -680,7 +680,7 @@ class GrabEventMonitor extends React.Component< GrabEventProps, {} >
 	{
 		let m = this.props.event as MsgResourceLoadFailed;
 		return ( <div className="ResourceLoadFailed">
-			<div className="NodeAddr">Node: { endpointAddrToString( m.nodeId ) }</div>
+			<div className="NodeAddr">Node: { MonitorStore.epaDisplayText( m.nodeId ) }</div>
 			<div className="FailedUri">URI: { m.resourceUri } </div>
 			<div className="Error">{ m.error } </div>
 		</div> );

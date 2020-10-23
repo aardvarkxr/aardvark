@@ -700,6 +700,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 			child = this.state.activeGrab.peer;
 		}
 
+		let debugName = EHand[ this.props.hand ] + " hand grabber";
 		return (
 			<>
 			<AvOrigin path={ originPath }>
@@ -707,13 +708,13 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 				{ ray }
 				<AvComposedEntity components={ [ this.containerComponent ]} 
 					volume={ [ k_containerInnerVolume, k_containerOuterVolume ] }
-					priority={ 100 }/>
+					priority={ 100 } debugName={ debugName + "/container" }/>
 				<AvInterfaceEntity transmits={
 					[ 
 						{ iface: "aardvark-panel@1", processor: this.onPanelStart },
 						{ iface: "aardvark-grab@1", processor: this.onGrabStart },
 					] }
-					volume={ grabberVolumes } >
+					volume={ grabberVolumes } debugName={ debugName }>
 						{
 							child
 							&& <AvTransform transform={ grabberFromGrabbable }>
@@ -725,7 +726,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 					[ 
 						{ iface: k_MenuInterface, processor: this.onMenuStart },
 					] }
-					volume={ grabberVolumes } >
+					volume={ grabberVolumes } debugName={ debugName + "/menu" }>
 				</AvInterfaceEntity>
 			</AvOrigin>
 			{ this.renderDebug() }
@@ -847,7 +848,8 @@ class DefaultHands extends React.Component< {}, {} >
 				</AvOrigin> */}
 				<AvOrigin path="/space/stage">
 					<AvComposedEntity components={ [this.containerComponent ] }
-						volume={ { type: EVolumeType.Infinite } }>
+						volume={ { type: EVolumeType.Infinite } }
+						debugName="stage container">
 					</AvComposedEntity>
 				</AvOrigin>
 				{/* <AvOrigin path="/user/head">

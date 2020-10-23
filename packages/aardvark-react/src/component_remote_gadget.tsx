@@ -10,6 +10,8 @@ export enum RemoteGadgetEventType
 	SendEventToMaster = "send_event_to_master",
 	DestroyGadget = "destroy_gadget",
 	SetItemInfo = "set_item_info",
+	StartGrab = "start_grab",
+	EndGrab = "end_grab",
 }
 
 export interface RemoteGadgetEvent
@@ -139,6 +141,7 @@ export class RemoteItemComponent implements EntityComponent
 	private masterCallback: ( event: object ) => void = null;
 	private activeRemote: ActiveInterface = null;
 	private itemId: string;
+	private isGrabbed: boolean = false;
 
 	constructor( itemId: string, callback: ( event: object ) => void )
 	{
@@ -149,6 +152,21 @@ export class RemoteItemComponent implements EntityComponent
 	private updateListener()
 	{
 		this.entityCallback?.();
+	}
+
+	public setIsGrabbed( isGrabbed: boolean )
+	{
+		if( isGrabbed != this.isGrabbed )
+		{
+			// tell the other end how we want to be started on the remote end
+			let req: RemoteGadgetEvent =
+			{
+				type: isGrabbed ? RemoteGadgetEventType.StartGrab : RemoteGadgetEventType.EndGrab,
+			};
+			this.activeRemote?.sendEvent( req );
+
+			this.isGrabbed = isGrabbed;
+		}
 	}
 
 	private sendSetItemInfo()
@@ -209,7 +227,7 @@ export class RemoteItemComponent implements EntityComponent
 
 	public get parent(): EndpointAddr
 	{
-		return this.activeRemote?.peer;
+		return !this.isGrabbed && this.activeRemote?.peer;
 	}
 	
 	public get wantsTransforms()

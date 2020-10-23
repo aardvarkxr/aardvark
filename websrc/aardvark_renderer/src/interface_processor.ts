@@ -97,6 +97,36 @@ class InterfaceEntityMap
 	}
 }
 
+class TransmitterInUseMap
+{
+	private iipMap: { [key: string ]: InterfaceInProgress| boolean } = {};
+
+	private makeKey( transmitterEpa: EndpointAddr, iface: string )
+	{
+		return `${ endpointAddrToString( transmitterEpa ) }/${ iface }`;
+	}
+
+	public set( transmitterEpa: EndpointAddr, iface: string, iip: InterfaceInProgress| boolean )
+	{
+		this.iipMap[ this.makeKey( transmitterEpa, iface )] = iip;
+	}
+
+	public find( transmitterEpa: EndpointAddr, iface: string )
+	{
+		return this.iipMap[ this.makeKey( transmitterEpa, iface ) ];
+	}
+
+	public has( transmitterEpa: EndpointAddr, iface: string )
+	{
+		return this.iipMap.hasOwnProperty( this.makeKey( transmitterEpa, iface ) );
+	}
+}
+
+
+export interface InterfaceProcessorOptions
+{
+	verboseLogging: boolean;
+}
 
 export class CInterfaceProcessor
 {
@@ -104,10 +134,23 @@ export class CInterfaceProcessor
 	private lostLockedInterfaces = new Map<string, InterfaceInProgress>();
 	private callbacks: InterfaceProcessorCallbacks;
 	private lastEntityMap: InterfaceEntityMap;
+	private options: InterfaceProcessorOptions;
 
-	constructor( callbacks: InterfaceProcessorCallbacks )
+	constructor( callbacks: InterfaceProcessorCallbacks, options?: InterfaceProcessorOptions )
 	{
 		this.callbacks = callbacks;
+		this.options = options ??
+		{
+			verboseLogging: false,
+		};
+	}
+
+	private log( msg: string, ...args: any[] )
+	{
+		if( this.options.verboseLogging )
+		{
+			console.log( msg, ...args );
+		}
 	}
 
 	public processFrame( entities: InterfaceEntity[]  )
@@ -157,7 +200,7 @@ export class CInterfaceProcessor
 		}
 
 		// end interfaces where one end or the other is gone
-		let transmittersInUse = new Map<string, InterfaceInProgress | boolean >();
+		let transmittersInUse = new TransmitterInUseMap();
 		let newInterfacesInProgress: InterfaceInProgress[] = []
 		for( let iip of this.interfacesInProgress )
 		{
@@ -178,11 +221,11 @@ export class CInterfaceProcessor
 			{
 				// console.log( "receiver no longer exists or lost iface", receiver );
 				this.callbacks.interfaceEnded(iip.transmitter, iip.receiver, iip.iface );
-				console.log( `interface end (no receiver/iface) ${ endpointAddrToString( transmitter.epa ) } `
+				this.log( `interface end (no receiver/iface) ${ endpointAddrToString( transmitter.epa ) } `
 					+` to ${ endpointAddrToString( iip.receiver ) } for ${ iip.iface }` );
 				if( iip.locked )
 				{
-					//console.log( "adding lost lock to list for " + endpointAddrToString( iip.transmitter ) );
+					//this.log( "adding lost lock to list for " + endpointAddrToString( iip.transmitter ) );
 					this.lostLockedInterfaces.set( endpointAddrToString( iip.transmitter ), iip );
 				}
 				continue;
@@ -195,7 +238,7 @@ export class CInterfaceProcessor
 				const [ int, pt ] = entitiesIntersect( transmitter, receiver, EVolumeContext.ContinueOnly );
 				if ( !int )
 				{
-					console.log( `interface end (no intersect) ${ endpointAddrToString( transmitter.epa ) } `
+					this.log( `interface end (no intersect) ${ endpointAddrToString( transmitter.epa ) } `
 						+` to ${ endpointAddrToString( receiver.epa ) } for ${ iip.iface }` );
 					this.callbacks.interfaceEnded( iip.transmitter, iip.receiver, iip.iface,
 						this.computeEntityTransform( transmitter, receiver ) );
@@ -204,7 +247,7 @@ export class CInterfaceProcessor
 
 				if( transmitter.originPath == receiver.originPath && transmitter.originPath != "/space/stage" )
 				{
-					console.log( `interface end (matching origins) ${ endpointAddrToString( transmitter.epa ) } `
+					this.log( `interface end (matching origins) ${ endpointAddrToString( transmitter.epa ) } `
 						+` to ${ endpointAddrToString( receiver.epa ) } for ${ iip.iface }` );
 					this.callbacks.interfaceEnded( iip.transmitter, iip.receiver, iip.iface,
 						this.computeEntityTransform( transmitter, receiver ) );
@@ -214,14 +257,15 @@ export class CInterfaceProcessor
 
 			iip.transmitterWantsTransforms = transmitter.wantsTransforms;
 			iip.receiverWantsTransforms = receiver.wantsTransforms;
-			transmittersInUse.set( endpointAddrToString( iip.transmitter ), iip );
+			transmittersInUse.set( iip.transmitter, iip.iface, iip );
 			newInterfacesInProgress.push( iip );
 		}
 
 		// lost locks count as "in use" so they won't trigger new interfaces
 		for( let transmitterEpaString of this.lostLockedInterfaces.keys() )
 		{
-			transmittersInUse.set( transmitterEpaString, false );
+			let iip = this.lostLockedInterfaces.get( transmitterEpaString );
+			transmittersInUse.set( iip.transmitter, iip.iface, false );
 		}
 
 		// Look for new interfaces
@@ -233,99 +277,99 @@ export class CInterfaceProcessor
 				continue;
 			}
 
-			let currentIip: InterfaceInProgress | boolean 
-				= transmittersInUse.get(endpointAddrToString( transmitter.epa ));
-			//console.log( "current iip", currentIip );
-			if( typeof currentIip == "boolean" || ( currentIip && currentIip.locked ) )
+			for( let iface of transmitter.transmits )
 			{
-				// This interface was locked. Wait for the unlock before changing anything
-				continue;
-			}
+				let currentIip	= transmittersInUse.find( transmitter.epa, iface );
 
-			let bestReceiver: InterfaceEntity;
-			let bestIface: string;
-			let bestPt: vec3;
-			for( let receiver of entities )
-			{
-				if( transmitter == receiver )
+				//console.log( "current iip", currentIip );
+				if( typeof currentIip == "boolean" || ( currentIip && currentIip.locked ) )
 				{
-					// you can't interface with yourself
+					// This interface was locked. Wait for the unlock before changing anything
 					continue;
 				}
 
-				if( transmitter.originPath == receiver.originPath 
-					&& transmitter.originPath != "/space/stage" 
-					&& transmitter.originPath != null )
+				let bestReceiver: InterfaceEntity;
+				let bestPt: vec3;
+				for( let receiver of entities )
 				{
-					// right hand can't interface with stuff that's also 
-					// on the right hand, etc.
+					if( transmitter == receiver )
+					{
+						// you can't interface with yourself
+						continue;
+					}
 
-					// This rule does not apply to entities that originate on the stage because they aren't
-					// moving around the way that hands and the head are.
-					continue;
-				}
+					if( transmitter.originPath == receiver.originPath 
+						&& transmitter.originPath != "/space/stage" 
+						&& transmitter.originPath != null )
+					{
+						// right hand can't interface with stuff that's also 
+						// on the right hand, etc.
 
-				let iface = findBestInterface(transmitter, receiver)
-				if( !iface )
-				{
-					// if the receiver doesn't implement any of the interfaces
-					// from the transmitter, they just don't care about each other
-					continue;
-				}
+						// This rule does not apply to entities that originate on the stage because they aren't
+						// moving around the way that hands and the head are.
+						continue;
+					}
 
-				const [ int, pt ] = entitiesIntersect( transmitter, receiver, EVolumeContext.StartOnly );
-				if( !int )
-				{
-					continue;
-				}
+					if( !receiver.receives.includes( iface ) )
+					{
+						// if the receiver doesn't implement this of the interfaces
+						// from the transmitter, they just don't care about each other
+						continue;
+					}
 
-				if( !bestReceiver || bestReceiver.priority < receiver.priority )
-				{
-					bestReceiver = receiver;
-					bestIface = iface;
-					bestPt = pt;
-				}
-			}
-
-			if( bestReceiver )
-			{
-				if( currentIip )
-				{
-					// make sure the new one is higher priority
-					let oldReceiver = entityMap.find( currentIip.receiver );
-					if( oldReceiver.priority >= bestReceiver.priority 
-						|| currentIip.iface != bestIface )
+					const [ int, pt ] = entitiesIntersect( transmitter, receiver, EVolumeContext.StartOnly );
+					if( !int )
 					{
 						continue;
 					}
 
-					// end the old interface before starting the new one
-					this.callbacks.interfaceEnded( transmitter.epa, oldReceiver.epa, bestIface,
-						this.computeEntityTransform( transmitter, oldReceiver ) );
-					let oldIndex = newInterfacesInProgress.findIndex( ( iip: InterfaceInProgress ) => 
-						( iip == currentIip ) );
-					if( oldIndex != -1 )
+					if( !bestReceiver || bestReceiver.priority < receiver.priority )
 					{
-						newInterfacesInProgress.splice( oldIndex, 1 );
+						bestReceiver = receiver;
+						bestPt = pt;
 					}
 				}
 
-				console.log( `interface started ${ endpointAddrToString( transmitter.epa ) } `
-					+` to ${ endpointAddrToString( bestReceiver.epa ) } for ${ bestIface }` );
-
-				// we found a transmitter and receiver that are touching and share an interface.
-				this.callbacks.interfaceStarted( transmitter.epa, bestReceiver.epa, bestIface,
-					this.computeEntityTransform( transmitter, bestReceiver ) );
-
-				newInterfacesInProgress.push(
+				if( bestReceiver )
+				{
+					if( currentIip )
 					{
-						transmitter: transmitter.epa,
-						receiver: bestReceiver.epa,
-						iface: bestIface,
-						locked: false,
-						transmitterWantsTransforms: transmitter.wantsTransforms,
-						receiverWantsTransforms: bestReceiver.wantsTransforms,
-					} );
+						// make sure the new one is higher priority
+						let oldReceiver = entityMap.find( currentIip.receiver );
+						if( oldReceiver.priority >= bestReceiver.priority )
+						{
+							continue;
+						}
+
+						// end the old interface before starting the new one
+						this.callbacks.interfaceEnded( transmitter.epa, oldReceiver.epa, iface,
+							this.computeEntityTransform( transmitter, oldReceiver ) );
+						let oldIndex = newInterfacesInProgress.findIndex( ( iip: InterfaceInProgress ) => 
+							( iip == currentIip ) );
+						if( oldIndex != -1 )
+						{
+							newInterfacesInProgress.splice( oldIndex, 1 );
+						}
+					}
+
+					this.log( `interface started ${ endpointAddrToString( transmitter.epa ) } `
+						+` to ${ endpointAddrToString( bestReceiver.epa ) } for ${ iface }` );
+
+					// we found a transmitter and receiver that are touching and share an interface.
+					this.callbacks.interfaceStarted( transmitter.epa, bestReceiver.epa, iface,
+						this.computeEntityTransform( transmitter, bestReceiver ) );
+
+					newInterfacesInProgress.push(
+						{
+							transmitter: transmitter.epa,
+							receiver: bestReceiver.epa,
+							iface: iface,
+							locked: false,
+							transmitterWantsTransforms: transmitter.wantsTransforms,
+							receiverWantsTransforms: bestReceiver.wantsTransforms,
+						} );
+				}
+
 			}
 		}
 
@@ -392,7 +436,7 @@ export class CInterfaceProcessor
 				foundIip = true;
 				if( iip.iface != iface )
 				{
-					console.log( `Discarding interface event from ${ endpointAddrToString( peerEpa ) } `
+					this.log( `Discarding interface event from ${ endpointAddrToString( peerEpa ) } `
 						+` to ${ endpointAddrToString( destEpa ) } for ${ iface }`
 						+` because the interface between those two is ${ iip.iface }`, event );
 					break;
@@ -402,7 +446,7 @@ export class CInterfaceProcessor
 				let peer = this.lastEntityMap?.find( peerEpa );
 
 				let destinationFromPeer = this.computeEntityTransform( destination, peer );
-				console.log( `Reflecting interface event from ${ endpointAddrToString( peerEpa ) } `
+				this.log( `Reflecting interface event from ${ endpointAddrToString( peerEpa ) } `
 					+` to ${ endpointAddrToString( destEpa ) } for ${ iface }`, event, destinationFromPeer );
 
 				this.callbacks.interfaceEvent( destEpa, peerEpa, iface, event, destinationFromPeer );
@@ -414,17 +458,18 @@ export class CInterfaceProcessor
 
 		if( !foundIip )
 		{
-			console.log( `Discarding interface event from ${ endpointAddrToString( peerEpa ) } `
+			this.log( `Discarding interface event from ${ endpointAddrToString( peerEpa ) } `
 			+` to ${ endpointAddrToString( destEpa ) } for ${ iface }`
 			+` because the interface was not found`, event );
 		}
 	}
 
-	private findIip( transmitter: EndpointAddr ): InterfaceInProgress
+	private findIip( transmitter: EndpointAddr, receiver: EndpointAddr ): InterfaceInProgress
 	{
 		for( let iip of this.interfacesInProgress )
 		{
-			if( endpointAddrsMatch( transmitter, iip.transmitter ) )
+			if( endpointAddrsMatch( transmitter, iip.transmitter )
+				&& endpointAddrsMatch( receiver, iip.receiver ) )
 			{
 				return iip;
 			}
@@ -435,23 +480,32 @@ export class CInterfaceProcessor
 
 	public lockInterface( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string ): InterfaceLockResult
 	{
-		let iip = this.findIip(transmitter);
+		let iip = this.findIip( transmitter, receiver );
 		if( !iip )
 		{
+			this.log( `Failed to lock interface ${ endpointAddrToString( transmitter ) } `
+				+` to ${ endpointAddrToString( receiver ) } for ${ iface }: `
+				+ `no interface in progress` );
 			return InterfaceLockResult.InterfaceNotFound;
 		}
 
 		if( iip.locked )
 		{
+			this.log( `Failed to lock interface ${ endpointAddrToString( transmitter ) } `
+				+` to ${ endpointAddrToString( receiver ) } for ${ iface }: `
+				+ `already locked` );
 			return InterfaceLockResult.AlreadyLocked;
 		}
 
 		if( iip.iface != iface )
 		{
+			this.log( `Failed to lock interface ${ endpointAddrToString( transmitter ) } `
+				+` to ${ endpointAddrToString( receiver ) } for ${ iface }: `
+				+ `mismatched interface (${ iip.iface })` );
 			return InterfaceLockResult.InterfaceNameMismatch;
 		}
 
-		console.log( `Locking interface ${ endpointAddrToString( transmitter ) } `
+		this.log( `Locking interface ${ endpointAddrToString( transmitter ) } `
 			+` to ${ endpointAddrToString( receiver ) } for ${ iface }` );
 
 		iip.locked = true;
@@ -461,7 +515,7 @@ export class CInterfaceProcessor
 
 	public unlockInterface( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string ): InterfaceLockResult
 	{
-		let iip = this.findIip(transmitter);
+		let iip = this.findIip( transmitter, receiver );
 		if( !iip )
 		{
 			if( this.lostLockedInterfaces.has( endpointAddrToString( transmitter ) ) )
@@ -497,7 +551,7 @@ export class CInterfaceProcessor
 			return InterfaceLockResult.InterfaceReceiverMismatch;
 		}
 
-		console.log( `Unlocking interface ${ endpointAddrToString( transmitter ) } `
+		this.log( `Unlocking interface ${ endpointAddrToString( transmitter ) } `
 			+` to ${ endpointAddrToString( receiver ) } for ${ iface }` );
 
 		iip.locked = false;
@@ -508,7 +562,7 @@ export class CInterfaceProcessor
 	public relockInterface( transmitterEpa: EndpointAddr, oldReceiverEpa: EndpointAddr, 
 		newReceiverEpa: EndpointAddr, iface: string ): InterfaceLockResult
 	{
-		let iip = this.findIip( transmitterEpa );
+		let iip = this.findIip( transmitterEpa, oldReceiverEpa );
 		if( !iip )
 		{
 			return InterfaceLockResult.InterfaceNotFound;
@@ -543,7 +597,7 @@ export class CInterfaceProcessor
 		this.callbacks.interfaceEnded( transmitterEpa, oldReceiverEpa, iface, transmitterFromOldReceiver );
 		this.callbacks.interfaceStarted( transmitterEpa, newReceiverEpa, iface, transmitterFromNewReceiver );
 
-		console.log( `Relocking interface ${ endpointAddrToString( transmitterEpa ) } `
+		this.log( `Relocking interface ${ endpointAddrToString( transmitterEpa ) } `
 		+ ` from ${ endpointAddrToString( oldReceiverEpa ) }`
 		+` to ${ endpointAddrToString( newReceiverEpa ) } for ${ iface }` );
 
