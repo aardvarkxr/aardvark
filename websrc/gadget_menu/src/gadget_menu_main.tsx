@@ -6,6 +6,7 @@ import bind from 'bind-decorator';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import { initSentryForBrowser } from 'common/sentry_utils';
+import { ConsoleTransportOptions } from 'winston/lib/winston/transports';
 
 initSentryForBrowser();
 
@@ -385,14 +386,19 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 				console.log( `starting gadgest ${JSON.stringify( this.settings.autoLaunch) }` )
 				for ( let autoLaunch of this.settings.autoLaunch )
 				{
-					let res = await AvGadget.instance().startGadget( autoLaunch, [] )
-					if (res.success)
-					{
-						console.log( `started gadget ${ autoLaunch }` );
-						resolve();
-					} 
-					else
-					{
+					try {
+						let res = await AvGadget.instance().startGadget( autoLaunch, [] )
+						if (res.success)
+						{
+							console.log( `started gadget ${ autoLaunch }` );
+							resolve();
+						} 
+						else
+						{
+							console.log( `gadget start failed ${ autoLaunch }` );
+							reject();
+						}
+					} catch (err) {
 						console.log( `gadget start failed ${ autoLaunch }` );
 						reject();
 					}
@@ -1252,7 +1258,6 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		origin: string, userAgent: string ) : Promise< [ AvGadgetSettings ] >
 	{
 		let [ gadgetUrl ] = args;
-
 		const favorited = this.settings.favorites.indexOf( gadgetUrl ) >= 0;
 		const markedForAutoLaunch = this.settings.autoLaunch.indexOf( gadgetUrl ) >= 0;
 		let gadgetSettings: AvGadgetSettings = {

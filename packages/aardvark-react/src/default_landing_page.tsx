@@ -85,7 +85,6 @@ export class DefaultLanding extends React.Component<DefaultLandingProps, Default
 		{
 			case GadgetListResult.Success:
 				text = successMessage;
-				this.getSettingsForGadget();
 				break;
 
 			case GadgetListResult.NotConnected:
@@ -118,6 +117,10 @@ export class DefaultLanding extends React.Component<DefaultLandingProps, Default
 				break;
 		}
 
+		if(this.state.connected) {
+			 this.getSettingsForGadget();
+		}
+
 		this.setState( { addResult: text } );
 	}
 
@@ -127,7 +130,7 @@ export class DefaultLanding extends React.Component<DefaultLandingProps, Default
 		try
 		{
 			let promResult = this.gadgetList.current.removeFavorite( this.gadgetUrl );
-			this.setGadgetListResult( await promResult, "Removed" );
+			this.setGadgetListResult( await promResult, "Removed from Favorites" );
 		}
 		catch( e )
 		{
@@ -142,7 +145,7 @@ export class DefaultLanding extends React.Component<DefaultLandingProps, Default
 		try
 		{
 			let promResult = this.gadgetList.current.removeAutoLaunch( this.gadgetUrl );
-			this.setGadgetListResult( await promResult, "Removed" );
+			this.setGadgetListResult( await promResult, "Removed from Auto Launch" );
 		}
 		catch( e )
 		{
@@ -157,7 +160,7 @@ export class DefaultLanding extends React.Component<DefaultLandingProps, Default
 		try
 		{
 			let promResult = this.gadgetList.current.setAutoLaunch( this.gadgetUrl );
-			this.setGadgetListResult( await promResult, "Removed" );
+			this.setGadgetListResult( await promResult, "Added to Auto Launch" );
 		}
 		catch( e )
 		{
@@ -166,7 +169,6 @@ export class DefaultLanding extends React.Component<DefaultLandingProps, Default
 
 	}
 
-	//MOOSE: Wip
 	@bind
 	private async getSettingsForGadget()
 	{
@@ -207,10 +209,8 @@ export class DefaultLanding extends React.Component<DefaultLandingProps, Default
 		if( this.state.hostSettings && this.state.manifest)
 		{
 			return <>
-				{ this.state.hostSettings.favorited &&
-					<div className="LandingButton" onClick={ this.onAddFavorite }>Add to Favorites</div> }
 				{ !this.state.hostSettings.favorited &&
-					<div className="LandingButton" onClick={ this.onRemoveFavorite }>Remove from Favorites</div> }
+					<div className="LandingButton" onClick={ this.onAddFavorite }>Add to Favorites</div> }
 				{ this.state.hostSettings.favorited &&
 					<div className="LandingButton" onClick={ this.onRemoveFavorite }>Remove from Favorites</div> }
 				{ !this.state.hostSettings.markedForAutoLaunch && this.state.manifest.aardvark.startAutomatically &&
