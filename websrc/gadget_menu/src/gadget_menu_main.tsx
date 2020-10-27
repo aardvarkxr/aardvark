@@ -1,5 +1,5 @@
 import { ApiInterfaceSender, ActiveInterface, AvGadget, AvGadgetSeed, AvGrabButton, AvHeadFacingTransform, AvHighlightTransmitters, AvInterfaceEntity, AvLine, AvModel, AvOrigin, AvPanel, AvPrimitive, AvStandardGrabbable, AvTransform, GadgetInfoEvent, GadgetSeedHighlight, HiddenChildrenBehavior, k_GadgetInfoInterface, PrimitiveType, PrimitiveYOrigin, renderGadgetIcon, ShowGrabbableChildren, k_GadgetListInterface, GadgetListEventType, AvMessagebox, AvApiInterface, ApiInterfaceHandler, GadgetListResult, AvMenuItem, GrabbableStyle } from '@aardvarkxr/aardvark-react';
-import { Av, WindowInfo, AardvarkManifest, AvNodeTransform, AvVector, emptyVolume, EndpointAddr, g_builtinModelFlask, g_builtinModelAutoLaunchInactive, g_builtinModelAutoLaunchActive, g_builtinModelBarcodeScanner, nodeTransformToMat4, nodeTransformFromMat4, g_builtinModelDropAttract, g_builtinModelNetwork, g_builtinModelHammerAndWrench, g_builtinModelStar, g_builtinModelTrashcan, MessageType, MsgDestroyGadget, rayVolume, MsgInstallGadget, g_builtinModelPanel, AvVolume, EVolumeType, g_builtinModelArrowFlat, g_builtinModelWindowIcon, infiniteVolume, endpointAddrToString } from '@aardvarkxr/aardvark-shared';
+import { Av, WindowInfo, AvStartGadgetResult, AardvarkManifest, AvNodeTransform, AvVector, emptyVolume, EndpointAddr, g_builtinModelFlask, g_builtinModelRocketship, g_builtinModelBarcodeScanner, nodeTransformToMat4, nodeTransformFromMat4, g_builtinModelDropAttract, g_builtinModelNetwork, g_builtinModelHammerAndWrench, g_builtinModelStar, g_builtinModelTrashcan, MessageType, MsgDestroyGadget, rayVolume, MsgInstallGadget, g_builtinModelPanel, AvVolume, EVolumeType, g_builtinModelArrowFlat, g_builtinModelWindowIcon, infiniteVolume, endpointAddrToString } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3, vec4 } from '@tlaukkan/tsm';
 import Axios from 'axios';
 import bind from 'bind-decorator';
@@ -10,6 +10,21 @@ import { initSentryForBrowser } from 'common/sentry_utils';
 initSentryForBrowser();
 
 const k_gadgetRegistryUI = "aardvark-gadget-registry@1";
+
+interface Icon {
+	modelUri: string,
+	rotateX: number
+}
+
+const k_iconAutoLaunchActive: Icon = {
+	modelUri: g_builtinModelRocketship,
+	rotateX: 0
+}
+
+const k_iconAutoLaunchInactive: Icon = {
+	modelUri: g_builtinModelTrashcan,
+	rotateX: 90
+}
 
 interface InfoPanelProps
 {
@@ -39,7 +54,7 @@ interface GadgetInfoPanelProps
 	highlight?: GadgetSeedHighlight;
 	autoLaunchSet?: boolean;
 	deleteCallback?: () => void;
-	autoLaunchCallBack?: () => void;
+	autoLaunchToggleCallback?: () => void;
 }
 
 const k_desktopWindowGadget = "http://localhost:23842/gadgets/desktop_window";
@@ -67,19 +82,18 @@ function GadgetInfoPanel( props: GadgetInfoPanelProps )
 			</AvTransform>
 		}
 		{ props.manifest.aardvark.startAutomatically && props.highlight == GadgetSeedHighlight.Menu &&
-			autoLaunchSubMenu(props.autoLaunchSet, props.autoLaunchCallBack)
+			autoLaunchSubMenu(props.autoLaunchSet, props.autoLaunchToggleCallback)
 		}
 	</>;
 }
 
 function autoLaunchSubMenu( autoLaunchSet: boolean, autoLaunchCallBack: () => void)
 {
-	const rotationAboutModelSpaceX = autoLaunchSet ? 0 : -90;
-	const modelUri = autoLaunchSet ? g_builtinModelAutoLaunchActive : g_builtinModelAutoLaunchInactive;
+	const icon = autoLaunchSet ? k_iconAutoLaunchActive : k_iconAutoLaunchInactive;
 	return <>
 		<AvTransform translateY={ 0.00 } translateX={ 0.065 } translateZ={ 0.03 } 
-						rotateX={ rotationAboutModelSpaceX } uniformScale={ 0.2 }>
-						<AvMenuItem modelUri={ modelUri } 
+						rotateX={ icon.rotateX } uniformScale={ 0.2 }>
+						<AvMenuItem modelUri={ icon.modelUri } 
 							onSelect={ autoLaunchCallBack }/>
 		</AvTransform>
 	</>
@@ -380,23 +394,26 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 	@bind
 	private autoLaunchGadgets()
 	{
-		return new Promise<any>( async ( resolve, reject ) => 
+		return new Promise<void>( async ( resolve, reject ) => 
 			{
 				console.log( `starting gadgest ${JSON.stringify( this.settings.autoLaunch) }` )
+				let gadgetStartPromises: Promise<AvStartGadgetResult>[] = [];
 				for ( let autoLaunch of this.settings.autoLaunch )
 				{
-					let res = await AvGadget.instance().startGadget( autoLaunch, [] )
-					if (res.success)
-					{
-						console.log( `started gadget ${ autoLaunch }` );
-						resolve();
-					} 
-					else
-					{
-						console.log( `gadget start failed ${ autoLaunch }` );
+					gadgetStartPromises.push(AvGadget.instance().startGadget( autoLaunch, [] ));
+				}
+
+				Promise.all(gadgetStartPromises)
+				.then( (results: AvStartGadgetResult[] ) => {
+					const failedGadgets = results.filter( (result) => {
+						return !result.success;
+					});
+
+					if (results.length > 0){
+						console.log( `gadget start failed for ${ JSON.stringify( failedGadgets ) }` );
 						reject();
 					}
-				}
+				});
 			}
 		)
 	}
@@ -810,7 +827,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 			let row = Math.floor( gadgetIndex / 3 );
 
 			let deleteFn = null;
-			let favoriteFn =  null;
+			let toggleAutoLaunchFn =  null;
 			if( this.state.tab == ControlPanelTab.Favorites && this.state.panel?.gadgetUrl == gadget.url )
 			{
 				deleteFn = () => { this.removeFavorite( gadget.url ); }
@@ -821,10 +838,10 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 			{
 				if (this.settings.autoLaunch.indexOf(gadget.url)) {
 					autoLaunchSet = true;
-					favoriteFn = () => { this.setAutoLaunch( gadget.url ); }
+					toggleAutoLaunchFn = () => { this.setAutoLaunch( gadget.url ); }
 				} else {
 					autoLaunchSet = false;
-					favoriteFn = () => { this.disableAutoLaunch( gadget.url ); }
+					toggleAutoLaunchFn = () => { this.disableAutoLaunch( gadget.url ); }
 				}
 			}
 
@@ -848,7 +865,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 							highlight={ this.state.panel.highlight } 
 							autoLaunchSet={ autoLaunchSet }
 							deleteCallback={ deleteFn }
-							autoLaunchCallBack={ favoriteFn } /> }
+							autoLaunchToggleCallback={ toggleAutoLaunchFn } /> }
 				</AvTransform>);
 		}
 		return <>

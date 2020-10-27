@@ -667,7 +667,9 @@ export class AvGadget
 		{
 			let notifyNodeId = this.m_nextNodeId++;
 			this.m_startGadgetPromises[ notifyNodeId ] = [ resolve, reject ];
+
 			let initialInterfacesEncoded = btoa( JSON.stringify( initialInterfaces ) );
+			
 			let epToNotify: EndpointAddr = 
 			{
 				type: EndpointType.Node,
