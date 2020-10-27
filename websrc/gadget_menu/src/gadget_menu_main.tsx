@@ -838,7 +838,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 			{
 				if (this.settings.autoLaunch.indexOf(gadget.url)) {
 					autoLaunchSet = true;
-					toggleAutoLaunchFn = () => { this.setAutoLaunch( gadget.url ); }
+					toggleAutoLaunchFn = () => { this.enableAutoLaunch( gadget.url ); }
 				} else {
 					autoLaunchSet = false;
 					toggleAutoLaunchFn = () => { this.disableAutoLaunch( gadget.url ); }
@@ -1027,7 +1027,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 	}
 
 	@bind
-	private setAutoLaunch( gadgetUrl: string, manifest?: AardvarkManifest )
+	private enableAutoLaunch( gadgetUrl: string, manifest?: AardvarkManifest )
 	{
 		if( -1 == this.settings.autoLaunch.indexOf( gadgetUrl ) )
 		{
