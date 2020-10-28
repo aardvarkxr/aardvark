@@ -174,8 +174,8 @@ export class DefaultLanding extends React.Component<DefaultLandingProps, Default
 	{
 		try
 		{
-			let promResult: AvGadgetSettings = await this.gadgetList.current.getSettingsForGadget( this.gadgetUrl );
-			this.setState( { hostSettings: promResult } );
+			let hostSettings = await this.gadgetList.current.getSettingsForGadget( this.gadgetUrl );
+			this.setState( { hostSettings } );
 		}
 		catch( e )
 		{
@@ -206,34 +206,36 @@ export class DefaultLanding extends React.Component<DefaultLandingProps, Default
 				onClick={ this.onStartAardvark }>Start Aardvark</div>;
 		}
 
-		if( this.state.hostSettings && this.state.manifest)
-		{
-			return <>
-				{ !this.state.hostSettings.favorited &&
-					<div className="LandingButton" onClick={ this.onAddFavorite }>Add to Favorites</div> }
-				{ this.state.hostSettings.favorited &&
-					<div className="LandingButton" onClick={ this.onRemoveFavorite }>Remove from Favorites</div> }
-				{ !this.state.hostSettings.markedForAutoLaunch && this.state.manifest.aardvark.startAutomatically &&
-					<div className="LandingButton" onClick={ this.onSetAutoLaunch}>Set to Auto Launch</div> }
-				{ this.state.hostSettings.markedForAutoLaunch && this.state.manifest.aardvark.startAutomatically &&
-					<div className="LandingButton" onClick={ this.onRemoveAutoLaunch}>Remove from Auto Launch Gadgets</div> }
-				<div className="LandingButton" onClick={ this.onStartGadget }>Start Gadget</div>
-				{ this.state.addResult &&
-					<div style={ { fontSize: "medium" }}>{ this.state.addResult }</div> }
-				</>;
-		}
-
 		return <>
-			<div className="LandingButton" onClick={ this.onAddFavorite }>Add to Favorites</div>
-			<div className="LandingButton" onClick={ this.onRemoveFavorite }>Remove from Favorites</div>
-			<div className="LandingButton" onClick={ this.onSetAutoLaunch}>Set to Auto Launch</div>
-			<div className="LandingButton" onClick={ this.onRemoveAutoLaunch}>Remove from Auto Launch Gadgets</div>
+			{ this.renderMutallyExclusiveButtons( 
+				this.onAddFavorite, 
+				this.onRemoveFavorite, 
+				"Favorites", 
+				this.state.hostSettings?.favorited ) }
+
+			{ this.renderMutallyExclusiveButtons( 
+				this.onSetAutoLaunch, 
+				this.onRemoveAutoLaunch, 
+				"Auto Launch", 
+				this.state.manifest 
+					? this.state.hostSettings?.autoLaunchEnabled 
+					: undefined ) }
+
 			<div className="LandingButton" onClick={ this.onStartGadget }>Start Gadget</div>
 			{ this.state.addResult &&
 				<div style={ { fontSize: "medium" }}>{ this.state.addResult }</div> }
-			</>;
+		</>;
 	}
 
+	private renderMutallyExclusiveButtons( enableCallback: () => void, disableCallback: () => void, description: string, testValue?: boolean )
+	{
+		return <>
+			{ (testValue === undefined || !testValue) && 
+				<div className="LandingButton" onClick={ enableCallback }>Add to { description }</div> }
+			{ (testValue === undefined || testValue) && 
+				<div className="LandingButton" onClick={ disableCallback }>Remove from { description }</div> }
+		</>
+	}
 
 	render()
 	{
