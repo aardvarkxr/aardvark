@@ -763,7 +763,7 @@ export interface AardvarkManifest extends WebAppManifest
 export interface AvGadgetSettings
 {
 	favorited: boolean,
-	markedForAutoLaunch: boolean
+	autoLaunchEnabled: boolean
 }
 
 
