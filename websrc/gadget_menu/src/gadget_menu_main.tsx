@@ -582,14 +582,15 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 
 	private getFavorites()
 	{
-		return Object.entries(this.settings.gadgetSettings).reduce( (accumulator: string[], pair: [string, GadgetSettings] ) => {
+		const reduced = Object.entries(this.settings.gadgetSettings).reduce( (accumulator: string[], pair: [string, GadgetSettings] ) => {
 			const [gadgetUri, settings] = pair;
 			if( settings.favorited )
 			{
 				accumulator.push(gadgetUri);
 				return accumulator;
 			}
-		}, []);
+		}, []) ?? [];
+		return reduced;
 	}
 
 	private renderFavoritesTab()
@@ -872,12 +873,12 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 			{
 				if( this.settings.gadgetSettings[ gadget.url ]?.autoLaunchEnabled ) 
 				{
-					autoLaunchSet = true;
+					autoLaunchSet = false;
 					toggleAutoLaunchFn = () => { this.enableAutoLaunch( gadget.url ); }
 				} 
 				else 
 				{
-					autoLaunchSet = false;
+					autoLaunchSet = true;
 					toggleAutoLaunchFn = () => { this.removeAutoLaunch( gadget.url ); }
 				}
 			}
@@ -1071,14 +1072,13 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 			console.log( `Adding to auto launch: ${ gadgetUrl } ` );
 			this.settings.gadgetSettings = {
 				...this.settings.gadgetSettings,
-				gadgetUrl: {
+				[ gadgetUrl ]: {
 					...this.settings.gadgetSettings[ gadgetUrl ],
 					autoLaunchEnabled: true
 				}
 			}
 
 			this.updateSettings();
-
 			if( !this.manifestsByUrl.has( gadgetUrl ) )
 			{
 				if( !manifest )
@@ -1144,7 +1144,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 			console.log( `Adding to favorites: ${ gadgetUrl } ` );
 			this.settings.gadgetSettings = {
 				...this.settings.gadgetSettings,
-				gadgetUrl: {
+				[ gadgetUrl ]: {
 					...this.settings.gadgetSettings[ gadgetUrl ],
 					favorited: true
 				}

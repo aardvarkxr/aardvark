@@ -217,9 +217,7 @@ export class DefaultLanding extends React.Component<DefaultLandingProps, Default
 				this.onSetAutoLaunch, 
 				this.onRemoveAutoLaunch, 
 				"Auto Launch", 
-				this.state.manifest 
-					? this.state.hostSettings?.autoLaunchEnabled 
-					: undefined ) }
+				this.state.hostSettings?.autoLaunchEnabled ) }
 
 			<div className="LandingButton" onClick={ this.onStartGadget }>Start Gadget</div>
 			{ this.state.addResult &&
