@@ -79,7 +79,8 @@ beforeEach( async() =>
 									permissions: [],
 									browserWidth: 16,
 									browserHeight: 16,
-									startAutomatically: false,	
+									startAutomatically: false,
+									restrictToSingleInstance: false,
 								}
 							}
 						}

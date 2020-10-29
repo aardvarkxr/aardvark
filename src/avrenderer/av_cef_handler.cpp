@@ -70,6 +70,13 @@ void CAardvarkCefHandler::onGadgetManifestReceived( bool success, const std::vec
 		return;
 	}
 
+	if (m_gadgetManifest.m_aardvark.m_restrictToSingleInstance 
+	    && CAardvarkCefApp::instance()->IsInstanceOfGadgetRunning( m_params ) )
+	{
+		LOG( INFO ) << "duplicate creation of singleton gadget " << this->m_params.uri << ".";
+		return;
+	}
+
 	m_gadgetManifestString = std::string( manifestData.begin(), manifestData.end() );
 
 	// Specify CEF browser settings here.

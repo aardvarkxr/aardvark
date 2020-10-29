@@ -155,7 +155,6 @@ void CAardvarkCefApp::OnContextInitialized()
 	startGadget( params );
 }
 
-
 void CAardvarkCefApp::startGadget( const aardvark::GadgetParams_t& params )
 {
 	CEF_REQUIRE_UI_THREAD();
@@ -164,6 +163,13 @@ void CAardvarkCefApp::startGadget( const aardvark::GadgetParams_t& params )
 	CefRefPtr<CAardvarkCefHandler> handler( new CAardvarkCefHandler( this, params ) );
 	m_browsers.push_back( handler );
 	handler->start();
+}
+
+bool CAardvarkCefApp::IsInstanceOfGadgetRunning( const aardvark::GadgetParams_t& params )
+{
+	return std::any_of(m_browsers.begin(), m_browsers.end(), [&params](const auto& handler) -> bool {
+		return handler->IsInstanceOfGadget(params);
+	});
 }
 
 

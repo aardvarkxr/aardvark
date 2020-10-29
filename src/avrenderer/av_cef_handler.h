@@ -111,7 +111,7 @@ public:
 		TerminationStatus status ) override;
 
 	bool IsClosing() const { return m_isClosing; }
-
+	bool IsInstanceOfGadget( const aardvark::GadgetParams_t& params ) const { return m_params.uri == params.uri; };
 	void triggerClose( bool forceClose );
 
 	// Called after creation to kick off the gadget
@@ -122,6 +122,7 @@ public:
 
 	// Called when a window info changes for a subscribed window
 	void windowUpdate( CefRefPtr<CefListValue> windowInfo );
+
 private:
 	// Platform-specific implementation.
 	void PlatformTitleChange(CefRefPtr<CefBrowser> browser,

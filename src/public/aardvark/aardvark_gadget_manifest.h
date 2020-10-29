@@ -8,6 +8,7 @@ class CAardvarkManifestExtension
 public:
 	std::unordered_set<std::string> m_permissions;
 	uint32_t m_width = 16, m_height = 16;
+	bool m_restrictToSingleInstance = false;
 };
 
 void to_json( nlohmann::json& j, const CAardvarkManifestExtension& gm );
