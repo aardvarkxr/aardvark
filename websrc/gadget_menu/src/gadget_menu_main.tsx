@@ -871,12 +871,12 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 			{
 				if( this.settings.gadgetSettings[ gadget.url ]?.autoLaunchEnabled ) 
 				{
-					autoLaunchSet = true;
+					autoLaunchSet = false;
 					toggleAutoLaunchFn = () => { this.enableAutoLaunch( gadget.url ); }
 				} 
 				else 
 				{
-					autoLaunchSet = false;
+					autoLaunchSet = true;
 					toggleAutoLaunchFn = () => { this.disableAutoLaunch( gadget.url ); }
 				}
 			}
@@ -1070,7 +1070,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 			console.log( `Adding to auto launch: ${ gadgetUrl } ` );
 			this.settings.gadgetSettings = {
 				...this.settings.gadgetSettings,
-				gadgetUrl: {
+				[ gadgetUrl ]: {
 					...this.settings.gadgetSettings[ gadgetUrl ],
 					autoLaunchEnabled: true
 				}
@@ -1143,7 +1143,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 			console.log( `Adding to favorites: ${ gadgetUrl } ` );
 			this.settings.gadgetSettings = {
 				...this.settings.gadgetSettings,
-				gadgetUrl: {
+				[ gadgetUrl ]: {
 					...this.settings.gadgetSettings[ gadgetUrl ],
 					favorited: true
 				}
