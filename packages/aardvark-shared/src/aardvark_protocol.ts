@@ -45,6 +45,8 @@ export enum MessageType
 	GetInstalledGadgets = 400,
 	GetInstalledGadgetsResponse = 401,
 	InstallGadget = 402,
+	SetGadgetToAutoLaunch = 403,
+	RemoveGadgetFromAutoLaunch = 404,
 
 	// gadget has "room" permissions
 	// CreateRoom = 600,

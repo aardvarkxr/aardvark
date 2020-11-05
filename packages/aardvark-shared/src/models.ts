@@ -29,3 +29,4 @@ export const g_builtinModelSphere = g_builtinModelPrefix + "sphere/sphere.glb";
 export const g_builtinModelStar = g_builtinModelPrefix + "star.glb";
 export const g_builtinModelTrashcan = g_builtinModelPrefix + "trashcan.glb";
 export const g_builtinModelWindowIcon = g_builtinModelPrefix + "window_icon.glb";
+export const g_builtinModelRocketship = g_builtinModelPrefix + "rocketship.glb";

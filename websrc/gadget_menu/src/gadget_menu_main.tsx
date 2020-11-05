@@ -1,5 +1,5 @@
 import { ApiInterfaceSender, ActiveInterface, AvGadget, AvGadgetSeed, AvGrabButton, AvHeadFacingTransform, AvHighlightTransmitters, AvInterfaceEntity, AvLine, AvModel, AvOrigin, AvPanel, AvPrimitive, AvStandardGrabbable, AvTransform, GadgetInfoEvent, GadgetSeedHighlight, HiddenChildrenBehavior, k_GadgetInfoInterface, PrimitiveType, PrimitiveYOrigin, renderGadgetIcon, ShowGrabbableChildren, k_GadgetListInterface, GadgetListEventType, AvMessagebox, AvApiInterface, ApiInterfaceHandler, GadgetListResult, AvMenuItem, GrabbableStyle } from '@aardvarkxr/aardvark-react';
-import { Av, WindowInfo, AardvarkManifest, AvNodeTransform, AvVector, emptyVolume, EndpointAddr, g_builtinModelFlask, g_builtinModelBarcodeScanner, nodeTransformToMat4, nodeTransformFromMat4, g_builtinModelDropAttract, g_builtinModelNetwork, g_builtinModelHammerAndWrench, g_builtinModelStar, g_builtinModelTrashcan, MessageType, MsgDestroyGadget, rayVolume, MsgInstallGadget, g_builtinModelPanel, AvVolume, EVolumeType, g_builtinModelArrowFlat, g_builtinModelWindowIcon, infiniteVolume, endpointAddrToString } from '@aardvarkxr/aardvark-shared';
+import { Av, WindowInfo, AvStartGadgetResult, AardvarkManifest, AvNodeTransform, AvVector, emptyVolume, EndpointAddr, g_builtinModelFlask, g_builtinModelRocketship, g_builtinModelBarcodeScanner, nodeTransformToMat4, nodeTransformFromMat4, g_builtinModelDropAttract, g_builtinModelNetwork, g_builtinModelHammerAndWrench, g_builtinModelStar, g_builtinModelTrashcan, MessageType, MsgDestroyGadget, rayVolume, MsgInstallGadget, g_builtinModelPanel, AvVolume, EVolumeType, g_builtinModelArrowFlat, g_builtinModelWindowIcon, infiniteVolume, endpointAddrToString } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3, vec4 } from '@tlaukkan/tsm';
 import Axios from 'axios';
 import bind from 'bind-decorator';
@@ -10,6 +10,21 @@ import { initSentryForBrowser } from 'common/sentry_utils';
 initSentryForBrowser();
 
 const k_gadgetRegistryUI = "aardvark-gadget-registry@1";
+
+interface Icon {
+	modelUri: string,
+	rotateX: number
+}
+
+const k_iconAutoLaunchActive: Icon = {
+	modelUri: g_builtinModelRocketship,
+	rotateX: 0
+}
+
+const k_iconAutoLaunchInactive: Icon = {
+	modelUri: g_builtinModelTrashcan,
+	rotateX: 90
+}
 
 interface InfoPanelProps
 {
@@ -37,7 +52,9 @@ interface GadgetInfoPanelProps
 {
 	manifest: AardvarkManifest;
 	highlight?: GadgetSeedHighlight;
+	autoLaunchSet?: boolean;
 	deleteCallback?: () => void;
+	autoLaunchToggleCallback?: () => void;
 }
 
 const k_desktopWindowGadget = "http://localhost:23842/gadgets/desktop_window";
@@ -45,7 +62,7 @@ const k_desktopWindowGadget = "http://localhost:23842/gadgets/desktop_window";
 function GadgetInfoPanel( props: GadgetInfoPanelProps )
 {
 	return <>
-		<InfoPanel widthInMeters={ 0.2 } translation={ { x: 0.13, y: 0, z: 0.03 } }>
+		<InfoPanel widthInMeters={ 0.2 } translation={ { x: 0.0, y: -0.02, z: 0.03 } }>
 			<div className="GadgetName">{ props.manifest.name }</div>
 			<div className="GadgetDescription">{ props.manifest.description }</div>
 			{ props.manifest.categories && props.manifest.categories.length > 0 &&
@@ -64,7 +81,22 @@ function GadgetInfoPanel( props: GadgetInfoPanelProps )
 								onSelect={ props.deleteCallback }/>
 			</AvTransform>
 		}
+		{ props.manifest.aardvark.startAutomatically && props.highlight == GadgetSeedHighlight.Menu &&
+			autoLaunchSubMenu(props.autoLaunchSet, props.autoLaunchToggleCallback)
+		}
 	</>;
+}
+
+function autoLaunchSubMenu( autoLaunchSet: boolean, autoLaunchCallBack: () => void)
+{
+	const icon = autoLaunchSet ? k_iconAutoLaunchActive : k_iconAutoLaunchInactive;
+	return <>
+		<AvTransform translateY={ 0.00 } translateX={ 0.065 } translateZ={ 0.03 } 
+						rotateX={ icon.rotateX } uniformScale={ 0.2 }>
+						<AvMenuItem modelUri={ icon.modelUri } 
+							onSelect={ autoLaunchCallBack }/>
+		</AvTransform>
+	</>
 }
 
 function windowDimsToSize( widthInPixels: number, heightInPixels: number, constraintInMeters: number )
@@ -211,9 +243,15 @@ interface GadgetUIEvent
 const k_rayStart = new vec3( [  0.000, 0.045, -0.02 ] );
 const k_rayDir = new vec3( [ 0, 0, -1 ] );
 
+interface GadgetSettings
+{
+	favorited?: boolean,
+	autoLaunchEnabled?: boolean,
+}
+
 interface GadgetMenuSettings
 {
-	favorites: string[];
+	gadgetSettings: Record<string, GadgetSettings>
 }
 
 const k_alwaysInstalledGadgets =
@@ -262,11 +300,22 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		let settingsString = window.localStorage.getItem( "aardvark_gadget_menu_settings" );
 		if( !settingsString )
 		{
-			this.settings = { favorites: [] };
+			this.settings = { gadgetSettings: {} };
 		}
 		else
 		{
-			this.settings = JSON.parse( settingsString ) as GadgetMenuSettings;
+			const settings = JSON.parse( settingsString )
+			if ( "favorites" in settings )
+			{
+				this.settings = { gadgetSettings: {} };
+				for( const gadgetUri of settings.favorites )
+				{
+					this.settings.gadgetSettings[ gadgetUri ] = { favorited: true };
+				}
+				this.updateSettings();
+			} else {
+				this.settings = JSON.parse( settingsString ) as GadgetMenuSettings;
+			}
 		}
 
 		Axios.get( "https://aardvarkxr.github.io/gadget-registry/registry.json" )
@@ -275,17 +324,26 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 			this.registry = response.data as Registry;
 			for( let entry of this.registry.gadgets )
 			{
-				this.requestManifest( entry.url );
+				this.requestManifest( entry.url )
+				.catch( (reason: any) => 
+				{
+					console.log( `Unable to load manifest for ${ entry.url }: ${ JSON.stringify( reason ) }`)
+				});
 			}
 			for( let entry of this.registry.labs )
 			{
-				this.requestManifest( entry.url );
+				this.requestManifest( entry.url )
+				.catch( (reason: any) => 
+				{
+					console.log( `Unable to load manifest for ${ entry.url }: ${ JSON.stringify( reason ) }`)
+				});
 			}
 		} )
 		.catch( ( reason: any ) =>
 		{
 			this.setState( { registryLoadFailed: true } );
-		} );
+		});
+
 
 		AvGadget.instance().getInstalledGadgets()
 		.then( ( installedGadgets: string[] ) =>
@@ -293,11 +351,16 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 			let addedOne = false;
 			for( let gadgetUrl of installedGadgets )
 			{
-				if( -1 == this.settings.favorites.indexOf( gadgetUrl ) )
+				if( !this.settings.gadgetSettings[gadgetUrl]?.favorited )
 				{
 					console.log( `Adding favorite from installed list: ${ gadgetUrl } ` );
-					this.settings.favorites.push( gadgetUrl );
-					this.requestManifest( gadgetUrl );
+					this.settings.gadgetSettings[gadgetUrl].favorited = true;
+					this.requestManifest( gadgetUrl )
+					.catch( (reason: any) => 
+					{
+						console.log( `Unable to load manifest for ${ gadgetUrl }: ${ JSON.stringify( reason ) }`)
+					});
+
 					addedOne = true;
 				}
 			}
@@ -306,19 +369,74 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 			{
 				this.updateSettings();
 			}
-		} );
-
-		for( let favorite of this.settings.favorites )
+		} )
+		.catch( (reason: any) => 
 		{
-			this.requestManifest( favorite );
+			console.log( `Get installed gadgets failed with ${ JSON.stringify( reason ) }` );
+		});
+
+		for( const gadgetUri in this.settings.gadgetSettings)
+		{
+			if( this.settings.gadgetSettings[ gadgetUri ].favorited )
+			{
+				this.requestManifest( gadgetUri )
+				.catch( (reason: any) =>
+				{
+					console.log( `Get gadget manifest for ${ gadgetUri } failed with ${ JSON.stringify( reason ) }` );
+				});
+			}
 		}
 
 		for( let builtin of k_alwaysInstalledGadgets )
 		{
-			this.requestManifest( builtin );
+			this.requestManifest( builtin )
+			.catch( (reason: any) =>
+			{
+				console.log( `Get gadget manifest for ${ builtin } failed with ${ JSON.stringify( reason ) }` );
+			});
 		}
 
-		this.requestManifest( k_desktopWindowGadget );
+		this.requestManifest( k_desktopWindowGadget )
+		.catch( (reason: any) =>
+		{
+			console.log( `Get gadget manifest for desktop window gadget failed with ${ JSON.stringify( reason ) }` );
+		});
+
+		this.autoLaunchGadgets()
+		.catch( (reason: any) =>
+		{
+			console.log( `Auto launch gadgets failed: ${ JSON.stringify( reason ) }` );
+		});
+	}
+
+	@bind
+	private autoLaunchGadgets()
+	{
+		return new Promise<void>( async ( resolve, reject ) => 
+			{
+				let gadgetStartPromises: Promise<AvStartGadgetResult>[] = [];
+				for ( const gadgetUri in this.settings.gadgetSettings )
+				{
+					if( this.settings.gadgetSettings[ gadgetUri ].autoLaunchEnabled )
+					{
+						console.log( `starting auto launch enabled gadget ${ gadgetUri }` );
+						gadgetStartPromises.push(AvGadget.instance().startGadget( gadgetUri, [] ));
+					}
+				}
+
+				Promise.all(gadgetStartPromises)
+				.then( (results: AvStartGadgetResult[] ) => {
+					const failedGadgets = results.filter( (result) => {
+						return !result.success;
+					});
+
+					if (results.length > 0){
+						console.log( `gadget start failed for ${ JSON.stringify( failedGadgets ) }` );
+						reject();
+					}
+				});
+			}
+		)
 	}
 
 	private requestManifest( url: string )
@@ -461,9 +579,21 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		return this.renderRegistryEntries( k_alwaysInstalledGadgets );
 	}
 
+	private getFavorites()
+	{
+		return Object.entries(this.settings.gadgetSettings).reduce( (accumulator: string[], pair: [string, GadgetSettings] ) => {
+			const [gadgetUri, settings] = pair;
+			if( settings.favorited )
+			{
+				accumulator.push(gadgetUri);
+				return accumulator;
+			}
+		}, []);
+	}
+
 	private renderFavoritesTab()
 	{
-		return this.renderRegistryEntries( this.settings.favorites );
+		return this.renderRegistryEntries( this.getFavorites() );
 	}
 
 	private renderFooter( canScrollUp?: boolean, canScrollDown?: boolean )
@@ -478,7 +608,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		{
 			buttons.push( [ g_builtinModelFlask, ControlPanelTab.Labs ] );
 		}
-		if( this.settings?.favorites?.length > 0 )
+		if( this.getFavorites().length > 0 )
 		{
 			buttons.push( [ g_builtinModelStar, ControlPanelTab.Favorites ] );
 		}
@@ -730,9 +860,25 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 			let row = Math.floor( gadgetIndex / 3 );
 
 			let deleteFn = null;
+			let toggleAutoLaunchFn =  null;
 			if( this.state.tab == ControlPanelTab.Favorites && this.state.panel?.gadgetUrl == gadget.url )
 			{
 				deleteFn = () => { this.removeFavorite( gadget.url ); }
+			}
+
+			let autoLaunchSet = null;
+			if( this.state.panel?.gadgetUrl == gadget.url)
+			{
+				if( this.settings.gadgetSettings[ gadget.url ]?.autoLaunchEnabled ) 
+				{
+					autoLaunchSet = false;
+					toggleAutoLaunchFn = () => { this.enableAutoLaunch( gadget.url ); }
+				} 
+				else 
+				{
+					autoLaunchSet = true;
+					toggleAutoLaunchFn = () => { this.disableAutoLaunch( gadget.url ); }
+				}
 			}
 
 			seeds.push( 
@@ -753,7 +899,9 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 						&& !this.state.scannerGadget &&
 						<GadgetInfoPanel manifest={ gadget.manifest } 
 							highlight={ this.state.panel.highlight } 
-							deleteCallback={ deleteFn } /> }
+							autoLaunchSet={ autoLaunchSet }
+							deleteCallback={ deleteFn }
+							autoLaunchToggleCallback={ toggleAutoLaunchFn } /> }
 				</AvTransform>);
 		}
 		return <>
@@ -894,17 +1042,17 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 
 	private removeFavorite( gadgetUrl: string )
 	{
-		let i = this.settings.favorites.indexOf( gadgetUrl );
-		if( -1 != i )
+		if( this.settings.gadgetSettings[ gadgetUrl ]?.favorited )
 		{
 			console.log( `Removing from favorites: ${ gadgetUrl } ` );
-			this.settings.favorites.splice( i, 1 );
+			this.settings.gadgetSettings[ gadgetUrl ].favorited = false;
 			this.updateSettings();
 
 			if( this.state.tab == ControlPanelTab.Favorites )
 			{
 				this.forceUpdate();
 			}
+
 			return GadgetListResult.Success;
 		}
 		else
@@ -912,6 +1060,63 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 			console.log( `Favorites does not contain: ${ gadgetUrl } ` );
 			return GadgetListResult.NoSuchFavorite;
 		}
+	}
+
+	@bind
+	private enableAutoLaunch( gadgetUrl: string, manifest?: AardvarkManifest )
+	{
+		if( !this.settings.gadgetSettings[ gadgetUrl ]?.autoLaunchEnabled )
+		{
+			console.log( `Adding to auto launch: ${ gadgetUrl } ` );
+			this.settings.gadgetSettings = {
+				...this.settings.gadgetSettings,
+				[ gadgetUrl ]: {
+					...this.settings.gadgetSettings[ gadgetUrl ],
+					autoLaunchEnabled: true
+				}
+			}
+
+			this.updateSettings();
+
+			if( !this.manifestsByUrl.has( gadgetUrl ) )
+			{
+				if( !manifest )
+				{
+					this.requestManifest( gadgetUrl );
+				}
+				else
+				{
+					this.manifestsByUrl.set( gadgetUrl, manifest );
+				}
+			}
+
+			this.forceUpdate();
+			return GadgetListResult.Success;
+		}
+		else
+		{
+			console.log( `Autolaunch already contains: ${ gadgetUrl } ` );
+			return GadgetListResult.AlreadyAdded;
+		}
+	}
+
+	@bind
+	private disableAutoLaunch( gadgetUrl: string )
+	{
+		if( this.settings.gadgetSettings[ gadgetUrl ]?.autoLaunchEnabled )
+		{
+			console.log( `Removing from autoLaunch: ${ gadgetUrl } ` );
+			this.settings.gadgetSettings[ gadgetUrl ].autoLaunchEnabled = false;
+			this.updateSettings();
+			this.forceUpdate();
+			return GadgetListResult.Success;
+		}
+		else
+		{
+			console.log( `Autolaunch does not contain: ${ gadgetUrl } ` );
+			return GadgetListResult.NoSuchFavorite;
+		}
+
 	}
 
 	@bind 
@@ -933,12 +1138,18 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 
 	private addFavorite( gadgetUrl: string, manifest?: AardvarkManifest )
 	{
-		if( -1 == this.settings.favorites.indexOf( gadgetUrl ) )
+		if( !this.settings.gadgetSettings[ gadgetUrl ]?.favorited )
 		{
 			console.log( `Adding to favorites: ${ gadgetUrl } ` );
-			this.settings.favorites.push( gadgetUrl );
-			this.updateSettings();
+			this.settings.gadgetSettings = {
+				...this.settings.gadgetSettings,
+				[ gadgetUrl ]: {
+					...this.settings.gadgetSettings[ gadgetUrl ],
+					favorited: true
+				}
+			}
 
+			this.updateSettings();
 			if( !this.manifestsByUrl.has( gadgetUrl ) )
 			{
 				if( !manifest )
@@ -1005,7 +1216,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 	{
 		let [ gadgetUrl ] = args;
 
-		if( -1 == this.settings.favorites.indexOf( gadgetUrl ) )
+		if( !this.settings.gadgetSettings[ gadgetUrl ]?.favorited )
 		{
 			return [ GadgetListResult.NoSuchFavorite ];
 		}
@@ -1034,7 +1245,6 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 
 		return [ result ];
 	}
-
 
 	@bind
 	private async onGadgetList_StartGadget( sender: ApiInterfaceSender, args: any[] ) 
