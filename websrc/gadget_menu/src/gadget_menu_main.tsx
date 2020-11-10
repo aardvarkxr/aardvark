@@ -586,8 +586,8 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 			if( settings.favorited )
 			{
 				accumulator.push(gadgetUri);
-				return accumulator;
 			}
+			return accumulator;
 		}, []);
 	}
 
