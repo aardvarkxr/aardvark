@@ -752,6 +752,7 @@ export interface AardvarkManifestExtension
 	browserWidth: number;
 	browserHeight: number;
 	startAutomatically: boolean;
+	restrictToSingleInstance: boolean;
 }
 
 export interface AardvarkManifest extends WebAppManifest
@@ -759,8 +760,6 @@ export interface AardvarkManifest extends WebAppManifest
 	xr_type: string;
 	aardvark: AardvarkManifestExtension;
 }
-
-
 
 export enum EAction
 {

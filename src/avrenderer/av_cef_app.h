@@ -36,6 +36,8 @@ public:
 
 	void startGadget( const aardvark::GadgetParams_t& params );
 
+	bool IsInstanceOfGadgetRunning( const aardvark::GadgetParams_t& params );
+
 	virtual void quitRequested() override;
 	virtual void browserClosed( CAardvarkCefHandler *handler ) override;
 	virtual bool createTextureForBrowser( void **sharedHandle,

@@ -6,6 +6,7 @@ void to_json( nlohmann::json& j, const CAardvarkManifestExtension& gm )
 		{ "permissions", gm.m_permissions },
 		{ "browserWidth", gm.m_width },
 		{ "browserHeight", gm.m_height },
+		{ "restrictToSingleInstance", gm.m_restrictToSingleInstance},
 	};
 }
 
@@ -21,6 +22,16 @@ void from_json( const nlohmann::json& j, CAardvarkManifestExtension& gm )
 	{
 		(void)e;
 		gm.m_width = gm.m_height = 16;
+	}
+
+	try
+	{
+		j.at( "restrictToSingleInstance" ).get_to( gm.m_restrictToSingleInstance );
+	}
+	catch ( nlohmann::json::exception& e )
+	{
+		(void)e;
+		gm.m_restrictToSingleInstance = false;
 	}
 }
 
