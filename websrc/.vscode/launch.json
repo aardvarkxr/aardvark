@@ -5,7 +5,8 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
-			"type": "chrome",
+			"type": "pwa-chrome",
+			"targetSelection": "pick",
 			"request": "attach",
 			"name": "Attach to aardvark_renderer",
 			"sourceMaps": true,

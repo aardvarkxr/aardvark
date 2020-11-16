@@ -582,15 +582,14 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 
 	private getFavorites()
 	{
-		const reduced = Object.entries(this.settings.gadgetSettings).reduce( (accumulator: string[], pair: [string, GadgetSettings] ) => {
+		return Object.entries(this.settings.gadgetSettings).reduce( (accumulator: string[], pair: [string, GadgetSettings] ) => {
 			const [gadgetUri, settings] = pair;
 			if( settings.favorited )
 			{
 				accumulator.push(gadgetUri);
-				return accumulator;
 			}
-		}, []) ?? [];
-		return reduced;
+			return accumulator;
+		}, []);
 	}
 
 	private renderFavoritesTab()

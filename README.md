@@ -82,15 +82,12 @@ It's straightforward to do, but there isn't any documentation on the topic yet.
 
 ## Current Status
 
-Aardvark is more or less a prototype at the moment.
-The interfaces are still in flux, many necessary features are missing, and the user interface still needs a lot of work.
-We're putting this out there now to gather as much feedback from people as possible and let users and developers shape the future direction of the project. 
+Aardvark entered alpha testing in September of 2020.
+In its current alpha state it is still very much a work in progress.
+If you have any feedback about the UI, the way gadgets are built, or anything else, we'd love to hear it!
 [Join the slack](https://join.slack.com/t/aardvarkxr/shared_invite/enQtODU1MTM3NjI5OTg3LTM0MGI4NzRjZDBjYTJjN2E1ZWIxNjU5MzdmNWZjMWVmM2UzMWE4MWZhOWY1YzI2MDMzZDNmZjhhNzViY2YxYWU) and tell us what you think.
 Or file an issue or pull request if you find something that could be better. 
 We want to hear from you.
-
-Aardvark is not far enough along for you to use it in any kind of production project.
-Expect future releases to break compatibility with existing gadgets.
 
 ## Upcoming Features
 
@@ -101,8 +98,6 @@ Here's a short list of things that we'd like to add or work on in no particular 
 * Animation to smooth  out transitions and just generally make things nicer
 * Switch to using a more capable rendering engine #11
 * Figure out better ways of not conflicting with the input of the host games
-* Provide better ways to let users find and use gadgets
-* Networked gadget scene graphs, including panels
 * Knowledge of where the user is in the VR experiences themselves so gadgets can be responsive to that
 
 If you want to help out with any of these, please reach out.
