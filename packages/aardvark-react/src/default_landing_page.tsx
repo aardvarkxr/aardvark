@@ -228,9 +228,9 @@ export class DefaultLanding extends React.Component<DefaultLandingProps, Default
 	private renderMutallyExclusiveButtons( enableCallback: () => void, disableCallback: () => void, description: string, testValue?: boolean )
 	{
 		return <>
-			{ (testValue === undefined || !testValue) && 
+			{ !testValue && 
 				<div className="LandingButton" onClick={ enableCallback }>Add to { description }</div> }
-			{ (testValue === undefined || testValue) && 
+			{ testValue && 
 				<div className="LandingButton" onClick={ disableCallback }>Remove from { description }</div> }
 		</>
 	}
