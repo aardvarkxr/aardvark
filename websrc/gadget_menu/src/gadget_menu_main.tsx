@@ -1,11 +1,12 @@
 import { ApiInterfaceSender, ActiveInterface, AvGadget, AvGadgetSeed, AvGrabButton, AvHeadFacingTransform, AvHighlightTransmitters, AvInterfaceEntity, AvLine, AvModel, AvOrigin, AvPanel, AvPrimitive, AvStandardGrabbable, AvTransform, GadgetInfoEvent, GadgetSeedHighlight, HiddenChildrenBehavior, k_GadgetInfoInterface, PrimitiveType, PrimitiveYOrigin, renderGadgetIcon, ShowGrabbableChildren, k_GadgetListInterface, GadgetListEventType, AvMessagebox, AvApiInterface, ApiInterfaceHandler, GadgetListResult, AvMenuItem, GrabbableStyle } from '@aardvarkxr/aardvark-react';
-import { Av, WindowInfo, AvStartGadgetResult, AardvarkManifest, AvNodeTransform, AvVector, emptyVolume, EndpointAddr, g_builtinModelFlask, g_builtinModelRocketship, g_builtinModelBarcodeScanner, nodeTransformToMat4, nodeTransformFromMat4, g_builtinModelDropAttract, g_builtinModelNetwork, g_builtinModelHammerAndWrench, g_builtinModelStar, g_builtinModelTrashcan, MessageType, MsgDestroyGadget, rayVolume, MsgInstallGadget, g_builtinModelPanel, AvVolume, EVolumeType, g_builtinModelArrowFlat, g_builtinModelWindowIcon, infiniteVolume, endpointAddrToString } from '@aardvarkxr/aardvark-shared';
+import { Av, WindowInfo, AvStartGadgetResult, AardvarkManifest, AvNodeTransform, AvVector, emptyVolume, EndpointAddr, g_builtinModelFlask, g_builtinModelRocketship, g_builtinModelBarcodeScanner, nodeTransformToMat4, nodeTransformFromMat4, g_builtinModelDropAttract, g_builtinModelNetwork, g_builtinModelHammerAndWrench, g_builtinModelStar, g_builtinModelTrashcan, MessageType, MsgDestroyGadget, rayVolume, MsgInstallGadget, g_builtinModelPanel, AvVolume, EVolumeType, g_builtinModelArrowFlat, g_builtinModelWindowIcon, infiniteVolume, endpointAddrToString, AvGadgetSettings } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3, vec4 } from '@tlaukkan/tsm';
 import Axios from 'axios';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import { initSentryForBrowser } from 'common/sentry_utils';
+import { ConsoleTransportOptions } from 'winston/lib/winston/transports';
 
 initSentryForBrowser();
 
@@ -877,7 +878,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 				else 
 				{
 					autoLaunchSet = true;
-					toggleAutoLaunchFn = () => { this.disableAutoLaunch( gadget.url ); }
+					toggleAutoLaunchFn = () => { this.removeAutoLaunch( gadget.url ); }
 				}
 			}
 
@@ -1077,7 +1078,6 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 			}
 
 			this.updateSettings();
-
 			if( !this.manifestsByUrl.has( gadgetUrl ) )
 			{
 				if( !manifest )
@@ -1101,7 +1101,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 	}
 
 	@bind
-	private disableAutoLaunch( gadgetUrl: string )
+	private removeAutoLaunch( gadgetUrl: string )
 	{
 		if( this.settings.gadgetSettings[ gadgetUrl ]?.autoLaunchEnabled )
 		{
@@ -1114,7 +1114,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		else
 		{
 			console.log( `Autolaunch does not contain: ${ gadgetUrl } ` );
-			return GadgetListResult.NoSuchFavorite;
+			return GadgetListResult.NoSuchAutoLaunch;
 		}
 
 	}
@@ -1247,6 +1247,83 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 	}
 
 	@bind
+	private async onGadgetList_SetAutoLaunch( sender: ApiInterfaceSender, args: any[],
+		origin: string, userAgent: string ) : Promise< [ GadgetListResult ] >
+	{
+		let [ gadgetUrl ] = args;
+		let manifest = await this.requestManifest( gadgetUrl );
+
+		// ask the user if they want this favorite
+		let answer = await this.messagebox.current.showPrompt( 
+			`Set gadget ${ manifest.name } (${ gadgetUrl }) to auto launch?`, 
+		[
+			{
+				text: "No",
+				name: "no",
+			},
+			{
+				text: "Yes",
+				name: "yes",
+			}
+		] );
+
+		let result = GadgetListResult.UserDeniedRequest;
+		if( answer == "yes" )
+		{
+			result = this.enableAutoLaunch( gadgetUrl );
+		}
+
+		return [ result ];
+	}
+
+	@bind
+	private async onGadgetList_RemoveAutoLaunch( sender: ApiInterfaceSender, args: any[],
+		origin: string, userAgent: string ) : Promise< [ GadgetListResult ] >
+	{
+		let [ gadgetUrl ] = args;
+
+		if( !this.settings.gadgetSettings[ gadgetUrl ]?.favorited )
+		{
+			return [ GadgetListResult.NoSuchAutoLaunch ];
+		}
+
+		let manifest = await this.requestManifest( gadgetUrl );
+
+		// ask the user if they want this favorite
+		let answer = await this.messagebox.current.showPrompt( 
+			`Remove gadget ${ manifest.name } (${ gadgetUrl }) from auto launch?`, 
+		[
+			{
+				text: "No",
+				name: "no",
+			},
+			{
+				text: "Yes",
+				name: "yes",
+			}
+		] );
+
+		let result = GadgetListResult.UserDeniedRequest;
+		if( answer == "yes" )
+		{
+			result = this.removeAutoLaunch( gadgetUrl );
+		}
+
+		return [ result ];
+	}
+
+	@bind
+	private async onGadgetList_GetSettingsForGadget( sender: ApiInterfaceSender, args: any[],
+		origin: string, userAgent: string ) : Promise< [ AvGadgetSettings ] >
+	{
+		let [ gadgetUrl ] = args;
+		const favorited = this.settings.gadgetSettings[ gadgetUrl ].favorited ?? false;
+		const autoLaunchEnabled = this.settings.gadgetSettings[ gadgetUrl ].autoLaunchEnabled ?? false;
+		let gadgetSettings: AvGadgetSettings = { favorited, autoLaunchEnabled }
+		return [ gadgetSettings ];
+	}
+
+	@bind
 	private async onGadgetList_StartGadget( sender: ApiInterfaceSender, args: any[] ) 
 		: Promise< [ GadgetListResult, number ] >
 	{
@@ -1364,6 +1441,9 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		let gadgetListHandlers:  { [ msgType:string ] : ApiInterfaceHandler } = {};
 		gadgetListHandlers[ GadgetListEventType.AddFavorite ] = this.onGadgetList_AddFavorite;
 		gadgetListHandlers[ GadgetListEventType.RemoveFavorite ] = this.onGadgetList_RemoveFavorite;
+		gadgetListHandlers[ GadgetListEventType.SetAutoLaunch ] = this.onGadgetList_SetAutoLaunch;
+		gadgetListHandlers[ GadgetListEventType.RemoveAutoLaunch ] = this.onGadgetList_RemoveAutoLaunch;
+		gadgetListHandlers[ GadgetListEventType.GetSettingsForGadget ] = this.onGadgetList_GetSettingsForGadget;
 		gadgetListHandlers[ GadgetListEventType.StartGadget ] = this.onGadgetList_StartGadget;
 
 		return (

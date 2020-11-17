@@ -1,4 +1,4 @@
-import { AardvarkManifest, manifestUriFromGadgetUri, MessageType, MsgInstallGadget } from '@aardvarkxr/aardvark-shared';
+import { AardvarkManifest, manifestUriFromGadgetUri, MessageType, MsgInstallGadget, AvGadgetSettings } from '@aardvarkxr/aardvark-shared';
 import axios from 'axios';
 import * as React from 'react';
 import './Landing.css';
@@ -19,6 +19,7 @@ interface DefaultLandingState
 	error?: string;
 	addResult?: string;
 	connected: boolean;
+	hostSettings?: AvGadgetSettings;
 }
 
 export class DefaultLanding extends React.Component<DefaultLandingProps, DefaultLandingState >
@@ -45,13 +46,13 @@ export class DefaultLanding extends React.Component<DefaultLandingProps, Default
 		{
 			this.setState( { error: "Failed to load manifest" } );
 		} );	
-
 	}
 
 	@bind
 	private onConnectToServer() 
 	{
 		this.setState( { connected: true } );
+		this.getSettingsForGadget();
 	}
 
 	@bind
@@ -92,7 +93,11 @@ export class DefaultLanding extends React.Component<DefaultLandingProps, Default
 
 
 			case GadgetListResult.AlreadyAdded:
-				text = "Gadget was already a favorite";
+				text = "Gadget setting was already active";
+				break;
+
+			case GadgetListResult.NoSuchAutoLaunch:
+				text = "Gadget was not set to auto launch";
 				break;
 
 			case GadgetListResult.NoSuchFavorite:
@@ -103,9 +108,17 @@ export class DefaultLanding extends React.Component<DefaultLandingProps, Default
 				text = "User denied request";
 				break;
 
+			case GadgetListResult.NotImplemented:
+				text = "not implemented";
+				break;
+
 			default:
 				text = "Unknown result " + result;
 				break;
+		}
+
+		if(this.state.connected) {
+			 this.getSettingsForGadget();
 		}
 
 		this.setState( { addResult: text } );
@@ -117,13 +130,57 @@ export class DefaultLanding extends React.Component<DefaultLandingProps, Default
 		try
 		{
 			let promResult = this.gadgetList.current.removeFavorite( this.gadgetUrl );
-			this.setGadgetListResult( await promResult, "Removed" );
+			this.setGadgetListResult( await promResult, "Removed from Favorites" );
 		}
 		catch( e )
 		{
 			this.setState( { addResult: String( e ) } );
 		}
 
+	}
+
+	@bind
+	private async onRemoveAutoLaunch()
+	{
+		try
+		{
+			let promResult = this.gadgetList.current.removeAutoLaunch( this.gadgetUrl );
+			this.setGadgetListResult( await promResult, "Removed from Auto Launch" );
+		}
+		catch( e )
+		{
+			this.setState( { addResult: String( e ) } );
+		}
+
+	}
+
+	@bind
+	private async onSetAutoLaunch()
+	{
+		try
+		{
+			let promResult = this.gadgetList.current.setAutoLaunch( this.gadgetUrl );
+			this.setGadgetListResult( await promResult, "Added to Auto Launch" );
+		}
+		catch( e )
+		{
+			this.setState( { addResult: String( e ) } );
+		}
+
+	}
+
+	@bind
+	private async getSettingsForGadget()
+	{
+		try
+		{
+			let hostSettings = await this.gadgetList.current.getSettingsForGadget( this.gadgetUrl );
+			this.setState( { hostSettings } );
+		}
+		catch( e )
+		{
+			this.setState( { addResult: String( e ) } );
+		}
 	}
 
 	@bind
@@ -150,14 +207,33 @@ export class DefaultLanding extends React.Component<DefaultLandingProps, Default
 		}
 
 		return <>
-			<div className="LandingButton" onClick={ this.onAddFavorite }>Add to Favorites</div>
-			<div className="LandingButton" onClick={ this.onRemoveFavorite }>Remove from Favorites</div>
+			{ this.renderMutallyExclusiveButtons( 
+				this.onAddFavorite, 
+				this.onRemoveFavorite, 
+				"Favorites", 
+				this.state.hostSettings?.favorited ) }
+
+			{ this.renderMutallyExclusiveButtons( 
+				this.onSetAutoLaunch, 
+				this.onRemoveAutoLaunch, 
+				"Auto Launch", 
+				this.state.hostSettings?.autoLaunchEnabled ) }
+
 			<div className="LandingButton" onClick={ this.onStartGadget }>Start Gadget</div>
 			{ this.state.addResult &&
 				<div style={ { fontSize: "medium" }}>{ this.state.addResult }</div> }
-			</>;
+		</>;
 	}
 
+	private renderMutallyExclusiveButtons( enableCallback: () => void, disableCallback: () => void, description: string, testValue?: boolean )
+	{
+		return <>
+			{ !testValue && 
+				<div className="LandingButton" onClick={ enableCallback }>Add to { description }</div> }
+			{ testValue && 
+				<div className="LandingButton" onClick={ disableCallback }>Remove from { description }</div> }
+		</>
+	}
 
 	render()
 	{
