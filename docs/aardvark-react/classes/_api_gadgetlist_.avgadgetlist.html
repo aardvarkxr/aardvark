@@ -143,9 +143,12 @@
 								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-inherited"><a href="_api_gadgetlist_.avgadgetlist.html#componentwillunmount" class="tsd-kind-icon">component<wbr>Will<wbr>Unmount</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-inherited"><a href="_api_gadgetlist_.avgadgetlist.html#componentwillupdate" class="tsd-kind-icon">component<wbr>Will<wbr>Update</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-inherited"><a href="_api_gadgetlist_.avgadgetlist.html#forceupdate" class="tsd-kind-icon">force<wbr>Update</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_api_gadgetlist_.avgadgetlist.html#getsettingsforgadget" class="tsd-kind-icon">get<wbr>Settings<wbr>For<wbr>Gadget</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-inherited"><a href="_api_gadgetlist_.avgadgetlist.html#getsnapshotbeforeupdate" class="tsd-kind-icon">get<wbr>Snapshot<wbr>Before<wbr>Update</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_api_gadgetlist_.avgadgetlist.html#removeautolaunch" class="tsd-kind-icon">remove<wbr>Auto<wbr>Launch</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_api_gadgetlist_.avgadgetlist.html#removefavorite" class="tsd-kind-icon">remove<wbr>Favorite</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-overwrite"><a href="_api_gadgetlist_.avgadgetlist.html#render" class="tsd-kind-icon">render</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_api_gadgetlist_.avgadgetlist.html#setautolaunch" class="tsd-kind-icon">set<wbr>Auto<wbr>Launch</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-class tsd-has-type-parameter tsd-is-inherited"><a href="_api_gadgetlist_.avgadgetlist.html#setstate" class="tsd-kind-icon">set<wbr>State</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-inherited"><a href="_api_gadgetlist_.avgadgetlist.html#shouldcomponentupdate" class="tsd-kind-icon">should<wbr>Component<wbr>Update</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_api_gadgetlist_.avgadgetlist.html#startgadget" class="tsd-kind-icon">start<wbr>Gadget</a></li>
@@ -469,7 +472,7 @@ class Foo extends React.Component {
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/bba9777b/packages/aardvark-react/src/api_gadgetlist.tsx#L31">src/api_gadgetlist.tsx:31</a></li>
+									<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/3509fb63/packages/aardvark-react/src/api_gadgetlist.tsx#L37">src/api_gadgetlist.tsx:37</a></li>
 								</ul>
 							</aside>
 							<h4 class="tsd-parameters-title">Parameters</h4>
@@ -768,6 +771,29 @@ class Foo extends React.Component {
 						</li>
 					</ul>
 				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
+					<a name="getsettingsforgadget" class="tsd-anchor"></a>
+					<h3>get<wbr>Settings<wbr>For<wbr>Gadget</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon">get<wbr>Settings<wbr>For<wbr>Gadget<span class="tsd-signature-symbol">(</span>gadgetUrl<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">AvGadgetSettings</span><span class="tsd-signature-symbol">&gt;</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/3509fb63/packages/aardvark-react/src/api_gadgetlist.tsx#L73">src/api_gadgetlist.tsx:73</a></li>
+								</ul>
+							</aside>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>gadgetUrl: <span class="tsd-signature-type">string</span></h5>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">AvGadgetSettings</span><span class="tsd-signature-symbol">&gt;</span></h4>
+						</li>
+					</ul>
+				</section>
 				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
 					<a name="getsnapshotbeforeupdate" class="tsd-anchor"></a>
 					<h3><span class="tsd-flag ts-flagOptional">Optional</span> get<wbr>Snapshot<wbr>Before<wbr>Update</h3>
@@ -805,6 +831,29 @@ class Foo extends React.Component {
 					</ul>
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
+					<a name="removeautolaunch" class="tsd-anchor"></a>
+					<h3>remove<wbr>Auto<wbr>Launch</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon">remove<wbr>Auto<wbr>Launch<span class="tsd-signature-symbol">(</span>gadgetUrl<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="../enums/_api_gadgetlist_.gadgetlistresult.html#notconnected" class="tsd-signature-type">NotConnected</a><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="../enums/_api_gadgetlist_.gadgetlistresult.html" class="tsd-signature-type">GadgetListResult</a><span class="tsd-signature-symbol">&gt;</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/3509fb63/packages/aardvark-react/src/api_gadgetlist.tsx#L64">src/api_gadgetlist.tsx:64</a></li>
+								</ul>
+							</aside>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>gadgetUrl: <span class="tsd-signature-type">string</span></h5>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <a href="../enums/_api_gadgetlist_.gadgetlistresult.html#notconnected" class="tsd-signature-type">NotConnected</a><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="../enums/_api_gadgetlist_.gadgetlistresult.html" class="tsd-signature-type">GadgetListResult</a><span class="tsd-signature-symbol">&gt;</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
 					<a name="removefavorite" class="tsd-anchor"></a>
 					<h3>remove<wbr>Favorite</h3>
 					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
@@ -814,7 +863,7 @@ class Foo extends React.Component {
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/bba9777b/packages/aardvark-react/src/api_gadgetlist.tsx#L40">src/api_gadgetlist.tsx:40</a></li>
+									<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/3509fb63/packages/aardvark-react/src/api_gadgetlist.tsx#L46">src/api_gadgetlist.tsx:46</a></li>
 								</ul>
 							</aside>
 							<h4 class="tsd-parameters-title">Parameters</h4>
@@ -838,10 +887,33 @@ class Foo extends React.Component {
 							<aside class="tsd-sources">
 								<p>Overrides Component.render</p>
 								<ul>
-									<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/bba9777b/packages/aardvark-react/src/api_gadgetlist.tsx#L58">src/api_gadgetlist.tsx:58</a></li>
+									<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/3509fb63/packages/aardvark-react/src/api_gadgetlist.tsx#L91">src/api_gadgetlist.tsx:91</a></li>
 								</ul>
 							</aside>
 							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Element</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
+					<a name="setautolaunch" class="tsd-anchor"></a>
+					<h3>set<wbr>Auto<wbr>Launch</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon">set<wbr>Auto<wbr>Launch<span class="tsd-signature-symbol">(</span>gadgetUrl<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="../enums/_api_gadgetlist_.gadgetlistresult.html#notconnected" class="tsd-signature-type">NotConnected</a><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="../enums/_api_gadgetlist_.gadgetlistresult.html" class="tsd-signature-type">GadgetListResult</a><span class="tsd-signature-symbol">&gt;</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/3509fb63/packages/aardvark-react/src/api_gadgetlist.tsx#L55">src/api_gadgetlist.tsx:55</a></li>
+								</ul>
+							</aside>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>gadgetUrl: <span class="tsd-signature-type">string</span></h5>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <a href="../enums/_api_gadgetlist_.gadgetlistresult.html#notconnected" class="tsd-signature-type">NotConnected</a><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="../enums/_api_gadgetlist_.gadgetlistresult.html" class="tsd-signature-type">GadgetListResult</a><span class="tsd-signature-symbol">&gt;</span></h4>
 						</li>
 					</ul>
 				</section>
@@ -940,7 +1012,7 @@ class Foo extends React.Component {
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/bba9777b/packages/aardvark-react/src/api_gadgetlist.tsx#L49">src/api_gadgetlist.tsx:49</a></li>
+									<li>Defined in <a href="https://github.com/aardvarkxr/aardvark/blob/3509fb63/packages/aardvark-react/src/api_gadgetlist.tsx#L82">src/api_gadgetlist.tsx:82</a></li>
 								</ul>
 							</aside>
 							<h4 class="tsd-parameters-title">Parameters</h4>
@@ -1033,14 +1105,23 @@ class Foo extends React.Component {
 							<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
 								<a href="_api_gadgetlist_.avgadgetlist.html#forceupdate" class="tsd-kind-icon">force<wbr>Update</a>
 							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class">
+								<a href="_api_gadgetlist_.avgadgetlist.html#getsettingsforgadget" class="tsd-kind-icon">get<wbr>Settings<wbr>For<wbr>Gadget</a>
+							</li>
 							<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
 								<a href="_api_gadgetlist_.avgadgetlist.html#getsnapshotbeforeupdate" class="tsd-kind-icon">get<wbr>Snapshot<wbr>Before<wbr>Update</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class">
+								<a href="_api_gadgetlist_.avgadgetlist.html#removeautolaunch" class="tsd-kind-icon">remove<wbr>Auto<wbr>Launch</a>
 							</li>
 							<li class=" tsd-kind-method tsd-parent-kind-class">
 								<a href="_api_gadgetlist_.avgadgetlist.html#removefavorite" class="tsd-kind-icon">remove<wbr>Favorite</a>
 							</li>
 							<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-overwrite">
 								<a href="_api_gadgetlist_.avgadgetlist.html#render" class="tsd-kind-icon">render</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class">
+								<a href="_api_gadgetlist_.avgadgetlist.html#setautolaunch" class="tsd-kind-icon">set<wbr>Auto<wbr>Launch</a>
 							</li>
 							<li class=" tsd-kind-method tsd-parent-kind-class tsd-has-type-parameter tsd-is-inherited">
 								<a href="_api_gadgetlist_.avgadgetlist.html#setstate" class="tsd-kind-icon">set<wbr>State</a>
