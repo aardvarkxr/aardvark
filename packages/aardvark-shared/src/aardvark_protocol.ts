@@ -338,6 +338,11 @@ export interface MsgInstallGadget
 	gadgetUri: string;
 }
 
+export interface MsgSetGadgetToAutoLaunch
+{
+	gadgetUri: string;
+}
+
 
 export interface MsgResourceLoadFailed
 {

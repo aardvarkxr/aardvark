@@ -1,4 +1,4 @@
-import { AardvarkManifest, manifestUriFromGadgetUri, AardvarkPort, AvNode, AvNodeTransform, AvNodeType, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, gadgetDetailsToId, MessageType, MsgDestroyGadget, MsgError, MsgGadgetStarted, MsgGeAardvarkManifestResponse, MsgGetAardvarkManifest, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgInstallGadget, MsgInterfaceEnded, MsgInterfaceEvent, MsgInterfaceReceiveEvent, MsgInterfaceSendEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgLostEndpoint, MsgNewEndpoint, MsgNodeHaptic, MsgOverrideTransform, MsgResourceLoadFailed, MsgSaveSettings, MsgSetEndpointType, MsgSetEndpointTypeResponse, MsgUpdateActionState, MsgUpdateSceneGraph, parseEnvelope, Permission, WebSocketCloseCodes } from '@aardvarkxr/aardvark-shared';
+import { AardvarkManifest, manifestUriFromGadgetUri, AardvarkPort, AvNode, AvNodeTransform, AvNodeType, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, gadgetDetailsToId, MessageType, MsgDestroyGadget, MsgError, MsgGadgetStarted, MsgGeAardvarkManifestResponse, MsgGetAardvarkManifest, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgInstallGadget, MsgInterfaceEnded, MsgInterfaceEvent, MsgInterfaceReceiveEvent, MsgInterfaceSendEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgLostEndpoint, MsgNewEndpoint, MsgNodeHaptic, MsgOverrideTransform, MsgResourceLoadFailed, MsgSaveSettings, MsgSetEndpointType, MsgSetEndpointTypeResponse, MsgUpdateActionState, MsgUpdateSceneGraph, parseEnvelope, Permission, WebSocketCloseCodes, MsgSetGadgetToAutoLaunch } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as express from 'express';
 import * as http from 'http';
@@ -628,6 +628,7 @@ class CEndpoint
 		this.registerEnvelopeHandler( MessageType.GetInstalledGadgets, this.onGetInstalledGadgets );
 		this.registerEnvelopeHandler( MessageType.DestroyGadget, this.onDestroyGadget );
 		this.registerEnvelopeHandler( MessageType.InstallGadget, this.onInstallGadget );
+		this.registerEnvelopeHandler( MessageType.SetGadgetToAutoLaunch, this.onSetGadgetToAutoLaunch );
 	}
 
 	public getId() { return this.m_id; }
@@ -914,6 +915,18 @@ class CEndpoint
 			if( gadget.hasPermission( Permission.Favorites ) )
 			{
 				gadget.sendMessage( MessageType.InstallGadget, m );
+			}
+		}
+	}
+
+	@bind private onSetGadgetToAutoLaunch( env: Envelope, m: MsgSetGadgetToAutoLaunch )
+	{
+		console.log( `Setting gadget to Auto Launch from web ${ m.gadgetUri }` );
+		for( let gadget of this.m_dispatcher.getListForType( EndpointType.Gadget ) )
+		{
+			if( gadget.hasPermission( Permission.Favorites ) )
+			{
+				gadget.sendMessage( MessageType.SetGadgetToAutoLaunch, m );
 			}
 		}
 	}
