@@ -1,5 +1,5 @@
 import { ApiInterfaceSender, ActiveInterface, AvGadget, AvGadgetSeed, AvGrabButton, AvHeadFacingTransform, AvHighlightTransmitters, AvInterfaceEntity, AvLine, AvModel, AvOrigin, AvPanel, AvPrimitive, AvStandardGrabbable, AvTransform, GadgetInfoEvent, GadgetSeedHighlight, HiddenChildrenBehavior, k_GadgetInfoInterface, PrimitiveType, PrimitiveYOrigin, renderGadgetIcon, ShowGrabbableChildren, k_GadgetListInterface, GadgetListEventType, AvMessagebox, AvApiInterface, ApiInterfaceHandler, GadgetListResult, AvMenuItem, GrabbableStyle } from '@aardvarkxr/aardvark-react';
-import { Av, WindowInfo, AvStartGadgetResult, AardvarkManifest, AvNodeTransform, AvVector, emptyVolume, EndpointAddr, g_builtinModelFlask, g_builtinModelRocketship, g_builtinModelBarcodeScanner, nodeTransformToMat4, nodeTransformFromMat4, g_builtinModelDropAttract, g_builtinModelNetwork, g_builtinModelHammerAndWrench, g_builtinModelStar, g_builtinModelTrashcan, MessageType, MsgDestroyGadget, rayVolume, MsgInstallGadget, g_builtinModelPanel, AvVolume, EVolumeType, g_builtinModelArrowFlat, g_builtinModelWindowIcon, infiniteVolume, endpointAddrToString, AvGadgetSettings } from '@aardvarkxr/aardvark-shared';
+import { Av, WindowInfo, AvStartGadgetResult, AardvarkManifest, AvNodeTransform, AvVector, emptyVolume, EndpointAddr, g_builtinModelFlask, g_builtinModelRocketship, g_builtinModelBarcodeScanner, nodeTransformToMat4, nodeTransformFromMat4, g_builtinModelDropAttract, g_builtinModelNetwork, g_builtinModelHammerAndWrench, g_builtinModelStar, g_builtinModelTrashcan, MessageType, MsgDestroyGadget, rayVolume, MsgInstallGadget, MsgSetGadgetToAutoLaunch, g_builtinModelPanel, AvVolume, EVolumeType, g_builtinModelArrowFlat, g_builtinModelWindowIcon, infiniteVolume, endpointAddrToString, AvGadgetSettings } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3, vec4 } from '@tlaukkan/tsm';
 import Axios from 'axios';
 import bind from 'bind-decorator';
@@ -17,12 +17,12 @@ interface Icon {
 	rotateX: number
 }
 
-const k_iconAutoLaunchActive: Icon = {
+const k_iconAutoLaunchInactive: Icon = {
 	modelUri: g_builtinModelRocketship,
 	rotateX: 0
 }
 
-const k_iconAutoLaunchInactive: Icon = {
+const k_iconAutoLaunchActive: Icon = {
 	modelUri: g_builtinModelTrashcan,
 	rotateX: 90
 }
@@ -297,6 +297,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		};
 
 		AvGadget.instance().registerMessageHandler( MessageType.InstallGadget,  this.onWebFavorite );
+		AvGadget.instance().registerMessageHandler( MessageType.SetGadgetToAutoLaunch,  this.onWebSetAutoLaunch );
 
 		let settingsString = window.localStorage.getItem( "aardvark_gadget_menu_settings" );
 		if( !settingsString )
@@ -872,13 +873,13 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 			{
 				if( this.settings.gadgetSettings[ gadget.url ]?.autoLaunchEnabled ) 
 				{
-					autoLaunchSet = false;
-					toggleAutoLaunchFn = () => { this.enableAutoLaunch( gadget.url ); }
+					autoLaunchSet = true;
+					toggleAutoLaunchFn = () => { this.removeAutoLaunch( gadget.url ); }
 				} 
 				else 
 				{
-					autoLaunchSet = true;
-					toggleAutoLaunchFn = () => { this.removeAutoLaunch( gadget.url ); }
+					autoLaunchSet = false;
+					toggleAutoLaunchFn = () => { this.enableAutoLaunch( gadget.url ); }
 				}
 			}
 
@@ -1117,6 +1118,12 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 			return GadgetListResult.NoSuchAutoLaunch;
 		}
 
+	}
+	
+	@bind 
+	private onWebSetAutoLaunch( m: MsgSetGadgetToAutoLaunch )
+	{
+		this.enableAutoLaunch( m.gadgetUri );
 	}
 
 	@bind 
