@@ -190,15 +190,15 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 # Find Qt5 libraries.
-# foreach(module Core Gui Widgets)
-#     find_package(Qt5 REQUIRED COMPONENTS ${module})
-#     list(APPEND QT_INCLUDE_DIRS "${Qt5${module}_INCLUDE_DIRS}")
-#     list(APPEND QT_LIBRARIES    "${Qt5${module}_LIBRARIES}")
-#     list(APPEND QT_FLAGS        "${Qt5${module}_EXECUTABLE_COMPILE_FLAGS}")
-#     list(APPEND QT_DEFINITIONS  "${Qt5${module}_DEFINITIONS}")
-# endforeach()
+foreach(module Core Gui Widgets)
+    find_package(Qt5 REQUIRED COMPONENTS ${module})
+    list(APPEND QT_INCLUDE_DIRS "${Qt5${module}_INCLUDE_DIRS}")
+    list(APPEND QT_LIBRARIES    "${Qt5${module}_LIBRARIES}")
+    list(APPEND QT_FLAGS        "${Qt5${module}_EXECUTABLE_COMPILE_FLAGS}")
+    list(APPEND QT_DEFINITIONS  "${Qt5${module}_DEFINITIONS}")
+endforeach()
 # Correct QT_FLAGS having semicolons, which break the compile step on POSIX
-# list(REMOVE_DUPLICATES QT_FLAGS)
+list(REMOVE_DUPLICATES QT_FLAGS)
 
 ## OpenVR API path
 find_library(OPENVR_LIBRARIES
@@ -246,6 +246,7 @@ add_subdirectory(hellovr_opengl)
 if(NOT (${CMAKE_SYSTEM_NAME} MATCHES "Darwin"))
   add_subdirectory(hellovr_vulkan)
 endif()
+add_subdirectory(helloworldoverlay)
 add_subdirectory(tracked_camera_openvr_sample)
 
 # -----------------------------------------------------------------------------

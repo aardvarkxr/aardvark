@@ -135,11 +135,21 @@ namespace tools
 		return GetUserDocumentsPath() / "aardvark" / "cache";
 	}
 
+	/** returns the input path */
+	std::filesystem::path GetInputDirectory()
+	{
+		return GetUserDocumentsPath() / "aardvark" / "input";
+	}
+
 	/** Turns a URI to a unique subpath */
 	std::string UriToSubpath( const std::string& uri, size_t maxLength )
 	{
 		std::string result;
-		if ( stringIsPrefix( "http://", uri ) )
+		if ( stringIsPrefix( "http://localhost:23842/gadgets/", uri ) )
+		{
+			result = "builtin_" + std::string( uri.begin() + strlen( "http://localhost:23842/gadgets/" ), uri.end() );
+		}
+		else if ( stringIsPrefix( "http://", uri ) )
 		{
 			result.assign( uri.begin() + strlen( "http://" ), uri.end() );
 		}
