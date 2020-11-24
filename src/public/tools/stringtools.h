@@ -12,5 +12,5 @@ namespace tools
 	bool stringIsPrefix( const std::string & sPrefix, const std::string & sTestString );
 	bool stringIsPrefixCaseSensitive( const std::string & sPrefix, const std::string & sTestString );
 
-	std::vector<std::string> tokenizeString( const std::string& s );
+	std::vector<std::string> tokenizeString( const std::string& s, char token = ' ' );
 }

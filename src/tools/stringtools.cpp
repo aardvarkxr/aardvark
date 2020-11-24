@@ -44,13 +44,13 @@ namespace tools
 		return prefix.end() == std::mismatch( prefix.begin(), prefix.end(), testString.begin() ).first;
 	}
 
-	std::vector<std::string> tokenizeString( const std::string& s )
+	std::vector<std::string> tokenizeString( const std::string& s, char token )
 	{
 		std::stringstream ss( s );
 		std::string item;
 		std::vector<std::string> elems;
 
-		while ( std::getline( ss, item, ' ' ) ) 
+		while ( std::getline( ss, item, token ) ) 
 		{
 			elems.push_back(std::move(item)); // if C++11 (based on comment from @mchiasson)
 		}
