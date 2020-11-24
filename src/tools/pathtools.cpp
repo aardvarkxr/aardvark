@@ -135,4 +135,49 @@ namespace tools
 		return GetUserDocumentsPath() / "aardvark" / "cache";
 	}
 
+	/** Turns a URI to a unique subpath */
+	std::string UriToSubpath( const std::string& uri, size_t maxLength )
+	{
+		std::string result;
+		if ( stringIsPrefix( "http://", uri ) )
+		{
+			result.assign( uri.begin() + strlen( "http://" ), uri.end() );
+		}
+		else if ( stringIsPrefix( "https://", uri ) )
+		{
+			result.assign( uri.begin() + strlen( "https://" ), uri.end() );
+		}
+		else if ( stringIsPrefix( "ipfs://", uri ) )
+		{
+			result.assign( uri.begin() + strlen( "ipfs://" ), uri.end() );
+		}
+		else
+		{
+			result = uri;
+		}
+
+		for ( auto & c : result )
+		{
+			switch ( c )
+			{
+			case '/':
+			case '\\':
+			case '#':
+			case '?':
+			case ':':
+			case '.':
+			case '&':
+				c = '_';
+				break;
+			}
+		}
+
+		if ( result.size() > maxLength )
+		{
+			result.erase( 0, maxLength - result.size() );
+		}
+
+		return result;
+	}
+
 }

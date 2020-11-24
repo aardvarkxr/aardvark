@@ -28,5 +28,8 @@ namespace tools
 
 	/** returns the cache path */
 	std::filesystem::path GetCacheDirectory();
+
+	/** Turns a gadget URL into a unique subpath */
+	std::string UriToSubpath( const std::string& uri, size_t maxLength = 64 );
 };
 

@@ -23,6 +23,11 @@ TEST_CASE( "path tools", "[tools]" )
 
 	REQUIRE( PathToFileUri( "//fnord/somepath/somefile.ext" ) == "file://fnord/somepath/somefile.ext" );
 	REQUIRE( PathToFileUri( "c:/somepath/somefile.ext" ) == "file:///c:/somepath/somefile.ext" );
+
+	REQUIRE( UriToSubpath( "http://foo.com" ) == "foo_com" );
+	REQUIRE( UriToSubpath( "https://foo.com" ) == "foo_com" );
+	REQUIRE( UriToSubpath( "https://foo.com/blargh/fred?something#27" ) == "foo_com_blargh_fred_something_27" );
+	REQUIRE( UriToSubpath( "01234567890123456789", 7 ) == "3456789" );
 }
 
 TEST_CASE( "string conversion", "[tools]" )
