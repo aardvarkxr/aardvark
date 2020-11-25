@@ -407,7 +407,8 @@ void CAardvarkCefHandler::triggerClose( bool forceClose )
 		return;
 	}
 
-	m_browser->GetHost()->CloseBrowser( forceClose );
+	if( m_browser )
+		m_browser->GetHost()->CloseBrowser( forceClose );
 }
 
 

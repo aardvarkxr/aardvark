@@ -13,6 +13,10 @@
 #include "javascript_object.h"
 #include "javascript_renderer.h"
 #include <tools/systools.h>
+#include <tools/pathtools.h>
+#include <openvr.h>
+
+#include <fstream>
 
 using aardvark::EAvSceneGraphResult;
 using aardvark::GadgetParams_t;
@@ -248,6 +252,33 @@ bool CAardvarkObject::init( CefRefPtr<CefV8Value> container )
 	{
 		m_renderer = CJavascriptObjectWithFunctions::create<CJavascriptRenderer>( m_handler );
 		container->SetValue( "renderer", m_renderer.object, V8_PROPERTY_ATTRIBUTE_READONLY );
+	}
+
+	if ( hasPermission( "input" ) )
+	{
+		RegisterFunction( container, "registerInput", [this]( const CefV8ValueList& arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+		{
+			if ( arguments.size() != 1
+				|| !arguments[ 0 ]->IsArray() )
+			{
+				exception = "Invalid arguments";
+				return;
+			}
+
+			m_handler->registerInput( arguments[ 0 ], &exception );
+		} );
+
+		RegisterFunction( container, "syncInput", [this]( const CefV8ValueList& arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+		{
+			if ( arguments.size() != 1
+				|| !arguments[ 0 ]->IsObject() )
+			{
+				exception = "Invalid arguments";
+				return;
+			}
+
+			m_handler->syncInput( arguments[ 0 ], &retval, &exception );
+		} );
 	}
 
 	return true;
@@ -552,3 +583,494 @@ void CAardvarkRenderProcessHandler::requestClose()
 	CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "request_close" );
 	sendBrowserMessage( msg );
 }
+
+std::string ParseStringField( CefRefPtr<CefV8Value> obj, const std::string & objectName, const std::string& fieldName, CefString* exception )
+{
+	if ( !obj )
+	{
+		*exception = objectName + " was null";
+		return "";
+	}
+	if ( !obj->IsObject() )
+	{
+		*exception = objectName + " was not an object";
+		return "";
+	}
+	CefRefPtr<CefV8Value> field = obj->GetValue( fieldName );
+	if ( !field )
+	{
+		*exception = objectName + " had no field " + fieldName;
+		return "";
+	}
+	if ( !field->IsString() )
+	{
+		*exception = objectName + " field " + fieldName + " was not a string";
+		return "";
+	}
+
+	return field->GetStringValue();
+}
+
+double ParseNumberField( CefRefPtr<CefV8Value> obj, const std::string& objectName, const std::string& fieldName, CefString* exception,
+	double default )
+{
+	if ( !obj )
+	{
+		*exception = objectName + " was null";
+		return 0;
+	}
+	if ( !obj->IsObject() )
+	{
+		*exception = objectName + " was not an object";
+		return 0;
+	}
+	CefRefPtr<CefV8Value> field = obj->GetValue( fieldName );
+	if ( !field || field->IsNull() || field->IsUndefined() )
+	{
+		return default;
+	}
+
+	if ( !field->IsDouble() && !field->IsInt() && !field->IsUInt() )
+	{
+		*exception = objectName + " field " + fieldName + " was not an unsigned int";
+		return 0;
+	}
+
+	return field->GetDoubleValue();
+}
+
+bool ParseBooleanField( CefRefPtr<CefV8Value> obj, const std::string& objectName, const std::string& fieldName, CefString* exception )
+{
+	if ( !obj )
+	{
+		*exception = objectName + " was null";
+		return false;
+	}
+	if ( !obj->IsObject() )
+	{
+		*exception = objectName + " was not an object";
+		return false;
+	}
+	CefRefPtr<CefV8Value> field = obj->GetValue( fieldName );
+	if ( !field )
+	{
+		*exception = objectName + " had no field " + fieldName;
+		return false;
+	}
+	if ( !field->IsBool() )
+	{
+		*exception = objectName + " field " + fieldName + " was not an unsigned int";
+		return false;
+	}
+
+	return field->GetBoolValue();
+}
+
+
+void CAardvarkRenderProcessHandler::registerInput( CefRefPtr<CefV8Value> manifestJS, CefString* exception )
+{
+	if ( m_inputManifest )
+	{
+		*exception = "registerInput can only be called once";
+		return;
+	}
+
+	ParseInputManifest( manifestJS, exception );
+	if ( !exception->empty() )
+	{
+		return;
+	}
+
+	vr::EVRInitError err = PrepareForVRInit();
+	if ( err != vr::VRInitError_None )
+	{
+		m_inputManifest = nullptr;
+		*exception = std::string( "prepare VR_Init failed: " ) + vr::VR_GetVRInitErrorAsSymbol( err );
+		return;
+	}
+	
+	nlohmann::json inputFiles = toInputFiles( *m_inputManifest );
+	for ( auto& [ name, contents ] : inputFiles.items() ) 
+	{
+		std::ofstream o( tools::GetInputDirectory() / m_gadgetId / name );
+		o << std::setw( 4 ) << contents << std::endl;
+	}
+
+	err = InitOpenVR();
+	if ( err != vr::VRInitError_None )
+	{
+		m_inputManifest = nullptr;
+		*exception = std::string( "VR_Init failed: " ) + vr::VR_GetVRInitErrorAsSymbol( err );
+		return;
+	}
+
+	std::filesystem::path actionManifestPath = tools::GetInputDirectory() / m_gadgetId / "action_manifest.json";
+	vr::EVRInputError inputErr = vr::VRInput()->SetActionManifestPath( actionManifestPath.u8string().c_str() );
+	if ( inputErr != vr::VRInputError_None )
+	{
+		*exception = std::string( "SetActionManifestPath failed: " ) + std::to_string( inputErr );
+		vr::VR_Shutdown();
+		m_inputManifest = nullptr;
+	}
+
+	// get handles for everything
+	for ( auto& actionSet : m_inputManifest->m_actionSets )
+	{
+		vr::VRInput()->GetActionSetHandle( ( "/actions/" + actionSet.name ).c_str(), &actionSet.handle );
+		for ( auto& action : actionSet.actions )
+		{
+			vr::VRInput()->GetActionHandle( ( "/actions/" + actionSet.name + "/in/" + action.name ).c_str(), &action.handle );
+		}
+	}
+}
+
+
+vr::EVRInitError CAardvarkRenderProcessHandler::InitOpenVR()
+{
+	nlohmann::json startupInfo =
+	{
+		{ "app_key", "aardvarkxr.gadget." + m_gadgetId },
+		{ "app_name", "Aardvark - " + m_gadgetManifest->m_name },
+	};
+
+	vr::EVRInitError err;
+	vr::VR_Init( &err, vr::VRApplication_Overlay, startupInfo.dump().c_str() );
+	return err;
+}
+
+
+vr::EVRInitError CAardvarkRenderProcessHandler::PrepareForVRInit()
+{
+	for ( auto& contextInfo : m_contexts )
+	{
+		if ( !contextInfo.frame->IsMain() )
+			continue;
+
+		m_gadgetId = tools::UriToSubpath( contextInfo.frame->GetURL() );
+		break;
+	}
+
+	// make an app manifest file for this instance so that when we connect for real SteamVR will know about our app
+	std::filesystem::path actionManifestPath = tools::GetInputDirectory() / m_gadgetId / "action_manifest.json";
+	nlohmann::json appManifest =
+	{
+		{ "source", "aardvark" },
+		{ "applications" ,
+			{
+				{
+					{ "app_key", "aardvarkxr.gadget." + m_gadgetId },
+					{ "launch_type" , "url" },
+					{ "action_manifest_path" , actionManifestPath.u8string() },
+					{ "is_dashboard_overlay" , true },
+					{ "url" , "this://url_will_not_work" },
+					{ "arguments" , "" },
+					{ "strings" ,
+						{ "en_us",
+							{
+								{ "name", "Aardvark - " + m_gadgetManifest->m_name }
+							}
+						}
+					}
+				}
+			}
+		}
+	};
+
+	std::filesystem::create_directories( tools::GetInputDirectory() / m_gadgetId );
+
+	std::filesystem::path appManifestPath = tools::GetInputDirectory() / m_gadgetId / ( m_gadgetId + ".vrmanifest" );
+	{
+		std::ofstream o( appManifestPath );
+		o << std::setw( 4 ) << appManifest << std::endl;
+	}
+
+	vr::EVRInitError err;
+	vr::VR_Init( &err, vr::VRApplication_Utility );
+	if ( err != vr::VRInitError_None )
+		return err;
+
+	vr::VRApplications()->AddApplicationManifest( appManifestPath.u8string().c_str(), true );
+
+	vr::VR_Shutdown();
+	return vr::VRInitError_None;
+}
+
+void CAardvarkRenderProcessHandler::ParseInputManifest( CefRefPtr<CefV8Value> manifestJS, CefString* exception )
+{
+	std::unique_ptr< CInputManifest> pManifest = std::make_unique<CInputManifest>();
+	for ( int i = 0; i < manifestJS->GetArrayLength(); i++ )
+	{
+		CefRefPtr<CefV8Value> pActionSet = manifestJS->GetValue( i );
+
+		CInputManifestActionSet actionSet;
+		actionSet.name = ParseStringField( pActionSet, "action set", "name", exception );
+		actionSet.localizedName = ParseStringField( pActionSet, "action set", "localizedName", exception );
+		actionSet.priority = (uint32_t)ParseNumberField( pActionSet, "action set", "priority", exception, 0 );
+		actionSet.suppressAppBindings = ParseBooleanField( pActionSet, "action set", "suppressAppBindings", exception );
+
+		if ( !exception->empty() )
+		{
+			return;
+		}
+
+		CefRefPtr< CefV8Value> pActions = pActionSet->GetValue( "actions" );
+		if ( !pActions || !pActions->IsArray() )
+		{
+			*exception = "invalid action array";
+			return;
+		}
+
+		for ( int iAction = 0; iAction < pActions->GetArrayLength(); iAction++ )
+		{
+			CefRefPtr<CefV8Value> pAction = pActions->GetValue( iAction );
+
+			CInputManifestAction action;
+			action.name = ParseStringField( pAction, "action", "name", exception );
+			action.localizedName = ParseStringField( pAction, "action", "localizedName", exception );
+			action.type = (ActionType)ParseNumberField( pAction, "action", "type", exception, (double)ActionType::Unknown );
+			if ( !exception->empty() )
+			{
+				return;
+			}
+			if ( action.type != ActionType::Boolean && action.type != ActionType::Float && action.type != ActionType::Vector2 )
+			{
+				*exception = "action " + action.name + " has an invalid type";
+				return;
+			}
+
+			CefRefPtr< CefV8Value> pBindings = pAction->GetValue( "bindings" );
+			if ( pBindings )
+			{
+				if ( !pBindings->IsArray() )
+				{
+					*exception = "invalid binding array";
+					return;
+				}
+
+				for ( int iBinding = 0; iBinding < pBindings->GetArrayLength(); iBinding++ )
+				{
+					CefRefPtr<CefV8Value> pBinding = pBindings->GetValue( iBinding );
+
+					CInputManifestActionBinding binding;
+					binding.interactionProfile = ParseStringField( pBinding, action.name + " binding", "interactionProfile", exception );
+					binding.inputPath = ParseStringField( pBinding, action.name + " binding", "inputPath", exception );
+
+					if ( !exception->empty() )
+					{
+						return;
+					}
+
+					action.bindings.push_back( std::move( binding ) );
+				}
+
+			}
+
+
+			actionSet.actions.push_back( std::move( action ) );
+		}
+
+		pManifest->m_actionSets.push_back( std::move( actionSet ) );
+	}
+
+	m_inputManifest = std::move( pManifest );
+}
+
+void CAardvarkRenderProcessHandler::syncInput( CefRefPtr<CefV8Value> infoJS, CefRefPtr<CefV8Value>* retVal, CefString* exception )
+{
+	if ( !m_inputManifest )
+	{
+		*exception = "registerInput must be called before syncInput";
+		return;
+	}
+
+	if ( !infoJS->IsObject() )
+	{
+		*exception = "InputInfo must be an object";
+		return;
+	}
+
+	CefRefPtr<CefV8Value> actionSetsJS = infoJS->GetValue( "activeActionSets" );
+	if ( !actionSetsJS || !actionSetsJS->IsArray() )
+	{
+		*exception = "activeActionSets must be an array";
+		return;
+	}
+
+	static vr::VRInputValueHandle_t k_leftHand = 0;
+	static vr::VRInputValueHandle_t k_rightHand = 0;
+	if ( !k_leftHand )
+	{
+		vr::VRInput()->GetInputSourceHandle( "/user/hand/left", &k_leftHand );
+		vr::VRInput()->GetInputSourceHandle( "/user/hand/right", &k_rightHand );
+	}
+
+	std::map<uint64_t, const CInputManifestActionSet*> actionSetsToQuery;
+	std::vector<vr::VRActiveActionSet_t> activeActionSets;
+	for ( int iActiveActionSet = 0; iActiveActionSet < actionSetsJS->GetArrayLength(); iActiveActionSet++ )
+	{
+		CefRefPtr<CefV8Value> actionSetJS = actionSetsJS->GetValue( iActiveActionSet );
+		if ( !actionSetsJS->IsObject() )
+		{
+			*exception = "invalid entry in activeActionSets";
+			return;
+		}
+
+		std::string actionSetName = ParseStringField( actionSetJS, "active action set", "actionSetName", exception );
+		if ( !exception->empty() )
+			return;
+
+		const CInputManifestActionSet* actionSetToQuery = nullptr;
+		for ( CInputManifestActionSet& actionSet : m_inputManifest->m_actionSets )
+		{
+			if ( actionSet.name == actionSetName )
+			{
+				actionSetToQuery = &actionSet;
+				break;
+			}
+		}
+
+		if ( !actionSetToQuery )
+		{
+			*exception = "Unknown action set " + actionSetName;
+			return;
+		}
+
+		std::vector<vr::VRInputValueHandle_t> topLevelPaths;
+		CefRefPtr<CefV8Value> topLevelPathsJS = actionSetJS->GetValue( "topLevelPaths" );
+		if ( topLevelPathsJS && !topLevelPathsJS->IsNull() && !topLevelPathsJS->IsUndefined() )
+		{
+			if ( !topLevelPathsJS->IsArray() )
+			{
+				*exception = "topLevelPaths must be an array if it is provided";
+				return;
+			}
+
+			for ( int i = 0; i < topLevelPathsJS->GetArrayLength(); i++ )
+			{
+				CefRefPtr<CefV8Value> v = topLevelPathsJS->GetValue( i );
+				if ( !v->IsString() )
+				{
+					*exception = "top level paths must be strings";
+					return;
+				}
+
+				std::string path = v->GetStringValue();
+				if ( path != "/user/hand/right" && path != "/user/hand/left" )
+				{
+					*exception = "top level path must be either /user/hand/left or /user/hand/right";
+					return;
+				}
+
+				vr::VRInputValueHandle_t handle;
+				vr::VRInput()->GetInputSourceHandle( path.c_str(), &handle );
+				topLevelPaths.push_back( handle );
+			}
+		}
+
+		vr::VRActiveActionSet_t activeSet = {};
+		activeSet.ulActionSet = actionSetToQuery->handle;
+		activeSet.nPriority = actionSetToQuery->priority;
+		if ( actionSetToQuery->suppressAppBindings )
+		{
+			activeSet.nPriority += vr::k_nActionSetOverlayGlobalPriorityMin;
+		}
+
+		if ( topLevelPaths.empty() )
+		{
+			topLevelPaths.push_back( k_leftHand );
+			topLevelPaths.push_back( k_rightHand );
+		}
+
+		for( vr::VRInputValueHandle_t pathHandle : topLevelPaths )
+		{
+			activeSet.ulRestrictedToDevice = pathHandle;
+			activeActionSets.push_back( activeSet );
+		}
+
+		actionSetsToQuery[actionSetToQuery->handle] = actionSetToQuery;
+	}
+
+	vr::EVRInputError err = vr::VRInput()->UpdateActionState( &activeActionSets[ 0 ], sizeof( vr::VRActiveActionSet_t ), 
+		(uint32_t)activeActionSets.size() );
+	if ( err != vr::VRInputError_None )
+	{
+		*exception = "UpdateActionState failed with " + std::to_string( err );
+		return;
+	}
+
+
+	( *retVal ) = CefV8Value::CreateObject( nullptr, nullptr );
+
+	CefRefPtr<CefV8Value> results = CefV8Value::CreateObject( nullptr, nullptr );
+	( *retVal )->SetValue( "results", results, V8_PROPERTY_ATTRIBUTE_NONE );
+
+	for ( const vr::VRActiveActionSet_t& active : activeActionSets )
+	{
+		std::string deviceName = active.ulRestrictedToDevice == k_leftHand ? "/user/hand/left" : "/user/hand/right";
+		const CInputManifestActionSet * actionSet = actionSetsToQuery[ active.ulActionSet ];
+
+		for ( const CInputManifestAction& action : actionSet->actions )
+		{
+			CefRefPtr<CefV8Value> deviceResult = CefV8Value::CreateObject( nullptr, nullptr );
+			switch ( action.type )
+			{
+			case ActionType::Boolean:
+			{
+				vr::InputDigitalActionData_t data;
+				err = vr::VRInput()->GetDigitalActionData( action.handle, &data, sizeof( data ), active.ulRestrictedToDevice );
+				if ( err == vr::VRInputError_None )
+				{
+					deviceResult->SetValue( "active", CefV8Value::CreateBool( data.bActive ), V8_PROPERTY_ATTRIBUTE_NONE );
+					deviceResult->SetValue( "value", CefV8Value::CreateBool( data.bState ), V8_PROPERTY_ATTRIBUTE_NONE );
+				}
+			}
+			break;
+
+			case ActionType::Float:
+			case ActionType::Vector2:
+			{
+				vr::InputAnalogActionData_t data;
+				err = vr::VRInput()->GetAnalogActionData( action.handle, &data, sizeof( data ), active.ulRestrictedToDevice );
+				if ( err == vr::VRInputError_None )
+				{
+					deviceResult->SetValue( "active", CefV8Value::CreateBool( data.bActive ), V8_PROPERTY_ATTRIBUTE_NONE );
+
+					if ( action.type == ActionType::Float )
+					{
+						deviceResult->SetValue( "value", CefV8Value::CreateDouble( data.x ), V8_PROPERTY_ATTRIBUTE_NONE );
+					}
+					else
+					{
+						CefRefPtr<CefV8Value> arr = CefV8Value::CreateArray( 2 );
+						arr->SetValue( 0, CefV8Value::CreateDouble( data.x ) );
+						arr->SetValue( 1, CefV8Value::CreateDouble( data.y ) );
+						deviceResult->SetValue( "value", arr, V8_PROPERTY_ATTRIBUTE_NONE );
+					}
+				}
+			}
+			break;
+
+			}
+
+			CefRefPtr<CefV8Value> as = results->GetValue( actionSet->name );
+			if ( !as || !as->IsObject() )
+			{
+				as = CefV8Value::CreateObject( nullptr, nullptr );
+				as->SetValue( "actions", CefV8Value::CreateObject( nullptr, nullptr ), V8_PROPERTY_ATTRIBUTE_NONE );
+				results->SetValue( actionSet->name, as, V8_PROPERTY_ATTRIBUTE_NONE );
+			}
+
+			CefRefPtr<CefV8Value> a = as->GetValue( "actions" )->GetValue( action.name );
+			if ( !a || !a->IsObject() )
+			{
+				a = CefV8Value::CreateObject( nullptr, nullptr );
+				a->SetValue( "devices", CefV8Value::CreateObject( nullptr, nullptr ), V8_PROPERTY_ATTRIBUTE_NONE );
+				as->GetValue( "actions" )->SetValue( action.name, a, V8_PROPERTY_ATTRIBUTE_NONE );
+			}
+
+			a->GetValue( "devices" )->SetValue( deviceName, deviceResult, V8_PROPERTY_ATTRIBUTE_NONE );
+		}
+	}
+
+}
+

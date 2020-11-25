@@ -749,6 +749,7 @@ export enum Permission
 	SceneGraph = "scenegraph",
 	Favorites = "favorites",
 	StartUrl = "starturl",
+	Input = "input",
 }
 
 export interface AardvarkManifestExtension

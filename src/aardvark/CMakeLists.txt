@@ -5,11 +5,13 @@ add_library(aardvark STATIC
 	aardvark_renderer_config.cpp
 	aardvark_transform.cpp
 	aardvark_scene_graph.cpp
+	input_types.cpp
 
 	${AV_SRC_PUBLIC}/aardvark/aardvark_gadget_manifest.h
 	${AV_SRC_PUBLIC}/aardvark/aardvark_scene_graph.h
 	${AV_SRC_PUBLIC}/aardvark/aardvark_renderer_config.h
 	${AV_SRC_PUBLIC}/aardvark/aardvark_transform.h
+	${AV_SRC_PUBLIC}/aardvark/input_types.h
 	${AV_SRC_PUBLIC}/aardvark/irenderer.h
 	${AV_SRC_PUBLIC}/aardvark/ivrmanager.h
 )

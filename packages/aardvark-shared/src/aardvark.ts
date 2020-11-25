@@ -87,6 +87,128 @@ export interface WindowInfo
 	texture: AvSharedTextureInfo;
 };
 
+export let k_interactionProfile_ViveController = "/interaction_profiles/htc/vive_controller";
+export let k_interactionProfile_CosmosController = "/interaction_profiles/htc/cosmos_controller";
+export let k_interactionProfile_ReverbG2Controller = "/interaction_profiles/microsoft/hpmotioncontroller";
+export let k_interactionProfile_MixedRealityController = "/interaction_profiles/microsoft/motion_controller";
+export let k_interactionProfile_TouchController = "/interaction_profiles/oculus/touch";
+export let k_interactionProfile_IndexController = "/interaction_profiles/valve/index_controller";
+
+/** Used to bind a single action to an input for a single interaction profile */
+export interface ActionBinding
+{
+	/** The OpenXR interaction profile to apply this binding to. Only interaction profiles that
+	 * apply to /user/hand/left or /user/hand/right are currently supported.
+	 *  See the OpenXR specification for more detail: https://www.khronos.org/registry/OpenXR/specs/1.0/html/xrspec.html#semantic-path-interaction-profiles
+	 */
+	interactionProfile: string;
+
+	/** This will be one of the input paths included in the OpenXR specification for 
+	 * this interactionProfile.
+	 */
+	inputPath: string;
+}
+
+
+/** The type of a single action. Pose actions are supposed through AvOrigin nodes on /user/hand/left
+ * or /user/hand/right.
+ */
+export enum ActionType
+{
+	Unknown = -1,
+
+	Boolean = 0,
+	Float = 1,
+	Vector2 = 2,
+}
+
+/** Declares a single action inside of an action set. */
+export interface Action
+{
+	/** Internal name to use for this action. These must be unique within the action set. */
+	name: string;
+
+	/** Name in the user's languageto show a user for this action */
+	localizedName: string;
+
+	/** Type of the action */
+	type: ActionType;
+
+	/** Bindings for this action on any number of controller types */
+	bindings?: ActionBinding[];
+}
+
+/** Declares a single action set for the gadget */
+export interface ActionSet
+{
+	/** Internal name to use for this action set. These must be unique within the gadget. */
+	name: string;
+
+	/** Name in the user's languageto show a user for this action set */
+	localizedName: string;
+
+	/** Suppresses scene app input for any inputs bound to actions in this action set 
+	 * whenever this action set is active. Use this with caution, and only when specific
+	 * conditions are present to prevent app input from being blocked permanently. 
+	 * 
+	 * @default false 
+	 */
+	suppressAppBindings?: boolean;
+
+	/** Priority for action bindings in this action set relative to other bindings in the same 
+	 * gadget. Bindings from action sets with higher numbers will suppress bindings from action sets
+	 * with lower numbers. This number will be clamped to the 0..10 range, inclusively.
+	 * 
+	 * @default 0
+	 */
+	priority?: number;
+
+	/** Actions contained in this action set */
+	actions?: Action[];
+}
+
+export interface ActiveActionSet
+{
+	/** Name of the action set to activate */
+	actionSetName: string;
+
+	/** List of hands to activate the action set on. This can be /user/hand/left, /user/hand/right, or 
+	 * an empty list. Empty list means that the 
+	 */
+	topLevelPaths?: string[];
+}
+
+/** Contains the list of action sets that the application would like to activate. */
+export interface InputInfo
+{
+	activeActionSets: ActiveActionSet[];
+}
+
+/** Contains the state of a single action on a single device */
+export interface ActionDeviceState
+{
+	active: boolean;
+	value: boolean | number | [ number, number ];
+}
+
+/** Contains the state of a single action */
+export interface ActionState
+{
+	devices: { [ topLevelPath: string ]: ActionDeviceState };
+}
+
+/** contains the state of a single action set */
+export interface ActionSetState
+{
+	actions: { [ actionName: string ]: ActionState };
+}
+
+/** Contains the current state of input for all actions after a call to syncActions. */
+export interface InputState
+{
+	results: { [ actionSetName: string ]: ActionSetState };
+}
+
 export interface Aardvark
 {
 	hasPermission( permission: Permission ): boolean;
@@ -112,6 +234,10 @@ export interface Aardvark
 	unsubscribeWindowList():void;
 	subscribeWindow( windowHandle: string, callback: ( window: WindowInfo ) => void ): void;
 	unsubscribeWindow( windowHandle: string ): void;
+
+	// requires input permissions
+	registerInput( actionSets: ActionSet[] ): void;
+	syncInput( info: InputInfo ): InputState;
 }
 
 declare global

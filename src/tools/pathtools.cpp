@@ -166,6 +166,13 @@ namespace tools
 			result = uri;
 		}
 
+		// Everything after the first question mark is probably stuff passed to the gadget by Aardvark and shouldn't count
+		size_t questionIndex = result.find_first_of( '?' );
+		if ( questionIndex != std::string::npos )
+		{
+			result.erase( questionIndex, result.size() - questionIndex );
+		}
+
 		for ( auto & c : result )
 		{
 			switch ( c )
@@ -184,7 +191,7 @@ namespace tools
 
 		if ( result.size() > maxLength )
 		{
-			result.erase( 0, maxLength - result.size() );
+			result.erase( 0, result.size() - maxLength );
 		}
 
 		return result;

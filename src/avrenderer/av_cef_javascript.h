@@ -8,10 +8,11 @@
 
 #include <aardvark/aardvark_gadget_manifest.h>
 #include <aardvark/aardvark_scene_graph.h>
+#include <aardvark/input_types.h>
 
 #include "uri_request_handler.h"
 #include "javascript_object.h"
-
+#include <openvr.h>
 
 class CAardvarkObject;
 
@@ -44,6 +45,16 @@ public:
 	void requestClose();
 	const aardvark::AardvarkConfig_t & getConfig() const { return m_config; }
 
+	void registerInput( CefRefPtr<CefV8Value> manifestJS, CefString *exception );
+
+	vr::EVRInitError InitOpenVR();
+
+	vr::EVRInitError PrepareForVRInit();
+
+	void ParseInputManifest( CefRefPtr<CefV8Value> manifestJS, CefString* exception );
+
+	void syncInput( CefRefPtr<CefV8Value> infoJS, CefRefPtr<CefV8Value>* retVal, CefString* exception );
+
 	void runFrame();
 private:
 	struct PerContextInfo_t
@@ -61,6 +72,9 @@ private:
 	aardvark::AardvarkConfig_t m_config;
 	CUriRequestHandler m_uriRequestHandler;
 	bool m_needRunFrame = true;
+
+	std::unique_ptr<CInputManifest> m_inputManifest;
+	std::string m_gadgetId;
 
 	// Include the default reference counting implementation.
 	IMPLEMENT_REFCOUNTING( CAardvarkRenderProcessHandler );
