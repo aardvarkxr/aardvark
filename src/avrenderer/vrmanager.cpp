@@ -212,7 +212,7 @@ void CVRManager::updateCameraActionPose()
 	vr::EVRInputError err = vr::VRInput()->UpdateActionState(&activeActionSet, sizeof(vr::VRActiveActionSet_t), 1);
 
 	vr::InputPoseActionData_t poseData;
-	if (vr::VRInputError_None == vr::VRInput()->GetPoseActionData(m_actionCamera, vr::TrackingUniverseStanding, 0, 
+	if (vr::VRInputError_None == vr::VRInput()->GetPoseActionDataForNextFrame(m_actionCamera, vr::TrackingUniverseStanding,
 		&poseData, sizeof(poseData), activeActionSet.ulRestrictedToDevice) && poseData.bActive && poseData.pose.bPoseIsValid )
 	{
 		m_cameraActionState.universeFromCamera = glmMatFromVrMat(poseData.pose.mDeviceToAbsoluteTracking);
@@ -239,7 +239,7 @@ CVRManager::ActionState_t CVRManager::getActionStateForHand( EHand eHand )
 	state.detach = GetAction( m_actionDetach, pathDevice );
 
 	vr::InputPoseActionData_t poseData;
-	if (vr::VRInputError_None == vr::VRInput()->GetPoseActionData(m_actionHand, vr::TrackingUniverseStanding, 0, 
+	if (vr::VRInputError_None == vr::VRInput()->GetPoseActionDataForNextFrame(m_actionHand, vr::TrackingUniverseStanding,
 		&poseData, sizeof(poseData), pathDevice) && poseData.bActive && poseData.pose.bPoseIsValid )
 	{
 		state.universeFromHand = glmMatFromVrMat(poseData.pose.mDeviceToAbsoluteTracking);
