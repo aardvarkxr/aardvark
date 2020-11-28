@@ -87,12 +87,78 @@ export interface WindowInfo
 	texture: AvSharedTextureInfo;
 };
 
-export let k_interactionProfile_ViveController = "/interaction_profiles/htc/vive_controller";
-export let k_interactionProfile_CosmosController = "/interaction_profiles/htc/cosmos_controller";
-export let k_interactionProfile_ReverbG2Controller = "/interaction_profiles/microsoft/hpmotioncontroller";
-export let k_interactionProfile_MixedRealityController = "/interaction_profiles/microsoft/motion_controller";
-export let k_interactionProfile_TouchController = "/interaction_profiles/oculus/touch";
-export let k_interactionProfile_IndexController = "/interaction_profiles/valve/index_controller";
+export enum InteractionProfile
+{
+	ViveController = "/interaction_profiles/htc/vive_controller",
+	CosmosController = "/interaction_profiles/htc/cosmos_controller",
+	ReverbG2Controller = "/interaction_profiles/microsoft/hpmotioncontroller",
+	MixedRealityController = "/interaction_profiles/microsoft/motion_controller",
+	TouchController = "/interaction_profiles/oculus/touch",
+	IndexController = "/interaction_profiles/valve/index_controller",
+}
+
+export enum Input
+{
+	Trigger = "/input/trigger",
+	TriggerTouch = "/input/trigger/touch",
+	TriggerClick = "/input/trigger/click",
+	TriggerValue = "/input/trigger/value",
+
+	Squeeze = "/input/squeeze",
+	SqueezeTouch = "/input/squeeze/touch",
+	SqueezeClick = "/input/squeeze/click",
+	SqueezeValue = "/input/squeeze/value",
+	SqueezeForce = "/input/squeeze/force",
+
+	A = "/input/a",
+	ATouch = "/input/a/touch",
+	AClick = "/input/a/click",
+
+	B = "/input/b",
+	BTouch = "/input/b/touch",
+	BClick = "/input/b/click",
+
+	X = "/input/x",
+	XTouch = "/input/x/touch",
+	XClick = "/input/x/click",
+
+	Y = "/input/y",
+	YTouch = "/input/y/touch",
+	YClick = "/input/y/click",
+
+	Menu = "/input/menu",
+	MenuTouch = "/input/menu/touch",
+	MenuClick = "/input/menu/click",
+
+	Trackpad = "/input/trackpad",
+	TrackpadTouch = "/input/trackpad/touch",
+	TrackpadClick = "/input/trackpad/click",
+	TrackpadForce = "/input/trackpad/force",
+	TrackpadX = "/input/trackpad/x",
+	TrackpadY = "/input/trackpad/y",
+
+	Thumbstick = "/input/thumbstick",
+	ThumbstickTouch = "/input/thumbstick/touch",
+	ThumbstickClick = "/input/thumbstick/click",
+	ThumbstickForce = "/input/thumbstick/force",
+	ThumbstickX = "/input/thumbstick/x",
+	ThumbstickY = "/input/thumbstick/y",
+}
+
+export enum Device
+{
+	Left = "/user/hand/left",
+	Right = "/user/hand/right",
+}
+
+export function handToDevice( hand: EHand ): Device
+{
+	switch( hand )
+	{
+		case EHand.Left: return Device.Left;
+		case EHand.Right: return Device.Right;
+	}
+}
 
 /** Used to bind a single action to an input for a single interaction profile */
 export interface ActionBinding
@@ -185,22 +251,23 @@ export interface InputInfo
 }
 
 /** Contains the state of a single action on a single device */
-export interface ActionDeviceState
+export interface ActionDeviceState<T>
 {
 	active: boolean;
-	value: boolean | number | [ number, number ];
+	value: T;
 }
 
 /** Contains the state of a single action */
-export interface ActionState
+export interface ActionState<T>
 {
-	devices: { [ topLevelPath: string ]: ActionDeviceState };
+	left?: ActionDeviceState<T>;
+	right?: ActionDeviceState<T>;
 }
 
 /** contains the state of a single action set */
 export interface ActionSetState
 {
-	actions: { [ actionName: string ]: ActionState };
+	[ actionName: string ]: ActionState< boolean | number | [ number, number ] >;
 }
 
 /** Contains the current state of input for all actions after a call to syncActions. */
@@ -250,5 +317,5 @@ declare global
 
 export function Av():Aardvark
 {
-	return window.aardvark as Aardvark;
+	return window?.aardvark as Aardvark;
 }

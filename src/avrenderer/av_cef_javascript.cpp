@@ -945,6 +945,12 @@ void CAardvarkRenderProcessHandler::syncInput( CefRefPtr<CefV8Value> infoJS, Cef
 				return;
 			}
 
+			if ( topLevelPathsJS->GetArrayLength() == 0 )
+			{
+				*exception = "topLevelPaths contain at least one path if it is defined";
+				return;
+			}
+
 			for ( int i = 0; i < topLevelPathsJS->GetArrayLength(); i++ )
 			{
 				CefRefPtr<CefV8Value> v = topLevelPathsJS->GetValue( i );
@@ -1006,7 +1012,7 @@ void CAardvarkRenderProcessHandler::syncInput( CefRefPtr<CefV8Value> infoJS, Cef
 
 	for ( const vr::VRActiveActionSet_t& active : activeActionSets )
 	{
-		std::string deviceName = active.ulRestrictedToDevice == k_leftHand ? "/user/hand/left" : "/user/hand/right";
+		std::string deviceName = active.ulRestrictedToDevice == k_leftHand ? "left" : "right";
 		const CInputManifestActionSet * actionSet = actionSetsToQuery[ active.ulActionSet ];
 
 		for ( const CInputManifestAction& action : actionSet->actions )
@@ -1056,19 +1062,17 @@ void CAardvarkRenderProcessHandler::syncInput( CefRefPtr<CefV8Value> infoJS, Cef
 			if ( !as || !as->IsObject() )
 			{
 				as = CefV8Value::CreateObject( nullptr, nullptr );
-				as->SetValue( "actions", CefV8Value::CreateObject( nullptr, nullptr ), V8_PROPERTY_ATTRIBUTE_NONE );
 				results->SetValue( actionSet->name, as, V8_PROPERTY_ATTRIBUTE_NONE );
 			}
 
-			CefRefPtr<CefV8Value> a = as->GetValue( "actions" )->GetValue( action.name );
+			CefRefPtr<CefV8Value> a = as->GetValue( action.name );
 			if ( !a || !a->IsObject() )
 			{
 				a = CefV8Value::CreateObject( nullptr, nullptr );
-				a->SetValue( "devices", CefV8Value::CreateObject( nullptr, nullptr ), V8_PROPERTY_ATTRIBUTE_NONE );
-				as->GetValue( "actions" )->SetValue( action.name, a, V8_PROPERTY_ATTRIBUTE_NONE );
+				as->SetValue( action.name, a, V8_PROPERTY_ATTRIBUTE_NONE );
 			}
 
-			a->GetValue( "devices" )->SetValue( deviceName, deviceResult, V8_PROPERTY_ATTRIBUTE_NONE );
+			a->SetValue( deviceName, deviceResult, V8_PROPERTY_ATTRIBUTE_NONE );
 		}
 	}
 

@@ -1,12 +1,11 @@
-import { ActiveInterface, AvComposedEntity, AvEntityChild, AvGadget, AvInterfaceEntity, AvOrigin, AvPrimitive, AvTransform, GrabRequest, GrabRequestType, PanelRequest, PanelRequestType, PrimitiveType, SimpleContainerComponent, AvPanel, AvGrabButton, AvModel, PrimitiveYOrigin, MenuEvent, MenuEventType, k_MenuInterface } from '@aardvarkxr/aardvark-react';
-import {g_builtinModelDropAttract,  AvNodeTransform, AvVolume, EAction, EHand, EVolumeType, multiplyTransforms, g_builtinModelHandLeft, g_builtinModelHandRight, InterfaceLockResult, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EVolumeContext, g_builtinModelGear, emptyVolume, rayVolume, AvVector, AvQuaternion } from '@aardvarkxr/aardvark-shared';
+import { ActiveInterface, AvComposedEntity, AvEntityChild, AvGadget, AvGrabButton, AvInterfaceEntity, AvOrigin, AvPrimitive, AvTransform, GrabRequest, GrabRequestType, k_MenuInterface, MenuEvent, MenuEventType, PanelRequest, PanelRequestType, PrimitiveType, PrimitiveYOrigin, SimpleContainerComponent } from '@aardvarkxr/aardvark-react';
+import { InputProcessor, AvNodeTransform, AvQuaternion, AvVolume, EAction, EHand, emptyVolume, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EVolumeContext, EVolumeType, g_builtinModelGear, handToDevice, InterfaceLockResult, multiplyTransforms, rayVolume } from '@aardvarkxr/aardvark-shared';
+import { vec3 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
+import { initSentryForBrowser } from 'common/sentry_utils';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
-import { makeEmpty } from 'aardvark_renderer/src/volume_test_utils';
-import { InterfaceEntity } from 'aardvark_renderer/src/interface_processor';
-import { vec3 } from '@tlaukkan/tsm';
-import { initSentryForBrowser } from 'common/sentry_utils';
+import { k_actionSets } from './default_hands_input';
 
 initSentryForBrowser();
 
@@ -56,6 +55,8 @@ enum ButtonState
 	Suppressed, // pressed, but we're ignoring this press for whatever reason
 }
 
+let inputProcessor = new InputProcessor( k_actionSets );
+
 class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 {
 	private grabListenerHandle = 0;
@@ -79,21 +80,38 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 			state: GrabberState.Idle,
 		};
 
-		this.grabListenerHandle = AvGadget.instance().listenForActionState( EAction.Grab, this.props.hand, 
+		this.grabListenerHandle = inputProcessor.registerBooleanCallbacks( "interact", "grab", 
+			handToDevice( this.props.hand ), 
 			this.onGrabPressed, this.onGrabReleased );
-		this.menuListenerHandle = AvGadget.instance().listenForActionState( EAction.A, this.props.hand, 
+		this.menuListenerHandle = inputProcessor.registerBooleanCallbacks( "interact", "menu", 
+			handToDevice( this.props.hand ), 
 			this.onMenuPressed, this.onMenuReleased );
-		this.grabRayHandler = AvGadget.instance().listenForActionState( EAction.GrabShowRay, this.props.hand, 
+		this.grabRayHandler = inputProcessor.registerBooleanCallbacks( "default", "showRay", 
+			handToDevice( this.props.hand ), 
 			this.onGrabShowRay, this.onGrabHideRay );
 
 		this.containerComponent.onItemChanged( () => this.forceUpdate() );
+
+		inputProcessor.activateActionSet( "default", handToDevice( this.props.hand ) );
 	}
 
 	componentWillUnmount()
 	{
-		AvGadget.instance().unlistenForActionState( this.grabListenerHandle );
-		AvGadget.instance().unlistenForActionState( this.menuListenerHandle );
-		AvGadget.instance().unlistenForActionState( this.grabRayHandler );
+		inputProcessor.unregisterCallback( this.grabListenerHandle );
+		inputProcessor.unregisterCallback( this.menuListenerHandle );
+		inputProcessor.unregisterCallback( this.grabRayHandler );
+	}
+
+	componentDidUpdate( prevProps: DefaultHandProps, prevState: DefaultHandState )
+	{
+		if( this.state.activeGrab || this.state.activePanel || this.state.activeMenu )
+		{
+			inputProcessor.activateActionSet( "interact", handToDevice( this.props.hand ) );
+		}
+		else
+		{
+			inputProcessor.deactivateActionSet( "interact", handToDevice( this.props.hand ) );
+		}
 	}
 
 	@bind
@@ -862,6 +880,7 @@ class DefaultHands extends React.Component< {}, {} >
 		);
 	}
 }
+
 
 ReactDOM.render( <DefaultHands/>, document.getElementById( "root" ) );
 
