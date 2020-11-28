@@ -1,4 +1,4 @@
-import { ActionSet, ActionState, ActionType, Input, InteractionProfile, twoHandBinding } from '@aardvarkxr/aardvark-shared';
+import { ActionSet, ActionState, ActionType, Input, InteractionProfile, twoHandBinding, Device } from '@aardvarkxr/aardvark-shared';
 
 export let k_actionSets: ActionSet[] =
 [
@@ -12,7 +12,12 @@ export let k_actionSets: ActionSet[] =
 				name: "showRay",
 				localizedName: "Show Grab Ray",
 				type: ActionType.Boolean,
-				bindings: twoHandBinding( InteractionProfile.IndexController, Input.TriggerTouch )
+				bindings: 
+				[ 
+					...twoHandBinding( InteractionProfile.IndexController, Input.TriggerTouch ),
+					...twoHandBinding( InteractionProfile.TouchController, Input.TriggerTouch ),
+					...twoHandBinding( InteractionProfile.MixedRealityController, Input.TriggerTouch ),
+				]
 			}
 		]
 	},
@@ -26,13 +31,30 @@ export let k_actionSets: ActionSet[] =
 				name: "grab",
 				localizedName: "Grab and Click",
 				type: ActionType.Boolean,
-				bindings: twoHandBinding( InteractionProfile.IndexController, Input.Trigger ),
+				bindings: 
+				[ 
+					...twoHandBinding( InteractionProfile.IndexController, Input.Trigger ),
+					...twoHandBinding( InteractionProfile.TouchController, Input.Trigger ),
+					...twoHandBinding( InteractionProfile.MixedRealityController, Input.Trigger ),
+				],
 			},
 			{
 				name: "menu",
 				localizedName: "Context Menu",
 				type: ActionType.Boolean,
-				bindings: twoHandBinding( InteractionProfile.IndexController, Input.A ),
+				bindings: 
+				[ 
+					...twoHandBinding( InteractionProfile.IndexController, Input.A ),
+					{
+						interactionProfile: InteractionProfile.TouchController,
+						inputPath: Device.Left + Input.X,
+					},
+					{
+						interactionProfile: InteractionProfile.TouchController,
+						inputPath: Device.Right + Input.A,
+					},
+					...twoHandBinding( InteractionProfile.MixedRealityController, Input.Menu ),
+				],
 			}
 		]
 	},
