@@ -58,6 +58,25 @@ export let k_actionSets: ActionSet[] =
 			}
 		]
 	},
+	{
+		name: "grabbed",
+		localizedName: "Grabbed",
+		suppressAppBindings: true,
+		actions: 
+		[
+			{
+				name: "move",
+				localizedName: "Move",
+				type: ActionType.Vector2,
+				bindings: 
+				[ 
+					...twoHandBinding( InteractionProfile.IndexController, Input.Thumbstick ),
+					...twoHandBinding( InteractionProfile.TouchController, Input.Thumbstick ),
+					...twoHandBinding( InteractionProfile.MixedRealityController, Input.Thumbstick ),
+				],
+			},
+		]
+	},
 
 ];
 

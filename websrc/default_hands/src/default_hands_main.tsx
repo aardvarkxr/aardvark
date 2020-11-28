@@ -89,7 +89,9 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 		this.grabRayHandler = inputProcessor.registerBooleanCallbacks( "default", "showRay", 
 			handToDevice( this.props.hand ), 
 			this.onGrabShowRay, this.onGrabHideRay );
-
+		this.grabMoveHandler = inputProcessor.registerVector2Callback( "grabbed", "move",
+			handToDevice( this.props.hand ), this.onGrabMove );
+	
 		this.containerComponent.onItemChanged( () => this.forceUpdate() );
 
 		inputProcessor.activateActionSet( "default", handToDevice( this.props.hand ) );
@@ -100,6 +102,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 		inputProcessor.unregisterCallback( this.grabListenerHandle );
 		inputProcessor.unregisterCallback( this.menuListenerHandle );
 		inputProcessor.unregisterCallback( this.grabRayHandler );
+		inputProcessor.unregisterCallback( this.grabMoveHandler );
 	}
 
 	componentDidUpdate( prevProps: DefaultHandProps, prevState: DefaultHandState )
@@ -132,14 +135,13 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 
 	private startGrabMove()
 	{
-		this.grabMoveHandler = AvGadget.instance().listenForVector2ActionState( 
-			EAction.GrabMove, this.props.hand, this.onGrabMove );
+		inputProcessor.activateActionSet( "grabbed", handToDevice( this.props.hand ) );
 		this.lastMoveTime = performance.now();
 	}
 
 	private stopGrabMove()
 	{
-		AvGadget.instance().unlistenForActionState( this.grabMoveHandler );
+		inputProcessor.deactivateActionSet( "grabbed", handToDevice( this.props.hand ) );
 	}
 
 	@bind
