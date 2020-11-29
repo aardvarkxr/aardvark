@@ -75,6 +75,8 @@ private:
 
 	std::unique_ptr<CInputManifest> m_inputManifest;
 	std::string m_gadgetId;
+	bool m_preparedForVRInit = false;
+	bool m_vrInitialized = false;
 
 	// Include the default reference counting implementation.
 	IMPLEMENT_REFCOUNTING( CAardvarkRenderProcessHandler );

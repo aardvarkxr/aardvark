@@ -305,6 +305,12 @@ export interface Aardvark
 	// requires input permissions
 	registerInput( actionSets: ActionSet[] ): void;
 	syncInput( info: InputInfo ): InputState;
+
+	// requires settings permissions
+	getBoolSetting( sectionName: string, settingName: string ): boolean;
+	getNumberSetting( sectionName: string, settingName: string ): number;
+	getStringSetting( sectionName: string, settingName: string ): string;
+	setSetting( sectionName: string, settingName: string, newValue: number | string | boolean ): void;
 }
 
 declare global

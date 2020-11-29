@@ -281,6 +281,147 @@ bool CAardvarkObject::init( CefRefPtr<CefV8Value> container )
 		} );
 	}
 
+	if ( hasPermission( "settings" ) )
+	{
+		RegisterFunction( container, "getBoolSetting", [this]( const CefV8ValueList& arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+		{
+			if ( arguments.size() != 2
+				|| !arguments[ 0 ]->IsString()
+				|| !arguments[ 1 ]->IsString() )
+			{
+				exception = "Invalid arguments";
+				return;
+			}
+
+			std::string section = arguments[ 0 ]->GetStringValue();
+			std::string setting = arguments[ 1 ]->GetStringValue();
+
+			vr::EVRInitError err = m_handler->InitOpenVR();
+			if ( err != vr::VRInitError_None )
+			{
+				exception = std::string( "VR_Init failed with " ) + vr::VR_GetVRInitErrorAsSymbol( err );
+				return;
+			}
+
+			vr::EVRSettingsError settingsErr;
+			bool bRes = vr::VRSettings()->GetBool( section.c_str(), setting.c_str(), &settingsErr );
+			if ( settingsErr != vr::VRSettingsError_None && settingsErr != vr::VRSettingsError_UnsetSettingHasNoDefault )
+			{
+				exception = std::string( "Failed to get setting with " ) + vr::VRSettings()->GetSettingsErrorNameFromEnum( settingsErr );
+			}
+			else
+			{
+				retval = CefV8Value::CreateBool( bRes );
+			}
+		} );
+
+		RegisterFunction( container, "getStringSetting", [this]( const CefV8ValueList& arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+		{
+			if ( arguments.size() != 2
+				|| !arguments[ 0 ]->IsString()
+				|| !arguments[ 1 ]->IsString() )
+			{
+				exception = "Invalid arguments";
+				return;
+			}
+
+			std::string section = arguments[ 0 ]->GetStringValue();
+			std::string setting = arguments[ 1 ]->GetStringValue();
+
+			vr::EVRInitError err = m_handler->InitOpenVR();
+			if ( err != vr::VRInitError_None )
+			{
+				exception = std::string( "VR_Init failed with " ) + vr::VR_GetVRInitErrorAsSymbol( err );
+				return;
+			}
+
+			vr::CVRSettingHelper helper( vr::VRSettings() );
+
+			vr::EVRSettingsError settingsErr;
+			std::string value = helper.GetString( section, setting, &settingsErr );
+			if ( settingsErr != vr::VRSettingsError_None && settingsErr != vr::VRSettingsError_UnsetSettingHasNoDefault )
+			{
+				exception = std::string( "Failed to get setting with " ) + vr::VRSettings()->GetSettingsErrorNameFromEnum( settingsErr );
+			}
+			else
+			{
+				retval = CefV8Value::CreateString( value );
+			}
+		} );
+
+		RegisterFunction( container, "getNumberSetting", [this]( const CefV8ValueList& arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+		{
+			if ( arguments.size() != 2
+				|| !arguments[ 0 ]->IsString()
+				|| !arguments[ 1 ]->IsString() )
+			{
+				exception = "Invalid arguments";
+				return;
+			}
+
+			std::string section = arguments[ 0 ]->GetStringValue();
+			std::string setting = arguments[ 1 ]->GetStringValue();
+
+			vr::EVRInitError err = m_handler->InitOpenVR();
+			if ( err != vr::VRInitError_None )
+			{
+				exception = std::string( "VR_Init failed with " ) + vr::VR_GetVRInitErrorAsSymbol( err );
+				return;
+			}
+
+			vr::EVRSettingsError settingsErr;
+			double value = vr::VRSettings()->GetFloat( section.c_str(), setting.c_str(), &settingsErr );
+			if ( settingsErr != vr::VRSettingsError_None && settingsErr != vr::VRSettingsError_UnsetSettingHasNoDefault )
+			{
+				exception = std::string( "Failed to get setting with " ) + vr::VRSettings()->GetSettingsErrorNameFromEnum( settingsErr );
+			}
+			else
+			{
+				retval = CefV8Value::CreateDouble( value );
+			}
+		} );
+
+		RegisterFunction( container, "setSetting", [this]( const CefV8ValueList& arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+		{
+			if ( arguments.size() != 3
+				|| !arguments[ 0 ]->IsString()
+				|| !arguments[ 1 ]->IsString() )
+		{
+				exception = "Invalid arguments";
+				return;
+			}
+
+			vr::EVRInitError err = m_handler->InitOpenVR();
+			if ( err != vr::VRInitError_None )
+			{
+				exception = std::string( "VR_Init failed with " ) + vr::VR_GetVRInitErrorAsSymbol( err );
+				return;
+			}
+
+			std::string section = arguments[ 0 ]->GetStringValue();
+			std::string setting = arguments[ 1 ]->GetStringValue();
+
+			vr::EVRSettingsError settingsErr;
+			if ( arguments[ 2 ]->IsBool() )
+			{
+				vr::VRSettings()->SetBool( section.c_str(), setting.c_str(), arguments[ 2 ]->GetBoolValue(), &settingsErr );
+			}
+			else if ( arguments[ 2 ]->IsString() )
+			{
+				std::string value = arguments[ 2 ]->GetStringValue();
+				vr::VRSettings()->SetString( section.c_str(), setting.c_str(), value.c_str(), &settingsErr );
+			}
+			else if ( arguments[ 2 ]->IsDouble() || arguments[2]->IsUInt() || arguments[2]->IsInt() )
+			{
+				vr::VRSettings()->SetFloat( section.c_str(), setting.c_str(), (float)arguments[ 2 ]->GetDoubleValue(), &settingsErr );
+			}
+			else
+			{
+				exception = "value must be boolean, string, or number";
+			}
+		} );
+	}
+
 	return true;
 
 }
@@ -727,6 +868,9 @@ void CAardvarkRenderProcessHandler::registerInput( CefRefPtr<CefV8Value> manifes
 
 vr::EVRInitError CAardvarkRenderProcessHandler::InitOpenVR()
 {
+	if ( m_vrInitialized )
+		return vr::VRInitError_None;
+
 	nlohmann::json startupInfo =
 	{
 		{ "app_key", "aardvarkxr.gadget." + m_gadgetId },
@@ -735,12 +879,16 @@ vr::EVRInitError CAardvarkRenderProcessHandler::InitOpenVR()
 
 	vr::EVRInitError err;
 	vr::VR_Init( &err, vr::VRApplication_Overlay, startupInfo.dump().c_str() );
+	m_vrInitialized = err == vr::VRInitError_None;
 	return err;
 }
 
 
 vr::EVRInitError CAardvarkRenderProcessHandler::PrepareForVRInit()
 {
+	if ( m_preparedForVRInit )
+		return vr::VRInitError_None;
+
 	for ( auto& contextInfo : m_contexts )
 	{
 		if ( !contextInfo.frame->IsMain() )
@@ -792,6 +940,8 @@ vr::EVRInitError CAardvarkRenderProcessHandler::PrepareForVRInit()
 	vr::VRApplications()->AddApplicationManifest( appManifestPath.u8string().c_str(), true );
 
 	vr::VR_Shutdown();
+
+	m_preparedForVRInit = true;
 	return vr::VRInitError_None;
 }
 

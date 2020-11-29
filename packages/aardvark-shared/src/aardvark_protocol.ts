@@ -750,6 +750,7 @@ export enum Permission
 	Favorites = "favorites",
 	StartUrl = "starturl",
 	Input = "input",
+	Settings = "settings",
 }
 
 export interface AardvarkManifestExtension
