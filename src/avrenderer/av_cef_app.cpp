@@ -208,6 +208,7 @@ void CAardvarkCefApp::runFrame()
 	if ( m_quitRequested && !m_quitHandled )
 	{
 		m_quitHandled = true;
+		m_quitTime = std::chrono::steady_clock::now();
 		CloseAllBrowsers( true );
 	}
 
@@ -235,6 +236,18 @@ void CAardvarkCefApp::runFrame()
 
 bool CAardvarkCefApp::wantsToQuit()
 {
+	if ( m_quitHandled )
+	{
+		// if we've blocked waiting for browsers to exit for more than five seconds, just exit the main
+		// aardvarkxr process. CEF will clean up the other processes.
+		auto end = std::chrono::steady_clock::now();
+		std::chrono::duration<double> elapsed_seconds = end - m_quitTime;
+		if ( elapsed_seconds.count() > 5 )
+		{
+			return true;
+		}
+	}
+
 	return m_browsers.empty() && m_quitRequested;
 }
 

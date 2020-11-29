@@ -57,6 +57,7 @@ private:
 	CefRefPtr<CefRenderProcessHandler> m_renderProcessHandler;
 	bool m_quitRequested = false;
 	bool m_quitHandled = false;
+	std::chrono::steady_clock::time_point m_quitTime;
 
 	std::vector< CefRefPtr<CAardvarkCefHandler> > m_browsers;
 	ID3D11Device *m_pD3D11Device = nullptr;
