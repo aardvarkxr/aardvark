@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { AvApiInterface } from './api_interface';
-
+import { bind } from 'bind-decorator';
 
 export const k_MessageboxInterface = "messagebox@1";
 
@@ -32,6 +32,7 @@ export class AvMessagebox extends React.Component< {}, {} >
 
 	private activePrompt: Prompt = null;
 	private activePromptReject: (reason: any)=>void = null;
+	private activePromptResolve: ( response: string )=>void = null;
 
 	public showPrompt( caption: string, options: MessageboxOption[] ) 
 	{
@@ -48,9 +49,11 @@ export class AvMessagebox extends React.Component< {}, {} >
 				options,
 			};
 			this.activePromptReject = reject;
+			this.activePromptResolve = resolve;
 
 			if( this.api.current && this.api.current.connected )
 			{
+				console.log( "Sending mbox request" );
 				this.api.current.sendRequestAndWaitForResponse<string>( MessageboxEventType.ShowPrompt, true,
 					this.activePrompt )
 				.then( ( response: string ) =>
@@ -65,6 +68,30 @@ export class AvMessagebox extends React.Component< {}, {} >
 			}
 		})
 	}
+
+	@bind
+	private onConnect()
+	{
+		console.log( "connected to mbox" );
+		if( this.activePrompt )
+		{
+			console.log( "sending postponed mbox request" );
+			this.api.current.sendRequestAndWaitForResponse<string>( MessageboxEventType.ShowPrompt, true,
+				this.activePrompt )
+			.then( ( response: string ) =>
+			{
+				let resolve = this.activePromptResolve;
+				this.clearActivePrompt();
+				resolve( response );
+			} )
+			.catch( (reason: any ) =>
+			{
+				// Just drop errors on the floor. We'll try again on reconnect
+			} );
+
+		}
+	}
+
 
 	public cancelPrompt() 
 	{
@@ -88,11 +115,13 @@ export class AvMessagebox extends React.Component< {}, {} >
 	{
 		this.activePrompt = null;
 		this.activePromptReject = null;
+		this.activePromptResolve = null;
 	}
 
 	public render()
 	{
-		return <AvApiInterface apiName={ k_MessageboxInterface } ref={ this.api }/>
+		return <AvApiInterface apiName={ k_MessageboxInterface } ref={ this.api }
+			onConnect={ this.onConnect }/>
 	}
 }
 
