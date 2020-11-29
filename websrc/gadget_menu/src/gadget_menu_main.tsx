@@ -515,6 +515,31 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		}
 	}
 
+	async componentDidMount()
+	{
+		if( !Av().getBoolSetting( "steamvr", "globalActionSetPriority" ) )
+		{
+			let answer = await this.messagebox.current.showPrompt( "Aardvark is able to automatically switch input between the "
+				+ "underlying game or application and Aardvark gadgets. This requires enabling an experimental "
+				+ "setting in SteamVR. Would you like to enable that setting?", 
+				[
+					{
+						text: "No",
+						name: "no",
+					},
+					{
+						text: "Yes",
+						name: "yes",
+					}
+				] );
+
+			if( answer == "yes" )
+			{
+				Av().setSetting( "steamvr", "globalActionSetPriority", true );
+			}
+		}
+	}
+
 	componentDidUpdate( prevProps: {}, prevState: ControlPanelState )
 	{
 		if( this.state.tab == ControlPanelTab.DesktopWindows 
