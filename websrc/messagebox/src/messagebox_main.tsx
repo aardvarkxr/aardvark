@@ -108,9 +108,15 @@ class Messagebox extends React.Component< {}, MessageboxState >
 			)
 		}
 
+		let classes = "Caption";
+		if( this.state.activePrompt.prompt.caption.length > 100 )
+		{
+			classes += " Long";
+		}
+
 		return <>
 			<div className="Messagebox" >
-				<div className="Caption">{this.state.activePrompt.prompt.caption}</div>
+				<div className={ classes }>{this.state.activePrompt.prompt.caption}</div>
 				<div className="ButtonList">{ buttons }</div>
 			</div>
 			<AvOrigin path="/user/head">

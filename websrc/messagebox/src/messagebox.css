@@ -18,6 +18,11 @@ body, html
 	text-align: center;
 }
 
+.Caption.Long
+{
+	font-size: 1.5rem;
+}
+
 .Button:hover
 {
 	background-color: red;
