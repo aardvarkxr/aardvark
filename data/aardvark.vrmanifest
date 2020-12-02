@@ -7,7 +7,7 @@
 			"launch_type": "binary",
 			"action_manifest_path": "input/aardvark_actions.json",
 			"is_dashboard_overlay": true,
-			"binary_path_windows": "../aardvarkxr.exe",
+			"binary_path_windows": "runaardvark.bat",
 			"image_path": "aardvark_capsule_main.png",
 			"arguments": "",
 			"strings": {
