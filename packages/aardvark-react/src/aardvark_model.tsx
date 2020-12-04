@@ -17,6 +17,15 @@ export interface AvModelProps extends AvBaseNodeProps
 	 */
 	color?: AvColor | string;
 
+	/** Only the parts of the model that are "on top" of another
+	 * Aardvark-rendered pixel should be drawn. This can be used 
+	 * to draw Aardvark replacements for things that other 
+	 * Aardvark-drawn geometry may be hiding, such as hand models.
+	 * 
+	 * @default false
+	 */
+	overlayOnly?: boolean;
+
 	/** Causes the model to be uniformly scaled up or down so
 	 * that its bounding box touches at least one of the -x, +x,
 	 * -y, +y, -z, or +z planes. Any axis that is 0 or unspecified
@@ -76,7 +85,8 @@ export class AvModel extends AvBaseNode< AvModelProps, {} >
 		
 		node.propModelUri = this.props.uri;
 		node.propScaleToFit = this.props.scaleToFit;
-
+		node.propOverlayOnly = this.props.overlayOnly;
+		
 		let color: AvColor;
 		if( typeof this.props.color === "string" )
 		{

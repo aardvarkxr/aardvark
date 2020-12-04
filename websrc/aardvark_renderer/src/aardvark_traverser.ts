@@ -1069,6 +1069,11 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 					[ node.propColor.r, node.propColor.g, node.propColor.b, alpha ] );
 			}
 
+			if( typeof node.propOverlayOnly == "boolean" )
+			{
+				nodeData.modelInstance.setOverlayOnly( node.propOverlayOnly );
+			}
+
 			if( node.propSharedTexture?.url )
 			{
 				const [ filteredTextureUrl, urlType ] = this.fixupUrlForCurrentNode( node.propSharedTexture.url );

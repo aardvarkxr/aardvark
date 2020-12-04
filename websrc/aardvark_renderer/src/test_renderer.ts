@@ -7,6 +7,7 @@ export class CTestModel implements AvModelInstance
 	public url: string;
 	public universeFromModel: mat4 = null;
 	public color: AvColor = null;
+	public overlayOnly: boolean = null;
 	public overrideTexture: AvSharedTextureInfo = null;
 
 	constructor( url: string )
@@ -37,6 +38,11 @@ export class CTestModel implements AvModelInstance
 		{
 			this.color.a = color[3];
 		}
+	}
+
+	public setOverlayOnly( overlayOnly: boolean ): void
+	{
+		this.overlayOnly = overlayOnly;
 	}
 }
 

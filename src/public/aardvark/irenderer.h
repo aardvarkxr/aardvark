@@ -52,6 +52,7 @@ public:
 	virtual void setDxgiOverrideTexture( void *textureHandle, ETextureFormat format, uint32_t width, uint32_t height ) = 0;
 	virtual void setOverrideTexture( ETextureFormat format, const void* data, uint32_t width, uint32_t height ) = 0;
 	virtual void setBaseColor( const glm::vec4 & color ) = 0;
+	virtual void setOverlayOnly( bool ) = 0;
 };
 
 

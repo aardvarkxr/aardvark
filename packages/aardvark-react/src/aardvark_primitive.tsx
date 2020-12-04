@@ -1,4 +1,5 @@
 import { g_builtinModelCylinder, g_builtinModelBox, g_builtinModelSphere } from '@aardvarkxr/aardvark-shared';
+import { POINT_CONVERSION_COMPRESSED } from 'constants';
 import * as React from 'react';
 import { AvModel } from './aardvark_model';
 import { AvTransform } from './aardvark_transform';
@@ -85,6 +86,16 @@ export interface AvPrimitiveProps
 	 * @default Center
 	 */
 	originZ?: PrimitiveZOrigin;
+
+	/** Only the parts of the model that are "on top" of another
+	 * Aardvark-rendered pixel should be drawn. This can be used 
+	 * to draw Aardvark replacements for things that other 
+	 * Aardvark-drawn geometry may be hiding, such as hand models.
+	 * 
+	 * @default false
+	 */
+	overlayOnly?: boolean;
+
 }
 
 
@@ -160,7 +171,7 @@ export function AvPrimitive( props: AvPrimitiveProps )
 
 	return <AvTransform scaleX={ xScale } scaleY={ yScale } scaleZ={ zScale }
 		translateX={ xOffset } translateY={ yOffset } translateZ={ zOffset }>
-			<AvModel uri={ modelUri} color={ props.color }/>
+			<AvModel uri={ modelUri} color={ props.color } overlayOnly={ props.overlayOnly }/>
 		</AvTransform>;
 }
 

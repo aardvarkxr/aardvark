@@ -40,6 +40,7 @@ public:
 	virtual void setDxgiOverrideTexture( void* textureHandle, ETextureFormat format, uint32_t width, uint32_t height ) override;
 	virtual void setOverrideTexture( ETextureFormat format, const void* data, uint32_t width, uint32_t height ) override;
 	virtual void setBaseColor( const glm::vec4 & color ) override;
+	virtual void setOverlayOnly( bool overlayOnly ) override { this->overlayOnly = overlayOnly; };
 
 	void animate( float animationTimeElapsed );
 protected:
@@ -47,6 +48,7 @@ protected:
 	std::string m_modelUri;
 	std::shared_ptr<vkglTF::Model> m_model;
 	vkglTF::Transformable m_modelParent;
+	bool overlayOnly = false;
 
 	void *m_lastDxgiHandle = nullptr;
 	glm::vec4 m_lastBaseColor = { 0, 0, 0, 0 };
@@ -70,7 +72,7 @@ public:
 	~VulkanExample() noexcept;
 
 	void renderNode( std::shared_ptr<vkglTF::Model> pModel, std::shared_ptr<vkglTF::Node> node, uint32_t cbIndex, 
-		vkglTF::Material::AlphaMode alphaMode, bool doubleSided, EEye eEye );
+		vkglTF::Material::AlphaMode alphaMode, GeometryType geometryType, EEye eEye );
 
 
 	void recordCommandBuffers( uint32_t cbIndex );
@@ -80,7 +82,7 @@ public:
 	void renderScene( uint32_t cbIndex, VkRenderPass targetRenderPass, VkFramebuffer targetFrameBuffer, uint32_t targetWidth, uint32_t targetHeight, EEye eEye );
 
 	void recordCommandsForModels( VkCommandBuffer currentCB, uint32_t i, vkglTF::Material::AlphaMode eAlphaMode, 
-		bool doubleSided, EEye eEye );
+		GeometryType geometryType, EEye eEye );
 	void loadEnvironment( std::string filename );
 
 	vkglTF::Model m_skybox;
@@ -170,6 +172,7 @@ protected:
 		VkPipeline skybox;
 		VkPipeline pbr;
 		VkPipeline pbrDoubleSided;
+		VkPipeline pbrOverlayOnly;
 		VkPipeline pbrAlphaBlend;
 		VkPipeline pbrAlphaBlendDoubleSided;
 	} pipelines;

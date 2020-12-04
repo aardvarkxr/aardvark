@@ -166,6 +166,22 @@ bool CJavascriptModelInstance::init( CefRefPtr<CefV8Value > container )
 		m_modelInstance->setBaseColor( color );
 	} );
 
+	RegisterFunction( container, "setOverlayOnly", [this]( const CefV8ValueList& arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 1 )
+		{
+			exception = "Invalid arguments";
+			return;
+		}
+
+		if ( !arguments[ 0 ]->IsBool() )
+		{
+			exception = "argument must a bool";
+			return;
+		}
+
+		m_modelInstance->setOverlayOnly( arguments[0]->GetBoolValue() );
+	} );
 	return true;
 }
 

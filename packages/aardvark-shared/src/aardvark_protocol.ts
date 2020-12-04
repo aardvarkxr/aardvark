@@ -692,6 +692,7 @@ export interface AvNode
 	propSharedTexture?: AvSharedTextureInfo;
 	propConstraint?: AvConstraint;
 	propColor?: AvColor;
+	propOverlayOnly?: boolean;
 	propEndAddr?: EndpointAddr;
 	propThickness?: number;
 	propStartGap?: number;

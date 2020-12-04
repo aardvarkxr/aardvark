@@ -96,6 +96,14 @@ protected:
 	std::string title = "Vulkan Example";
 	std::string name = "vulkanExample";
 	void windowResize();
+
+	enum class GeometryType
+	{
+		SingleSided,
+		DoubleSided,
+		OverlayOnly,
+	};
+
 public: 
 	static std::vector<const char*> args;
 	bool prepared = false;

@@ -61,6 +61,7 @@ VulkanExample::~VulkanExample() noexcept
 	vkDestroyPipeline(device, pipelines.skybox, nullptr);
 	vkDestroyPipeline(device, pipelines.pbr, nullptr);
 	vkDestroyPipeline( device, pipelines.pbrDoubleSided, nullptr );
+	vkDestroyPipeline( device, pipelines.pbrOverlayOnly, nullptr );
 	vkDestroyPipeline( device, pipelines.pbrAlphaBlend, nullptr );
 	vkDestroyPipeline(device, pipelines.pbrAlphaBlendDoubleSided, nullptr);
 
@@ -108,101 +109,105 @@ void VulkanExample::configureMirrorCamera() {
 }
 
 void VulkanExample::renderNode( std::shared_ptr<vkglTF::Model> pModel, std::shared_ptr<vkglTF::Node> node, uint32_t cbIndex, 
-	vkglTF::Material::AlphaMode alphaMode, bool doubleSided, EEye eEye )
+	vkglTF::Material::AlphaMode alphaMode, GeometryType geometryType, EEye eEye )
 {
 	if ( node->mesh ) {
 		// Render mesh primitives
 		for ( auto primitive : node->mesh->primitives ) {
 			vkglTF::Material & primitiveMaterial = primitive->materialIndex >= pModel->materials.size()
 				? pModel->materials.back() : pModel->materials[primitive->materialIndex];
-			
-			if ( primitiveMaterial.alphaMode == alphaMode && primitiveMaterial.doubleSided == doubleSided ) {
-				VkDescriptorSet descriptorSet;
-				switch ( eEye )
-				{
-				case EEye::Left:
-					descriptorSet = descriptorSets[cbIndex].eye[vr::Eye_Left]->set();
-					break;
-				case EEye::Right:
-					descriptorSet = descriptorSets[cbIndex].eye[vr::Eye_Right]->set();
-					break;
-				default:
-				case EEye::Mirror:
-					descriptorSet = descriptorSets[cbIndex].scene->set();
-					break;
-				}
+	
+			if ( primitiveMaterial.alphaMode != alphaMode )
+				continue;
 
-				const std::vector<VkDescriptorSet> descriptorsets =
-				{
-					descriptorSet,
-					primitiveMaterial.descriptorSet->set(),
-					node->mesh->uniformBuffer.descriptor->set(),
-				};
-				vkCmdBindDescriptorSets( commandBuffers[cbIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, static_cast<uint32_t>( descriptorsets.size() ), descriptorsets.data(), 0, NULL );
+			if ( primitiveMaterial.doubleSided && geometryType == GeometryType::SingleSided )
+				continue;
+
+			VkDescriptorSet descriptorSet;
+			switch ( eEye )
+			{
+			case EEye::Left:
+				descriptorSet = descriptorSets[cbIndex].eye[vr::Eye_Left]->set();
+				break;
+			case EEye::Right:
+				descriptorSet = descriptorSets[cbIndex].eye[vr::Eye_Right]->set();
+				break;
+			default:
+			case EEye::Mirror:
+				descriptorSet = descriptorSets[cbIndex].scene->set();
+				break;
+			}
+
+			const std::vector<VkDescriptorSet> descriptorsets =
+			{
+				descriptorSet,
+				primitiveMaterial.descriptorSet->set(),
+				node->mesh->uniformBuffer.descriptor->set(),
+			};
+			vkCmdBindDescriptorSets( commandBuffers[cbIndex], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, static_cast<uint32_t>( descriptorsets.size() ), descriptorsets.data(), 0, NULL );
 
 
-				// Pass material parameters as push constants
-				PushConstBlockMaterial pushConstBlockMaterial{};
-				pushConstBlockMaterial.emissiveFactor = primitiveMaterial.emissiveFactor;
-				// To save push constant space, availability and texture coordinate set are combined
-				// -1 = texture not used for this material, >= 0 texture used and index of texture coordinate set
+			// Pass material parameters as push constants
+			PushConstBlockMaterial pushConstBlockMaterial{};
+			pushConstBlockMaterial.emissiveFactor = primitiveMaterial.emissiveFactor;
+			// To save push constant space, availability and texture coordinate set are combined
+			// -1 = texture not used for this material, >= 0 texture used and index of texture coordinate set
+			pushConstBlockMaterial.colorTextureSet = primitiveMaterial.baseColorTexture != nullptr ? primitiveMaterial.texCoordSets.baseColor : -1;
+			pushConstBlockMaterial.normalTextureSet = primitiveMaterial.normalTexture != nullptr ? primitiveMaterial.texCoordSets.normal : -1;
+			pushConstBlockMaterial.occlusionTextureSet = primitiveMaterial.occlusionTexture != nullptr ? primitiveMaterial.texCoordSets.occlusion : -1;
+			pushConstBlockMaterial.emissiveTextureSet = primitiveMaterial.emissiveTexture != nullptr ? primitiveMaterial.texCoordSets.emissive : -1;
+			pushConstBlockMaterial.alphaMask = static_cast<float>( primitiveMaterial.alphaMode == vkglTF::Material::ALPHAMODE_MASK );
+			pushConstBlockMaterial.alphaMaskCutoff = primitiveMaterial.alphaCutoff;
+
+			// TODO: glTF specs states that metallic roughness should be preferred, even if specular glossiness is present
+
+			switch ( primitiveMaterial.workflow )
+			{
+			case vkglTF::Material::Workflow::MetallicRoughness:
+				pushConstBlockMaterial.workflow = static_cast<float>( PBR_WORKFLOW_METALLIC_ROUGHNESS );
+				pushConstBlockMaterial.baseColorFactor = primitiveMaterial.baseColorFactor;
+				pushConstBlockMaterial.metallicFactor = primitiveMaterial.metallicFactor;
+				pushConstBlockMaterial.roughnessFactor = primitiveMaterial.roughnessFactor;
+				pushConstBlockMaterial.PhysicalDescriptorTextureSet = primitiveMaterial.metallicRoughnessTexture != nullptr ? primitiveMaterial.texCoordSets.metallicRoughness : -1;
 				pushConstBlockMaterial.colorTextureSet = primitiveMaterial.baseColorTexture != nullptr ? primitiveMaterial.texCoordSets.baseColor : -1;
-				pushConstBlockMaterial.normalTextureSet = primitiveMaterial.normalTexture != nullptr ? primitiveMaterial.texCoordSets.normal : -1;
-				pushConstBlockMaterial.occlusionTextureSet = primitiveMaterial.occlusionTexture != nullptr ? primitiveMaterial.texCoordSets.occlusion : -1;
-				pushConstBlockMaterial.emissiveTextureSet = primitiveMaterial.emissiveTexture != nullptr ? primitiveMaterial.texCoordSets.emissive : -1;
-				pushConstBlockMaterial.alphaMask = static_cast<float>( primitiveMaterial.alphaMode == vkglTF::Material::ALPHAMODE_MASK );
-				pushConstBlockMaterial.alphaMaskCutoff = primitiveMaterial.alphaCutoff;
+				break;
 
-				// TODO: glTF specs states that metallic roughness should be preferred, even if specular glossiness is present
+			case vkglTF::Material::Workflow::SpecularGlossiness:
+				pushConstBlockMaterial.workflow = static_cast<float>( PBR_WORKFLOW_SPECULAR_GLOSINESS );
+				pushConstBlockMaterial.PhysicalDescriptorTextureSet = primitiveMaterial.extension.specularGlossinessTexture != nullptr ? primitiveMaterial.texCoordSets.specularGlossiness : -1;
+				pushConstBlockMaterial.colorTextureSet = primitiveMaterial.extension.diffuseTexture != nullptr ? primitiveMaterial.texCoordSets.baseColor : -1;
+				pushConstBlockMaterial.diffuseFactor = primitiveMaterial.extension.diffuseFactor;
+				pushConstBlockMaterial.specularFactor = glm::vec4( primitiveMaterial.extension.specularFactor, 1.0f );
+				break;
 
-				switch ( primitiveMaterial.workflow )
-				{
-				case vkglTF::Material::Workflow::MetallicRoughness:
-					pushConstBlockMaterial.workflow = static_cast<float>( PBR_WORKFLOW_METALLIC_ROUGHNESS );
-					pushConstBlockMaterial.baseColorFactor = primitiveMaterial.baseColorFactor;
-					pushConstBlockMaterial.metallicFactor = primitiveMaterial.metallicFactor;
-					pushConstBlockMaterial.roughnessFactor = primitiveMaterial.roughnessFactor;
-					pushConstBlockMaterial.PhysicalDescriptorTextureSet = primitiveMaterial.metallicRoughnessTexture != nullptr ? primitiveMaterial.texCoordSets.metallicRoughness : -1;
-					pushConstBlockMaterial.colorTextureSet = primitiveMaterial.baseColorTexture != nullptr ? primitiveMaterial.texCoordSets.baseColor : -1;
-					break;
+			case vkglTF::Material::Workflow::Unlit:
+				pushConstBlockMaterial.workflow = static_cast<float>( PBR_WORKFLOW_UNLIT );
+				pushConstBlockMaterial.baseColorFactor = primitiveMaterial.baseColorFactor;
+				break;
+			}
 
-				case vkglTF::Material::Workflow::SpecularGlossiness:
-					pushConstBlockMaterial.workflow = static_cast<float>( PBR_WORKFLOW_SPECULAR_GLOSINESS );
-					pushConstBlockMaterial.PhysicalDescriptorTextureSet = primitiveMaterial.extension.specularGlossinessTexture != nullptr ? primitiveMaterial.texCoordSets.specularGlossiness : -1;
-					pushConstBlockMaterial.colorTextureSet = primitiveMaterial.extension.diffuseTexture != nullptr ? primitiveMaterial.texCoordSets.baseColor : -1;
-					pushConstBlockMaterial.diffuseFactor = primitiveMaterial.extension.diffuseFactor;
-					pushConstBlockMaterial.specularFactor = glm::vec4( primitiveMaterial.extension.specularFactor, 1.0f );
-					break;
+			vkCmdPushConstants( commandBuffers[cbIndex], pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( PushConstBlockMaterial ), &pushConstBlockMaterial );
 
-				case vkglTF::Material::Workflow::Unlit:
-					pushConstBlockMaterial.workflow = static_cast<float>( PBR_WORKFLOW_UNLIT );
-					pushConstBlockMaterial.baseColorFactor = primitiveMaterial.baseColorFactor;
-					break;
-				}
+			PushConstBlockVertex pushConstVertex{};
+			pushConstVertex.uvScaleAndOffset =
+			{
+				primitiveMaterial.baseColorScale[0], primitiveMaterial.baseColorScale[1],
+				primitiveMaterial.baseColorOffset[0], primitiveMaterial.baseColorOffset[1]
+			};
 
-				vkCmdPushConstants( commandBuffers[cbIndex], pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( PushConstBlockMaterial ), &pushConstBlockMaterial );
+			vkCmdPushConstants( commandBuffers[cbIndex], pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof( PushConstBlockMaterial ), sizeof( PushConstBlockVertex ), &pushConstVertex );
 
-				PushConstBlockVertex pushConstVertex{};
-				pushConstVertex.uvScaleAndOffset =
-				{
-					primitiveMaterial.baseColorScale[0], primitiveMaterial.baseColorScale[1],
-					primitiveMaterial.baseColorOffset[0], primitiveMaterial.baseColorOffset[1]
-				};
-
-				vkCmdPushConstants( commandBuffers[cbIndex], pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof( PushConstBlockMaterial ), sizeof( PushConstBlockVertex ), &pushConstVertex );
-
-				if ( primitive->hasIndices ) {
-					vkCmdDrawIndexed( commandBuffers[cbIndex], primitive->indexCount, 1, primitive->firstIndex, 0, 0 );
-				}
-				else {
-					vkCmdDraw( commandBuffers[cbIndex], primitive->vertexCount, 1, 0, 0 );
-				}
+			if ( primitive->hasIndices ) {
+				vkCmdDrawIndexed( commandBuffers[cbIndex], primitive->indexCount, 1, primitive->firstIndex, 0, 0 );
+			}
+			else {
+				vkCmdDraw( commandBuffers[cbIndex], primitive->vertexCount, 1, 0, 0 );
 			}
 		}
 
 	};
 	for ( auto child : node->children ) {
-		renderNode( pModel, child, cbIndex, alphaMode, doubleSided, eEye );
+		renderNode( pModel, child, cbIndex, alphaMode, geometryType, eEye );
 	}
 }
 
@@ -354,30 +359,38 @@ void VulkanExample::renderScene( uint32_t cbIndex, VkRenderPass targetRenderPass
 
 	vkCmdBindPipeline( currentCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines.pbr );
 
-	recordCommandsForModels( currentCB, cbIndex, vkglTF::Material::ALPHAMODE_OPAQUE, false, eEye );
-	recordCommandsForModels( currentCB, cbIndex, vkglTF::Material::ALPHAMODE_MASK, false, eEye );
+	recordCommandsForModels( currentCB, cbIndex, vkglTF::Material::ALPHAMODE_OPAQUE, GeometryType::SingleSided, eEye );
+	recordCommandsForModels( currentCB, cbIndex, vkglTF::Material::ALPHAMODE_MASK, GeometryType::SingleSided, eEye );
 
 	vkCmdBindPipeline( currentCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines.pbrDoubleSided );
 
-	recordCommandsForModels( currentCB, cbIndex, vkglTF::Material::ALPHAMODE_OPAQUE, true, eEye );
-	recordCommandsForModels( currentCB, cbIndex, vkglTF::Material::ALPHAMODE_MASK, true, eEye );
+	recordCommandsForModels( currentCB, cbIndex, vkglTF::Material::ALPHAMODE_OPAQUE, GeometryType::DoubleSided, eEye );
+	recordCommandsForModels( currentCB, cbIndex, vkglTF::Material::ALPHAMODE_MASK, GeometryType::DoubleSided, eEye );
+
+	vkCmdBindPipeline( currentCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines.pbrOverlayOnly );
+
+	recordCommandsForModels( currentCB, cbIndex, vkglTF::Material::ALPHAMODE_OPAQUE, GeometryType::OverlayOnly, eEye );
+	recordCommandsForModels( currentCB, cbIndex, vkglTF::Material::ALPHAMODE_MASK, GeometryType::OverlayOnly, eEye );
 
 	// Transparent primitives
 	// TODO: Correct depth sorting
 	vkCmdBindPipeline( currentCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines.pbrAlphaBlend );
-	recordCommandsForModels( currentCB, cbIndex, vkglTF::Material::ALPHAMODE_BLEND, false, eEye );
+	recordCommandsForModels( currentCB, cbIndex, vkglTF::Material::ALPHAMODE_BLEND, GeometryType::SingleSided, eEye );
 
 	vkCmdBindPipeline( currentCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines.pbrAlphaBlendDoubleSided );
-	recordCommandsForModels( currentCB, cbIndex, vkglTF::Material::ALPHAMODE_BLEND, true, eEye );
+	recordCommandsForModels( currentCB, cbIndex, vkglTF::Material::ALPHAMODE_BLEND, GeometryType::DoubleSided, eEye );
 
 	vkCmdEndRenderPass( currentCB );
 }
 
 void VulkanExample::recordCommandsForModels( VkCommandBuffer currentCB, uint32_t i, vkglTF::Material::AlphaMode eAlphaMode, 
-	bool bDoubleSided, EEye eEye )
+	GeometryType geometryType, EEye eEye )
 {
 	for ( auto pModel : m_modelsToRender )
 	{
+		if ( pModel->overlayOnly != ( geometryType == GeometryType::OverlayOnly ) )
+			continue;
+
 		VkDeviceSize offsets[1] = { 0 };
 		vkCmdBindVertexBuffers( currentCB, 0, 1, &pModel->m_model->buffers->vertices.buffer, offsets );
 		if ( pModel->m_model->buffers->indices.buffer != VK_NULL_HANDLE )
@@ -386,7 +399,7 @@ void VulkanExample::recordCommandsForModels( VkCommandBuffer currentCB, uint32_t
 		}
 
 		for ( auto node : pModel->m_model->nodes ) {
-			renderNode( pModel->m_model, node, i, eAlphaMode, bDoubleSided, eEye );
+			renderNode( pModel->m_model, node, i, eAlphaMode, geometryType, eEye );
 		}
 	}
 }
@@ -683,8 +696,12 @@ void VulkanExample::preparePipelines()
 	depthStencilStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 	depthStencilStateCI.depthTestEnable = VK_FALSE;
 	depthStencilStateCI.depthWriteEnable = VK_FALSE;
+	depthStencilStateCI.stencilTestEnable = VK_TRUE;
 	depthStencilStateCI.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
 	depthStencilStateCI.back.compareOp = VK_COMPARE_OP_ALWAYS;
+	depthStencilStateCI.back.passOp = VK_STENCIL_OP_REPLACE;
+	depthStencilStateCI.back.writeMask = 1;
+	depthStencilStateCI.back.reference = 1;
 	depthStencilStateCI.front = depthStencilStateCI.back;
 
 	VkPipelineViewportStateCreateInfo viewportStateCI{};
@@ -792,6 +809,20 @@ void VulkanExample::preparePipelines()
 
 	rasterizationStateCI.cullMode = VK_CULL_MODE_NONE;
 	VK_CHECK_RESULT( vkCreateGraphicsPipelines( device, pipelineCache, 1, &pipelineCI, nullptr, &pipelines.pbrDoubleSided ) );
+
+	{
+		VkStencilOpState old = depthStencilStateCI.front;
+
+		// require that the stencil be non-zero before writing with this pipeline
+		depthStencilStateCI.front.compareOp = VK_COMPARE_OP_NOT_EQUAL;
+		depthStencilStateCI.front.compareMask = 1;
+		depthStencilStateCI.front.reference = 0;
+		depthStencilStateCI.front.passOp = VK_STENCIL_OP_KEEP;
+		depthStencilStateCI.back = depthStencilStateCI.front;
+		VK_CHECK_RESULT( vkCreateGraphicsPipelines( device, pipelineCache, 1, &pipelineCI, nullptr, &pipelines.pbrOverlayOnly ) );
+
+		depthStencilStateCI.back = depthStencilStateCI.front = old;
+	}
 
 	rasterizationStateCI.cullMode = VK_CULL_MODE_BACK_BIT;
 	blendAttachmentState.blendEnable = VK_TRUE;

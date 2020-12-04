@@ -14,6 +14,7 @@ export interface AvModelInstance
 	setUniverseFromModelTransform( universeFromModel: number[] ): void;
 	setOverrideTexture( textureInfo: AvSharedTextureInfo ): void;
 	setBaseColor( color: [ number, number, number, number ] ): void;
+	setOverlayOnly( overlayOnly: boolean ): void;
 }
 
 export interface AvActionState

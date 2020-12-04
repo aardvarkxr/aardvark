@@ -714,9 +714,9 @@ void VulkanExampleBase::initVulkan()
 	vkGetDeviceQueue(device, vulkanDevice->queueFamilyIndices.graphics, 0, &queue);
 
 	/*
-		Suitable depth format
+		Suitable depth format. We require a stencil buffer, so skip the non-stencil formats
 	*/
-	std::vector<VkFormat> depthFormats = { VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D32_SFLOAT, VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D16_UNORM_S8_UINT, VK_FORMAT_D16_UNORM };
+	std::vector<VkFormat> depthFormats = { VK_FORMAT_D32_SFLOAT_S8_UINT, /*VK_FORMAT_D32_SFLOAT,*/ VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D16_UNORM_S8_UINT/*, VK_FORMAT_D16_UNORM*/ };
 	VkBool32 validDepthFormat = false;
 	for (auto& format : depthFormats) {
 		VkFormatProperties formatProps;
