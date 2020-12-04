@@ -1126,7 +1126,7 @@ void CAardvarkRenderProcessHandler::syncInput( CefRefPtr<CefV8Value> infoJS, Cef
 		vr::VRActiveActionSet_t activeSet = {};
 		activeSet.ulActionSet = actionSetToQuery->handle;
 		activeSet.nPriority = actionSetToQuery->priority;
-		if ( actionSetToQuery->suppressAppBindings )
+		if ( actionSetToQuery->suppressAppBindings && vr::VRSystem()->IsInputAvailable() )
 		{
 			activeSet.nPriority += vr::k_nActionSetOverlayGlobalPriorityMin;
 		}
