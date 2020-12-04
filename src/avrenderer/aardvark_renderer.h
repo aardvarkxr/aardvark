@@ -175,6 +175,8 @@ protected:
 		VkPipeline pbrOverlayOnly;
 		VkPipeline pbrAlphaBlend;
 		VkPipeline pbrAlphaBlendDoubleSided;
+		VkPipeline pbrAlphaBlendStencilPrePass;
+		VkPipeline pbrAlphaBlendDoubleSidedStencilPrePass;
 	} pipelines;
 
 	struct DescriptorSets {

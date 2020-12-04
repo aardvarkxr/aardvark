@@ -64,6 +64,8 @@ VulkanExample::~VulkanExample() noexcept
 	vkDestroyPipeline( device, pipelines.pbrOverlayOnly, nullptr );
 	vkDestroyPipeline( device, pipelines.pbrAlphaBlend, nullptr );
 	vkDestroyPipeline(device, pipelines.pbrAlphaBlendDoubleSided, nullptr);
+	vkDestroyPipeline( device, pipelines.pbrAlphaBlendStencilPrePass, nullptr );
+	vkDestroyPipeline(device, pipelines.pbrAlphaBlendDoubleSidedStencilPrePass, nullptr);
 
 	vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
 
@@ -366,6 +368,14 @@ void VulkanExample::renderScene( uint32_t cbIndex, VkRenderPass targetRenderPass
 
 	recordCommandsForModels( currentCB, cbIndex, vkglTF::Material::ALPHAMODE_OPAQUE, GeometryType::DoubleSided, eEye );
 	recordCommandsForModels( currentCB, cbIndex, vkglTF::Material::ALPHAMODE_MASK, GeometryType::DoubleSided, eEye );
+
+	// render the transparent stuff into the stencil buffer but not the color, alpha, or depth so that overlay-only rendering
+	// can know about transparent pixels, but still draw behind them
+	vkCmdBindPipeline( currentCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines.pbrAlphaBlendStencilPrePass );
+	recordCommandsForModels( currentCB, cbIndex, vkglTF::Material::ALPHAMODE_BLEND, GeometryType::SingleSided, eEye );
+
+	vkCmdBindPipeline( currentCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines.pbrAlphaBlendDoubleSidedStencilPrePass );
+	recordCommandsForModels( currentCB, cbIndex, vkglTF::Material::ALPHAMODE_BLEND, GeometryType::DoubleSided, eEye );
 
 	vkCmdBindPipeline( currentCB, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines.pbrOverlayOnly );
 
@@ -838,6 +848,13 @@ void VulkanExample::preparePipelines()
 
 	rasterizationStateCI.cullMode = VK_CULL_MODE_NONE;
 	VK_CHECK_RESULT( vkCreateGraphicsPipelines( device, pipelineCache, 1, &pipelineCI, nullptr, &pipelines.pbrAlphaBlendDoubleSided ) );
+
+	rasterizationStateCI.cullMode = VK_CULL_MODE_BACK_BIT;
+	blendAttachmentState.colorWriteMask = 0;
+	VK_CHECK_RESULT( vkCreateGraphicsPipelines( device, pipelineCache, 1, &pipelineCI, nullptr, &pipelines.pbrAlphaBlendStencilPrePass ) );
+
+	rasterizationStateCI.cullMode = VK_CULL_MODE_NONE;
+	VK_CHECK_RESULT( vkCreateGraphicsPipelines( device, pipelineCache, 1, &pipelineCI, nullptr, &pipelines.pbrAlphaBlendDoubleSidedStencilPrePass ) );
 
 	for ( auto shaderStage : shaderStages ) {
 		vkDestroyShaderModule( device, shaderStage.module, nullptr );
