@@ -134,14 +134,17 @@ namespace vkglTF
 	struct Primitive {
 		uint32_t firstIndex;
 		uint32_t indexCount;
+		uint32_t vertexStart;
 		uint32_t vertexCount;
 		uint32_t materialIndex;
 		bool hasIndices;
 
 		BoundingBox bb;
 
-		Primitive(uint32_t firstIndex, uint32_t indexCount, uint32_t vertexCount, uint32_t materialIndex ) 
-			: firstIndex(firstIndex), indexCount(indexCount), vertexCount(vertexCount), materialIndex( materialIndex ) {
+		Primitive(uint32_t firstIndex, uint32_t indexCount, uint32_t vertexStart, uint32_t vertexCount, uint32_t materialIndex ) 
+			: firstIndex(firstIndex), indexCount(indexCount), vertexStart( vertexStart ), vertexCount(vertexCount), 
+				materialIndex( materialIndex ) 
+		{
 			hasIndices = indexCount > 0;
 		};
 
@@ -173,15 +176,15 @@ namespace vkglTF
 		} uniformBuffer;
 
 		struct UniformBlock {
-			glm::mat4 matrix;
-			glm::mat4 jointMatrix[MAX_NUM_JOINTS]{};
+			glm::mat4 stageFromNode;
+			glm::mat4 nodeFromJoint[MAX_NUM_JOINTS]{};
 			float jointcount{ 0 };
 		} uniformBlock;
 
 		Mesh(vks::VulkanDevice *device, vks::CDescriptorManager *descriptorManager, glm::mat4 matrix) {
 			this->device = device;
 			this->descriptorManager = descriptorManager;
-			this->uniformBlock.matrix = matrix;
+			this->uniformBlock.stageFromNode = matrix;
 			VK_CHECK_RESULT(device->createBuffer(
 				VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -309,22 +312,22 @@ namespace vkglTF
 
 		void update() {
 			if (mesh) {
-				glm::mat4 m = getMatrix();
+				glm::mat4 stageFromNode = getMatrix();
 				if (skin) {
-					mesh->uniformBlock.matrix = m;
+					mesh->uniformBlock.stageFromNode = stageFromNode;
 					// Update join matrices
-					glm::mat4 inverseTransform = glm::inverse(m);
+					glm::mat4 nodeFromStage = glm::inverse( stageFromNode );
 					size_t numJoints = std::min((uint32_t)skin->joints.size(), MAX_NUM_JOINTS);
 					for (size_t i = 0; i < numJoints; i++) {
 						std::shared_ptr<Node> jointNode = skin->joints[i];
-						glm::mat4 jointMat = jointNode->getMatrix() * skin->inverseBindMatrices[i];
-						jointMat = inverseTransform * jointMat;
-						mesh->uniformBlock.jointMatrix[i] = jointMat;
+						glm::mat4 nodeFromJoint = jointNode->getMatrix() * skin->inverseBindMatrices[i];
+						//nodeFromJoint = nodeFromStage * nodeFromJoint;
+						mesh->uniformBlock.nodeFromJoint[i] = nodeFromJoint;
 					}
 					mesh->uniformBlock.jointcount = (float)numJoints;
 					memcpy(mesh->uniformBuffer.mapped, &mesh->uniformBlock, sizeof(mesh->uniformBlock));
 				} else {
-					memcpy(mesh->uniformBuffer.mapped, &m, sizeof(glm::mat4));
+					memcpy(mesh->uniformBuffer.mapped, &stageFromNode, sizeof(glm::mat4));
 				}
 			}
 
@@ -699,7 +702,7 @@ namespace vkglTF
 							return;
 						}
 					}					
-					auto newPrimitive = std::make_shared<Primitive>(indexStart, indexCount, vertexCount, primitive.material );
+					auto newPrimitive = std::make_shared<Primitive>(indexStart, indexCount, vertexStart, vertexCount, primitive.material );
 					newPrimitive->setBoundingBox(posMin, posMax);
 					newMesh->primitives.push_back(newPrimitive);
 				}
@@ -1147,10 +1150,44 @@ namespace vkglTF
 			}
 			loadSkins( gltfModel );
 
-			for ( auto node : linearNodes ) {
+			for ( auto node : linearNodes ) 
+			{
 				// Assign skins
-				if ( node->skinIndex > -1 ) {
-					node->skin = skins[node->skinIndex];
+				if ( node->skinIndex > -1 )
+				{
+					node->skin = skins[ node->skinIndex ];
+
+					// sanitize any garbage joint indices that came in from the file
+					if ( node->mesh )
+					{
+						for ( auto& pPrimitive : node->mesh->primitives )
+						{
+							for ( uint32_t i = 0; i < pPrimitive->vertexCount; i++ )
+							{
+								if ( pPrimitive->vertexStart + i >= vertexBuffer.size() )
+									break;
+
+								Vertex& vert = vertexBuffer[ pPrimitive->vertexStart + i ];
+
+								if ( vert.joint0.x > node->skin->joints.size() )
+								{
+									vert.joint0.x = 0;
+								}
+								if ( vert.joint0.y > node->skin->joints.size() )
+								{
+									vert.joint0.y = 0;
+								}
+								if ( vert.joint0.z > node->skin->joints.size() )
+								{
+									vert.joint0.z = 0;
+								}
+								if ( vert.joint0.w > node->skin->joints.size() )
+								{
+									vert.joint0.w = 0;
+								}
+							}
+						}
+					}
 				}
 				// Initial pose
 				if ( node->mesh ) {
