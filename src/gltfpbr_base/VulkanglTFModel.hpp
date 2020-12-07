@@ -283,10 +283,9 @@ namespace vkglTF
 			if ( src.mesh )
 			{
 				mesh = std::make_shared<Mesh>( *src.mesh );
-				if ( src.skin )
-				{
-					skin = std::make_shared<Skin>( *src.skin );
-				}
+
+				// Don't make a deep copy here. Once we clone the skin list at the model level we'll fix up all the nodes
+				skin = src.skin; 
 			}
 			skinIndex = src.skinIndex;
 			bvh = src.bvh;
@@ -317,13 +316,16 @@ namespace vkglTF
 					mesh->uniformBlock.stageFromNode = stageFromNode;
 					// Update join matrices
 					glm::mat4 nodeFromStage = glm::inverse( stageFromNode );
+					
 					size_t numJoints = std::min((uint32_t)skin->joints.size(), MAX_NUM_JOINTS);
-					for (size_t i = 0; i < numJoints; i++) {
+					for (size_t i = 0; i < numJoints; i++) 
+					{
 						std::shared_ptr<Node> jointNode = skin->joints[i];
-						glm::mat4 nodeFromJoint = jointNode->getMatrix() * skin->inverseBindMatrices[i];
-						//nodeFromJoint = nodeFromStage * nodeFromJoint;
+						glm::mat4 stageFromJoint = jointNode->getMatrix();
+						glm::mat4 nodeFromJoint = nodeFromStage * stageFromJoint * skin->inverseBindMatrices[i];
 						mesh->uniformBlock.nodeFromJoint[i] = nodeFromJoint;
 					}
+
 					mesh->uniformBlock.jointcount = (float)numJoints;
 					memcpy(mesh->uniformBuffer.mapped, &mesh->uniformBlock, sizeof(mesh->uniformBlock));
 				} else {
@@ -463,20 +465,6 @@ namespace vkglTF
 				collectLinearNodes( pNewNode );
 			}
 
-			// Fix all the parent points on those nodes
-			for ( auto pNode : linearNodes )
-			{
-				if ( !pNode->parent || pNode->parent == &src )
-				{
-					pNode->parent = this;
-				}
-				else
-				{
-					auto pParentNode = nodeFromIndex( static_cast<vkglTF::Node *>( pNode->parent )->index );
-					pNode->parent = &*pParentNode;
-				}
-			}
-
 			// copy the skins deeply and make them point at the new nodes
 			for ( auto pSrcSkin : src.skins ) 
 			{
@@ -502,6 +490,25 @@ namespace vkglTF
 				}
 
 				skins.push_back( newSkin );
+			}
+
+			// Fix up some stuff per node
+			for ( auto pNode : linearNodes )
+			{
+				if ( !pNode->parent || pNode->parent == &src )
+				{
+					pNode->parent = this;
+				}
+				else
+				{
+					auto pParentNode = nodeFromIndex( static_cast<vkglTF::Node*>( pNode->parent )->index );
+					pNode->parent = &*pParentNode;
+				}
+
+				if ( pNode->skin )
+				{
+					pNode->skin = skins[ pNode->skinIndex ];
+				}
 			}
 
 			// shallow copy textures and materials
@@ -730,7 +737,7 @@ namespace vkglTF
 			for (tinygltf::Skin &source : gltfModel.skins) {
 				std::shared_ptr<Skin> newSkin = std::make_shared<Skin>();
 				newSkin->name = source.name;
-				
+
 				// Find skeleton root node
 				if (source.skeleton > -1) {
 					newSkin->skeletonRoot = nodeFromIndex(source.skeleton);
@@ -1157,37 +1164,37 @@ namespace vkglTF
 				{
 					node->skin = skins[ node->skinIndex ];
 
-					// sanitize any garbage joint indices that came in from the file
-					if ( node->mesh )
-					{
-						for ( auto& pPrimitive : node->mesh->primitives )
-						{
-							for ( uint32_t i = 0; i < pPrimitive->vertexCount; i++ )
-							{
-								if ( pPrimitive->vertexStart + i >= vertexBuffer.size() )
-									break;
+					//// sanitize any garbage joint indices that came in from the file
+					//if ( node->mesh )
+					//{
+					//	for ( auto& pPrimitive : node->mesh->primitives )
+					//	{
+					//		for ( uint32_t i = 0; i < pPrimitive->vertexCount; i++ )
+					//		{
+					//			if ( pPrimitive->vertexStart + i >= vertexBuffer.size() )
+					//				break;
 
-								Vertex& vert = vertexBuffer[ pPrimitive->vertexStart + i ];
+					//			Vertex& vert = vertexBuffer[ pPrimitive->vertexStart + i ];
 
-								if ( vert.joint0.x > node->skin->joints.size() )
-								{
-									vert.joint0.x = 0;
-								}
-								if ( vert.joint0.y > node->skin->joints.size() )
-								{
-									vert.joint0.y = 0;
-								}
-								if ( vert.joint0.z > node->skin->joints.size() )
-								{
-									vert.joint0.z = 0;
-								}
-								if ( vert.joint0.w > node->skin->joints.size() )
-								{
-									vert.joint0.w = 0;
-								}
-							}
-						}
-					}
+					//			if ( vert.joint0.x > node->skin->joints.size() )
+					//			{
+					//				vert.joint0.x = 0;
+					//			}
+					//			if ( vert.joint0.y > node->skin->joints.size() )
+					//			{
+					//				vert.joint0.y = 0;
+					//			}
+					//			if ( vert.joint0.z > node->skin->joints.size() )
+					//			{
+					//				vert.joint0.z = 0;
+					//			}
+					//			if ( vert.joint0.w > node->skin->joints.size() )
+					//			{
+					//				vert.joint0.w = 0;
+					//			}
+					//		}
+					//	}
+					//}
 				}
 				// Initial pose
 				if ( node->mesh ) {
