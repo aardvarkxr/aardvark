@@ -89,6 +89,9 @@ export class AvGadget
 	private m_epToNotify: EndpointAddr = null;
 	private m_firstSceneGraph: boolean = true;
 	private m_initialInterfaces: InitialInterfaceLock[] = [];
+	private m_endpointOpened: boolean = false;
+	private m_activeWaitForConnectReject: (reason: any) => void = null;
+	private m_activeWaitForConnectResolve: () => void = null;
 
 	private m_interfaceEventProcessors: {[nodeId: number]: AvInterfaceEventProcessor } = {}
 	private m_interfaceEntityProcessors = new Map<number, AvInterfaceEntityProcessor>();
@@ -123,6 +126,32 @@ export class AvGadget
 		this.m_endpoint = new CGadgetEndpoint( this.m_actualGadgetUri, this.onEndpointOpen );
 	}
 
+	/** Returns a promise that resolves when the initial endpoint handshake is complete
+	 * 
+	 * @public
+	 */
+	@bind public waitForConnect()
+	{
+		if( this.m_activeWaitForConnectReject ) {
+			this.m_activeWaitForConnectReject("Another caller registered a promise");
+			this.clearWaitForConnect();
+		}
+
+		return new Promise( (resolve, reject) => 
+		{
+			if ( this.m_endpointOpened ) resolve();
+
+			this.m_activeWaitForConnectReject = reject
+			this.m_activeWaitForConnectResolve = resolve
+		});
+	}
+
+	@bind private clearWaitForConnect()
+	{
+		this.m_activeWaitForConnectReject = null;
+		this.m_activeWaitForConnectResolve = null;
+	}
+
 	@bind public onEndpointOpen( settings: any )
 	{
 		this.m_endpoint.getGadgetManifest( this.m_actualGadgetUri )
@@ -146,6 +175,13 @@ export class AvGadget
 		if( this.m_onSettingsReceived )
 		{
 			this.m_onSettingsReceived( settings );
+		}
+
+		this.m_endpointOpened = true;
+		if ( this.m_activeWaitForConnectResolve )
+		{
+			this.m_activeWaitForConnectResolve();
+			this.clearWaitForConnect();
 		}
 	}
 
@@ -617,7 +653,6 @@ export class AvGadget
 
 		if( this.m_firstSceneGraph )
 		{
-			//console.log( `sending GadgetStarted for ${ this.m_endpoint.getEndpointId() }`)
 			this.m_firstSceneGraph = false;
 			if( this.m_epToNotify )
 			{
