@@ -17,6 +17,7 @@ export let k_actionSets: ActionSet[] =
 					...twoHandBinding( InteractionProfile.IndexController, Input.TriggerTouch ),
 					...twoHandBinding( InteractionProfile.TouchController, Input.TriggerTouch ),
 					...twoHandBinding( InteractionProfile.MixedRealityController, Input.TriggerTouch ),
+					...twoHandBinding( InteractionProfile.ViveController, Input.TriggerTouch ),
 				]
 			}
 		]
@@ -36,6 +37,7 @@ export let k_actionSets: ActionSet[] =
 					...twoHandBinding( InteractionProfile.IndexController, Input.Trigger ),
 					...twoHandBinding( InteractionProfile.TouchController, Input.Trigger ),
 					...twoHandBinding( InteractionProfile.MixedRealityController, Input.Trigger ),
+					...twoHandBinding( InteractionProfile.ViveController, Input.Trigger ),
 				],
 			},
 			{
@@ -54,6 +56,7 @@ export let k_actionSets: ActionSet[] =
 						inputPath: Device.Right + Input.A,
 					},
 					...twoHandBinding( InteractionProfile.MixedRealityController, Input.Menu ),
+					...twoHandBinding( InteractionProfile.ViveController, Input.Menu ),
 				],
 			}
 		]
@@ -73,6 +76,7 @@ export let k_actionSets: ActionSet[] =
 					...twoHandBinding( InteractionProfile.IndexController, Input.Thumbstick ),
 					...twoHandBinding( InteractionProfile.TouchController, Input.Thumbstick ),
 					...twoHandBinding( InteractionProfile.MixedRealityController, Input.Thumbstick ),
+					...twoHandBinding( InteractionProfile.ViveController, Input.Trackpad ),
 				],
 			},
 		]
