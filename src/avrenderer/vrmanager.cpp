@@ -3,6 +3,8 @@
 #include <iostream>
 #include <tools/pathtools.h>
 
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/quaternion.hpp>
 
 void CVRManager::init()
 {
@@ -21,6 +23,8 @@ void CVRManager::init()
 	vr::VRInput()->GetActionHandle( "/actions/aardvark/in/detach", &m_actionDetach );
 	vr::VRInput()->GetActionHandle( "/actions/aardvark/in/hand", &m_actionHand );
 	vr::VRInput()->GetActionHandle( "/actions/aardvark/in/camera", &m_actionCamera );
+	vr::VRInput()->GetActionHandle( "/actions/aardvark/in/left_anim", &m_actionLeftSkeleton );
+	vr::VRInput()->GetActionHandle( "/actions/aardvark/in/right_anim", &m_actionRightSkeleton );
 	vr::VRInput()->GetInputSourceHandle( "/user/hand/left", &m_leftHand );
 	vr::VRInput()->GetInputSourceHandle( "/user/hand/right", &m_rightHand );
 	vr::VRInput()->GetInputSourceHandle("/user/head", &m_head);
@@ -185,6 +189,30 @@ glm::vec2 GetActionVector2( vr::VRActionHandle_t action, vr::VRInputValueHandle_
 	return res;
 }
 
+std::vector<glm::mat4> GetSkeletonAction( vr::VRActionHandle_t action )
+{
+	vr::InputSkeletalActionData_t actionData;
+	vr::EVRInputError err = vr::VRInput()->GetSkeletalActionData( action, &actionData, sizeof( actionData ) );
+	if ( err != vr::VRInputError_None || !actionData.bActive )
+		return {};
+
+	vr::VRBoneTransform_t transforms[ 31 ];
+	err = vr::VRInput()->GetSkeletalBoneData( action, vr::VRSkeletalTransformSpace_Parent, vr::VRSkeletalMotionRange_WithoutController,
+		transforms, 31 );
+	if ( err != vr::VRInputError_None )
+		return {};
+
+	std::vector<glm::mat4> output;
+	output.reserve( 31 );
+	for( auto t : transforms )
+	{ 
+		glm::quat q( t.orientation.w, t.orientation.x, t.orientation.y, t.orientation.z );
+		glm::mat4 mat = glm::translate( glm::toMat4( q ), glm::vec3( t.position.v[0], t.position.v[ 1 ], t.position.v[ 2 ] ) );
+		output.push_back( mat );
+	}
+
+	return output;
+}
 
 void CVRManager::doInputWork()
 {
@@ -201,6 +229,21 @@ void CVRManager::doInputWork()
 
 	m_universeFromOriginTransforms["/user/hand/left"] = m_handActionState[(int)EHand::Left].universeFromHand;
 	m_universeFromOriginTransforms["/user/hand/right"] = m_handActionState[(int)EHand::Right].universeFromHand;
+
+	vr::InputPoseActionData_t poseData;
+	if ( vr::VRInputError_None == vr::VRInput()->GetPoseActionDataForNextFrame( m_actionLeftSkeleton, vr::TrackingUniverseStanding,
+		&poseData, sizeof( poseData ), vr::k_ulInvalidInputValueHandle ) && poseData.bActive && poseData.pose.bPoseIsValid )
+	{
+		m_universeFromOriginTransforms[ "/user/hand/left/raw" ] = glmMatFromVrMat( poseData.pose.mDeviceToAbsoluteTracking );
+	}
+	if ( vr::VRInputError_None == vr::VRInput()->GetPoseActionDataForNextFrame( m_actionRightSkeleton, vr::TrackingUniverseStanding,
+		&poseData, sizeof( poseData ), vr::k_ulInvalidInputValueHandle ) && poseData.bActive && poseData.pose.bPoseIsValid )
+	{
+		m_universeFromOriginTransforms[ "/user/hand/right/raw" ] = glmMatFromVrMat( poseData.pose.mDeviceToAbsoluteTracking );
+	}
+
+	m_animationSource[ "/user/hand/left" ] = GetSkeletonAction( m_actionLeftSkeleton );
+	m_animationSource[ "/user/hand/right" ] = GetSkeletonAction( m_actionRightSkeleton );
 }
 
 void CVRManager::updateCameraActionPose()
@@ -376,4 +419,14 @@ void CVRManager::setVargglesTexture(const vr::Texture_t *pTexture)
 
 	if (vr::VROverlay()->ShowOverlay(m_vargglesOverlay) != vr::VROverlayError_None)
 		std::cout << "ERROR: ShowOverlay failed" << std::endl;
+}
+
+bool CVRManager::getAnimationSource( const std::string& animationSource, std::vector<glm::mat4>* parentFromJoint )
+{
+	auto i = m_animationSource.find( animationSource );
+	if ( i == m_animationSource.end() )
+		return false;
+
+	*parentFromJoint = i->second;
+	return true;
 }

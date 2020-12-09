@@ -182,6 +182,23 @@ bool CJavascriptModelInstance::init( CefRefPtr<CefV8Value > container )
 
 		m_modelInstance->setOverlayOnly( arguments[0]->GetBoolValue() );
 	} );
+
+	RegisterFunction( container, "setAnimationSource", [this]( const CefV8ValueList& arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 1 )
+		{
+			exception = "Invalid arguments";
+			return;
+		}
+
+		if ( !arguments[ 0 ]->IsString() )
+		{
+			exception = "argument must a string";
+			return;
+		}
+
+		m_modelInstance->setAnimationSource( arguments[ 0 ]->GetStringValue() );
+	} );
 	return true;
 }
 

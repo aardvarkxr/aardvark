@@ -45,6 +45,16 @@
       {
          "name" : "/actions/aardvark/in/camera",
          "type" : "pose"
+      },
+      {
+         "name" : "/actions/aardvark/in/left_anim",
+         "type" : "skeleton",
+         "skeleton": "/skeleton/hand/left"
+      },
+      {
+         "name" : "/actions/aardvark/in/right_anim",
+         "type" : "skeleton",
+         "skeleton": "/skeleton/hand/right"
       }
    ],
    "default_bindings" : [

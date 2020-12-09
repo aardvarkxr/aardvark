@@ -46,6 +46,7 @@ public:
 	virtual void runFrame( bool* shouldQuit ) = 0;
 	virtual void getVargglesLookRotation(glm::mat4& horizontalLooktransform) = 0;
 	virtual void setVargglesTexture(const vr::Texture_t* pTexture) = 0;
+	virtual bool getAnimationSource( const std::string& animationSource, std::vector<glm::mat4>* parentFromJoint ) = 0;
 	virtual glm::mat4 getHmdFromUniverse() = 0;
 	virtual bool shouldRender() = 0;
 };

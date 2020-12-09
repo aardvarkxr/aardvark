@@ -276,11 +276,11 @@ interface RemoteUniverse
 
 function handFromOriginPath( originPath: string )
 {
-	if ( originPath == "/user/hand/left" )
+	if ( originPath.startsWith( "/user/hand/left" ) )
 	{
 		return EHand.Left;
 	}
-	else if ( originPath == "/user/hand/right" )
+	else if ( originPath.startsWith( "/user/hand/right" ) )
 	{
 		return EHand.Right;
 	}
@@ -1073,6 +1073,11 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 			{
 				nodeData.modelInstance.setOverlayOnly( node.propOverlayOnly );
 			}
+			if( node.propAnimationSource )
+			{
+				nodeData.modelInstance.setAnimationSource( node.propAnimationSource );
+			}
+
 
 			if( node.propSharedTexture?.url )
 			{

@@ -53,6 +53,7 @@ public:
 	virtual void setOverrideTexture( ETextureFormat format, const void* data, uint32_t width, uint32_t height ) = 0;
 	virtual void setBaseColor( const glm::vec4 & color ) = 0;
 	virtual void setOverlayOnly( bool ) = 0;
+	virtual void setAnimationSource( const std::string& ) = 0;
 };
 
 

@@ -15,6 +15,7 @@ export interface AvModelInstance
 	setOverrideTexture( textureInfo: AvSharedTextureInfo ): void;
 	setBaseColor( color: [ number, number, number, number ] ): void;
 	setOverlayOnly( overlayOnly: boolean ): void;
+	setAnimationSource( animationSource: string ): void;
 }
 
 export interface AvActionState

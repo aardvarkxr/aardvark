@@ -9,6 +9,7 @@ export class CTestModel implements AvModelInstance
 	public color: AvColor = null;
 	public overlayOnly: boolean = null;
 	public overrideTexture: AvSharedTextureInfo = null;
+	public animationSource: string = null;
 
 	constructor( url: string )
 	{
@@ -43,6 +44,11 @@ export class CTestModel implements AvModelInstance
 	public setOverlayOnly( overlayOnly: boolean ): void
 	{
 		this.overlayOnly = overlayOnly;
+	}
+
+	public setAnimationSource( animationSource: string ): void
+	{
+		this.animationSource = animationSource;
 	}
 }
 

@@ -693,6 +693,7 @@ export interface AvNode
 	propConstraint?: AvConstraint;
 	propColor?: AvColor;
 	propOverlayOnly?: boolean;
+	propAnimationSource?: string;
 	propEndAddr?: EndpointAddr;
 	propThickness?: number;
 	propStartGap?: number;

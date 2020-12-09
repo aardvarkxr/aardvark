@@ -26,6 +26,14 @@ export interface AvModelProps extends AvBaseNodeProps
 	 */
 	overlayOnly?: boolean;
 
+	/** Path of the resource to use as the source for animations in
+	 * this model. At the moment only /user/hand/left and /user/hand/right
+	 * are supported for left and right hand skeleton imputs.
+	 * 
+	 * @default none
+	 */
+	animationSource?: string;
+
 	/** Causes the model to be uniformly scaled up or down so
 	 * that its bounding box touches at least one of the -x, +x,
 	 * -y, +y, -z, or +z planes. Any axis that is 0 or unspecified
@@ -86,6 +94,7 @@ export class AvModel extends AvBaseNode< AvModelProps, {} >
 		node.propModelUri = this.props.uri;
 		node.propScaleToFit = this.props.scaleToFit;
 		node.propOverlayOnly = this.props.overlayOnly;
+		node.propAnimationSource = this.props.animationSource;
 		
 		let color: AvColor;
 		if( typeof this.props.color === "string" )

@@ -41,6 +41,7 @@ public:
 	virtual void setOverrideTexture( ETextureFormat format, const void* data, uint32_t width, uint32_t height ) override;
 	virtual void setBaseColor( const glm::vec4 & color ) override;
 	virtual void setOverlayOnly( bool overlayOnly ) override { this->overlayOnly = overlayOnly; };
+	virtual void setAnimationSource( const std::string& animationSource ) override { this->animationSource = animationSource;  }
 
 	void animate( float animationTimeElapsed );
 protected:
@@ -49,6 +50,7 @@ protected:
 	std::shared_ptr<vkglTF::Model> m_model;
 	vkglTF::Transformable m_modelParent;
 	bool overlayOnly = false;
+	std::string animationSource;
 
 	void *m_lastDxgiHandle = nullptr;
 	glm::vec4 m_lastBaseColor = { 0, 0, 0, 0 };

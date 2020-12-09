@@ -2127,11 +2127,27 @@ bool operator<( const SortableModel_t & lhs, const SortableModel_t & rhs )
 void VulkanExample::processRenderList()
 {
 	// animate everything
+	std::vector<glm::mat4> nodeFromJoint;
 	glm::mat4 hmdFromUniverse = m_vrManager->getHmdFromUniverse();
 	std::vector<SortableModel_t> sortableModels;
 	for ( auto model : m_modelsToRender )
 	{
 		model->animate( frameTimer );
+
+		if ( !model->animationSource.empty() && m_vrManager->getAnimationSource( model->animationSource, &nodeFromJoint ) )
+		{
+			for ( auto& skin : model->m_model->skins )
+			{
+				for ( uint32_t jointIndex = 0; jointIndex < nodeFromJoint.size() && jointIndex < skin->joints.size(); jointIndex++ )
+				{
+					std::shared_ptr<vkglTF::Node> node = skin->joints[ jointIndex ];
+					node->matParentFromNode = nodeFromJoint[ jointIndex ];
+					node->rotation = glm::quat( 1.f, 0, 0, 0 );
+					node->translation = glm::vec3( 0, 0, 0 );
+					node->scale = glm::vec3( 1.f, 1.f, 1.f);
+				}
+			}
+		}
 
 		glm::mat4 hmdFromModel = hmdFromUniverse * model->m_modelParent.matParentFromNode;
 		glm::vec4 modelInHmdSpace = hmdFromModel * glm::vec4( { 0, 0, 0, 1.f } );
