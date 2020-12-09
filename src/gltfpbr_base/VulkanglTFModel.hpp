@@ -614,7 +614,6 @@ namespace vkglTF
 						const float *bufferNormals = nullptr;
 						const float *bufferTexCoordSet0 = nullptr;
 						const float *bufferTexCoordSet1 = nullptr;
-						const uint16_t *bufferJoints = nullptr;
 						const float *bufferWeights = nullptr;
 
 						// Position attribute is required
@@ -646,10 +645,11 @@ namespace vkglTF
 
 						// Skinning
 						// Joints
+						const tinygltf::Accessor* jointAccessor = nullptr;
+						const tinygltf::BufferView * jointView = nullptr;
 						if (primitive.attributes.find("JOINTS_0") != primitive.attributes.end()) {
-							const tinygltf::Accessor &jointAccessor = model.accessors[primitive.attributes.find("JOINTS_0")->second];
-							const tinygltf::BufferView &jointView = model.bufferViews[jointAccessor.bufferView];
-							bufferJoints = reinterpret_cast<const uint16_t *>(&(model.buffers[jointView.buffer].data[jointAccessor.byteOffset + jointView.byteOffset]));
+							jointAccessor = &model.accessors[primitive.attributes.find("JOINTS_0")->second];
+							jointView = &model.bufferViews[jointAccessor->bufferView];
 						}
 
 						if (primitive.attributes.find("WEIGHTS_0") != primitive.attributes.end()) {
@@ -658,7 +658,7 @@ namespace vkglTF
 							bufferWeights = reinterpret_cast<const float *>(&(model.buffers[uvView.buffer].data[uvAccessor.byteOffset + uvView.byteOffset]));
 						}
 
-						hasSkin = (bufferJoints && bufferWeights);
+						hasSkin = ( jointAccessor && bufferWeights);
 
 						for (size_t v = 0; v < posAccessor.count; v++) {
 							Vertex vert{};
@@ -667,7 +667,44 @@ namespace vkglTF
 							vert.uv0 = bufferTexCoordSet0 ? glm::make_vec2(&bufferTexCoordSet0[v * 2]) : glm::vec3(0.0f);
 							vert.uv1 = bufferTexCoordSet1 ? glm::make_vec2(&bufferTexCoordSet1[v * 2]) : glm::vec3(0.0f);
 
-							vert.joint0 = hasSkin ? glm::vec4(glm::make_vec4(&bufferJoints[v * 4])) : glm::vec4(0.0f);
+							if ( !jointAccessor )
+							{
+								vert.joint0 = glm::vec4( 0.0f );
+							}
+							else
+							{
+								size_t jointByteOffset = jointAccessor->byteOffset + jointView->byteOffset;
+								switch ( jointAccessor->componentType )
+								{
+								case TINYGLTF_COMPONENT_TYPE_BYTE:
+								case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+								{
+									const uint8_t *bufferJoints = reinterpret_cast<const uint8_t*>( 
+										&( model.buffers[ jointView->buffer ].data[ jointByteOffset ] ) );
+									vert.joint0 = glm::vec4( glm::make_vec4( &bufferJoints[ v * 4 ] ) );
+								}
+								break;
+
+								case TINYGLTF_COMPONENT_TYPE_SHORT:
+								case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+								{
+									const uint16_t* bufferJoints = reinterpret_cast<const uint16_t*>(
+										&( model.buffers[ jointView->buffer ].data[ jointByteOffset ] ) );
+									vert.joint0 = glm::vec4( glm::make_vec4( &bufferJoints[ v * 4 ] ) );
+								}
+								break;
+
+								case TINYGLTF_COMPONENT_TYPE_INT:
+								case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+								{
+									const uint16_t* bufferJoints = reinterpret_cast<const uint16_t*>(
+										&( model.buffers[ jointView->buffer ].data[ jointByteOffset ] ) );
+									vert.joint0 = glm::vec4( glm::make_vec4( &bufferJoints[ v * 4 ] ) );
+								}
+								break;
+								}
+							}
+
 							vert.weight0 = hasSkin ? glm::make_vec4(&bufferWeights[v * 4]) : glm::vec4(0.0f);
 							vertexBuffer.push_back(vert);
 						}
