@@ -61,7 +61,7 @@ std::string translateOpenXrPath( const std::string& openVRPath )
 nlohmann::json computeBooleanMode( const std::string inputPath, const std::string& actionPath )
 {
 	return {
-		{ "path", inputPath },
+		{ "path", translateOpenXrPath( inputPath ) },
 		{ "mode", "button" },
 		{ "inputs",
 			{
@@ -78,7 +78,7 @@ nlohmann::json computeBooleanMode( const std::string inputPath, const std::strin
 nlohmann::json computeVector2Mode( const std::string inputPath, const std::string& actionPath )
 {
 	return {
-		{ "path", inputPath },
+		{ "path", translateOpenXrPath( inputPath ) },
 		{ "mode", "joystick" },
 		{ "inputs",
 			{
@@ -96,7 +96,7 @@ nlohmann::json computeVector2Mode( const std::string inputPath, const std::strin
 nlohmann::json computeFloatMode( const std::string inputPath, const std::string& actionPath )
 {
 	return {
-		{ "path", inputPath },
+		{ "path", translateOpenXrPath( inputPath ) },
 		{ "mode", "trigger" },
 		{ "inputs",
 			{
