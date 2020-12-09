@@ -1,4 +1,4 @@
-import { ShowGrabbableChildren, NetworkedItemComponent, ActiveInterface, AvComposedEntity, AvGadget, AvInterfaceEntity, AvLine, AvModel, AvPrimitive, AvStandardGrabbable, AvTransform, MoveableComponent, PrimitiveType, PrimitiveYOrigin, PrimitiveZOrigin, DefaultLanding, RemoteItemComponent, MoveableComponentState, k_remoteGrabbableInterface, GrabbableStyle } from '@aardvarkxr/aardvark-react';
+import { ShowGrabbableChildren, NetworkedItemComponent, ActiveInterface, AvComposedEntity, AvGadget, AvInterfaceEntity, AvLine, AvModel, AvPrimitive, AvStandardGrabbable, AvTransform, MoveableComponent, PrimitiveType, PrimitiveYOrigin, PrimitiveZOrigin, DefaultLanding, RemoteItemComponent, MoveableComponentState, k_remoteGrabbableInterface, GrabbableStyle, renderAardvarkRoot } from '@aardvarkxr/aardvark-react';
 import { Av, AvNodeTransform, AvVector, AvVolume, endpointAddrToString, EVolumeType, g_builtinModelBox, InitialInterfaceLock, infiniteVolume } from '@aardvarkxr/aardvark-shared';
 import { vec2 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
@@ -516,5 +516,4 @@ class Whiteboard extends React.Component< {}, WhiteboardState >
 }
 
 
-let main = Av() ? <Whiteboard/> : <DefaultLanding/>;
-ReactDOM.render( main, document.getElementById( "root" ) );
+renderAardvarkRoot( document.getElementById( "root" ), () => <Whiteboard/>, () => <DefaultLanding/> );

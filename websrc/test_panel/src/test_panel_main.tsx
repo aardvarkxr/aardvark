@@ -1,4 +1,4 @@
-import { AvGadget, AvMessagebox, AvPanel, AvStandardGrabbable, AvTransform, DefaultLanding, GrabbableStyle } from '@aardvarkxr/aardvark-react';
+import { AvGadget, AvMessagebox, AvPanel, AvStandardGrabbable, AvTransform, DefaultLanding, GrabbableStyle, renderAardvarkRoot } from '@aardvarkxr/aardvark-react';
 import { Av, EAction, EHand, g_builtinModelBox, InitialInterfaceLock } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
@@ -236,5 +236,5 @@ class TestPanel extends React.Component< {}, TestPanelState >
 
 }
 
-let main = Av() ? <TestPanel/> : <DefaultLanding/>;
-ReactDOM.render( main, document.getElementById( "root" ) );
+
+renderAardvarkRoot( "root", <TestPanel/> );

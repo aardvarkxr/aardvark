@@ -18,6 +18,7 @@ export * from './aardvark_panel';
 export * from './aardvark_panelanchor';
 export * from './aardvark_parent_transform';
 export * from './aardvark_primitive';
+export * from './aardvark_render';
 export * from './aardvark_standard_grabbable';
 export * from './aardvark_transform';
 export * from './aardvark_utils';

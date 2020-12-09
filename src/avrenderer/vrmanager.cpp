@@ -35,7 +35,10 @@ void CVRManager::init()
 CVRManager::~CVRManager()
 {
 	destroyVargglesOverlay();
-	vr::VR_Shutdown();
+	if ( vr::VRSystem() )
+	{
+		vr::VR_Shutdown();
+	}
 }
 
 
