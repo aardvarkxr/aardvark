@@ -2127,7 +2127,7 @@ bool operator<( const SortableModel_t & lhs, const SortableModel_t & rhs )
 void VulkanExample::processRenderList()
 {
 	// animate everything
-	std::vector<glm::mat4> nodeFromJoint;
+	std::vector<JointTransform_t> nodeFromJoint;
 	glm::mat4 hmdFromUniverse = m_vrManager->getHmdFromUniverse();
 	std::vector<SortableModel_t> sortableModels;
 	for ( auto model : m_modelsToRender )
@@ -2138,13 +2138,12 @@ void VulkanExample::processRenderList()
 		{
 			for ( auto& skin : model->m_model->skins )
 			{
-				for ( uint32_t jointIndex = 0; jointIndex < nodeFromJoint.size() && jointIndex < skin->joints.size(); jointIndex++ )
+				for ( uint32_t jointIndex = 0; jointIndex < nodeFromJoint.size() && jointIndex < skin->joints.size();
+					jointIndex++ )
 				{
 					std::shared_ptr<vkglTF::Node> node = skin->joints[ jointIndex ];
-					node->matParentFromNode = nodeFromJoint[ jointIndex ];
-					node->rotation = glm::quat( 1.f, 0, 0, 0 );
-					node->translation = glm::vec3( 0, 0, 0 );
-					node->scale = glm::vec3( 1.f, 1.f, 1.f);
+					node->rotation = nodeFromJoint[jointIndex].rotation;
+					node->translation = nodeFromJoint[jointIndex].translation;
 				}
 			}
 		}

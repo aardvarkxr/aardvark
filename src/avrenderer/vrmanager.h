@@ -14,7 +14,7 @@ public:
 	virtual void sentHapticEventForHand( EHand hand, float amplitude, float frequency, float duration ) override;
 	virtual void runFrame( bool* shouldQuit ) override;
 	virtual void setVargglesTexture(const vr::Texture_t *pTexture) override;
-	virtual bool getAnimationSource( const std::string& animationSource, std::vector<glm::mat4>* parentFromJoint ) override;
+	virtual bool getAnimationSource( const std::string& animationSource, std::vector<JointTransform_t>* parentFromJoint ) override;
 	virtual glm::mat4 getHmdFromUniverse() override { return m_hmdFromUniverse; }
 	virtual void getVargglesLookRotation(glm::mat4 &horizontalLooktransform) override;
 	virtual bool shouldRender() override;
@@ -54,7 +54,7 @@ protected:
 	ActionState_t getActionStateForHand( EHand eHand );
 
 	std::unordered_map<std::string, glm::mat4> m_universeFromOriginTransforms;
-	std::unordered_map<std::string, std::vector< glm::mat4 > > m_animationSource;
+	std::unordered_map<std::string, std::vector< JointTransform_t > > m_animationSource;
 	glm::mat4 m_hmdFromUniverse;
 
 	const char* k_pchVargglesOverlayKey = "aardvark.varggles";

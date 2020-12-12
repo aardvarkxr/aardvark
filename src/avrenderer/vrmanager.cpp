@@ -3,8 +3,6 @@
 #include <iostream>
 #include <tools/pathtools.h>
 
-#define GLM_ENABLE_EXPERIMENTAL
-#include <glm/gtx/quaternion.hpp>
 
 void CVRManager::init()
 {
@@ -192,7 +190,7 @@ glm::vec2 GetActionVector2( vr::VRActionHandle_t action, vr::VRInputValueHandle_
 	return res;
 }
 
-std::vector<glm::mat4> GetSkeletonAction( vr::VRActionHandle_t action )
+std::vector<JointTransform_t> GetSkeletonAction( vr::VRActionHandle_t action )
 {
 	vr::InputSkeletalActionData_t actionData;
 	vr::EVRInputError err = vr::VRInput()->GetSkeletalActionData( action, &actionData, sizeof( actionData ) );
@@ -205,13 +203,14 @@ std::vector<glm::mat4> GetSkeletonAction( vr::VRActionHandle_t action )
 	if ( err != vr::VRInputError_None )
 		return {};
 
-	std::vector<glm::mat4> output;
+	std::vector<JointTransform_t> output;
 	output.reserve( 31 );
-	for( auto t : transforms )
+	for( auto & t : transforms )
 	{ 
-		glm::quat q( t.orientation.w, t.orientation.x, t.orientation.y, t.orientation.z );
-		glm::mat4 mat = glm::translate( glm::toMat4( q ), glm::vec3( t.position.v[0], t.position.v[ 1 ], t.position.v[ 2 ] ) );
-		output.push_back( mat );
+		JointTransform_t tOut;
+		tOut.rotation = glm::quat( t.orientation.w, t.orientation.x, t.orientation.y, t.orientation.z );
+		tOut.translation = glm::vec3( t.position.v[ 0 ], t.position.v[ 1 ], t.position.v[ 2 ] );
+		output.push_back( tOut );
 	}
 
 	return output;
@@ -424,7 +423,7 @@ void CVRManager::setVargglesTexture(const vr::Texture_t *pTexture)
 		std::cout << "ERROR: ShowOverlay failed" << std::endl;
 }
 
-bool CVRManager::getAnimationSource( const std::string& animationSource, std::vector<glm::mat4>* parentFromJoint )
+bool CVRManager::getAnimationSource( const std::string& animationSource, std::vector<JointTransform_t>* parentFromJoint )
 {
 	auto i = m_animationSource.find( animationSource );
 	if ( i == m_animationSource.end() )

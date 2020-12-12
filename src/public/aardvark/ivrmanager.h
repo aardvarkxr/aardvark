@@ -5,7 +5,9 @@
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/glm.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 enum class EHand
 {
@@ -20,6 +22,12 @@ inline bool isSameHand( EHand h1, EHand h2 )
 {
 	return h1 != EHand::Invalid && h1 == h2;
 }
+
+struct JointTransform_t
+{
+	glm::vec3 translation;
+	glm::quat rotation;
+};
 
 class IVrManager
 {
@@ -46,7 +54,7 @@ public:
 	virtual void runFrame( bool* shouldQuit ) = 0;
 	virtual void getVargglesLookRotation(glm::mat4& horizontalLooktransform) = 0;
 	virtual void setVargglesTexture(const vr::Texture_t* pTexture) = 0;
-	virtual bool getAnimationSource( const std::string& animationSource, std::vector<glm::mat4>* parentFromJoint ) = 0;
+	virtual bool getAnimationSource( const std::string& animationSource, std::vector<JointTransform_t>* parentFromJoint ) = 0;
 	virtual glm::mat4 getHmdFromUniverse() = 0;
 	virtual bool shouldRender() = 0;
 };
