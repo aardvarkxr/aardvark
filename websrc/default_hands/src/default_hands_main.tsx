@@ -1,5 +1,5 @@
-import { ActiveInterface, AvComposedEntity, AvEntityChild, AvGadget, AvGrabButton, AvInterfaceEntity, AvOrigin, AvPrimitive, AvTransform, GrabRequest, GrabRequestType, k_MenuInterface, MenuEvent, MenuEventType, PanelRequest, PanelRequestType, PrimitiveType, PrimitiveYOrigin, SimpleContainerComponent } from '@aardvarkxr/aardvark-react';
-import { InputProcessor, AvNodeTransform, AvQuaternion, AvVolume, EAction, EHand, emptyVolume, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EVolumeContext, EVolumeType, g_builtinModelGear, handToDevice, InterfaceLockResult, multiplyTransforms, rayVolume } from '@aardvarkxr/aardvark-shared';
+import { ActiveInterface, AvComposedEntity, AvEntityChild, AvGadget, AvGrabButton, AvInterfaceEntity, AvModel, AvOrigin, AvPrimitive, AvTransform, GrabRequest, GrabRequestType, k_MenuInterface, MenuEvent, MenuEventType, PanelRequest, PanelRequestType, PrimitiveType, PrimitiveYOrigin, SimpleContainerComponent } from '@aardvarkxr/aardvark-react';
+import { InputProcessor, AvNodeTransform, AvQuaternion, AvVolume, EAction, EHand, emptyVolume, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EVolumeContext, EVolumeType, g_builtinModelGear, handToDevice, InterfaceLockResult, multiplyTransforms, rayVolume, g_builtinModelSkinnedHandLeft, g_builtinModelSkinnedHandRight } from '@aardvarkxr/aardvark-shared';
 import { vec3 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
 import { initSentryForBrowser } from 'common/sentry_utils';
@@ -609,7 +609,10 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 		switch( this.state.state )
 		{
 			case GrabberState.Idle:
-				modelColor = "lightblue";
+				if( this.state.activePanel )
+				{
+					modelColor = "grey";
+				}
 				break;
 
 			case GrabberState.Highlight:
@@ -643,14 +646,20 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 				break;
 		}
 
-		let originPath:string;
+		let originPath: string;
+		let animationSource: string;
+		let modelUrl: string;
 		switch( this.props.hand )
 		{
 		case EHand.Left:
-			originPath = "/user/hand/left";
+			originPath = "/user/hand/left/raw";
+			animationSource = "/user/hand/left";
+			modelUrl = g_builtinModelSkinnedHandLeft;
 			break;
 		case EHand.Right:
-			originPath = "/user/hand/right";
+			originPath = "/user/hand/right/raw";
+			animationSource = "/user/hand/right";
+			modelUrl = g_builtinModelSkinnedHandRight;
 			break;
 		}
 
@@ -724,7 +733,11 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 		return (
 			<>
 			<AvOrigin path={ originPath }>
-				<AvPrimitive radius={ 0.01 } type={ PrimitiveType.Sphere } color={ modelColor }/>
+				{ modelUrl && <AvModel 
+					uri={ modelUrl } overlayOnly={ true } animationSource={ animationSource }/> }
+				{
+					!modelUrl && <AvPrimitive type={ PrimitiveType.Sphere } radius={ 0.02 } />
+				}
 				{ ray }
 				<AvComposedEntity components={ [ this.containerComponent ]} 
 					volume={ [ k_containerInnerVolume, k_containerOuterVolume ] }
