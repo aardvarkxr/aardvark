@@ -116,6 +116,12 @@ export function nodeTransformToMat4( transform: AvNodeTransform ): mat4
 
 	let mat = translateMat( vTrans ).multiply( qRot.toMat4() );
 	mat = mat.multiply( scaleMat( vScale ) ) ;
+	
+	if( Number.isNaN( mat.at( 0 ) ) )
+	{
+		throw new Error( "Garbage passed into nodeTransformToMat4 resulted in NaN in output" );
+	}
+
 	return mat;
 }
 
