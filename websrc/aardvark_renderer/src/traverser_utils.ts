@@ -1,6 +1,6 @@
 import { TransformedVolume } from './volume_intersection';
 import { mat4 } from '@tlaukkan/tsm';
-import { EndpointAddr, stringToEndpointAddr, AvVolume, JointInfo, Av, JointTransform, nodeTransformToMat4, EVolumeType } from '@aardvarkxr/aardvark-shared';
+import { EndpointAddr, stringToEndpointAddr, AvVolume, JointInfo, Av, JointTransform, nodeTransformToMat4, EVolumeType, sphereVolume, EHand } from '@aardvarkxr/aardvark-shared';
 import validator from 'validator';
 
 
@@ -126,9 +126,108 @@ export function concatArrayBuffers( buffers: TypedArrayFields[] ): ArrayBuffer
 	return out.buffer;
 }
 
-let skeletonInfoCache = new Map<string, JointInfo[] | null >();
+enum HandSkeletonBone
+{
+	Root = 0,
+	Wrist,
+	Thumb0,
+	Thumb1,
+	Thumb2,
+	Thumb3,
+	IndexFinger0,
+	IndexFinger1,
+	IndexFinger2,
+	IndexFinger3,
+	IndexFinger4,
+	MiddleFinger0,
+	MiddleFinger1,
+	MiddleFinger2,
+	MiddleFinger3,
+	MiddleFinger4,
+	RingFinger0,
+	RingFinger1,
+	RingFinger2,
+	RingFinger3,
+	RingFinger4,
+	PinkyFinger0,
+	PinkyFinger1,
+	PinkyFinger2,
+	PinkyFinger3,
+	PinkyFinger4,
+	Aux_Thumb,
+	Aux_IndexFinger,
+	Aux_MiddleFinger,
+	Aux_RingFinger,
+	Aux_PinkyFinger,
+};
 
-function getSkeletonInfo( handPath: string )
+interface JointVolume
+{
+	volume: AvVolume;
+	jointFromVolume: mat4;
+	joint: HandSkeletonBone;
+}
+
+interface SkeletonInfo
+{
+	joints: JointInfo[];
+	volumes: JointVolume[];
+}
+
+let skeletonInfoCache = new Map<string, SkeletonInfo | null >();
+
+
+function boneSphere( hand: EHand, joint: HandSkeletonBone, offset?: number, radius?: number )
+{
+	let x = offset ?? 0;
+	if( hand == EHand.Right )
+	{
+		x = -x;
+	}
+
+	let jointFromVolume = nodeTransformToMat4( { position: { x, y: 0, z: 0 } } );
+	let jv: JointVolume =
+	{
+		joint,
+		jointFromVolume,
+		volume: sphereVolume( radius ?? 0.01 ),
+	}
+	return jv;
+}
+
+function createHandVolumes( handPath: string )
+{
+	let hand = handPath == "/user/hand/left" ? EHand.Left : EHand.Right;
+	return [
+		//boneSphere( hand, HandSkeletonBone.Wrist ),
+		//boneSphere( hand, HandSkeletonBone.Thumb0 ),
+		boneSphere( hand, HandSkeletonBone.Thumb1, 0, 0.012 ),
+		boneSphere( hand, HandSkeletonBone.Thumb2, 0, 0.012 ),
+		boneSphere( hand, HandSkeletonBone.Thumb3 ),
+		// boneSphere( hand, HandSkeletonBone.IndexFinger0 ),
+		boneSphere( hand, HandSkeletonBone.IndexFinger1, 0, 0.011 ),
+		boneSphere( hand, HandSkeletonBone.IndexFinger2, 0, 0.011 ),
+		boneSphere( hand, HandSkeletonBone.IndexFinger3 ),
+		boneSphere( hand, HandSkeletonBone.IndexFinger4 ),
+		boneSphere( hand, HandSkeletonBone.MiddleFinger0, 0.02, 0.03 ),
+		boneSphere( hand, HandSkeletonBone.MiddleFinger1, 0, 0.011 ),
+		boneSphere( hand, HandSkeletonBone.MiddleFinger2, 0, 0.011 ),
+		boneSphere( hand, HandSkeletonBone.MiddleFinger3 ),
+		boneSphere( hand, HandSkeletonBone.MiddleFinger4 ),
+		// boneSphere( hand, HandSkeletonBone.RingFinger0 ),
+		boneSphere( hand, HandSkeletonBone.RingFinger1, 0, 0.011 ),
+		boneSphere( hand, HandSkeletonBone.RingFinger2, 0, 0.011 ),
+		boneSphere( hand, HandSkeletonBone.RingFinger3 ),
+		boneSphere( hand, HandSkeletonBone.RingFinger4 ),
+		// boneSphere( hand, HandSkeletonBone.PinkyFinger0 ),
+		boneSphere( hand, HandSkeletonBone.PinkyFinger1 ),
+		boneSphere( hand, HandSkeletonBone.PinkyFinger2 ),
+		boneSphere( hand, HandSkeletonBone.PinkyFinger3 ),
+		boneSphere( hand, HandSkeletonBone.PinkyFinger4 ),
+	];
+}
+
+function getSkeletonInfo( handPath: string ): SkeletonInfo | null
 {
 	if( skeletonInfoCache.has( handPath ) )
 	{
@@ -136,11 +235,19 @@ function getSkeletonInfo( handPath: string )
 	}
 	else
 	{
-		let info = Av().renderer.getSkeletonInfo( handPath );
-		if( info )
+		let joints = Av().renderer.getSkeletonInfo( handPath );
+		if( !joints )
 		{
-			skeletonInfoCache.set( handPath, info );
+			return null;
 		}
+
+		let info: SkeletonInfo =
+		{
+			joints,
+			volumes: createHandVolumes( handPath ),
+		}
+
+		skeletonInfoCache.set( handPath, info );
 		return info;
 	}
 }
@@ -156,19 +263,15 @@ export function getHandVolumes( handPath: string ): TransformedVolume[]
 	if( !transforms )
 		return [];
 
-	if( transforms.length != info.length )
+	if( transforms.length != info.joints.length )
 	{
-		console.log( `Mismatched array lengths for ${ handPath } skeleton ${ transforms.length } != ${ info.length }` );
+		console.log( `Mismatched array lengths for ${ handPath } skeleton ${ transforms.length } != ${ info.joints.length }` );
 		return [];
 	}
 
 	let parentFromJoint = transforms.map( ( t: JointTransform ) =>
 		nodeTransformToMat4( { position: t.translation, rotation: t.rotation } ) );
 
-	if( Number.isNaN( parentFromJoint[0].row( 0)[0]))
-	{
-		console.log( "It's NaN" );
-	}
 	let universeFromRootArray = Av().renderer.getUniverseFromOriginTransform( handPath + "/raw" );
 	if( !universeFromRootArray )
 	{
@@ -178,6 +281,9 @@ export function getHandVolumes( handPath: string ): TransformedVolume[]
 
 	let universeFromJoint: mat4[] = [];
 
+	// the bone indices in the hands are actually ordered such that the parents 
+	// will be resolved first so we don't need this loop. Leaving it here in case
+	// a future skeleton is not so kind.
 	let missedOne = true;
 	while( missedOne )
 	{
@@ -187,7 +293,7 @@ export function getHandVolumes( handPath: string ): TransformedVolume[]
 			if( universeFromJoint[i] )
 				continue;
 
-			const parentIndex = info[i].parentIndex;
+			const parentIndex = info.joints[i].parentIndex;
 			if( typeof parentIndex !== "number" )
 			{
 				universeFromJoint[i] = universeFromRoot;
@@ -204,16 +310,13 @@ export function getHandVolumes( handPath: string ): TransformedVolume[]
 	}
 
 	let results:TransformedVolume[] = [];
-	for( let i = 0; i < transforms.length; i++ )
+	for( let v of info.volumes )
 	{
-		if( info[i].radius == 0 )
-			continue;
-
+		let universeFromVolume = ( new mat4( universeFromJoint[ v.joint ].all() ) ).multiply( v.jointFromVolume );
 		results.push(
 			{
-				universeFromVolume: universeFromJoint[i],
-				type: EVolumeType.Sphere,
-				radius: info[i].radius,
+				...v.volume,
+				universeFromVolume,
 			} );
 	}
 
