@@ -38,6 +38,7 @@ protected:
 	std::shared_ptr<IRenderer> m_renderer;
 	std::unique_ptr<IVrManager> m_vrManager;
 
+	CefRefPtr<CefV8Context> m_traverserContext;
 	CefRefPtr< CefV8Value > m_jsTraverser;
 	CefRefPtr< CefV8Value > m_jsHapticProcessor;
 

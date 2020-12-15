@@ -1,5 +1,5 @@
 import { ipfsUtils } from './ipfs_utils';
-import { AvSharedTextureInfo } from '@aardvarkxr/aardvark-shared';
+import { Av, AvSharedTextureInfo, g_builtinModelSphere } from '@aardvarkxr/aardvark-shared';
 import { textureCache, TextureInfo } from './texture_cache';
 import { AABB, AvActionState, AvConstraint, AvModelInstance, AvNode, AvNodeTransform, AvNodeType, AvRenderer, EHand, emptyActionState, EndpointAddr, minIgnoringNulls, nodeTransformFromMat4, nodeTransformToMat4, scaleAxisToFit, scaleMat, vec3MultiplyAndAdd, computeUniverseFromLine, endpointAddrToString, EndpointType, ENodeFlags, EVolumeType, filterActionsForGadget, g_builtinModelError, MessageType, MsgInterfaceEnded, MsgInterfaceReceiveEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgResourceLoadFailed, MsgUpdateActionState, g_builtinModelCylinder, AvVector } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3, vec4 } from '@tlaukkan/tsm';
@@ -7,7 +7,7 @@ import bind from 'bind-decorator';
 import { EndpointAddrMap } from './endpoint_addr_map';
 import { CInterfaceProcessor, InterfaceEntity, InterfaceProcessorCallbacks } from './interface_processor';
 import { modelCache, ModelInfo } from './model_cache';
-import { fixupUrl, UrlType } from './traverser_utils';
+import { fixupUrl, getHandVolumes, UrlType } from './traverser_utils';
 import { Traverser, TraverserCallbacks } from './traverser_interface';
 import { TransformedVolume } from './volume_intersection';
 const equal = require( 'fast-deep-equal' );
@@ -499,9 +499,15 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 		this.m_currentVisibility = true;
 		this.m_currentNodeByType = {};
 		this.m_universeFromNodeTransforms = {};
-		this.m_renderList = [];
 		this.m_interfaceEntities = [];
 		this.m_entityParentTransforms = new EndpointAddrMap<PendingTransform >();
+		
+		// need to render the volumes from the previous frame because updateInterfaceProcessor 
+		// happens after we send off the render list.
+		this.m_renderList = [ ...this.sphereVolumeModels ];
+		
+		this.sphereVolumeSpares = [ ...this.sphereVolumeSpares, ...this.sphereVolumeModels ];
+		this.sphereVolumeModels = [];
 
 		this.m_frameNumber++;
 
@@ -592,8 +598,52 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 		}
 	}
 
+
+	private sphereVolumeModels: AvModelInstance[] = [];
+	private sphereVolumeSpares: AvModelInstance[] = [];
+
+	private showVolume( v: TransformedVolume )
+	{
+		if( v.type != EVolumeType.Sphere )
+		{
+			// we currently only know how to show spheres
+			return;
+		}
+
+		let model = this.sphereVolumeSpares.shift();
+		if( !model )
+		{
+			let sphereModel = modelCache.queueModelLoad( g_builtinModelSphere );
+			if( sphereModel )
+			{
+				model = this.m_renderer.createModelInstance( g_builtinModelSphere, 
+					sphereModel.base64 );
+			}
+
+			if( !model )
+			{
+				// we'll have to catch this one next frame
+				return;
+			}
+		}
+
+		let universeFromVolume = new mat4( v.universeFromVolume.all() );
+		universeFromVolume.scale( new vec3( [ v.radius, v.radius, v.radius ] ) );
+
+		model.setUniverseFromModelTransform( universeFromVolume.all() );
+		this.sphereVolumeModels.push( model );
+		this.m_renderList.push( model );		
+	}
+
 	private updateInterfaceProcessor()
 	{
+		// get the hand volumes we support so we can use those when requested
+		const handVolumes: { [ path: string ]: TransformedVolume[] } =
+		{
+			"/user/hand/left": getHandVolumes( "/user/hand/left" ),
+			"/user/hand/right": getHandVolumes( "/user/hand/right" ),
+		};
+
 		let entities: InterfaceEntity[] = [];
 		for( let entityNode of this.m_interfaceEntities )
 		{
@@ -630,6 +680,25 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 						continue;
 					}
 
+					if( volume.type == EVolumeType.Skeleton && handVolumes[ volume.skeletonPath ] )
+					{
+						if( volume.visualize )
+						{
+							for( let v of handVolumes[ volume.skeletonPath ] )
+							{
+								v.visualize = true;
+							}
+						}
+
+						volumes = 
+						[
+							...volumes,
+							...handVolumes[ volume.skeletonPath ],
+						];
+
+						continue;
+					}
+
 					let matScale = volume.scale 
 						? scaleMat( new vec3( [ volume.scale, volume.scale, volume.scale ] ) )
 						: mat4.identity;
@@ -645,6 +714,14 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 						} );
 				}
 
+			}
+
+			for( let v of volumes )
+			{
+				if( v.visualize )
+				{
+					this.showVolume( v );
+				}
 			}
 
 			if( volumes.length == 0 )

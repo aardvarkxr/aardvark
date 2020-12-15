@@ -432,3 +432,43 @@ bool CVRManager::getAnimationSource( const std::string& animationSource, std::ve
 	*parentFromJoint = i->second;
 	return true;
 }
+
+bool CVRManager::getSkeletonInfo( const std::string& skeletonPath, std::vector<JointInfo_t>* jointInfo )
+{
+	vr::VRActionHandle_t action = vr::k_ulInvalidActionHandle;
+	if ( skeletonPath == "/user/hand/left" )
+	{
+		action = m_actionLeftSkeleton;
+	}
+	else if( skeletonPath == "/user/hand/right" )
+	{
+		action = m_actionRightSkeleton;
+	}
+	else
+	{
+		return false;
+	}
+
+	uint32_t boneCount;
+	if ( vr::VRInputError_None != vr::VRInput()->GetBoneCount( action, &boneCount ) )
+		return false;
+
+	jointInfo->resize( boneCount );
+
+	std::vector<vr::BoneIndex_t> parents;
+	parents.resize( boneCount );
+	if ( vr::VRInputError_None != vr::VRInput()->GetBoneHierarchy( action, &parents[ 0 ], boneCount ) )
+	{
+		return false;
+	}
+
+	for ( uint32_t i = 0; i < boneCount; i++ )
+	{
+		(*jointInfo)[ i ].parentIndex = parents[ i ];
+	}
+
+	// joint radius defaults to 1cm. Fix some up?
+
+	return true;
+}
+

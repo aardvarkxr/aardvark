@@ -680,13 +680,22 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 			radius: 0.03,
 		};
 
-		const k_grabberBallVolume: AvVolume =
+		const k_grabberVolume: AvVolume =
+		{ 
+			type: EVolumeType.Skeleton,
+			skeletonPath: animationSource, 
+			//visualize: true,
+		};
+
+		let grabberVolumes = [ k_grabberVolume ];
+		
+		const k_pokerBallVolume: AvVolume =
 		{ 
 			type: EVolumeType.Sphere, 
 			radius: 0.01,
 		};
 
-		let grabberVolumes = [ k_grabberBallVolume ];
+		let pokerVolumes = [ k_pokerBallVolume ];
 
 		let ray: JSX.Element = null;
 		if( this.state.showRay &&

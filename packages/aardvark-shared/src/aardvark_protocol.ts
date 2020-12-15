@@ -533,6 +533,7 @@ export enum EVolumeType
 	Infinite = 3,
 	Empty = 4,
 	Ray = 5, // ray is always down the positive X axis from the origin
+	Skeleton = 6,
 };
 
 /** Volume context allows entities to specify volumes that
@@ -565,7 +566,9 @@ export interface AvVolume
 	radius?: number;
 	uri?: string;
 	aabb?: AABB;
+	skeletonPath?: string; // /user/hand/left or /user/hand/right
 	scale?: number; // Scales radius or AABB (after model box is resolved)
+	visualize?: boolean; // If this is true Aardvark will render the volume to the best of its ability
 }
 
 export function emptyVolume(): AvVolume

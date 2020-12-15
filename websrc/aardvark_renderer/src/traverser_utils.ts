@@ -1,4 +1,6 @@
-import { EndpointAddr, stringToEndpointAddr } from '@aardvarkxr/aardvark-shared';
+import { TransformedVolume } from './volume_intersection';
+import { mat4 } from '@tlaukkan/tsm';
+import { EndpointAddr, stringToEndpointAddr, AvVolume, JointInfo, Av, JointTransform, nodeTransformToMat4, EVolumeType } from '@aardvarkxr/aardvark-shared';
 import validator from 'validator';
 
 
@@ -122,4 +124,98 @@ export function concatArrayBuffers( buffers: TypedArrayFields[] ): ArrayBuffer
 		sizeSoFar += b.byteLength;
 	}
 	return out.buffer;
+}
+
+let skeletonInfoCache = new Map<string, JointInfo[] | null >();
+
+function getSkeletonInfo( handPath: string )
+{
+	if( skeletonInfoCache.has( handPath ) )
+	{
+		return skeletonInfoCache.get( handPath );
+	}
+	else
+	{
+		let info = Av().renderer.getSkeletonInfo( handPath );
+		if( info )
+		{
+			skeletonInfoCache.set( handPath, info );
+		}
+		return info;
+	}
+}
+
+/** gets a volume list to represent one hand */
+export function getHandVolumes( handPath: string ): TransformedVolume[]
+{
+	let info = getSkeletonInfo( handPath );
+	if( !info )
+		return [];
+
+	let transforms = Av().renderer.getSkeletonTransforms( handPath );
+	if( !transforms )
+		return [];
+
+	if( transforms.length != info.length )
+	{
+		console.log( `Mismatched array lengths for ${ handPath } skeleton ${ transforms.length } != ${ info.length }` );
+		return [];
+	}
+
+	let parentFromJoint = transforms.map( ( t: JointTransform ) =>
+		nodeTransformToMat4( { position: t.translation, rotation: t.rotation } ) );
+
+	if( Number.isNaN( parentFromJoint[0].row( 0)[0]))
+	{
+		console.log( "It's NaN" );
+	}
+	let universeFromRootArray = Av().renderer.getUniverseFromOriginTransform( handPath + "/raw" );
+	if( !universeFromRootArray )
+	{
+		return [];
+	}
+	let universeFromRoot = new mat4( universeFromRootArray );
+
+	let universeFromJoint: mat4[] = [];
+
+	let missedOne = true;
+	while( missedOne )
+	{
+		missedOne = false;
+		for( let i = 0; i < transforms.length; i++ )
+		{
+			if( universeFromJoint[i] )
+				continue;
+
+			const parentIndex = info[i].parentIndex;
+			if( typeof parentIndex !== "number" )
+			{
+				universeFromJoint[i] = universeFromRoot;
+			}
+			else if( !universeFromJoint[ parentIndex ] )
+			{
+				missedOne = true;
+			}
+			else
+			{
+				universeFromJoint[i] = ( new mat4( universeFromJoint[ parentIndex ].all() ) ).multiply( parentFromJoint[ i ] );
+			}
+		}
+	}
+
+	let results:TransformedVolume[] = [];
+	for( let i = 0; i < transforms.length; i++ )
+	{
+		if( info[i].radius == 0 )
+			continue;
+
+		results.push(
+			{
+				universeFromVolume: universeFromJoint[i],
+				type: EVolumeType.Sphere,
+				radius: info[i].radius,
+			} );
+	}
+
+	return results;
 }

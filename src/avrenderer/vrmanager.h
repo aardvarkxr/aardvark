@@ -15,6 +15,7 @@ public:
 	virtual void runFrame( bool* shouldQuit ) override;
 	virtual void setVargglesTexture(const vr::Texture_t *pTexture) override;
 	virtual bool getAnimationSource( const std::string& animationSource, std::vector<JointTransform_t>* parentFromJoint ) override;
+	virtual bool getSkeletonInfo( const std::string& skeletonPath, std::vector<JointInfo_t>* jointInfo ) override;
 	virtual glm::mat4 getHmdFromUniverse() override { return m_hmdFromUniverse; }
 	virtual void getVargglesLookRotation(glm::mat4 &horizontalLooktransform) override;
 	virtual bool shouldRender() override;

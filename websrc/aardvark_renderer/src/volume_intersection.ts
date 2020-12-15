@@ -288,6 +288,12 @@ function volumeMatchesContext( v: TransformedVolume, context: EVolumeContext )
 export function volumesIntersect( v1: TransformedVolume, v2: TransformedVolume, context: EVolumeContext ) 
 	: [ boolean, vec3 | null ]
 {
+	if( v1.type == EVolumeType.Skeleton || v2.type == EVolumeType.Skeleton )
+	{
+		throw new Error( "Skeleton volumes cannot be intersected directly. Call getHandVolumes to get an"
+			+ " array of volumes before you can pass those to volumesIntersect" );
+	}
+
 	if( !volumeMatchesContext( v1, context ) || !volumeMatchesContext( v2, context ) )
 	{
 		return [ false, null ];

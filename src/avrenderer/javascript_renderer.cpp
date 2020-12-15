@@ -74,6 +74,25 @@ bool aabbFromJavascript( CefRefPtr<CefV8Value> arg, AABB_t *out )
 	return true;
 }
 
+CefRefPtr<CefV8Value> vec3ToJavascript( const glm::vec3& v )
+{
+	CefRefPtr<CefV8Value> out = CefV8Value::CreateObject( nullptr, nullptr );
+	out->SetValue( "x", CefV8Value::CreateDouble( v.x ), V8_PROPERTY_ATTRIBUTE_NONE );
+	out->SetValue( "y", CefV8Value::CreateDouble( v.y ), V8_PROPERTY_ATTRIBUTE_NONE );
+	out->SetValue( "z", CefV8Value::CreateDouble( v.z ), V8_PROPERTY_ATTRIBUTE_NONE );
+	return out;
+}
+
+CefRefPtr<CefV8Value> quatToJavascript( const glm::quat & q )
+{
+	CefRefPtr<CefV8Value> out = CefV8Value::CreateObject( nullptr, nullptr );
+	out->SetValue( "w", CefV8Value::CreateDouble( q.w ), V8_PROPERTY_ATTRIBUTE_NONE );
+	out->SetValue( "x", CefV8Value::CreateDouble( q.x ), V8_PROPERTY_ATTRIBUTE_NONE );
+	out->SetValue( "y", CefV8Value::CreateDouble( q.y ), V8_PROPERTY_ATTRIBUTE_NONE );
+	out->SetValue( "z", CefV8Value::CreateDouble( q.z ), V8_PROPERTY_ATTRIBUTE_NONE );
+	return out;
+}
+
 bool CJavascriptModelInstance::init( CefRefPtr<CefV8Value > container )
 {
 	RegisterFunction( container, "setUniverseFromModelTransform", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
@@ -227,8 +246,9 @@ void CJavascriptRenderer::runFrame()
 
 	if ( m_jsTraverser )
 	{
+		m_traverserContext->Enter();
 		m_jsTraverser->ExecuteFunction( nullptr, CefV8ValueList{} );
-
+		m_traverserContext->Exit();
 	}
 
 	if ( m_vrManager->shouldRender() )
@@ -402,6 +422,7 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 		}
 
 		m_jsTraverser = arguments[0];
+		m_traverserContext = CefV8Context::GetCurrentContext();
 	} );
 
 	RegisterFunction( container, "renderList", [this]( const CefV8ValueList & arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
@@ -577,6 +598,77 @@ bool CJavascriptRenderer::init( CefRefPtr<CefV8Value> container )
 		grabMove->SetValue( 0, CefV8Value::CreateDouble( actionState.grabMove.x ) );
 		grabMove->SetValue( 1, CefV8Value::CreateDouble( actionState.grabMove.y ) );
 		retval->SetValue( "grabMove", grabMove, V8_PROPERTY_ATTRIBUTE_NONE );
+	} );
+
+	RegisterFunction( container, "getSkeletonTransforms", [this]( const CefV8ValueList& arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 1 )
+		{
+			exception = "Invalid arguments";
+			return;
+		}
+
+		if ( !arguments[ 0 ]->IsString() )
+		{
+			exception = "argument must be a string";
+		}
+
+		std::vector<JointTransform_t> joints;
+		joints.reserve( 31 );
+		if ( !m_vrManager->getAnimationSource( arguments[ 0 ]->GetStringValue(), &joints ) )
+		{
+			retval = CefV8Value::CreateNull();
+		}
+		else
+		{
+			retval = CefV8Value::CreateArray( (int)joints.size() );
+
+			for ( uint32_t i = 0; i < joints.size(); i++ )
+			{
+				CefRefPtr<CefV8Value> t = CefV8Value::CreateObject( nullptr, nullptr );
+				t->SetValue( "translation", vec3ToJavascript( joints[ i ].translation ), V8_PROPERTY_ATTRIBUTE_NONE );
+				t->SetValue( "rotation", quatToJavascript( joints[ i ].rotation ), V8_PROPERTY_ATTRIBUTE_NONE );
+
+				retval->SetValue( i, t );
+			}
+		}
+	} );
+
+	RegisterFunction( container, "getSkeletonInfo", [this]( const CefV8ValueList& arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 1 )
+		{
+			exception = "Invalid arguments";
+			return;
+		}
+
+		if ( !arguments[ 0 ]->IsString() )
+		{
+			exception = "argument must be a string";
+			return;
+		}
+
+		std::vector<JointInfo_t> joints;
+		if ( !m_vrManager->getSkeletonInfo( arguments[ 0 ]->GetStringValue(), &joints ) )
+		{
+			retval = CefV8Value::CreateNull();
+		}
+		else
+		{
+			retval = CefV8Value::CreateArray( (int)joints.size() );
+
+			for ( uint32_t i = 0; i < joints.size(); i++ )
+			{
+				CefRefPtr<CefV8Value> t = CefV8Value::CreateObject( nullptr, nullptr );
+				t->SetValue( "radius", CefV8Value::CreateDouble( joints[i].radius ), V8_PROPERTY_ATTRIBUTE_NONE );
+				if ( joints[ i ].parentIndex != -1 )
+				{
+					t->SetValue( "parentIndex", CefV8Value::CreateInt( joints[ i ].parentIndex ), V8_PROPERTY_ATTRIBUTE_NONE );
+				}
+
+				retval->SetValue( i, t );
+			}
+		}
 	} );
 
 

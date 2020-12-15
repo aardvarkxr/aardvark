@@ -1,4 +1,4 @@
-import { AABB, AardvarkManifest, AvSharedTextureInfo, EHand, EndpointAddr, Permission } from './aardvark_protocol';
+import { AABB, AardvarkManifest, AvSharedTextureInfo, EHand, EndpointAddr, Permission, AvVector, AvQuaternion } from './aardvark_protocol';
 
 export interface AvTraversalRenderer
 {
@@ -33,6 +33,18 @@ export interface AvActionState
 }
 
 
+export interface JointTransform
+{
+	translation: AvVector;
+	rotation: AvQuaternion;
+}
+
+export interface JointInfo
+{
+	radius: number;
+	parentIndex?: number;
+}
+
 export interface AvRenderer
 {
 	setRendererConfig( rendererConfig: string ): void;
@@ -45,6 +57,9 @@ export interface AvRenderer
 	sendHapticEventForHand( hand: EHand, amplitude: number, frequency: number, duration: number ): void;
 
 	getActionState( hand: EHand ): AvActionState;
+
+	getSkeletonTransforms( skeletonPath: string ):JointTransform[] | null;
+	getSkeletonInfo( skeletonPath: string ):JointInfo[] | null;
 }
 
 export interface AvStartGadgetResult

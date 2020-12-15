@@ -1,4 +1,4 @@
-import { AvRenderer, AvTraversalRenderer, AvModelInstance, AABB, AvHapticProcessor, EHand, AvActionState, AvSharedTextureInfo, AvColor } from "@aardvarkxr/aardvark-shared";
+import { AvRenderer, AvTraversalRenderer, AvModelInstance, AABB, AvHapticProcessor, EHand, AvActionState, AvSharedTextureInfo, AvColor, JointTransform, JointInfo } from "@aardvarkxr/aardvark-shared";
 import { mat4, vec4 } from '@tlaukkan/tsm';
 
 
@@ -116,5 +116,8 @@ export class CTestRenderer implements AvRenderer
 		}
 		return state;
 	}
+
+	public getSkeletonTransforms( skeletonPath: string ): JointTransform[] | null { return null; }
+	public getSkeletonInfo( skeletonPath: string ): JointInfo[] | null { return null; }
 }
 

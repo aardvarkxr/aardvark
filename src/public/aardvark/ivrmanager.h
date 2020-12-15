@@ -29,6 +29,13 @@ struct JointTransform_t
 	glm::quat rotation;
 };
 
+struct JointInfo_t
+{
+	float radius = 0.01f;
+	int32_t parentIndex = -1;
+};
+
+
 class IVrManager
 {
 public:
@@ -55,6 +62,7 @@ public:
 	virtual void getVargglesLookRotation(glm::mat4& horizontalLooktransform) = 0;
 	virtual void setVargglesTexture(const vr::Texture_t* pTexture) = 0;
 	virtual bool getAnimationSource( const std::string& animationSource, std::vector<JointTransform_t>* parentFromJoint ) = 0;
+	virtual bool getSkeletonInfo( const std::string& skeletonPath, std::vector<JointInfo_t>* jointInfo ) = 0;
 	virtual glm::mat4 getHmdFromUniverse() = 0;
 	virtual bool shouldRender() = 0;
 };
