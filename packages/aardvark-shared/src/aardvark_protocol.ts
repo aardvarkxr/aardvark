@@ -590,6 +590,16 @@ export function modelBoxVolume( uri: string, scale?: number )
 		} );
 };
 
+export function sphereVolume( radius: number ) : AvVolume
+{
+	return (
+		{
+			type: EVolumeType.Sphere,
+			radius,
+		}
+	)
+}
+
 export function rayVolume( start: vec3, dir: vec3 )
 {
 	let nodeFromVolume: mat4;
