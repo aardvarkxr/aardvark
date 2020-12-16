@@ -642,7 +642,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		buttons.push( [ g_builtinModelHammerAndWrench, ControlPanelTab.Builtin ] );
 		buttons.push( [ g_builtinModelWindowIcon, ControlPanelTab.DesktopWindows ] );
 
-		const k_buttonGap = 0.07;
+		const k_buttonGap = 0.09;
 		let start = -k_buttonGap * ( buttons.length / 2 );
 
 		let buttonElements: JSX.Element[] = [];
@@ -837,7 +837,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 
 	private renderTabButton( translateX: number, modelUri: string, tab: ControlPanelTab )
 	{
-		let scale = this.state.tab == tab ? 2.2 : 1.5;
+		let scale = this.state.tab == tab ? 2.2 : 1.8;
 		return <AvTransform translateX={ translateX } uniformScale={ scale }>
 				<AvGrabButton modelUri={ modelUri }
 					onClick={ () => this.setState( { tab } ) }/>
@@ -875,8 +875,8 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 			}
 		}
 
-		const k_cellWidth = 0.06;
-		const k_bottomPadding = 0.04;
+		const k_cellWidth = 0.08;
+		const k_bottomPadding = 0.06;
 		let rowCount = Math.ceil( entries.length / 3 );
 		let top = rowCount * k_cellWidth;
 		let seeds: JSX.Element[] = [];
@@ -915,7 +915,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 
 					<AvTransform rotateX={ 90 }>
 						<AvGadgetSeed key="gadget" manifest={ gadget.manifest } gadgetUrl={ gadget.url } 
-							radius={ 0.025 }
+							radius={ 0.040 }
 							highlightCallback={ ( highlight: GadgetSeedHighlight ) =>
 								{
 									this.onSeedHighlight( gadget.url, highlight );
