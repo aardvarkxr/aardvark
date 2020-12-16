@@ -35,7 +35,8 @@ enum GrabberState
 interface DefaultHandState
 {
 	activeGrab: ActiveInterface;
-	activePanel: ActiveInterface;
+	activePanel1: ActiveInterface;
+	activePanel2: ActiveInterface;
 	activeMenu: ActiveInterface;
 	grabberFromGrabbableOverride?: AvNodeTransform;
 	grabberFromGrabbableDirection?: vec3;
@@ -75,7 +76,8 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 		this.state = 
 		{ 
 			activeGrab: null,
-			activePanel: null,
+			activePanel1: null,
+			activePanel2: null,
 			activeMenu: null,
 			state: GrabberState.Idle,
 		};
@@ -107,7 +109,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 
 	componentDidUpdate( prevProps: DefaultHandProps, prevState: DefaultHandState )
 	{
-		if( this.state.activeGrab || this.state.activePanel || this.state.activeMenu )
+		if( this.state.activeGrab || this.state.activePanel1 || this.state.activeMenu )
 		{
 			inputProcessor.activateActionSet( "interact", handToDevice( this.props.hand ) );
 		}
@@ -149,7 +151,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 	{
 		// skip the ray when we already have something interesting going on.
 		if( this.state.state != GrabberState.Idle 
-			|| this.state.activePanel )
+			|| this.state.activePanel1 || this.state.activePanel2 )
 			return;
 
 		this.setState( 
@@ -214,10 +216,10 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 							this.startGrabMove();
 						}
 					}
-					else if( this.state.activePanel )
+					else if( this.state.activePanel1 )
 					{
-						await this.state.activePanel.lock();
-						this.state.activePanel?.sendEvent( { type: PanelRequestType.Down } as PanelRequest );
+						await this.state.activePanel1.lock();
+						this.state.activePanel1?.sendEvent( { type: PanelRequestType.Down } as PanelRequest );
 					}
 				}
 				break;
@@ -295,10 +297,10 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 							console.log( `Unexpected grabber state ${ GrabberState[ this.state.state ] } on grab release` );
 					}
 				}
-				else if( this.state.activePanel )
+				else if( this.state.activePanel1 )
 				{
-					this.state.activePanel.sendEvent( { type: PanelRequestType.Up } as PanelRequest );
-					this.state.activePanel.unlock();	
+					this.state.activePanel1.sendEvent( { type: PanelRequestType.Up } as PanelRequest );
+					this.state.activePanel1.unlock();	
 				}
 				break;
 		}
@@ -562,7 +564,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 	}
 
 	@bind
-	private onPanelStart( activeInterface: ActiveInterface )
+	private onPanel1Start( activeInterface: ActiveInterface )
 	{
 		AvGadget.instance().sendHapticEvent( activeInterface.self, 0.7, 1, 0 );
 		
@@ -573,11 +575,22 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 				activeInterface.unlock();
 			}
 
-			this.setState( { activePanel: null } );	
+			this.setState( { activePanel1: null } );	
 			AvGadget.instance().sendHapticEvent(activeInterface.self, 0.3, 1, 0 );
 		} );
 
-		this.setState( { activePanel: activeInterface } );
+		this.setState( { activePanel1: activeInterface } );
+	}
+
+	@bind
+	private onPanel2Start( activeInterface: ActiveInterface )
+	{
+		activeInterface.onEnded( () =>
+		{
+			this.setState( { activePanel2: null } );	
+		} );
+
+		this.setState( { activePanel2: activeInterface } );
 	}
 
 	@bind
@@ -605,47 +618,6 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 
 	public render()
 	{
-		let modelColor: string;
-		switch( this.state.state )
-		{
-			case GrabberState.Idle:
-				if( this.state.activePanel )
-				{
-					modelColor = "grey";
-				}
-				break;
-
-			case GrabberState.Highlight:
-				modelColor = "red";
-				break;
-
-			case GrabberState.Grabbing:
-				if( this.containerComponent.hasPotentialDrop )
-				{
-					modelColor = "green";
-				}
-				else
-				{
-					modelColor = "orange";
-				}
-				break;
-
-			default:
-			case GrabberState.LostGrab:
-			case GrabberState.GrabReleased:
-			case GrabberState.WaitingForDropComplete:
-			case GrabberState.WaitingForRegrab:
-			case GrabberState.WaitingForRegrabDropComplete:
-			case GrabberState.WaitingForRegrabNewMoveable:
-			case GrabberState.GrabFailed:
-				modelColor="yellow"
-				break;
-
-			case GrabberState.Menu:
-				modelColor = "darkblue";
-				break;
-		}
-
 		let originPath: string;
 		let animationSource: string;
 		let modelUrl: string;
@@ -689,14 +661,6 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 
 		let grabberVolumes = [ k_grabberVolume ];
 		
-		const k_pokerBallVolume: AvVolume =
-		{ 
-			type: EVolumeType.Sphere, 
-			radius: 0.01,
-		};
-
-		let pokerVolumes = [ k_pokerBallVolume ];
-
 		let ray: JSX.Element = null;
 		if( this.state.showRay &&
 			( this.state.state == GrabberState.Idle || this.state.wasShowingRay ) )
@@ -753,8 +717,9 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 					priority={ 100 } debugName={ debugName + "/container" }/>
 				<AvInterfaceEntity transmits={
 					[ 
-						{ iface: "aardvark-panel@1", processor: this.onPanelStart },
+						{ iface: "aardvark-panel@1", processor: this.onPanel1Start },
 						{ iface: "aardvark-grab@1", processor: this.onGrabStart },
+						{ iface: "aardvark-panel@2", processor: this.onPanel2Start },
 					] }
 					volume={ grabberVolumes } debugName={ debugName }>
 						{

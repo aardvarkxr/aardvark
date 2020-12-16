@@ -57,9 +57,12 @@ export interface PanelRequest
 	type: PanelRequestType;
 }
 
+
 interface AvPanelState
 {
 	mousePosition: vec2;
+	mouseDistance: number;
+	mousePressed: boolean;
 }
 
 /**
@@ -71,12 +74,13 @@ interface AvPanelState
 export class AvPanel extends React.Component< AvPanelProps, AvPanelState >
 {
 	private m_sharedTextureInfo: AvSharedTextureInfo = null;
+	private m_activePoker: ActiveInterface = null;
 
 	constructor( props: any )
 	{
 		super( props );
 
-		this.state = { mousePosition: null };
+		this.state = { mousePosition: null, mouseDistance: 9999, mousePressed: false };
 
 		Av().subscribeToBrowserTexture( this.onUpdateBrowserTexture );
 	}
@@ -92,6 +96,7 @@ export class AvPanel extends React.Component< AvPanelProps, AvPanelState >
 	private onPanel( activePoker: ActiveInterface )
 	{
 		this.deliverMouseEvent( PanelMouseEventType.Enter, activePoker.selfIntersectionPoint, activePoker.peer );
+		this.m_activePoker = activePoker;
 
 		activePoker.onEvent( ( event: PanelRequest ) =>
 		{
@@ -117,7 +122,25 @@ export class AvPanel extends React.Component< AvPanelProps, AvPanelState >
 		activePoker.onEnded( () =>
 		{
 			this.deliverMouseEvent( PanelMouseEventType.Leave, activePoker.selfIntersectionPoint, activePoker.peer );
+			this.m_activePoker = null;
 		} );
+	}
+
+	componentDidUpdate( prevProps: AvPanelProps, prevState: AvPanelState )
+	{
+		const k_clickDist = 0.01;
+		const k_releaseDist = 0.02;
+		let dist = this.state.mouseDistance ?? 9999;
+		if( dist < k_clickDist && !this.state.mousePressed )
+		{
+			this.deliverMouseEvent( PanelMouseEventType.Down, null, this.m_activePoker?.peer );
+			this.setState( { mousePressed: true } );
+		}
+		else if( dist > k_releaseDist && this.state.mousePressed)
+		{
+			this.deliverMouseEvent( PanelMouseEventType.Up, null, this.m_activePoker?.peer );
+			this.setState( { mousePressed: false } );
+		}
 	}
 
 	private deliverMouseEvent( eventType: PanelMouseEventType, panelFromPoker: AvVector, pokerEpa: EndpointAddr )
@@ -129,8 +152,9 @@ export class AvPanel extends React.Component< AvPanelProps, AvPanelState >
 		}
 		else if( panelFromPoker )
 		{
+
 			mousePosition = new vec2( [ panelFromPoker.x, panelFromPoker.y ] );
-			this.setState( { mousePosition } );
+			this.setState( { mousePosition, mouseDistance: panelFromPoker.z } );
 		}
 
 		let event: PanelMouseEvent =

@@ -1,6 +1,7 @@
 import { AvVolume, EVolumeType, AvColor } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
+import { AvGadget } from './aardvark_gadget';
 import { ActiveInterface, AvInterfaceEntity } from './aardvark_interface_entity';
 import { AvModel } from './aardvark_model';
 import { PanelRequest, PanelRequestType } from './aardvark_panel';
@@ -37,7 +38,8 @@ export interface GrabButtonProps
 
 interface GrabButtonState
 {
-	pokerCount: number;
+	outerCount: number;
+	innerCount: number;
 }
 
 /** A component that signals when it is grabbed. */
@@ -48,42 +50,59 @@ export class AvGrabButton extends React.Component< GrabButtonProps, GrabButtonSt
 		super( props );
 
 		this.state = 
-		{ 
-			pokerCount: 0,
+		{
+			innerCount: 0, 
+			outerCount: 0,
 		};
 	}
 
 	@bind
-	private onPanel( activePoker: ActiveInterface )
+	private onOuter( activePoker: ActiveInterface )
 	{
-		this.setState( ( prevState ) => { return { pokerCount: prevState.pokerCount + 1 }; } );
-		activePoker.onEvent( ( event: PanelRequest ) =>
+		this.setState( ( prevState ) => { return { outerCount: prevState.outerCount + 1 }; } );
+		activePoker.onEnded( () =>
 		{
-			switch( event.type )
+			this.setState( ( prevState ) => { return { outerCount: prevState.outerCount - 1 }; } );
+		} );
+	}
+	
+	@bind
+	private onInner( activePoker: ActiveInterface )
+	{
+		this.setState( ( prevState ) => 
+		{
+			if( prevState.innerCount == 0 ) 
 			{
-				case PanelRequestType.Down:
-					this.props.onClick?.();
-					break;
-
-				case PanelRequestType.Up:
-					this.props.onRelease?.();
-					break;
+				AvGadget.instance().sendHapticEvent( activePoker.peer, 0.7, 1, 0 );
+		
+				this.props.onClick?.();
 			}
+
+			return { innerCount: prevState.innerCount + 1 }; 
 		} );
 
 		activePoker.onEnded( () =>
 		{
-			this.setState( ( prevState ) => { return { pokerCount: prevState.pokerCount - 1 }; } );
+			this.setState( ( prevState ) => 
+			{
+				if( prevState.innerCount == 1 ) 
+				{
+					AvGadget.instance().sendHapticEvent( activePoker.peer, 0.3, 1, 0 );
+					this.props.onRelease?.();
+				}
+	
+				return { innerCount: prevState.innerCount - 1 }; 
+			} );
 		} );
 	}
 	
 	public render()
 	{
-		let scale = ( this.state.pokerCount > 0 ) ? 1.1 : 1.0;
-		let volume: AvVolume;
+		let scale = ( this.state.outerCount > 0 ) ? 1.1 : 1.0;
+		let outerVolume: AvVolume;
 		if( this.props.radius )
 		{
-			volume = 
+			outerVolume = 
 			{
 				type: EVolumeType.Sphere,
 				radius: this.props.radius,
@@ -91,12 +110,14 @@ export class AvGrabButton extends React.Component< GrabButtonProps, GrabButtonSt
 		}
 		else if( this.props.modelUri )
 		{
-			volume = 
+			outerVolume = 
 			{
 				type: EVolumeType.ModelBox,
 				uri: this.props.modelUri,
 			};
 		}
+
+		let innerVolume = outerVolume ? { ...outerVolume, scale: 0.8 } : null;
 
 		return <>
 			<AvTransform uniformScale={ scale }>
@@ -104,8 +125,10 @@ export class AvGrabButton extends React.Component< GrabButtonProps, GrabButtonSt
 					color={ this.props.color }/> }
 				{ this.props.children }
 			</AvTransform>
-			<AvInterfaceEntity volume={ volume } priority={ 20 }
-				receives={ [ { iface: "aardvark-panel@1", processor: this.onPanel } ] }/>
+			<AvInterfaceEntity volume={ outerVolume } priority={ 20 }
+				receives={ [ { iface: "aardvark-panel@2", processor: this.onOuter } ] }/>
+			<AvInterfaceEntity volume={ innerVolume } priority={ 21 }
+				receives={ [ { iface: "aardvark-panel@2", processor: this.onInner } ] }/>
 		</>;
 	}
 }
