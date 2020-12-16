@@ -878,7 +878,7 @@ class DefaultHands extends React.Component< {}, {} >
 					} volume={ emptyVolume() } ref={ this.gadgetRegistryRef } />
 				</AvOrigin>
 				<AvOrigin path="/user/hand/left">
-					<AvTransform translateZ={ 0.04 }>
+					<AvTransform translateZ={ 0.04 } translateY={ 0.02 }>
 						<AvGrabButton onClick={ this.toggleGadgetMenu } 
 							modelUri={ g_builtinModelGear }/>
 					</AvTransform>

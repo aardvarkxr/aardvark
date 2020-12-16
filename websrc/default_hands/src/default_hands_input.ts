@@ -18,6 +18,7 @@ export let k_actionSets: ActionSet[] =
 					...twoHandBinding( InteractionProfile.TouchController, Input.TriggerTouch ),
 					...twoHandBinding( InteractionProfile.MixedRealityController, Input.TriggerTouch ),
 					...twoHandBinding( InteractionProfile.ViveController, Input.TriggerTouch ),
+					...twoHandBinding( InteractionProfile.ReverbG2Controller, Input.TriggerTouch ),
 				]
 			}
 		]
@@ -34,10 +35,11 @@ export let k_actionSets: ActionSet[] =
 				type: ActionType.Boolean,
 				bindings: 
 				[ 
-					...twoHandBinding( InteractionProfile.IndexController, Input.Trigger ),
-					...twoHandBinding( InteractionProfile.TouchController, Input.Trigger ),
-					...twoHandBinding( InteractionProfile.MixedRealityController, Input.Trigger ),
+					...twoHandBinding( InteractionProfile.IndexController, Input.Squeeze ),
+					...twoHandBinding( InteractionProfile.TouchController, Input.Squeeze ),
+					...twoHandBinding( InteractionProfile.MixedRealityController, Input.Squeeze ),
 					...twoHandBinding( InteractionProfile.ViveController, Input.Trigger ),
+					...twoHandBinding( InteractionProfile.ReverbG2Controller, Input.Squeeze ),
 				],
 			},
 			{
@@ -57,6 +59,14 @@ export let k_actionSets: ActionSet[] =
 					},
 					...twoHandBinding( InteractionProfile.MixedRealityController, Input.Menu ),
 					...twoHandBinding( InteractionProfile.ViveController, Input.Menu ),
+					{
+						interactionProfile: InteractionProfile.ReverbG2Controller,
+						inputPath: Device.Left + Input.X,
+					},
+					{
+						interactionProfile: InteractionProfile.ReverbG2Controller,
+						inputPath: Device.Right + Input.A,
+					},
 				],
 			}
 		]
@@ -77,6 +87,7 @@ export let k_actionSets: ActionSet[] =
 					...twoHandBinding( InteractionProfile.TouchController, Input.Thumbstick ),
 					...twoHandBinding( InteractionProfile.MixedRealityController, Input.Thumbstick ),
 					...twoHandBinding( InteractionProfile.ViveController, Input.Trackpad ),
+					...twoHandBinding( InteractionProfile.ReverbG2Controller, Input.Thumbstick ),
 				],
 			},
 		]
