@@ -276,11 +276,11 @@ interface RemoteUniverse
 
 function handFromOriginPath( originPath: string )
 {
-	if ( originPath.startsWith( "/user/hand/left" ) )
+	if ( originPath?.startsWith( "/user/hand/left" ) )
 	{
 		return EHand.Left;
 	}
-	else if ( originPath.startsWith( "/user/hand/right" ) )
+	else if ( originPath?.startsWith( "/user/hand/right" ) )
 	{
 		return EHand.Right;
 	}
