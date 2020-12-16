@@ -1,4 +1,4 @@
-import { matMultiplyPoint, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EVolumeContext, InitialInterfaceLock, InterfaceLockResult } from '@aardvarkxr/aardvark-shared';
+import { matMultiplyPoint, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EVolumeContext, InitialInterfaceLock, InterfaceLockResult, Device, stringToEndpointAddr } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3 } from '@tlaukkan/tsm';
 import { TransformedVolume, volumesIntersect } from './volume_intersection';
 
@@ -245,7 +245,7 @@ export class CInterfaceProcessor
 					continue;
 				}
 
-				if( transmitter.originPath == receiver.originPath && transmitter.originPath != "/space/stage" )
+				if( !shouldAllowMatch( transmitter, receiver ) )
 				{
 					this.log( `interface end (matching origins) ${ endpointAddrToString( transmitter.epa ) } `
 						+` to ${ endpointAddrToString( receiver.epa ) } for ${ iip.iface }` );
@@ -298,9 +298,7 @@ export class CInterfaceProcessor
 						continue;
 					}
 
-					if( transmitter.originPath == receiver.originPath 
-						&& transmitter.originPath != "/space/stage" 
-						&& transmitter.originPath != null )
+					if( !shouldAllowMatch( transmitter, receiver ) )
 					{
 						// right hand can't interface with stuff that's also 
 						// on the right hand, etc.
@@ -607,4 +605,24 @@ export class CInterfaceProcessor
 		return InterfaceLockResult.Success;
 	}
 
+}
+
+function shouldAllowMatch( transmitter: InterfaceEntity, receiver: InterfaceEntity ): boolean
+{
+	if( transmitter.originPath == "/space/stage" || !transmitter.originPath || !receiver.originPath )
+		return true;
+
+	if( transmitter.originPath == receiver.originPath )
+		return false;
+
+	let to = transmitter.originPath.split( '/' );
+	let ro = receiver.originPath.split( '/' );
+
+	if( to.length > 3 && ro.length > 3 )
+	{
+		if( to[1] == ro[1] && to[2] == ro[2] && to[3] == ro[3] )
+			return false;
+	}
+
+	return true;
 }
