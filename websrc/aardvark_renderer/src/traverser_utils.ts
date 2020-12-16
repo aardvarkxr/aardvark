@@ -197,33 +197,35 @@ function boneSphere( hand: EHand, joint: HandSkeletonBone, offset?: number, radi
 
 function createHandVolumes( handPath: string )
 {
+	// volumes are processed in the order that they appear in the list, so put the 
+	// most important fingertip volumes first in the list
 	let hand = handPath == "/user/hand/left" ? EHand.Left : EHand.Right;
 	return [
+		boneSphere( hand, HandSkeletonBone.IndexFinger4 ),
+		boneSphere( hand, HandSkeletonBone.Thumb3 ),
+		boneSphere( hand, HandSkeletonBone.MiddleFinger4 ),
+		boneSphere( hand, HandSkeletonBone.RingFinger4 ),
+		boneSphere( hand, HandSkeletonBone.PinkyFinger4 ),
 		//boneSphere( hand, HandSkeletonBone.Wrist ),
 		//boneSphere( hand, HandSkeletonBone.Thumb0 ),
 		boneSphere( hand, HandSkeletonBone.Thumb1, 0, 0.012 ),
 		boneSphere( hand, HandSkeletonBone.Thumb2, 0, 0.012 ),
-		boneSphere( hand, HandSkeletonBone.Thumb3 ),
 		// boneSphere( hand, HandSkeletonBone.IndexFinger0 ),
 		boneSphere( hand, HandSkeletonBone.IndexFinger1, 0, 0.011 ),
 		boneSphere( hand, HandSkeletonBone.IndexFinger2, 0, 0.011 ),
 		boneSphere( hand, HandSkeletonBone.IndexFinger3 ),
-		boneSphere( hand, HandSkeletonBone.IndexFinger4 ),
 		boneSphere( hand, HandSkeletonBone.MiddleFinger0, 0.02, 0.03 ),
 		boneSphere( hand, HandSkeletonBone.MiddleFinger1, 0, 0.011 ),
 		boneSphere( hand, HandSkeletonBone.MiddleFinger2, 0, 0.011 ),
 		boneSphere( hand, HandSkeletonBone.MiddleFinger3 ),
-		boneSphere( hand, HandSkeletonBone.MiddleFinger4 ),
 		// boneSphere( hand, HandSkeletonBone.RingFinger0 ),
 		boneSphere( hand, HandSkeletonBone.RingFinger1, 0, 0.011 ),
 		boneSphere( hand, HandSkeletonBone.RingFinger2, 0, 0.011 ),
 		boneSphere( hand, HandSkeletonBone.RingFinger3 ),
-		boneSphere( hand, HandSkeletonBone.RingFinger4 ),
 		// boneSphere( hand, HandSkeletonBone.PinkyFinger0 ),
 		boneSphere( hand, HandSkeletonBone.PinkyFinger1 ),
 		boneSphere( hand, HandSkeletonBone.PinkyFinger2 ),
 		boneSphere( hand, HandSkeletonBone.PinkyFinger3 ),
-		boneSphere( hand, HandSkeletonBone.PinkyFinger4 ),
 	];
 }
 
