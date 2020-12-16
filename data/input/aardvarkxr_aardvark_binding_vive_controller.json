@@ -24,6 +24,16 @@
                "path" : "/user/hand/right/pose/tip"
             }
          ],
+         "skeleton" : [
+            {
+               "output" : "/actions/aardvark/in/left_anim",
+               "path" : "/user/hand/left/input/skeleton/left"
+            },
+            {
+               "output" : "/actions/aardvark/in/right_anim",
+               "path" : "/user/hand/right/input/skeleton/right"
+            }
+         ],
          "sources" : [
             {
                "inputs" : {
