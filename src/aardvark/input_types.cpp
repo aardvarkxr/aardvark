@@ -9,6 +9,12 @@ static std::map<std::string, std::string> g_xrToVr =
 	{ "squeeze/touch", "grip/touch" },
 	{ "squeeze", "grip" },
 
+	{ "thumbstick/click", "joystick/click" },
+	{ "thumbstick/x", "joystick/x" },
+	{ "thumbstick/x", "joystick/x" },
+	{ "thumbstick/touch", "joystick/touch" },
+	{ "thumbstick", "joystick" },
+
 	{ "menu/click", "application_menu/click" },
 	{ "menu/touch", "application_menu/touch" },
 	{ "menu", "application_menu" },
