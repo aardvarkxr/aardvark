@@ -328,6 +328,15 @@ export class InputProcessor
 	{
 		for( let actionSet of this.actionSets )
 		{
+			if( old && newState && !old.results[ actionSet.name ] && newState.results[ actionSet.name ])
+			{
+				// the action set just became active. pretend it had the new state all along
+				// to avoid spurious rising edges.
+				old.results[ actionSet.name ] = newState.results[ actionSet.name ];
+
+				// TODO: Maybe this should be optional?
+			}
+
 			for( let baseAction of actionSet.actions ?? [] )
 			{
 				let action = baseAction as ActionWithListeners;
