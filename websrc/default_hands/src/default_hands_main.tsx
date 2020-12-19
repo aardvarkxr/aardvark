@@ -1,5 +1,5 @@
 import { ActiveInterface, AvComposedEntity, AvEntityChild, AvGadget, AvGrabButton, AvInterfaceEntity, AvModel, AvOrigin, AvPrimitive, AvTransform, GrabRequest, GrabRequestType, k_MenuInterface, MenuEvent, MenuEventType, PanelRequest, PanelRequestType, PrimitiveType, PrimitiveYOrigin, SimpleContainerComponent } from '@aardvarkxr/aardvark-react';
-import { InputProcessor, AvNodeTransform, AvQuaternion, AvVolume, EAction, EHand, emptyVolume, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EVolumeContext, EVolumeType, g_builtinModelGear, handToDevice, InterfaceLockResult, multiplyTransforms, rayVolume, g_builtinModelSkinnedHandLeft, g_builtinModelSkinnedHandRight } from '@aardvarkxr/aardvark-shared';
+import { InputProcessor, AvNodeTransform, AvQuaternion, AvVolume, EAction, EHand, emptyVolume, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EVolumeContext, EVolumeType, g_builtinModelGear, handToDevice, InterfaceLockResult, multiplyTransforms, rayVolume, g_builtinModelSkinnedHandLeft, g_builtinModelSkinnedHandRight, Av } from '@aardvarkxr/aardvark-shared';
 import { vec3 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
 import { initSentryForBrowser } from 'common/sentry_utils';
@@ -97,6 +97,8 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 		this.containerComponent.onItemChanged( () => this.forceUpdate() );
 
 		inputProcessor.activateActionSet( "default", handToDevice( this.props.hand ) );
+
+		Av().registerSceneApplicationNotification( this.onSceneAppChanged );
 	}
 
 	componentWillUnmount()
@@ -117,6 +119,12 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 		{
 			inputProcessor.deactivateActionSet( "interact", handToDevice( this.props.hand ) );
 		}
+	}
+
+	@bind
+	private onSceneAppChanged()
+	{
+		this.forceUpdate();
 	}
 
 	@bind
@@ -635,6 +643,12 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 			break;
 		}
 
+		let overlayOnly = true;
+		if( !Av().getCurrentSceneApplication() )
+		{
+			overlayOnly = false;
+		}
+
 		const k_containerOuterVolume: AvVolume =
 		{
 			type: EVolumeType.AABB,
@@ -715,7 +729,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 			<>
 			<AvOrigin path={ originPath }>
 				{ modelUrl && <AvModel 
-					uri={ modelUrl } overlayOnly={ true } animationSource={ animationSource }/> }
+					uri={ modelUrl } overlayOnly={ overlayOnly } animationSource={ animationSource }/> }
 				{
 					!modelUrl && <AvPrimitive type={ PrimitiveType.Sphere } radius={ 0.02 } />
 				}

@@ -12,6 +12,6 @@
 	{
 		"browserWidth": 512,
 		"browserHeight": 512,
-		"permissions" : [ "scenegraph", "master", "input" ]
+		"permissions" : [ "scenegraph", "master", "input", "application" ]
 	}
 }
