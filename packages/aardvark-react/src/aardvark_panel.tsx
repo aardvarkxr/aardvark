@@ -257,7 +257,7 @@ export class AvPanel extends React.Component< AvPanelProps, AvPanelState >
 						</AvTransform> }
 					{ this.props.interactive &&
 						<AvInterfaceEntity volume={ [ volume, thickVolume ] } priority={ 10 } wantsTransforms={ true }
-							receives={ [ { iface: "aardvark-panel@1", processor: this.onPanel } ] }/> }
+							receives={ [ { iface: "aardvark-panel@2", processor: this.onPanel } ] }/> }
 				</>
 	}
 }
