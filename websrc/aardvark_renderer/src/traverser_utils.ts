@@ -2,6 +2,7 @@ import { TransformedVolume } from './volume_intersection';
 import { mat4 } from '@tlaukkan/tsm';
 import { EndpointAddr, stringToEndpointAddr, AvVolume, JointInfo, Av, JointTransform, nodeTransformToMat4, EVolumeType, sphereVolume, EHand } from '@aardvarkxr/aardvark-shared';
 import validator from 'validator';
+import e from 'express';
 
 
 export enum UrlType
@@ -171,7 +172,7 @@ interface JointVolume
 interface SkeletonInfo
 {
 	joints: JointInfo[];
-	volumes: JointVolume[];
+	volumes: { [whichPart: string ] : JointVolume[] };
 }
 
 let skeletonInfoCache = new Map<string, SkeletonInfo | null >();
@@ -195,11 +196,10 @@ function boneSphere( hand: EHand, joint: HandSkeletonBone, offset?: number, radi
 	return jv;
 }
 
-function createHandVolumes( handPath: string )
+function createHandVolumes( hand: EHand )
 {
 	// volumes are processed in the order that they appear in the list, so put the 
 	// most important fingertip volumes first in the list
-	let hand = handPath == "/user/hand/left" ? EHand.Left : EHand.Right;
 	return [
 		boneSphere( hand, HandSkeletonBone.IndexFinger4 ),
 		boneSphere( hand, HandSkeletonBone.Thumb3 ),
@@ -229,6 +229,15 @@ function createHandVolumes( handPath: string )
 	];
 }
 
+function createIndexTipVolumes( hand: EHand )
+{
+	// volumes are processed in the order that they appear in the list, so put the 
+	// most important fingertip volumes first in the list
+	return [
+		boneSphere( hand, HandSkeletonBone.IndexFinger4 ),
+	];
+}
+
 function getSkeletonInfo( handPath: string ): SkeletonInfo | null
 {
 	if( skeletonInfoCache.has( handPath ) )
@@ -243,10 +252,15 @@ function getSkeletonInfo( handPath: string ): SkeletonInfo | null
 			return null;
 		}
 
+		let hand = handPath == "/user/hand/left" ? EHand.Left : EHand.Right;
 		let info: SkeletonInfo =
 		{
 			joints,
-			volumes: createHandVolumes( handPath ),
+			volumes: 
+			{
+				"": createHandVolumes( hand ),
+				"/index/tip": createIndexTipVolumes( hand ),
+			}
 		}
 
 		skeletonInfoCache.set( handPath, info );
@@ -257,11 +271,22 @@ function getSkeletonInfo( handPath: string ): SkeletonInfo | null
 /** gets a volume list to represent one hand */
 export function getHandVolumes( handPath: string ): TransformedVolume[]
 {
-	let info = getSkeletonInfo( handPath );
+	let skeletonPath:string = handPath;
+	if( handPath.startsWith( "/user/hand/left" ) )
+	{
+		skeletonPath = "/user/hand/left";
+	}
+	else if( handPath.startsWith( "/user/hand/right" ) )
+	{
+		skeletonPath = "/user/hand/right";
+	}
+
+	let whichPart = handPath.substr( skeletonPath.length );
+	let info = getSkeletonInfo( skeletonPath );
 	if( !info )
 		return [];
 
-	let transforms = Av().renderer.getSkeletonTransforms( handPath );
+	let transforms = Av().renderer.getSkeletonTransforms( skeletonPath );
 	if( !transforms )
 		return [];
 
@@ -274,7 +299,7 @@ export function getHandVolumes( handPath: string ): TransformedVolume[]
 	let parentFromJoint = transforms.map( ( t: JointTransform ) =>
 		nodeTransformToMat4( { position: t.translation, rotation: t.rotation } ) );
 
-	let universeFromRootArray = Av().renderer.getUniverseFromOriginTransform( handPath + "/raw" );
+	let universeFromRootArray = Av().renderer.getUniverseFromOriginTransform( skeletonPath + "/raw" );
 	if( !universeFromRootArray )
 	{
 		return [];
@@ -311,8 +336,14 @@ export function getHandVolumes( handPath: string ): TransformedVolume[]
 		}
 	}
 
+	let jointVolumes = info.volumes[ whichPart ];
+	if( !jointVolumes )
+	{
+		return [];
+	}
+
 	let results:TransformedVolume[] = [];
-	for( let v of info.volumes )
+	for( let v of jointVolumes )
 	{
 		let universeFromVolume = ( new mat4( universeFromJoint[ v.joint ].all() ) ).multiply( v.jointFromVolume );
 		results.push(

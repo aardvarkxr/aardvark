@@ -637,12 +637,7 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 
 	private updateInterfaceProcessor()
 	{
-		// get the hand volumes we support so we can use those when requested
-		const handVolumes: { [ path: string ]: TransformedVolume[] } =
-		{
-			"/user/hand/left": getHandVolumes( "/user/hand/left" ),
-			"/user/hand/right": getHandVolumes( "/user/hand/right" ),
-		};
+		let handVolumeCache = new Map<string, TransformedVolume[]>();
 
 		let entities: InterfaceEntity[] = [];
 		for( let entityNode of this.m_interfaceEntities )
@@ -680,11 +675,18 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 						continue;
 					}
 
-					if( volume.type == EVolumeType.Skeleton && handVolumes[ volume.skeletonPath ] )
+					if( volume.type == EVolumeType.Skeleton && volume.skeletonPath )
 					{
+						let handVolumes: TransformedVolume[] = [];
+						if( !handVolumeCache.has( volume.skeletonPath ) )
+						{
+							handVolumes = getHandVolumes( volume.skeletonPath ) ?? [];
+							handVolumeCache.set( volume.skeletonPath, handVolumes );
+						}
+
 						if( volume.visualize )
 						{
-							for( let v of handVolumes[ volume.skeletonPath ] )
+							for( let v of handVolumes )
 							{
 								v.visualize = true;
 							}
@@ -693,7 +695,7 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 						volumes = 
 						[
 							...volumes,
-							...handVolumes[ volume.skeletonPath ],
+							...handVolumes,
 						];
 
 						continue;

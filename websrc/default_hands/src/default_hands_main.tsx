@@ -659,7 +659,15 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 			//visualize: true,
 		};
 
+		const k_pokerVolume: AvVolume =
+		{ 
+			type: EVolumeType.Skeleton,
+			skeletonPath: animationSource + "/index/tip", 
+			//visualize: true,
+		};
+
 		let grabberVolumes = [ k_grabberVolume ];
+		let poker2Volumes = ( this.state.activePanel1 || this.state.activeGrab ) ? [] : [ k_pokerVolume ];
 		
 		let ray: JSX.Element = null;
 		if( this.state.showRay &&
@@ -719,7 +727,6 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 					[ 
 						{ iface: "aardvark-panel@1", processor: this.onPanel1Start },
 						{ iface: "aardvark-grab@1", processor: this.onGrabStart },
-						{ iface: "aardvark-panel@2", processor: this.onPanel2Start },
 					] }
 					volume={ grabberVolumes } debugName={ debugName }>
 						{
@@ -734,6 +741,12 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 						{ iface: k_MenuInterface, processor: this.onMenuStart },
 					] }
 					volume={ grabberVolumes } debugName={ debugName + "/menu" }>
+				</AvInterfaceEntity>
+				<AvInterfaceEntity transmits={
+					[ 
+						{ iface: "aardvark-panel@2", processor: this.onPanel2Start },
+					] }
+					volume={ poker2Volumes } debugName={ debugName + "/poker" }>
 				</AvInterfaceEntity>
 			</AvOrigin>
 			{ this.renderDebug() }
