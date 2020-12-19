@@ -677,8 +677,8 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 
 					if( volume.type == EVolumeType.Skeleton && volume.skeletonPath )
 					{
-						let handVolumes: TransformedVolume[] = [];
-						if( !handVolumeCache.has( volume.skeletonPath ) )
+						let handVolumes: TransformedVolume[] = handVolumeCache.get( volume.skeletonPath );
+						if( !handVolumes )
 						{
 							handVolumes = getHandVolumes( volume.skeletonPath ) ?? [];
 							handVolumeCache.set( volume.skeletonPath, handVolumes );
