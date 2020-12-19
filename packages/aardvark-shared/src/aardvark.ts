@@ -1,4 +1,4 @@
-import { AABB, AardvarkManifest, AvSharedTextureInfo, EHand, EndpointAddr, Permission, AvVector, AvQuaternion } from './aardvark_protocol';
+import { AABB, AardvarkManifest, AvNodeTransform, AvSharedTextureInfo, EHand, EndpointAddr, Permission, AvVector, AvQuaternion } from './aardvark_protocol';
 
 export interface AvTraversalRenderer
 {
@@ -293,6 +293,25 @@ export interface InputState
 	results: { [ actionSetName: string ]: ActionSetState };
 }
 
+/** Information about the underlying application that Aardvark is running on top of. */
+export interface SceneApplicationInfo
+{
+	/** A globally unique identifier for the running application. */
+	id: string;
+
+	/** A name that can be shown to a user for the running application. */
+	name: string;
+
+	/** A unique-within-the-application identifier for which level/map/planet the user is in. */
+	worldId?: string;
+
+	/** A unique-within-the-worldID identifier for which instance of the world that the user is in. */
+	instanceId?: string;
+
+	/** The transform from the user's stage origin to the instance's origin. */
+	instanceFromStage?: AvNodeTransform;
+}
+
 export interface Aardvark
 {
 	hasPermission( permission: Permission ): boolean;
@@ -328,6 +347,10 @@ export interface Aardvark
 	getNumberSetting( sectionName: string, settingName: string ): number;
 	getStringSetting( sectionName: string, settingName: string ): string;
 	setSetting( sectionName: string, settingName: string, newValue: number | string | boolean ): void;
+
+	// requires application permissions
+	registerSceneApplicationNotification( fn: () => void ): void;
+	getCurrentSceneApplication(): SceneApplicationInfo | null;
 }
 
 declare global

@@ -46,6 +46,7 @@ public:
 	const aardvark::AardvarkConfig_t & getConfig() const { return m_config; }
 
 	void registerInput( CefRefPtr<CefV8Value> manifestJS, CefString *exception );
+	void registerSceneApplicationNotification( CefRefPtr<CefV8Value> fn, CefRefPtr<CefV8Context> context );
 
 	vr::EVRInitError InitOpenVR();
 
@@ -57,6 +58,8 @@ public:
 
 	void runFrame();
 private:
+	void pollVrEvents();
+
 	struct PerContextInfo_t
 	{
 		CefRefPtr<CefBrowser> browser;
@@ -72,6 +75,13 @@ private:
 	aardvark::AardvarkConfig_t m_config;
 	CUriRequestHandler m_uriRequestHandler;
 	bool m_needRunFrame = true;
+
+	struct AppChangeCallback_t
+	{
+		CefRefPtr<CefV8Value> fn;
+		CefRefPtr<CefV8Context> context;
+	};
+	std::vector<AppChangeCallback_t> m_appChangeCallbacks;
 
 	std::unique_ptr<CInputManifest> m_inputManifest;
 	std::string m_gadgetId;

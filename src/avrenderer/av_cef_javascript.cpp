@@ -422,6 +422,64 @@ bool CAardvarkObject::init( CefRefPtr<CefV8Value> container )
 		} );
 	}
 
+	if ( hasPermission( "application" ) )
+	{
+		RegisterFunction( container, "registerSceneApplicationNotification", [this]( const CefV8ValueList& arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+		{
+			if ( arguments.size() != 1
+				|| !arguments[ 0 ]->IsFunction() )
+			{
+				exception = "Invalid arguments";
+				return;
+			}
+
+			m_handler->registerSceneApplicationNotification( arguments[ 0 ],
+				CefV8Context::GetCurrentContext() );
+		} );
+
+		RegisterFunction( container, "getCurrentSceneApplication", [this]( const CefV8ValueList& arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+		{
+			vr::EVRInitError err = m_handler->InitOpenVR();
+			if ( err != vr::VRInitError_None )
+			{
+				exception = std::string( "VR_Init failed with " ) + vr::VR_GetVRInitErrorAsSymbol( err );
+				return;
+			}
+
+			uint32_t pid = vr::VRApplications()->GetCurrentSceneProcessId();
+			if ( !pid )
+			{
+				// no scene app == compositor == return null to the caller
+				retval = CefV8Value::CreateNull();
+				return;
+			}
+
+			char appKey[ vr::k_unMaxApplicationKeyLength ];
+			if ( vr::VRApplicationError_None !=
+				vr::VRApplications()->GetApplicationKeyByProcessId( pid, appKey, sizeof( appKey ) ) )
+			{
+				// if we can't get the key we have nothing to share with the app
+				retval = CefV8Value::CreateNull();
+				return;
+			}
+
+			char appName[ 1024 ];
+			vr::EVRApplicationError appErr;
+			vr::VRApplications()->GetApplicationPropertyString( appKey, vr::VRApplicationProperty_Name_String,
+				appName, sizeof( appName ), &appErr );
+			if ( appErr != vr::VRApplicationError_None )
+			{
+				retval = CefV8Value::CreateNull();
+				return;
+			}
+
+			retval = CefV8Value::CreateObject( nullptr, nullptr );
+			retval->SetValue( "id", CefV8Value::CreateString( appKey ), V8_PROPERTY_ATTRIBUTE_NONE );
+			retval->SetValue( "name", CefV8Value::CreateString( appName ), V8_PROPERTY_ATTRIBUTE_NONE );
+		} );
+
+	}
+
 	return true;
 
 }
@@ -675,6 +733,8 @@ void CAardvarkRenderProcessHandler::runFrame()
 		}
 	}
 
+	pollVrEvents();
+
 	m_uriRequestHandler.doCefRequestWork();
 
 	// requests from javascript come in on the renderer thread, so process those too
@@ -687,6 +747,30 @@ void CAardvarkRenderProcessHandler::runFrame()
 	}
 
 	CefPostDelayedTask( TID_RENDERER, base::Bind( &CAardvarkRenderProcessHandler::runFrame, this ), frameDelay );
+}
+
+void CAardvarkRenderProcessHandler::pollVrEvents()
+{
+	if ( !vr::VRSystem() )
+		return;
+
+	vr::VREvent_t evt;
+	while ( vr::VRSystem()->PollNextEvent( &evt, sizeof( evt ) ) )
+	{
+		switch ( evt.eventType )
+		{
+		case vr::VREvent_SceneFocusChanged:
+		{
+			for ( auto& cb : m_appChangeCallbacks )
+			{
+				cb.context->Enter();
+				cb.fn->ExecuteFunction( nullptr, {} );
+			}
+		}
+		break;
+
+		}
+	}
 }
 
 void CAardvarkRenderProcessHandler::sendBrowserMessage( CefRefPtr< CefProcessMessage > msg )
@@ -1225,6 +1309,12 @@ void CAardvarkRenderProcessHandler::syncInput( CefRefPtr<CefV8Value> infoJS, Cef
 			a->SetValue( deviceName, deviceResult, V8_PROPERTY_ATTRIBUTE_NONE );
 		}
 	}
+}
 
+
+void CAardvarkRenderProcessHandler::registerSceneApplicationNotification( 
+	CefRefPtr<CefV8Value> fn, CefRefPtr<CefV8Context> context )
+{
+	m_appChangeCallbacks.push_back( { fn, context } );
 }
 

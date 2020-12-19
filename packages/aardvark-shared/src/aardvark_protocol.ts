@@ -766,6 +766,7 @@ export enum Permission
 	StartUrl = "starturl",
 	Input = "input",
 	Settings = "settings",
+	Application = "application",
 }
 
 export interface AardvarkManifestExtension
