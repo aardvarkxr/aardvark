@@ -544,6 +544,14 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 			this.setState( { activeGrab: null, wasShowingRay: false } );	
 		} );
 
+		activeInterface.onTransformUpdated( ( entityFromPeer: AvNodeTransform ) =>
+		{
+			if( !this.state.grabberFromGrabbableOverride && this.state.state == GrabberState.Grabbing )
+			{
+				console.log( "Transform updated" );
+				this.setGrabberFromGrabbable( entityFromPeer );
+			}
+		} );
 	}
 
 	private setGrabberFromGrabbable( grabberFromGrabbable: AvNodeTransform )

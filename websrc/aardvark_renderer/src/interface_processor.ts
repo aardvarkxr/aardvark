@@ -37,6 +37,7 @@ interface InterfaceInProgress
 	locked: boolean;
 	transmitterWantsTransforms: boolean;
 	receiverWantsTransforms: boolean;
+	refreshTransforms: boolean;
 }
 
 export function findBestInterface( transmitter: InterfaceEntity, receiver: InterfaceEntity ): string | null
@@ -181,6 +182,7 @@ export class CInterfaceProcessor
 					locked: true,
 					transmitterWantsTransforms: transmitter.wantsTransforms,
 					receiverWantsTransforms: receiver?.wantsTransforms ?? false,
+					refreshTransforms: false,
 				};
 
 				if( receiver && receiver.receives.includes( initialLock.iface ) )
@@ -365,6 +367,7 @@ export class CInterfaceProcessor
 							locked: false,
 							transmitterWantsTransforms: transmitter.wantsTransforms,
 							receiverWantsTransforms: bestReceiver.wantsTransforms,
+							refreshTransforms: false,
 						} );
 				}
 
@@ -376,7 +379,7 @@ export class CInterfaceProcessor
 		this.interfacesInProgress = newInterfacesInProgress;
 		for( let iip of this.interfacesInProgress )
 		{
-			if( !iip.receiverWantsTransforms && !iip.transmitterWantsTransforms )
+			if( !iip.receiverWantsTransforms && !iip.transmitterWantsTransforms && !iip.refreshTransforms )
 			{
 				continue;
 			}
@@ -384,17 +387,19 @@ export class CInterfaceProcessor
 			let transmitter = entityMap.find( iip.transmitter );
 			let receiver = entityMap.find( iip.receiver );
 
-			if( iip.transmitterWantsTransforms )
+			if( iip.transmitterWantsTransforms || iip.refreshTransforms )
 			{
 				this.callbacks.interfaceTransformUpdated(iip.transmitter, iip.receiver, iip.iface, 
 					this.computeEntityTransform( transmitter, receiver ) );
 			}
 
-			if( iip.receiverWantsTransforms )
+			if( iip.receiverWantsTransforms || iip.refreshTransforms )
 			{
 				this.callbacks.interfaceTransformUpdated( iip.receiver, iip.transmitter, iip.iface,
 					this.computeEntityTransform( receiver, transmitter ) );
 			}
+
+			iip.refreshTransforms = false;
 		}
 
 		this.lastEntityMap = entityMap;
@@ -448,6 +453,8 @@ export class CInterfaceProcessor
 					+` to ${ endpointAddrToString( destEpa ) } for ${ iface }`, event, destinationFromPeer );
 
 				this.callbacks.interfaceEvent( destEpa, peerEpa, iface, event, destinationFromPeer );
+
+				iip.refreshTransforms = true;
 
 				// we should only have one iip for this transmitter
 				break;
@@ -507,6 +514,8 @@ export class CInterfaceProcessor
 			+` to ${ endpointAddrToString( receiver ) } for ${ iface }` );
 
 		iip.locked = true;
+		iip.refreshTransforms = true;
+				
 		return InterfaceLockResult.Success;
 	}
 
@@ -553,6 +562,8 @@ export class CInterfaceProcessor
 			+` to ${ endpointAddrToString( receiver ) } for ${ iface }` );
 
 		iip.locked = false;
+		iip.refreshTransforms = true;
+				
 		return InterfaceLockResult.Success;
 		
 	}
