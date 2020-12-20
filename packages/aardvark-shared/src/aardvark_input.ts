@@ -26,6 +26,8 @@ interface ActionWithListeners extends Action
 {
 	leftCallbacks?: (BooleanCallback | FloatCallback | Vector2Callback )[];
 	rightCallbacks?: (BooleanCallback | FloatCallback | Vector2Callback )[];
+	suppressLeft?: boolean;
+	suppressRight?: boolean;
 }
 
 
@@ -75,47 +77,79 @@ export class InputProcessor
 				break;
 			}
 		}
-		
-		if( activeSet )
+
+		let somethingAdded = false;
+
+		if( !activeSet )
 		{
-			if( typeof devices == "string" )
+			activeSet = 
 			{
-				if( !activeSet.topLevelPaths )
-				{
-					activeSet.topLevelPaths = [ devices ];
-				}
-				else
-				{
-					activeSet.topLevelPaths.push( devices );
-				}
-			}
-			else
-			{
-				activeSet.topLevelPaths = devices;
-			}
+				actionSetName,
+				topLevelPaths: [],
+			};
+			this.inputInfo.activeActionSets.push( activeSet );
+		}
+
+		let newDevices: Device[];
+		if( typeof devices == "string" )
+		{
+			newDevices = [ devices ];
+		}
+		else if( typeof devices == "object" )
+		{
+			newDevices = devices;
 		}
 		else
 		{
-			let topLevelPaths: Device[];
-			if( typeof devices == "object" )
-			{
-				topLevelPaths = devices;
-			}
-			else if( devices )
-			{
-				topLevelPaths = [ devices ];
-			}
+			newDevices = [ Device.Left, Device.Right ];
+		}
 
-			this.inputInfo.activeActionSets.push(
+		for( let newDevice of newDevices )
+		{
+			if( !activeSet.topLevelPaths.includes( newDevice ) )
+			{
+				activeSet.topLevelPaths.push( newDevice );
+				this.suppressInitialPressForActionSet( actionSetName, newDevice );
+				somethingAdded = true;
+			}
+		}
+
+		if( !this.inputTimer && this.inputIntervalMs && somethingAdded )
+		{
+			this.inputTimer = window.setTimeout( () => this.onInputTick(), this.inputIntervalMs );
+		}
+	}
+
+	private suppressInitialPressForActionSet( actionSetName: string, device: Device )
+	{
+		let actionSet: ActionSet;
+		for( let as of this.actionSets )
+		{
+			if( as.name == actionSetName )
+			{
+				actionSet = as;
+				break;
+			}
+		}
+		if( !actionSet )
+		{
+			return;
+		}
+
+		for( let actionBase of actionSet.actions ?? [] )
+		{
+			let action = actionBase as ActionWithListeners;
+			if( action.type == ActionType.Boolean )
+			{
+				switch( device )
 				{
-					actionSetName,
-					topLevelPaths,
+					case Device.Left: 
+						action.suppressLeft = true;
+						break;
+					case Device.Right: 
+						action.suppressRight = true;
+						break;
 				}
-			);
-
-			if( !this.inputTimer && this.inputIntervalMs )
-			{
-				this.inputTimer = window.setTimeout( () => this.onInputTick(), this.inputIntervalMs );
 			}
 		}
 	}
@@ -328,33 +362,46 @@ export class InputProcessor
 	{
 		for( let actionSet of this.actionSets )
 		{
-			if( old && newState && !old.results[ actionSet.name ] && newState.results[ actionSet.name ])
-			{
-				// the action set just became active. pretend it had the new state all along
-				// to avoid spurious rising edges.
-				old.results[ actionSet.name ] = newState.results[ actionSet.name ];
-
-				// TODO: Maybe this should be optional?
-			}
-
 			for( let baseAction of actionSet.actions ?? [] )
 			{
 				let action = baseAction as ActionWithListeners;
 				let oldAction = old?.results[ actionSet.name ]?.[ action.name ];
 				let newAction = newState.results[ actionSet.name ]?.[ action.name ];
+
 				let oldLeft  = oldAction?.left?.value;
 				let oldRight = oldAction?.right?.value;
 
 				let newLeft  = newAction?.left?.value;
 				let newRight = newAction?.right?.value;
 
-				for( let cb of action.leftCallbacks ?? [] )
+				if( action.suppressLeft )
 				{
-					this.callCallback( cb, oldLeft, newLeft, action.type );
+					if( !newLeft )
+					{
+						action.suppressLeft = false;
+					}
 				}
-				for( let cb of action.rightCallbacks ?? [] )
+				else
 				{
-					this.callCallback( cb, oldRight, newRight, action.type );
+					for( let cb of action.leftCallbacks ?? [] )
+					{
+						this.callCallback( cb, oldLeft, newLeft, action.type );
+					}
+				}
+
+				if( action.suppressRight )
+				{
+					if( !newRight )
+					{
+						action.suppressRight = false;
+					}
+				}
+				else
+				{
+					for( let cb of action.rightCallbacks ?? [] )
+					{
+						this.callCallback( cb, oldRight, newRight, action.type );
+					}
 				}
 			}
 		}

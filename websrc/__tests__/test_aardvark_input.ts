@@ -418,6 +418,20 @@ describe( "InputProcessor ", () =>
 		ip.activateActionSet( "default" );
 		jest.advanceTimersToNextTimer();
 
+		// after initial activation, the callback won't be called
+		expect( rcbShowRay ).toBe( 0 );
+		expect( fcbShowRay ).toBe( 0 );
+
+		state.results.default.showRay.left.value = false;
+		jest.advanceTimersToNextTimer();
+
+		// still nothing because the release is suppressed too
+		expect( rcbShowRay ).toBe( 0 );
+		expect( fcbShowRay ).toBe( 0 );
+
+		state.results.default.showRay.left.value = true;
+		jest.advanceTimersToNextTimer();
+
 		expect( rcbShowRay ).toBe( 1 );
 		expect( fcbShowRay ).toBe( 0 );
 
@@ -438,6 +452,14 @@ describe( "InputProcessor ", () =>
 		ip.activateActionSet( "interact", Device.Right );
 		jest.advanceTimersToNextTimer();
 		
+		expect( rcbGrab ).toBe( 0 ); // still 0 because of suppression
+		expect( fcbGrab ).toBe( 0 );
+
+		state.results.interact.grab.right.value = false;
+		jest.advanceTimersToNextTimer();
+		state.results.interact.grab.right.value = true;
+		jest.advanceTimersToNextTimer();
+
 		expect( rcbShowRay ).toBe( 1 );
 		expect( fcbShowRay ).toBe( 1 );
 		expect( rcbGrab ).toBe( 1 ); 
@@ -454,12 +476,18 @@ describe( "InputProcessor ", () =>
 		ip.deactivateActionSet( "interact", Device.Right );
 		jest.advanceTimersToNextTimer();
 		
+		// release is 1 because we don't suppress the release when an action set is deactivated
 		expect( rcbShowRay ).toBe( 1 );
 		expect( fcbShowRay ).toBe( 1 );
 		expect( rcbGrab ).toBe( 1 ); 
-		expect( fcbGrab ).toBe( 1 );
+		expect( fcbGrab ).toBe( 1 ); 
 
 		ip.activateActionSet( "interact", [ Device.Left, Device.Right ] );
+		jest.advanceTimersToNextTimer();
+		
+		state.results.interact.grab.right.value = false;
+		jest.advanceTimersToNextTimer();
+		state.results.interact.grab.right.value = true;
 		jest.advanceTimersToNextTimer();
 		
 		expect( rcbShowRay ).toBe( 1 );
