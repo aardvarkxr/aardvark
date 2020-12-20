@@ -206,21 +206,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 						{
 							this.state.activeGrab.sendEvent( { type: GrabRequestType.SetGrabber } as GrabRequest );
 							let grabberFromGrabbable = this.state.activeGrab.selfFromPeer;
-							let grabberFromGrabbableDirection = new vec3( [ 
-								grabberFromGrabbable.position?.x ?? 0,
-								grabberFromGrabbable.position?.y ?? 0,
-								grabberFromGrabbable.position?.z ?? 0 ] );
-							let grabberFromGrabbableRange = grabberFromGrabbableDirection.length();
-							grabberFromGrabbableDirection.normalize();
-							
-							this.setState( 
-								{ 
-									grabberFromGrabbableOverride: null,
-									grabberFromGrabbableDirection,
-									grabberFromGrabbableRange,
-									grabberFromGrabbableRotation: grabberFromGrabbable.rotation,
-								} );
-			
+							this.setGrabberFromGrabbable( grabberFromGrabbable );
 							this.startGrabMove();
 						}
 					}
@@ -408,24 +394,13 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 			}
 
 			let grabberFromGrabbable = this.state.grabberFromRegrabTarget ?? activeInterface.selfFromPeer;
-			let grabberFromGrabbableDirection = new vec3( [ 
-				grabberFromGrabbable.position?.x ?? 0,
-				grabberFromGrabbable.position?.y ?? 0,
-				grabberFromGrabbable.position?.z ?? 0 ] );
-			let grabberFromGrabbableRange = grabberFromGrabbableDirection.length();
-			grabberFromGrabbableDirection.normalize();
-
-			this.setState( 
-				{ 
-					state: GrabberState.Grabbing, 
-					grabberFromGrabbableOverride: null,
-					grabberFromGrabbableDirection,
-					grabberFromGrabbableRange,
-					grabberFromGrabbableRotation: grabberFromGrabbable.rotation,
+			this.setGrabberFromGrabbable( grabberFromGrabbable );
+			this.setState(
+				{
 					grabberFromRegrabTarget: null,
 					regrabTarget: null,
 				} );
-
+	
 			this.startGrabMove();
 
 			let res = await activeInterface.lock();
@@ -569,6 +544,26 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 			this.setState( { activeGrab: null, wasShowingRay: false } );	
 		} );
 
+	}
+
+	private setGrabberFromGrabbable( grabberFromGrabbable: AvNodeTransform )
+	{
+		let grabberFromGrabbableDirection = new vec3( [
+			grabberFromGrabbable.position?.x ?? 0,
+			grabberFromGrabbable.position?.y ?? 0,
+			grabberFromGrabbable.position?.z ?? 0
+		] );
+		let grabberFromGrabbableRange = grabberFromGrabbableDirection.length();
+		grabberFromGrabbableDirection.normalize();
+
+		this.setState(
+			{
+				state: GrabberState.Grabbing,
+				grabberFromGrabbableOverride: null,
+				grabberFromGrabbableDirection,
+				grabberFromGrabbableRange,
+				grabberFromGrabbableRotation: grabberFromGrabbable.rotation,
+			} );
 	}
 
 	@bind
