@@ -54,6 +54,7 @@ public:
 	virtual void setBaseColor( const glm::vec4 & color ) = 0;
 	virtual void setOverlayOnly( bool ) = 0;
 	virtual void setAnimationSource( const std::string& ) = 0;
+	virtual bool setAnimation( const std::string& uri, const void *data, size_t dataLength, std::string *error ) = 0;
 };
 
 

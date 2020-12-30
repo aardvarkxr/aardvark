@@ -32,3 +32,7 @@ export const g_builtinModelWindowIcon = g_builtinModelPrefix + "window_icon.glb"
 export const g_builtinModelRocketship = g_builtinModelPrefix + "rocketship.glb";
 export const g_builtinModelSkinnedHandLeft = g_builtinModelPrefix + "skinned_hand_left.glb";
 export const g_builtinModelSkinnedHandRight = g_builtinModelPrefix + "skinned_hand_right.glb";
+
+export const g_builtinAnims = g_builtinModelPrefix + "animations/";
+
+export const g_anim_Left_ThumbsUp = g_builtinAnims + "left_thumbs_up.glb";

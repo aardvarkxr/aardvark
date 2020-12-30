@@ -16,6 +16,7 @@ export interface AvModelInstance
 	setBaseColor( color: [ number, number, number, number ] ): void;
 	setOverlayOnly( overlayOnly: boolean ): void;
 	setAnimationSource( animationSource: string ): void;
+	setAnimation(modelUri: string, modelDataBase64: string ): void;
 }
 
 export interface AvActionState

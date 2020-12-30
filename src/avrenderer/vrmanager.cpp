@@ -3,6 +3,7 @@
 #include <iostream>
 #include <tools/pathtools.h>
 
+#include <glm/gtc/matrix_transform.hpp>
 
 void CVRManager::init()
 {
@@ -216,6 +217,12 @@ std::vector<JointTransform_t> GetSkeletonAction( vr::VRActionHandle_t action )
 	return output;
 }
 
+glm::mat4 JointToMat4( const JointTransform_t& joint )
+{
+	return glm::translate( glm::mat4( 1.0f ), joint.translation ) 
+		* glm::mat4( const_cast<glm::quat&>( joint.rotation ) );
+}
+
 void CVRManager::doInputWork()
 {
 	vr::VRActiveActionSet_t actionSet[2] = {};
@@ -232,6 +239,9 @@ void CVRManager::doInputWork()
 	m_universeFromOriginTransforms["/user/hand/left"] = m_handActionState[(int)EHand::Left].universeFromHand;
 	m_universeFromOriginTransforms["/user/hand/right"] = m_handActionState[(int)EHand::Right].universeFromHand;
 
+	m_animationSource[ "/user/hand/left" ] = GetSkeletonAction( m_actionLeftSkeleton );
+	m_animationSource[ "/user/hand/right" ] = GetSkeletonAction( m_actionRightSkeleton );
+
 	vr::InputPoseActionData_t poseData;
 	if ( vr::VRInputError_None == vr::VRInput()->GetPoseActionDataForNextFrame( m_actionLeftSkeleton, vr::TrackingUniverseStanding,
 		&poseData, sizeof( poseData ), vr::k_ulInvalidInputValueHandle ) && poseData.bActive && poseData.pose.bPoseIsValid )
@@ -244,8 +254,10 @@ void CVRManager::doInputWork()
 		m_universeFromOriginTransforms[ "/user/hand/right/raw" ] = glmMatFromVrMat( poseData.pose.mDeviceToAbsoluteTracking );
 	}
 
-	m_animationSource[ "/user/hand/left" ] = GetSkeletonAction( m_actionLeftSkeleton );
-	m_animationSource[ "/user/hand/right" ] = GetSkeletonAction( m_actionRightSkeleton );
+	m_universeFromOriginTransforms[ "/user/hand/left/root_bone" ] = 
+		m_universeFromOriginTransforms[ "/user/hand/left/raw" ] * JointToMat4( m_animationSource[ "/user/hand/left" ][1] );
+	m_universeFromOriginTransforms[ "/user/hand/right/root_bone" ] = 
+		m_universeFromOriginTransforms[ "/user/hand/right/raw" ] * JointToMat4( m_animationSource[ "/user/hand/right" ][1] );
 }
 
 void CVRManager::updateCameraActionPose()

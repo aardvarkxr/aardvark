@@ -519,7 +519,12 @@ namespace vkglTF
 			// extensions don't actually seem to be used, so shallow copy those
 			extensions = src.extensions;
 
-			for ( auto & srcAnimation : src.animations )
+			copyAnimations( src );
+		}
+
+		void copyAnimations( const Model& src )
+		{
+			for ( auto& srcAnimation : src.animations )
 			{
 				// everything but channels can just be copied
 				Animation newAnim;
@@ -529,7 +534,7 @@ namespace vkglTF
 				newAnim.end = srcAnimation.end;
 
 				// Channels need their nodes patched up
-				for ( auto & srcChannel : srcAnimation.channels )
+				for ( auto& srcChannel : srcAnimation.channels )
 				{
 					AnimationChannel newChannel;
 					newChannel.path = srcChannel.path;
@@ -543,7 +548,6 @@ namespace vkglTF
 
 				animations.push_back( newAnim );
 			}
-
 		}
 
 		// linearNodes just holds all the nodes in the hierarchy in a flat

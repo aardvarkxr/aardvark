@@ -218,6 +218,36 @@ bool CJavascriptModelInstance::init( CefRefPtr<CefV8Value > container )
 
 		m_modelInstance->setAnimationSource( arguments[ 0 ]->GetStringValue() );
 	} );
+
+	RegisterFunction( container, "setAnimation", [this]( const CefV8ValueList& arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
+	{
+		if ( arguments.size() != 2 )
+		{
+			exception = "Invalid arguments";
+			return;
+		}
+
+		if ( !arguments[ 0 ]->IsString() )
+		{
+			exception = "first argument must be a url string";
+			return;
+		}
+
+		if ( !arguments[ 1 ]->IsString() )
+		{
+			exception = "second argument must be a base64 encoded string of the glTF model blob that contains the animation because CEF doesn't support arraybuffer";
+			return;
+		}
+
+		const std::string uri = arguments[ 0 ]->GetStringValue();
+		std::string modelData = base64_decode( arguments[ 1 ]->GetStringValue() );
+		std::string sError;
+		if ( !m_modelInstance->setAnimation( uri, modelData.c_str(), modelData.size(), &sError ) && !sError.empty() )
+		{
+			exception = sError;
+		}
+	} );
+
 	return true;
 }
 

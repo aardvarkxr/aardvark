@@ -10,6 +10,7 @@ import { modelCache, ModelInfo } from './model_cache';
 import { fixupUrl, getHandVolumes, UrlType } from './traverser_utils';
 import { Traverser, TraverserCallbacks } from './traverser_interface';
 import { TransformedVolume } from './volume_intersection';
+import isUrl from 'is-url';
 const equal = require( 'fast-deep-equal' );
 
 interface NodeData
@@ -18,6 +19,7 @@ interface NodeData
 	lastFailedModelUri?: string;
 	lastTextureUri?: string;
 	lastFailedTextureUri?: string;
+	lastAnimationSource?: string;
 	modelInstance?: AvModelInstance;
 	lastParentFromNode?: mat4;
 	constraint?: AvConstraint;
@@ -1152,9 +1154,31 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 			{
 				nodeData.modelInstance.setOverlayOnly( node.propOverlayOnly );
 			}
-			if( node.propAnimationSource )
+			if( node.propAnimationSource && node.propAnimationSource != nodeData.lastAnimationSource )
 			{
-				nodeData.modelInstance.setAnimationSource( node.propAnimationSource );
+				if( node.propAnimationSource.startsWith( "source:" ) )
+				{
+					let trimmedSource = node.propAnimationSource.substr( 7 );
+					nodeData.modelInstance.setAnimationSource( trimmedSource );
+					nodeData.lastAnimationSource = node.propAnimationSource;
+				}
+				else
+				{
+					const [ animUri, urlType ] = this.fixupUrlForCurrentNode( node.propAnimationSource );
+					let animInfo = this.tryLoadModelForNode(node, animUri );
+					if( animInfo )
+					{
+						try
+						{
+							nodeData.modelInstance.setAnimation( animUri, animInfo.base64 );
+							nodeData.lastAnimationSource = node.propAnimationSource;
+						}
+						catch( e )
+						{
+							nodeData.lastFailedModelUri = animUri;
+						}
+					}
+				}
 			}
 
 

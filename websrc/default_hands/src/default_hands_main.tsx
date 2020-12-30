@@ -1,5 +1,5 @@
 import { ActiveInterface, AvComposedEntity, AvEntityChild, AvGadget, AvGrabButton, AvInterfaceEntity, AvModel, AvOrigin, AvPrimitive, AvTransform, GrabRequest, GrabRequestType, k_MenuInterface, MenuEvent, MenuEventType, PanelRequest, PanelRequestType, PrimitiveType, PrimitiveYOrigin, SimpleContainerComponent } from '@aardvarkxr/aardvark-react';
-import { InputProcessor, AvNodeTransform, AvQuaternion, AvVolume, EAction, EHand, emptyVolume, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EVolumeContext, EVolumeType, g_builtinModelGear, handToDevice, InterfaceLockResult, multiplyTransforms, rayVolume, g_builtinModelSkinnedHandLeft, g_builtinModelSkinnedHandRight, Av } from '@aardvarkxr/aardvark-shared';
+import { InputProcessor, AvNodeTransform, AvQuaternion, AvVolume, EAction, EHand, emptyVolume, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EVolumeContext, EVolumeType, g_builtinModelGear, handToDevice, InterfaceLockResult, multiplyTransforms, rayVolume, g_builtinModelSkinnedHandLeft, g_builtinModelSkinnedHandRight, Av, g_anim_Left_ThumbsUp } from '@aardvarkxr/aardvark-shared';
 import { vec3 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
 import { initSentryForBrowser } from 'common/sentry_utils';
@@ -632,16 +632,21 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 		let originPath: string;
 		let animationSource: string;
 		let modelUrl: string;
+		let volumeSkeleton: string;
 		switch( this.props.hand )
 		{
 		case EHand.Left:
+			originPath = "/user/hand/left/root_bone";
 			originPath = "/user/hand/left/raw";
-			animationSource = "/user/hand/left";
+			volumeSkeleton = "/user/hand/left";
+			animationSource = "source:/user/hand/left";
+			//animationSource = g_anim_Left_ThumbsUp;
 			modelUrl = g_builtinModelSkinnedHandLeft;
 			break;
 		case EHand.Right:
 			originPath = "/user/hand/right/raw";
-			animationSource = "/user/hand/right";
+			volumeSkeleton = "/user/hand/right";
+			animationSource = "source:/user/hand/right";
 			modelUrl = g_builtinModelSkinnedHandRight;
 			break;
 		}
@@ -672,14 +677,14 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 		const k_grabberVolume: AvVolume =
 		{ 
 			type: EVolumeType.Skeleton,
-			skeletonPath: animationSource, 
+			skeletonPath: volumeSkeleton, 
 			//visualize: true,
 		};
 
 		const k_pokerVolume: AvVolume =
 		{ 
 			type: EVolumeType.Skeleton,
-			skeletonPath: animationSource + "/index/tip", 
+			skeletonPath: volumeSkeleton + "/index/tip", 
 			//visualize: true,
 		};
 

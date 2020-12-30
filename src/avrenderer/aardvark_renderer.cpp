@@ -2415,6 +2415,18 @@ void CVulkanRendererModelInstance::setBaseColor( const glm::vec4 & color )
 }
 
 
+bool CVulkanRendererModelInstance::setAnimation( const std::string& uri, const void* data, size_t dataLength, 
+	std::string* error )
+{
+	m_animation = m_renderer->findOrLoadModel( uri, data, dataLength, error );
+	if ( !m_animation )
+		return false;
+
+	m_model->animations.clear();
+	m_model->copyAnimations( *m_animation );
+	return true;
+}
+
 
 void CVulkanRendererModelInstance::animate( float animationTimeElapsed )
 {
