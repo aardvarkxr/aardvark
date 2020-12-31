@@ -41,7 +41,7 @@ public:
 	virtual void setOverrideTexture( ETextureFormat format, const void* data, uint32_t width, uint32_t height ) override;
 	virtual void setBaseColor( const glm::vec4 & color ) override;
 	virtual void setOverlayOnly( bool overlayOnly ) override { this->overlayOnly = overlayOnly; };
-	virtual void setAnimationSource( const std::string& animationSource ) override { this->animationSource = animationSource;  }
+	virtual void setAnimationSource( const std::string& animationSource ) override;
 	virtual bool setAnimation( const std::string& uri, const void* data, size_t dataLength, std::string* error ) override;
 
 	void animate( float animationTimeElapsed );

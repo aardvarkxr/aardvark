@@ -25,6 +25,10 @@ mockedModelCache.queueModelLoad.mockImplementation(
 				yMin: -1, yMax: 1,
 				zMin: -1, zMax: 1,
 			},
+			getRootFromNode: ( nodeId: string ) =>
+			{
+				return new mat4();
+			},
 		}
 	} );
 

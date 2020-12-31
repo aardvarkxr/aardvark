@@ -39,13 +39,29 @@ export enum GrabRequestType
 	HideMenu = "hide_menu",
 }
 
+
+/** Defines the pose from the grabber to the grabbable, as well as the pose of the hand when the grab
+ * occurs. 
+ */
+export enum GrabPose
+{
+	/** Use the normal animated hand while grabbing Use the relative pose between the grabber and the
+	 * grabbable when the grab started when positioning the grabbable.
+	 */
+	None = "none",
+
+	/** Grab with a pen grip. The grab point is the tip of the pen. */
+	Pen = "pen",
+};
+
 export interface GrabRequest
 {
 	type: GrabRequestType;
 	newMoveable?: EndpointAddr;
 	oldMoveableFromNewMoveable?: AvNodeTransform;
-	grabberFromGrabbable?: AvNodeTransform;
+	grabberFromGrabbable?: AvNodeTransform | GrabPose;
 }
+
 
 export class MoveableComponent implements EntityComponent
 {
@@ -64,11 +80,11 @@ export class MoveableComponent implements EntityComponent
 	private waitingForRedrop:EndpointAddr = null;
 	private waitingForRedropTransform: AvNodeTransform = null;
 	private canDropIntoContainers = true;
-	private forcedGrabberFromGrabbable: AvNodeTransform = null;
+	private forcedGrabberFromGrabbable: AvNodeTransform | GrabPose = null;
 	private shouldShowMenu = false;
 
 	constructor( callback: () => void, useInitialParent?: boolean, canDropIntoContainers?: boolean,
-		forcedGrabberFromGrabbable?: AvNodeTransform )
+		forcedGrabberFromGrabbable?: AvNodeTransform | GrabPose )
 	{
 		this.canDropIntoContainers = canDropIntoContainers ?? true;
 		this.forcedGrabberFromGrabbable = forcedGrabberFromGrabbable;

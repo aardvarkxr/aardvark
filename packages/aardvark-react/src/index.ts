@@ -12,6 +12,7 @@ export * from './aardvark_head_facing_transform';
 export * from './aardvark_highlight_transmitters';
 export * from './aardvark_line';
 export * from './aardvark_model';
+export * from './aardvark_model_transform';
 export * from './aardvark_menu_item';
 export * from './aardvark_origin';
 export * from './aardvark_panel';

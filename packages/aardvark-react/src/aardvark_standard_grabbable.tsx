@@ -9,7 +9,7 @@ import { AvMenuItem } from './aardvark_menu_item';
 import { AvModel } from './aardvark_model';
 import { AvTransform } from './aardvark_transform';
 import { AvGadgetList } from './api_gadgetlist';
-import { MoveableComponent, MoveableComponentState } from './component_moveable';
+import { GrabPose, MoveableComponent, MoveableComponentState } from './component_moveable';
 import { NetworkedGadgetComponent, NetworkedItemComponent } from './component_networked_gadget';
 import { RemoteGadgetComponent, RemoteItemComponent, k_remoteGrabbableInterface } from './component_remote_gadget';
 import { AvInterfaceEntity } from './aardvark_interface_entity';
@@ -93,6 +93,7 @@ export enum GrabbableStyle
 	 */
 	NetworkedItem = 3,
 }
+
 
 /** Props for {@link AvStandardGrabbable} */
 export interface StandardGrabbableProps
@@ -187,6 +188,13 @@ export interface StandardGrabbableProps
 	 */
 	grabberFromGrabbable?: AvNodeTransform;
 
+	/** Use this pose for the grabbing hand, and position the grabbable at the "grab point" of that
+	 * pose.
+	 * 
+	 * @default use the transform at the moment the grab started
+	 */
+	grabPose?: GrabPose;
+
 	/** Defines when the grabbable can be grabbed, and whether or not
 	 * it counts as the topmost grabbable in the gadget.
 	 */
@@ -251,7 +259,7 @@ export class AvStandardGrabbable extends React.Component< StandardGrabbableProps
 		this.moveableComponent = new MoveableComponent( this.onMoveableUpdate, 
 			this.props.style == GrabbableStyle.Gadget, 
 			this.props.canDropIntoContainers && !AvGadget.instance().isRemote,
-			this.props.grabberFromGrabbable );
+			this.props.grabberFromGrabbable ?? this.props.grabPose );
 
 		let remoteLock = AvGadget.instance().findInitialInterface( RemoteGadgetComponent.interfaceName );
 		if( remoteLock )

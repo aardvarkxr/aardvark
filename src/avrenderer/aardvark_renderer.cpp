@@ -2414,6 +2414,13 @@ void CVulkanRendererModelInstance::setBaseColor( const glm::vec4 & color )
 	}
 }
 
+void CVulkanRendererModelInstance::setAnimationSource( const std::string& animationSource )
+{ 
+	this->animationSource = animationSource; 
+	m_animation = nullptr;
+	m_model->animations.clear();
+}
+
 
 bool CVulkanRendererModelInstance::setAnimation( const std::string& uri, const void* data, size_t dataLength, 
 	std::string* error )

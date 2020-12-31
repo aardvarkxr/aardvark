@@ -1,5 +1,5 @@
-import { ActiveInterface, AvComposedEntity, AvEntityChild, AvGadget, AvGrabButton, AvInterfaceEntity, AvModel, AvOrigin, AvPrimitive, AvTransform, GrabRequest, GrabRequestType, k_MenuInterface, MenuEvent, MenuEventType, PanelRequest, PanelRequestType, PrimitiveType, PrimitiveYOrigin, SimpleContainerComponent } from '@aardvarkxr/aardvark-react';
-import { InputProcessor, AvNodeTransform, AvQuaternion, AvVolume, EAction, EHand, emptyVolume, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EVolumeContext, EVolumeType, g_builtinModelGear, handToDevice, InterfaceLockResult, multiplyTransforms, rayVolume, g_builtinModelSkinnedHandLeft, g_builtinModelSkinnedHandRight, Av, g_anim_Left_ThumbsUp } from '@aardvarkxr/aardvark-shared';
+import { ActiveInterface, AvComposedEntity, AvEntityChild, AvGadget, AvGrabButton, AvInterfaceEntity, AvModel, AvModelTransform, AvOrigin, AvPrimitive, AvTransform, GrabPose, GrabRequest, GrabRequestType, k_MenuInterface, MenuEvent, MenuEventType, PanelRequest, PanelRequestType, PrimitiveType, PrimitiveYOrigin, SimpleContainerComponent } from '@aardvarkxr/aardvark-react';
+import { InputProcessor, AvNodeTransform, AvQuaternion, AvVolume, g_builtinAnims, EHand, emptyVolume, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EVolumeContext, EVolumeType, g_builtinModelGear, handToDevice, InterfaceLockResult, multiplyTransforms, rayVolume, g_builtinModelSkinnedHandLeft, g_builtinModelSkinnedHandRight, Av, g_anim_Left_ThumbsUp } from '@aardvarkxr/aardvark-shared';
 import { vec3 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
 import { initSentryForBrowser } from 'common/sentry_utils';
@@ -38,7 +38,7 @@ interface DefaultHandState
 	activePanel1: ActiveInterface;
 	activePanel2: ActiveInterface;
 	activeMenu: ActiveInterface;
-	grabberFromGrabbableOverride?: AvNodeTransform;
+	grabberFromGrabbableOverride?: AvNodeTransform | GrabPose;
 	grabberFromGrabbableDirection?: vec3;
 	grabberFromGrabbableRange?: number;
 	grabberFromGrabbableRotation?: AvQuaternion;
@@ -636,11 +636,9 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 		switch( this.props.hand )
 		{
 		case EHand.Left:
-			originPath = "/user/hand/left/root_bone";
 			originPath = "/user/hand/left/raw";
 			volumeSkeleton = "/user/hand/left";
 			animationSource = "source:/user/hand/left";
-			//animationSource = g_anim_Left_ThumbsUp;
 			modelUrl = g_builtinModelSkinnedHandLeft;
 			break;
 		case EHand.Right:
@@ -706,30 +704,50 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 			}
 		}
 
-		let grabberFromGrabbable: AvNodeTransform = null;
-		if( this.state.grabberFromGrabbableOverride )
-		{
-			grabberFromGrabbable = this.state.grabberFromGrabbableOverride;
-		}
-		else if( this.state.grabberFromGrabbableDirection )
-		{
-			grabberFromGrabbable =
-			{
-				position: 
-				{
-					x: this.state.grabberFromGrabbableDirection.x * this.state.grabberFromGrabbableRange,
-					y: this.state.grabberFromGrabbableDirection.y * this.state.grabberFromGrabbableRange,
-					z: this.state.grabberFromGrabbableDirection.z * this.state.grabberFromGrabbableRange,
-				},
-				rotation: this.state.grabberFromGrabbableRotation,
-			};
-		}
 
-		let child: EndpointAddr = null;
-		if( this.state.activeGrab && grabberFromGrabbable
-			&& this.state.state != GrabberState.GrabReleased )
+		let child: JSX.Element;
+		if( this.state.activeGrab && this.state.state != GrabberState.GrabReleased )
 		{
-			child = this.state.activeGrab.peer;
+			let childEpa = this.state.activeGrab.peer;
+
+			let childEntity = <AvEntityChild child={ childEpa }/>;
+			if( typeof this.state.grabberFromGrabbableOverride == "string" &&
+				this.state.grabberFromGrabbableOverride != GrabPose.None )
+			{
+				let hand = EHand[ this.props.hand ].toLowerCase();
+
+				originPath = `/user/hand/${ hand }/root_bone`;
+				animationSource = g_builtinAnims + hand + "_" 
+					+ this.state.grabberFromGrabbableOverride + ".glb";
+				child = <AvModelTransform modelUri={ animationSource } 
+					modelNodeId={ this.state.grabberFromGrabbableOverride } >
+					{ childEntity }
+				</AvModelTransform>;
+
+				overlayOnly = false;
+			}
+			else if( typeof this.state.grabberFromGrabbableOverride == "object"
+				&& this.state.grabberFromGrabbableOverride )
+			{
+				child = <AvTransform transform={ this.state.grabberFromGrabbableOverride }>
+					{ childEntity }
+				</AvTransform>;
+			}
+			else if( this.state.grabberFromGrabbableDirection )
+			{
+				child = <AvTransform transform={ 
+					{
+						position: 
+						{
+							x: this.state.grabberFromGrabbableDirection.x * this.state.grabberFromGrabbableRange,
+							y: this.state.grabberFromGrabbableDirection.y * this.state.grabberFromGrabbableRange,
+							z: this.state.grabberFromGrabbableDirection.z * this.state.grabberFromGrabbableRange,
+						},
+						rotation: this.state.grabberFromGrabbableRotation,
+					} }>
+					{ childEntity }
+				</AvTransform>;
+			}
 		}
 
 		let debugName = EHand[ this.props.hand ] + " hand grabber";
@@ -751,12 +769,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 						{ iface: "aardvark-grab@1", processor: this.onGrabStart },
 					] }
 					volume={ grabberVolumes } debugName={ debugName }>
-						{
-							child
-							&& <AvTransform transform={ grabberFromGrabbable }>
-								<AvEntityChild child={ child }/>
-							</AvTransform>
-						}
+						{ child }
 				</AvInterfaceEntity>
 				<AvInterfaceEntity transmits={
 					[ 

@@ -1,4 +1,4 @@
-import { ShowGrabbableChildren, NetworkedItemComponent, ActiveInterface, AvComposedEntity, AvGadget, AvInterfaceEntity, AvLine, AvModel, AvPrimitive, AvStandardGrabbable, AvTransform, MoveableComponent, PrimitiveType, PrimitiveYOrigin, PrimitiveZOrigin, DefaultLanding, RemoteItemComponent, MoveableComponentState, k_remoteGrabbableInterface, GrabbableStyle, renderAardvarkRoot } from '@aardvarkxr/aardvark-react';
+import { ShowGrabbableChildren, NetworkedItemComponent, ActiveInterface, AvComposedEntity, AvGadget, AvInterfaceEntity, AvLine, AvModel, AvPrimitive, AvStandardGrabbable, AvTransform, MoveableComponent, PrimitiveType, PrimitiveYOrigin, PrimitiveZOrigin, DefaultLanding, RemoteItemComponent, MoveableComponentState, k_remoteGrabbableInterface, GrabbableStyle, renderAardvarkRoot, GrabPose } from '@aardvarkxr/aardvark-react';
 import { Av, AvNodeTransform, AvVector, AvVolume, endpointAddrToString, EVolumeType, g_builtinModelBox, InitialInterfaceLock, infiniteVolume } from '@aardvarkxr/aardvark-shared';
 import { vec2 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
@@ -123,7 +123,7 @@ function Marker( props: MarkerProps )
 	return <AvTransform translateX={ props.initialXOffset } translateY={ 0.005 }>
 		<AvStandardGrabbable style={ GrabbableStyle.NetworkedItem } itemId = { props.itemId }
 			volume={ k_grabVolume } showChildren={ ShowGrabbableChildren.OnlyWhenGrabbed} 
-			canDropIntoContainers={ false }
+			canDropIntoContainers={ false } grabPose={ GrabPose.Pen }
 			appearance={
 			<>
 				<AvTransform translateY={ markerTipRadius } >

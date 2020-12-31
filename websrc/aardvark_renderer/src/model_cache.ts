@@ -14,6 +14,8 @@ export interface ModelInfo
 	readonly aabb: AABB;
 	readonly binary: ArrayBuffer;
 	readonly base64: string;
+
+	getRootFromNode( nodeId: string ): mat4;
 }
 
 function addNodeToAabb( aabb: AABB, node: any )
@@ -135,6 +137,41 @@ class ModelInfoInternal implements ModelInfo
 
 		this.aabb = aabbFromGltf( model );
 	}
+
+	private findNode( nodeList: any[], id: string ): any
+	{
+		for( let node of nodeList )
+		{
+			if( node.name == id )
+				return node;
+
+			if( node.children )
+			{
+				let child = this.findNode( node.children, id );
+				if( child )
+				{
+					return child;
+				}
+			}
+		}
+
+		return null;
+	}
+
+	public getRootFromNode( nodeId: string ): mat4
+	{
+		for( let scene of this.model.scenes )
+		{
+			let node = this.findNode( scene.nodes, nodeId );
+			if( node )
+			{
+				return node.rootFromNode;
+			}
+		}
+
+		return null;
+	}
+
 }
 
 /** Options for the model cache */

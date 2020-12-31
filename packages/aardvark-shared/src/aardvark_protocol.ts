@@ -480,6 +480,7 @@ export enum AvNodeType
 	// RoomMember = 16,
 	InterfaceEntity = 17,
 	Child = 18,
+	ModelTransform = 19,
 }
 
 
@@ -717,6 +718,7 @@ export interface AvNode
 	propReceives?: string[];
 	propInterfaceLocks?: InitialInterfaceLock[];
 	propChildAddr?: EndpointAddr;
+	propModelNodeId?: string;
 }
 
 export enum EHand

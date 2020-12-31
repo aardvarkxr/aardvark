@@ -934,6 +934,10 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 			this.traverseParentTransform( node, defaultParent );
 			break;
 		
+		case AvNodeType.ModelTransform:
+			this.traverseModelTransform( node, defaultParent );
+			break;
+		
 		case AvNodeType.HeadFacingTransform:
 			this.traverseHeadFacingTransform( node, defaultParent );
 			break;
@@ -1047,6 +1051,17 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 				parentTransform, defaultParent,	node.propConstraint, null, null )
 		}
 	}
+
+	traverseModelTransform( node: AvNode, defaultParent: PendingTransform )
+	{
+		let modelInfo = this.tryLoadModelForNode( node, node.propModelUri );
+		let parentFromNode = modelInfo?.getRootFromNode( node.propModelNodeId );
+		if( parentFromNode )
+		{
+			this.updateTransform( node.globalId, defaultParent, parentFromNode, null );
+		}
+	}
+
 
 	traverseHeadFacingTransform( node: AvNode, defaultParent: PendingTransform )
 	{
