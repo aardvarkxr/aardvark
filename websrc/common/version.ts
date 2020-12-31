@@ -1,1 +1,1 @@
-export const k_AardvarkVersion = "0.13.3";
+export const k_AardvarkVersion = "1.5.0";
