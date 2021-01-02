@@ -30,6 +30,7 @@ class CDispatcher
 	private m_gadgetsWithWaiters: { [ persistenceUuid: string ]: (( gadg: CGadgetData) => void)[] } = {};
 	private m_startGadgetPromises: {[nodeId:number]: 
 		[ ( gadgetEndpointId: number ) => void, ( reason: any ) => void ] } = {};
+	private m_successfulConnections = 0;
 
 	constructor()
 	{
@@ -97,6 +98,11 @@ class CDispatcher
 		}
 	}
 
+	public rememberSuccess()
+	{
+		this.m_successfulConnections++;
+	}
+	
 	public removeEndpoint( ep: CEndpoint )
 	{
 		let list = this.getListForType( ep.getType() );
@@ -112,7 +118,7 @@ class CDispatcher
 
 		let endpointsToStayAliveFor = this.getListForType( EndpointType.Gadget ).length
 			+ this.getListForType( EndpointType.Renderer ).length;
-		if( endpointsToStayAliveFor == 0 )
+		if( endpointsToStayAliveFor == 0 && this.m_successfulConnections > 0 )
 		{
 			// exit cleanly one second after the last endpoint we care about 
 			// disconnects. Under nodemon this means we'll need to restart by hand. 
@@ -335,6 +341,8 @@ class CGadgetData
 			let manifestJson = await getJSONFromUri( manifestUriFromGadgetUri( this.m_gadgetUri ) );
 			this.m_manifest = manifestJson as AardvarkManifest;
 			console.log( `Gadget ${ this.m_ep.getId() } is ${ this.getName() }` );
+
+			this.m_dispatcher.rememberSuccess();
 		}
 		catch( e )
 		{
