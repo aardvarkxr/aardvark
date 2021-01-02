@@ -254,10 +254,16 @@ void CVRManager::doInputWork()
 		m_universeFromOriginTransforms[ "/user/hand/right/raw" ] = glmMatFromVrMat( poseData.pose.mDeviceToAbsoluteTracking );
 	}
 
-	m_universeFromOriginTransforms[ "/user/hand/left/root_bone" ] = 
-		m_universeFromOriginTransforms[ "/user/hand/left/raw" ] * JointToMat4( m_animationSource[ "/user/hand/left" ][1] );
-	m_universeFromOriginTransforms[ "/user/hand/right/root_bone" ] = 
-		m_universeFromOriginTransforms[ "/user/hand/right/raw" ] * JointToMat4( m_animationSource[ "/user/hand/right" ][1] );
+	if ( !m_animationSource[ "/user/hand/left" ].empty() )
+	{
+		m_universeFromOriginTransforms[ "/user/hand/left/root_bone" ] = 
+			m_universeFromOriginTransforms[ "/user/hand/left/raw" ] * JointToMat4( m_animationSource[ "/user/hand/left" ][1] );
+	}
+	if ( !m_animationSource[ "/user/hand/right" ].empty() )
+	{
+		m_universeFromOriginTransforms[ "/user/hand/right/root_bone" ] =
+			m_universeFromOriginTransforms[ "/user/hand/right/raw" ] * JointToMat4( m_animationSource[ "/user/hand/right" ][ 1 ] );
+	}
 }
 
 void CVRManager::updateCameraActionPose()
