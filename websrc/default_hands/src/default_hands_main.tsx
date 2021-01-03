@@ -111,13 +111,23 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 
 	componentDidUpdate( prevProps: DefaultHandProps, prevState: DefaultHandState )
 	{
-		if( this.state.activeGrab || this.state.activePanel1 || this.state.activeMenu )
+		if( this.state.activeGrab || this.state.activePanel1 || this.state.activeMenu 
+			|| this.state.state == GrabberState.WaitingForRegrabNewMoveable
+			|| this.state.state == GrabberState.WaitingForRegrabDropComplete
+			|| this.state.state == GrabberState.WaitingForRegrab 
+			|| this.state.state == GrabberState.Grabbing )
 		{
+			console.log( `${ EHand[ this.props.hand ] } interact activated` );
 			inputProcessor.activateActionSet( "interact", handToDevice( this.props.hand ) );
 		}
 		else
 		{
+			console.log( `${ EHand[ this.props.hand ] } interact deactivated` );
 			inputProcessor.deactivateActionSet( "interact", handToDevice( this.props.hand ) );
+		}
+		if( this.state.state != prevState.state )
+		{
+			console.log( `${ EHand[ this.props.hand ] } transitioned to ${ GrabberState[ this.state.state ] }` );
 		}
 	}
 
@@ -180,6 +190,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 	@bind
 	private async onGrabPressed()
 	{
+		console.log( `${ EHand[ this.props.hand ] } grab pressed` );
 		switch( this.grabPressed )
 		{
 			case ButtonState.Idle:
@@ -230,6 +241,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 	@bind
 	private async onGrabReleased()
 	{
+		console.log( `${ EHand[ this.props.hand ] } grab released` );
 		switch( this.grabPressed )
 		{
 			case ButtonState.Suppressed:
@@ -413,6 +425,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 
 			if( !this.grabPressed )
 			{
+				console.log( "Grab was released while regrabbing. Dropping right away")
 				// the user released the grab while we were acquiring our new moveable. So we need to 
 				// drop it immediately.
 				await activeInterface.sendEvent( { type: GrabRequestType.DropYourself } as GrabRequest );
@@ -431,6 +444,8 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 		activeInterface.onEvent( 
 			async ( event: GrabRequest ) =>
 			{
+				console.log( `GRAB EVENT from ${ endpointAddrToString( activeInterface.peer ) } ` 
+				+ `${ event.type } with ${ GrabberState[ this.state.state ] }`, event );
 				switch( event.type )
 				{
 					case GrabRequestType.DropComplete:
@@ -454,6 +469,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 									grabberFromGrabbableRange: null, 
 									grabberFromGrabbableRotation: null, } );
 								let res = await resPromise;
+								console.log( `RELOCK result ${ InterfaceLockResult[ res ] }` );
 								if( res != InterfaceLockResult.Success )
 								{
 									console.log( `Regrab failed with ${ InterfaceLockResult[ res ] }` );
@@ -489,6 +505,10 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 									grabberFromRegrabTarget: multiplyTransforms( activeInterface.selfFromPeer, 
 										event.oldMoveableFromNewMoveable ),
 								} );
+						}
+						else
+						{
+							console.log( `REGRAB requested when we were ${ GrabberState[ this.state.state ]}` );
 						}
 					}
 					break;
