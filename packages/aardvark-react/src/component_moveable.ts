@@ -159,6 +159,7 @@ export class MoveableComponent implements EntityComponent
 	{
 		activeGrab.onEnded(() =>
 		{
+			console.log( "ACTIVE GRAB ENDED from ", endpointAddrToString( activeGrab.peer ) );
 			this.activeGrabs.delete( activeGrab );
 			this.updateListener();
 
@@ -172,7 +173,7 @@ export class MoveableComponent implements EntityComponent
 
 		activeGrab.onEvent( async ( event: GrabRequest ) =>
 		{
-			console.log( "Event received", event );
+			console.log( "Event received", event.type, event );
 			switch( event.type )
 			{
 				case GrabRequestType.SetGrabber:
@@ -199,6 +200,8 @@ export class MoveableComponent implements EntityComponent
 
 						this.activeContainer?.sendEvent( { state: "Moving" } );
 						this.activeContainer?.unlock();
+						console.log( "activeContainer.unlock()" 
+							+ ( this.activeContainer ? "" : "NO CONTAINER" ) );
 	
 						this.updateListener();
 					}
@@ -235,9 +238,12 @@ export class MoveableComponent implements EntityComponent
 	{
 		if( requestLock )
 		{
+			console.log( "before lock" );
 			await this.activeContainer?.lock();
 		}
+		console.log( "before sendEvent" );
 		await this.activeContainer?.sendEvent( { state: "Resting", moveableToReplace, oldMoveableFromNewMoveable } );
+		console.log( "after sendEvent" );
 
 		this.wasEverDropped = true;
 		this.grabber = null;
