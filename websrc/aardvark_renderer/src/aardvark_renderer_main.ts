@@ -77,13 +77,15 @@ rendererEndpoint.registerHandler( MessageType.InterfaceLock,
 rendererEndpoint.registerHandler( MessageType.InterfaceUnlock, 
 	( m: MsgInterfaceLock, env: Envelope ) =>
 	{
-		let result = traverser.interfaceUnlock( m.transmitter, m.receiver, m.iface );
+		let [ result, postReplyWork ] = traverser.interfaceUnlock( m.transmitter, m.receiver, m.iface );
 		let response: MsgInterfaceUnlockResponse =
 		{
 			result,
 		};
 		rendererEndpoint.sendReply(MessageType.InterfaceUnlockResponse, response, env, 
 			{ type: EndpointType.Renderer } );
+
+		postReplyWork?.();
 	} );
 
 rendererEndpoint.registerHandler( MessageType.InterfaceRelock,

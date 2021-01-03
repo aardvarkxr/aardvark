@@ -276,7 +276,7 @@ function rayRayIntersect( r0: TransformedVolume, r1: TransformedVolume ) : [ boo
 }
 
 
-function volumeMatchesContext( v: TransformedVolume, context: EVolumeContext )
+export function volumeMatchesContext( v: TransformedVolume, context: EVolumeContext )
 {
 	let volumeContext = v.context ?? EVolumeContext.Always;
 	return context == EVolumeContext.Always || volumeContext == EVolumeContext.Always

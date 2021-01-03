@@ -13,7 +13,8 @@ export interface Traverser
 	getHandForEpa( epa: EndpointAddr ): EHand;
 
 	interfaceLock( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string ): InterfaceLockResult;
-	interfaceUnlock( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string ): InterfaceLockResult;
+	interfaceUnlock( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string ): 
+		[ InterfaceLockResult, () => void ];
 	interfaceRelock( transmitterEpa: EndpointAddr, oldReceiverEpa: EndpointAddr, 
 		newReceiverEpa: EndpointAddr, iface: string ): InterfaceLockResult;
 	interfaceSendEvent( destEpa: EndpointAddr, peerEpa: EndpointAddr, iface: string, event: object ): void;

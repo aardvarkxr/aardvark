@@ -1,5 +1,5 @@
 import { ipfsUtils } from './ipfs_utils';
-import { Av, AvSharedTextureInfo, g_builtinModelSphere } from '@aardvarkxr/aardvark-shared';
+import { Av, AvSharedTextureInfo, g_builtinModelSphere, InterfaceLockResult } from '@aardvarkxr/aardvark-shared';
 import { textureCache, TextureInfo } from './texture_cache';
 import { AABB, AvActionState, AvConstraint, AvModelInstance, AvNode, AvNodeTransform, AvNodeType, AvRenderer, EHand, emptyActionState, EndpointAddr, minIgnoringNulls, nodeTransformFromMat4, nodeTransformToMat4, scaleAxisToFit, scaleMat, vec3MultiplyAndAdd, computeUniverseFromLine, endpointAddrToString, EndpointType, ENodeFlags, EVolumeType, filterActionsForGadget, g_builtinModelError, MessageType, MsgInterfaceEnded, MsgInterfaceReceiveEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgResourceLoadFailed, MsgUpdateActionState, g_builtinModelCylinder, AvVector } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3, vec4 } from '@tlaukkan/tsm';
@@ -311,7 +311,7 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 	private m_actionState: { [ hand: number ] : AvActionState } = {};
 	private m_dirtyGadgetActions = new Set<number>();
 	private m_remoteUniverse: { [ universeUuid: string ]: RemoteUniverse } = {};
-	private m_interfaceProcessor = new CInterfaceProcessor( this );
+	private m_interfaceProcessor = new CInterfaceProcessor( this, { verboseLogging: true } );
 	private m_interfaceEntities: AvNode[] = [];
 	private m_entityParentTransforms = new EndpointAddrMap<PendingTransform >();
 	private m_callbacks: TraverserCallbacks;
@@ -352,7 +352,8 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 		return this.m_interfaceProcessor.lockInterface( transmitter, receiver, iface );
 	}
 
-	public interfaceUnlock( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string )
+	public interfaceUnlock( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string ) :
+		[ InterfaceLockResult, () => void ]
 	{
 		return this.m_interfaceProcessor.unlockInterface( transmitter, receiver, iface );
 	}

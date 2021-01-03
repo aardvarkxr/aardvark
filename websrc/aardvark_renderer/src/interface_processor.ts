@@ -1,6 +1,6 @@
-import { matMultiplyPoint, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EVolumeContext, InitialInterfaceLock, InterfaceLockResult, Device, stringToEndpointAddr } from '@aardvarkxr/aardvark-shared';
+import { matMultiplyPoint, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EVolumeContext, InitialInterfaceLock, InterfaceLockResult, Device, stringToEndpointAddr, EVolumeType } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3 } from '@tlaukkan/tsm';
-import { TransformedVolume, volumesIntersect } from './volume_intersection';
+import { volumeMatchesContext, TransformedVolume, volumesIntersect } from './volume_intersection';
 
 export interface InterfaceProcessorCallbacks
 {
@@ -38,6 +38,7 @@ interface InterfaceInProgress
 	transmitterWantsTransforms: boolean;
 	receiverWantsTransforms: boolean;
 	refreshTransforms: boolean;
+	hasRealVolumes: boolean;
 }
 
 export function findBestInterface( transmitter: InterfaceEntity, receiver: InterfaceEntity ): string | null
@@ -53,6 +54,19 @@ export function findBestInterface( transmitter: InterfaceEntity, receiver: Inter
 	return null;
 }
 
+function hasRealVolume( ep: InterfaceEntity, context: EVolumeContext )
+{
+	for( let v of ep.volumes )
+	{
+		if( !volumeMatchesContext( v, context ) )
+			continue;
+
+		if( v.type != EVolumeType.Empty )
+			return true;
+	}
+
+	return false;
+}
 
 function entitiesIntersect( transmitter: InterfaceEntity, receiver: InterfaceEntity, context: EVolumeContext ):
 	[ boolean, null | vec3 ]
@@ -183,6 +197,8 @@ export class CInterfaceProcessor
 					transmitterWantsTransforms: transmitter.wantsTransforms,
 					receiverWantsTransforms: receiver?.wantsTransforms ?? false,
 					refreshTransforms: false,
+					hasRealVolumes: hasRealVolume( transmitter, EVolumeContext.StartOnly )
+						&& hasRealVolume( receiver, EVolumeContext.StartOnly )
 				};
 
 				if( receiver && receiver.receives.includes( initialLock.iface ) )
@@ -259,6 +275,8 @@ export class CInterfaceProcessor
 
 			iip.transmitterWantsTransforms = transmitter.wantsTransforms;
 			iip.receiverWantsTransforms = receiver.wantsTransforms;
+			iip.hasRealVolumes = hasRealVolume( transmitter, EVolumeContext.StartOnly )
+				&& hasRealVolume( receiver, EVolumeContext.StartOnly );
 			transmittersInUse.set( iip.transmitter, iip.iface, iip );
 			newInterfacesInProgress.push( iip );
 		}
@@ -368,6 +386,7 @@ export class CInterfaceProcessor
 							transmitterWantsTransforms: transmitter.wantsTransforms,
 							receiverWantsTransforms: bestReceiver.wantsTransforms,
 							refreshTransforms: false,
+							hasRealVolumes: true,
 						} );
 				}
 
@@ -520,7 +539,8 @@ export class CInterfaceProcessor
 	}
 
 
-	public unlockInterface( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string ): InterfaceLockResult
+	public unlockInterface( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string ): 
+		[ InterfaceLockResult, () => void ]
 	{
 		let iip = this.findIip( transmitter, receiver );
 		if( !iip )
@@ -530,32 +550,32 @@ export class CInterfaceProcessor
 				iip = this.lostLockedInterfaces.get( endpointAddrToString( transmitter ) );
 				if( iip.iface != iface )
 				{
-					return InterfaceLockResult.InterfaceNameMismatch;
+					return [ InterfaceLockResult.InterfaceNameMismatch, null ];
 				}
 
 				// we lost the other end of the lock and told the transmitter about that already.
 				this.lostLockedInterfaces.delete( endpointAddrToString( transmitter ) );
-				return InterfaceLockResult.Success;
+				return [ InterfaceLockResult.Success, null ];
 			}
 			else
 			{
-				return InterfaceLockResult.InterfaceNotFound;
+				return [ InterfaceLockResult.InterfaceNotFound, null ];
 			}
 		}
 
 		if( !iip.locked )
 		{
-			return InterfaceLockResult.NotLocked;
+			return [ InterfaceLockResult.NotLocked, null ];
 		}
 
 		if( iip.iface != iface )
 		{
-			return InterfaceLockResult.InterfaceNameMismatch;
+			return [ InterfaceLockResult.InterfaceNameMismatch, null ];
 		}
 
 		if( !endpointAddrsMatch( iip.receiver, receiver ) )
 		{
-			return InterfaceLockResult.InterfaceReceiverMismatch;
+			return [ InterfaceLockResult.InterfaceReceiverMismatch, null ];
 		}
 
 		this.log( `Unlocking interface ${ endpointAddrToString( transmitter ) } `
@@ -564,8 +584,23 @@ export class CInterfaceProcessor
 		iip.locked = false;
 		iip.refreshTransforms = true;
 				
-		return InterfaceLockResult.Success;
-		
+		let fn: () => void;
+		if( !iip.hasRealVolumes )
+		{
+			// This interface is guaranteed to edit on the next frame... unless somebody sneaks in
+			// with a new lock. End this interface immediately so there's no risk of that happening
+			// and the behavior from the gadget side is deterministic 
+
+			// we this with a callback so that the unlock result always shows up before the interface
+			// end
+			fn = () =>
+			{
+				this.callbacks.interfaceEnded(iip.transmitter, iip.receiver, iip.iface );
+				this.interfacesInProgress.filter( ( testIip ) => testIip != iip );
+			}
+		}
+
+		return [ InterfaceLockResult.Success, fn ];
 	}
 
 	public relockInterface( transmitterEpa: EndpointAddr, oldReceiverEpa: EndpointAddr, 
