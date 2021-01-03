@@ -115,6 +115,7 @@ export class GadgetSeedContainerComponent implements EntityComponent
 	{
 		this.contentsEpa = activeContainer.peer;
 
+		console.log( `Seed container onContainerStart with ${ endpointAddrToString( activeContainer.peer ) }` );
 		activeContainer.onEvent( 
 			( event: any ) =>
 			{
@@ -126,6 +127,8 @@ export class GadgetSeedContainerComponent implements EntityComponent
 		activeContainer.onEnded( 
 			() =>
 			{
+				console.log( `Seed container active container ended with `
+					+ `${ endpointAddrToString( activeContainer.peer ) }` );
 				this.contentsRested = false;
 				this.contentsEpa = null;
 				this.activeContainer = null;
@@ -292,6 +295,11 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 
 	componentDidUpdate( prevProps: AvGadgetSeedProps, prevState: AvGadgetSeedState )
 	{
+		if( this.state.phase != prevState.phase )
+		{
+			console.log( `Seed transitioned to ${ GadgetSeedPhase[ this.state.phase ] }` );
+		}
+	
 		let oldHighlight = this.seedPhaseToHighlight( prevState.phase );
 		let newHighlight = this.seedPhaseToHighlight( this.state.phase );
 		if( oldHighlight != newHighlight )
@@ -313,6 +321,8 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 	@bind
 	private async onMoveableUpdate()
 	{
+		console.log( `onMoveableUpdate ${ GadgetSeedPhase[ this.state.phase ] } `
+			+`${ MoveableComponentState[ this.moveableComponent.state ]}` );
 		switch( this.state.phase )
 		{
 			case GadgetSeedPhase.Idle:
