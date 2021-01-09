@@ -875,7 +875,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 			}
 		}
 
-		const k_cellWidth = 0.08;
+		const k_cellWidth = 0.10;
 		const k_bottomPadding = 0.06;
 		let rowCount = Math.ceil( entries.length / 3 );
 		let top = rowCount * k_cellWidth;
