@@ -14,32 +14,40 @@ export let k_actionSets: ActionSet[] =
 				type: ActionType.Boolean,
 				bindings: 
 				[ 
-					...twoHandBinding( InteractionProfile.IndexController, Input.TriggerTouch ),
-					...twoHandBinding( InteractionProfile.TouchController, Input.TriggerTouch ),
-					...twoHandBinding( InteractionProfile.MixedRealityController, Input.TriggerTouch ),
-					...twoHandBinding( InteractionProfile.ViveController, Input.TriggerTouch ),
-					...twoHandBinding( InteractionProfile.ReverbG2Controller, Input.TriggerTouch ),
+					// ...twoHandBinding( InteractionProfile.IndexController, Input.TriggerTouch ),
+					// ...twoHandBinding( InteractionProfile.TouchController, Input.TriggerTouch ),
+					// ...twoHandBinding( InteractionProfile.MixedRealityController, Input.TriggerTouch ),
+					// ...twoHandBinding( InteractionProfile.ViveController, Input.TriggerTouch ),
+					// ...twoHandBinding( InteractionProfile.ReverbG2Controller, Input.TriggerTouch ),
 				]
 			}
 		]
 	},
 	{
 		name: "interact",
-		localizedName: "Grab and Click",
+		localizedName: "Grab",
 		suppressAppBindings: true,
 		actions: 
 		[
 			{
 				name: "grab",
-				localizedName: "Grab and Click",
+				localizedName: "Grab",
 				type: ActionType.Boolean,
 				bindings: 
 				[ 
 					...twoHandBinding( InteractionProfile.IndexController, Input.Squeeze ),
+					...twoHandBinding( InteractionProfile.IndexController, Input.Trigger ),
+
 					...twoHandBinding( InteractionProfile.TouchController, Input.Squeeze ),
+					...twoHandBinding( InteractionProfile.TouchController, Input.Trigger ),
+
 					...twoHandBinding( InteractionProfile.MixedRealityController, Input.Squeeze ),
+					...twoHandBinding( InteractionProfile.MixedRealityController, Input.Trigger ),
+
 					...twoHandBinding( InteractionProfile.ViveController, Input.Trigger ),
+					
 					...twoHandBinding( InteractionProfile.ReverbG2Controller, Input.Squeeze ),
+					...twoHandBinding( InteractionProfile.ReverbG2Controller, Input.Trigger ),
 				],
 			},
 			{
