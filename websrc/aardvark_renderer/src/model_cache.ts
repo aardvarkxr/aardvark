@@ -182,6 +182,9 @@ export interface ModelCacheOptions
 	 * @default true
 	 */
 	negativeCaching?: boolean;
+
+	/** A list of URLs to load at init time so the cache is warm */
+	urlsToLoad?: string[];
 }
 
 
@@ -201,6 +204,10 @@ async function init( optionsParam: ModelCacheOptions )
 	failedModels = new Set<string>();
 	loadsPending = new Set<string>();
 
+	for( let url of optionsParam?.urlsToLoad ?? [] )
+	{
+		queueModelLoad( url );
+	}
 }
 
 async function cleanup()

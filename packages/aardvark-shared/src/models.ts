@@ -36,3 +36,5 @@ export const g_builtinModelSkinnedHandRight = g_builtinModelPrefix + "skinned_ha
 export const g_builtinAnims = g_builtinModelPrefix + "animations/";
 
 export const g_anim_Left_ThumbsUp = g_builtinAnims + "left_thumbs_up.glb";
+export const g_anim_Left_Pen = g_builtinAnims + "left_pen.glb";
+export const g_anim_Right_Pen = g_builtinAnims + "right_pen.glb";

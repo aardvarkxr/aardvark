@@ -1,5 +1,5 @@
 import { ipfsUtils } from './ipfs_utils';
-import { Av, AvSharedTextureInfo, g_builtinModelSphere, InterfaceLockResult } from '@aardvarkxr/aardvark-shared';
+import { Av, AvSharedTextureInfo, g_anim_Left_Pen, g_anim_Right_Pen, g_builtinModelSphere, InterfaceLockResult, g_builtinModelSkinnedHandLeft, g_builtinModelSkinnedHandRight } from '@aardvarkxr/aardvark-shared';
 import { textureCache, TextureInfo } from './texture_cache';
 import { AABB, AvActionState, AvConstraint, AvModelInstance, AvNode, AvNodeTransform, AvNodeType, AvRenderer, EHand, emptyActionState, EndpointAddr, minIgnoringNulls, nodeTransformFromMat4, nodeTransformToMat4, scaleAxisToFit, scaleMat, vec3MultiplyAndAdd, computeUniverseFromLine, endpointAddrToString, EndpointType, ENodeFlags, EVolumeType, filterActionsForGadget, g_builtinModelError, MessageType, MsgInterfaceEnded, MsgInterfaceReceiveEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgResourceLoadFailed, MsgUpdateActionState, g_builtinModelCylinder, AvVector } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3, vec4 } from '@tlaukkan/tsm';
@@ -329,6 +329,13 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 		await modelCache.init(
 			{
 				negativeCaching: false,
+				urlsToLoad:
+				[
+					g_builtinModelSkinnedHandLeft,
+					g_builtinModelSkinnedHandRight,
+					g_anim_Left_Pen,
+					g_anim_Right_Pen,
+				]
 			} );
 		await textureCache.init(
 			{
