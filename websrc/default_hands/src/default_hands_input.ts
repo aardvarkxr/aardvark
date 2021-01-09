@@ -36,17 +36,28 @@ export let k_actionSets: ActionSet[] =
 				bindings: 
 				[ 
 					...twoHandBinding( InteractionProfile.IndexController, Input.Squeeze ),
-					...twoHandBinding( InteractionProfile.IndexController, Input.Trigger ),
 
 					...twoHandBinding( InteractionProfile.TouchController, Input.Squeeze ),
-					...twoHandBinding( InteractionProfile.TouchController, Input.Trigger ),
 
 					...twoHandBinding( InteractionProfile.MixedRealityController, Input.Squeeze ),
-					...twoHandBinding( InteractionProfile.MixedRealityController, Input.Trigger ),
 
 					...twoHandBinding( InteractionProfile.ViveController, Input.Trigger ),
 					
 					...twoHandBinding( InteractionProfile.ReverbG2Controller, Input.Squeeze ),
+				],
+			},
+			{
+				name: "grab_secondary",
+				localizedName: "Grab (Secondary)",
+				type: ActionType.Boolean,
+				bindings: 
+				[ 
+					...twoHandBinding( InteractionProfile.IndexController, Input.Trigger ),
+
+					...twoHandBinding( InteractionProfile.TouchController, Input.Trigger ),
+
+					...twoHandBinding( InteractionProfile.MixedRealityController, Input.Trigger ),
+
 					...twoHandBinding( InteractionProfile.ReverbG2Controller, Input.Trigger ),
 				],
 			},

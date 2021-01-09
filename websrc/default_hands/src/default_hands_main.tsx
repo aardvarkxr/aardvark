@@ -70,6 +70,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 	private grabRayHandler = 0;
 	private grabMoveHandler = 0;
 	private lastMoveTime = 0;
+	private rawGrabCount = 0;
 
 	constructor( props: any )
 	{
@@ -86,7 +87,10 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 
 		this.grabListenerHandle = inputProcessor.registerBooleanCallbacks( "interact", "grab", 
 			handToDevice( this.props.hand ), 
-			this.onGrabPressed, this.onGrabReleased );
+			this.onRawGrabPressed, this.onRawGrabReleased );
+		this.grabListenerHandle = inputProcessor.registerBooleanCallbacks( "interact", "grab_secondary", 
+			handToDevice( this.props.hand ), 
+			this.onRawGrabPressed, this.onRawGrabReleased );
 		this.menuListenerHandle = inputProcessor.registerBooleanCallbacks( "interact", "menu", 
 			handToDevice( this.props.hand ), 
 			this.onMenuPressed, this.onMenuReleased );
@@ -190,6 +194,25 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 	}
 
 	@bind
+	private onRawGrabPressed()
+	{
+		this.rawGrabCount = Math.min( 2, this.rawGrabCount + 1 );
+		if( this.rawGrabCount == 1 )
+		{
+			this.onGrabPressed();
+		}
+	}
+
+	@bind
+	private onRawGrabReleased()
+	{
+		this.rawGrabCount = Math.max( 0, this.rawGrabCount - 1 );
+		if( this.rawGrabCount == 0 )
+		{
+			this.onGrabReleased();
+		}
+	}
+	
 	private async onGrabPressed()
 	{
 		console.log( `${ EHand[ this.props.hand ] } grab pressed` );
@@ -240,7 +263,6 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 	}
 
 
-	@bind
 	private async onGrabReleased()
 	{
 		console.log( `${ EHand[ this.props.hand ] } grab released` );
