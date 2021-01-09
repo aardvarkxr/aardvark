@@ -14,11 +14,11 @@ export let k_actionSets: ActionSet[] =
 				type: ActionType.Boolean,
 				bindings: 
 				[ 
-					// ...twoHandBinding( InteractionProfile.IndexController, Input.TriggerTouch ),
-					// ...twoHandBinding( InteractionProfile.TouchController, Input.TriggerTouch ),
-					// ...twoHandBinding( InteractionProfile.MixedRealityController, Input.TriggerTouch ),
-					// ...twoHandBinding( InteractionProfile.ViveController, Input.TriggerTouch ),
-					// ...twoHandBinding( InteractionProfile.ReverbG2Controller, Input.TriggerTouch ),
+					...twoHandBinding( InteractionProfile.IndexController, Input.TriggerTouch ),
+					...twoHandBinding( InteractionProfile.TouchController, Input.TriggerTouch ),
+					...twoHandBinding( InteractionProfile.MixedRealityController, Input.TriggerTouch ),
+					...twoHandBinding( InteractionProfile.ViveController, Input.TriggerTouch ),
+					...twoHandBinding( InteractionProfile.ReverbG2Controller, Input.TriggerTouch ),
 				]
 			}
 		]

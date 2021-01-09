@@ -45,8 +45,9 @@ interface DefaultHandState
 	state: GrabberState;
 	regrabTarget?: EndpointAddr;
 	grabberFromRegrabTarget?: AvNodeTransform;
-	showRay?: boolean;
+	rayButtonDown?: boolean;
 	wasShowingRay?: boolean;
+	hasRayIntersect?: boolean;
 }
 
 enum ButtonState
@@ -174,7 +175,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 
 		this.setState( 
 			{ 
-				showRay: true
+				rayButtonDown: true
 			} );
 	}
 
@@ -183,7 +184,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 	{
 		this.setState( 
 			{ 
-				showRay: false
+				rayButtonDown: false
 			} );
 	}
 
@@ -393,6 +394,21 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 		}
 	}
 
+	private shouldShowRay() : boolean
+	{
+		return this.state.hasRayIntersect && this.state.rayButtonDown;
+	}
+
+	@bind
+	private async onRayStart( activeInterface: ActiveInterface )
+	{
+		this.setState( { hasRayIntersect : true } );
+
+		activeInterface.onEnded( () =>
+		{
+			this.setState( { hasRayIntersect: false } );
+		} );
+	}
 
 	@bind
 	private async onGrabStart( activeInterface: ActiveInterface )
@@ -438,7 +454,7 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 			this.setState( { state: GrabberState.Highlight } );
 		}
 		console.log( `setting activeInterface to ${ endpointAddrToString( activeInterface.peer ) }`)
-		this.setState( { activeGrab: activeInterface, wasShowingRay: this.state.showRay } );
+		this.setState( { activeGrab: activeInterface, wasShowingRay: this.shouldShowRay() } );
 
 
 		activeInterface.onEvent( 
@@ -709,15 +725,18 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 		let grabberVolumes = [ k_grabberVolume ];
 		let poker2Volumes = ( this.state.activePanel1 || this.state.activeGrab ) ? [] : [ k_pokerVolume ];
 		
+		const k_rayVolume: AvVolume = rayVolume( new vec3( [ 0, 0, -0.05 ] ), 
+			new vec3( [ 0, -Math.SQRT2, -Math.SQRT2 ] ) );
+
 		let ray: JSX.Element = null;
-		if( this.state.showRay &&
+		if( this.shouldShowRay() && 
 			( this.state.state == GrabberState.Idle || this.state.wasShowingRay ) )
 		{
-			grabberVolumes.push( rayVolume( new vec3( [ 0, 0, 0 ] ), new vec3( [ 0, 0, -1 ] ) ) );
+			grabberVolumes.push( k_rayVolume );
 			if( this.state.state == GrabberState.Idle ||
 				this.state.state == GrabberState.Highlight )
 			{
-				ray = <AvTransform rotateX={ -90 }>
+				ray = <AvTransform rotateX={ -135 }>
 				<AvPrimitive radius={ 0.005 } height={ 4 } type={ PrimitiveType.Cylinder }
 					color="lightgrey" originY={ PrimitiveYOrigin.Bottom } />
 				</AvTransform>;
@@ -788,7 +807,8 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 						{ iface: "aardvark-panel@1", processor: this.onPanel1Start },
 						{ iface: "aardvark-grab@1", processor: this.onGrabStart },
 					] }
-					volume={ grabberVolumes } debugName={ debugName }>
+					volume={ grabberVolumes } debugName={ debugName }
+					priority={ 100 }>
 						{ child }
 				</AvInterfaceEntity>
 				<AvInterfaceEntity transmits={
@@ -802,6 +822,13 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 						{ iface: "aardvark-panel@2", processor: this.onPanel2Start },
 					] }
 					volume={ poker2Volumes } debugName={ debugName + "/poker" }>
+				</AvInterfaceEntity>
+				<AvInterfaceEntity transmits={
+					[ 
+						{ iface: "aardvark-grab@1", processor: this.onRayStart },
+					] }
+					volume={ k_rayVolume } debugName={ debugName + "/ray" }
+					priority={ 0 }>
 				</AvInterfaceEntity>
 			</AvOrigin>
 			{ this.renderDebug() }
