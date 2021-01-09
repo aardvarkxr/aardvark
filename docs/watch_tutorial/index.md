@@ -62,7 +62,8 @@ class WatchGadget extends React.Component< {}, WatchState >
 	{
 		return (
 				<div>
-					<AvStandardGrabbable modelUri={ g_builtinModelBox } modelScale={ 0.03 }>
+					<AvStandardGrabbable modelUri={ g_builtinModelBox } modelScale={ 0.03 }
+						style={ GrabbableStyle.Gadget }>
 						<AvTransform translateY={ 0.08 } >
 							<AvPanel interactive={true} widthInMeters={ 0.1 }></AvPanel>
 						</AvTransform>
