@@ -229,6 +229,25 @@ function createHandVolumes( hand: EHand )
 	];
 }
 
+function createGripVolumes( hand: EHand )
+{
+	// volumes are processed in the order that they appear in the list, so put the 
+	// most important fingertip volumes first in the list
+	return [
+		boneSphere( hand, HandSkeletonBone.Thumb1, 0, 0.012 ),
+		boneSphere( hand, HandSkeletonBone.Thumb2, 0, 0.012 ),
+		boneSphere( hand, HandSkeletonBone.IndexFinger1, 0, 0.015 ),
+//		boneSphere( hand, HandSkeletonBone.IndexFinger2, 0, 0.015 ),
+		boneSphere( hand, HandSkeletonBone.MiddleFinger0, 0.02, 0.04 ),
+		boneSphere( hand, HandSkeletonBone.MiddleFinger1, 0, 0.013 ),
+		boneSphere( hand, HandSkeletonBone.MiddleFinger2, 0, 0.013 ),
+		boneSphere( hand, HandSkeletonBone.RingFinger1, 0, 0.013 ),
+		boneSphere( hand, HandSkeletonBone.RingFinger2, 0, 0.013 ),
+		boneSphere( hand, HandSkeletonBone.PinkyFinger1 ),
+		boneSphere( hand, HandSkeletonBone.PinkyFinger2 ),
+	];
+}
+
 function createIndexTipVolumes( hand: EHand )
 {
 	// volumes are processed in the order that they appear in the list, so put the 
@@ -260,6 +279,7 @@ function getSkeletonInfo( handPath: string ): SkeletonInfo | null
 			{
 				"": createHandVolumes( hand ),
 				"/index/tip": createIndexTipVolumes( hand ),
+				"/grip": createGripVolumes( hand ),
 			}
 		}
 

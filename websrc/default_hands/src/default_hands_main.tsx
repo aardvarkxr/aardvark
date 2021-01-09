@@ -695,8 +695,8 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 		const k_grabberVolume: AvVolume =
 		{ 
 			type: EVolumeType.Skeleton,
-			skeletonPath: volumeSkeleton, 
-			//visualize: true,
+			skeletonPath: volumeSkeleton + "/grip", 
+			//visualize: this.props.hand == EHand.Left,
 		};
 
 		const k_pokerVolume: AvVolume =
