@@ -39,6 +39,7 @@ interface DefaultHandState
 	activePanel2: ActiveInterface;
 	activeMenu: ActiveInterface;
 	grabberFromGrabbableOverride?: AvNodeTransform | GrabPose;
+	grabberFromGrabbableOrigin?: vec3,
 	grabberFromGrabbableDirection?: vec3;
 	grabberFromGrabbableRange?: number;
 	grabberFromGrabbableRotation?: AvQuaternion;
@@ -598,12 +599,28 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 			grabberFromGrabbable.position?.z ?? 0
 		] );
 		let grabberFromGrabbableRange = grabberFromGrabbableDirection.length();
-		grabberFromGrabbableDirection.normalize();
+
+		let grabberFromGrabbableOrigin = new vec3( [ 0, 0, 0 ] );
+		if( grabberFromGrabbable > 0.2 )
+		{
+			grabberFromGrabbableDirection.normalize();
+		}
+		else
+		{
+			grabberFromGrabbableOrigin = grabberFromGrabbableDirection;
+			grabberFromGrabbableDirection = new vec3(
+				[
+					0, -Math.SQRT2, -Math.SQRT2
+				]
+			);
+			grabberFromGrabbableRange = 0;
+		}
 
 		this.setState(
 			{
 				state: GrabberState.Grabbing,
 				grabberFromGrabbableOverride: null,
+				grabberFromGrabbableOrigin,
 				grabberFromGrabbableDirection,
 				grabberFromGrabbableRange,
 				grabberFromGrabbableRotation: grabberFromGrabbable.rotation,
@@ -778,9 +795,9 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 					{
 						position: 
 						{
-							x: this.state.grabberFromGrabbableDirection.x * this.state.grabberFromGrabbableRange,
-							y: this.state.grabberFromGrabbableDirection.y * this.state.grabberFromGrabbableRange,
-							z: this.state.grabberFromGrabbableDirection.z * this.state.grabberFromGrabbableRange,
+							x: this.state.grabberFromGrabbableOrigin.x + this.state.grabberFromGrabbableDirection.x * this.state.grabberFromGrabbableRange,
+							y: this.state.grabberFromGrabbableOrigin.y + this.state.grabberFromGrabbableDirection.y * this.state.grabberFromGrabbableRange,
+							z: this.state.grabberFromGrabbableOrigin.z + this.state.grabberFromGrabbableDirection.z * this.state.grabberFromGrabbableRange,
 						},
 						rotation: this.state.grabberFromGrabbableRotation,
 					} }>
