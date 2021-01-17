@@ -271,8 +271,7 @@ void CJavascriptRenderer::runFrame()
 
 	auto tStart = std::chrono::high_resolution_clock::now();
 
-	bool shouldQuitVr = false;
-	m_vrManager->runFrame( &shouldQuitVr );
+	m_vrManager->runFrame();
 
 	if ( m_jsTraverser )
 	{
@@ -293,13 +292,36 @@ void CJavascriptRenderer::runFrame()
 	bool shouldQuitWindow = false;
 	m_renderer->runFrame( &shouldQuitWindow, tDiff / 1000.0f );
 
-	if ( shouldQuitWindow || shouldQuitVr )
+	if ( shouldQuitWindow )
 	{
-		m_quitting = true;
-		CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "quit" );
-		m_handler->sendBrowserMessage( msg );
+		triggerQuit();
 	}
 }
+
+void CJavascriptRenderer::triggerQuit()
+{
+	// don't do this twice
+	if ( m_quitting )
+		return;
+
+	m_quitting = true;
+	CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create( "quit" );
+	m_handler->sendBrowserMessage( msg );
+}
+
+
+void CJavascriptRenderer::processVREvent( const vr::VREvent_t& evt )
+{
+	switch ( evt.eventType )
+	{
+	case vr::VREvent_Quit:
+	{
+		triggerQuit();
+	}
+	break;
+	}
+}
+
 
 bool endpointAddrFromJs( CefRefPtr< CefV8Value > obj, EndpointAddr_t *addr )
 {

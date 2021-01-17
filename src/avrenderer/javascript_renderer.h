@@ -2,10 +2,13 @@
 
 #include "javascript_object.h"
 #include "aardvark/irenderer.h"
-
 class CAardvarkRenderProcessHandler;
 class CJavascriptRenderer;
 
+namespace vr
+{
+	struct VREvent_t;
+}
 
 class CJavascriptModelInstance : public CJavascriptObjectWithFunctions
 {
@@ -32,9 +35,12 @@ public:
 
 	bool hasPermission( const std::string & permission );
 	void runFrame();
+	void processVREvent( const vr::VREvent_t& evt );
 
 
 protected:
+	void triggerQuit();
+
 	std::shared_ptr<IRenderer> m_renderer;
 	std::unique_ptr<IVrManager> m_vrManager;
 

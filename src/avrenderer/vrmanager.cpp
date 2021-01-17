@@ -77,22 +77,11 @@ glm::mat4 CVRManager::glmMatFromVrMat( const vr::HmdMatrix34_t & mat )
 	return matrixObj;
 }
 
-void CVRManager::runFrame( bool *shouldQuit )
+void CVRManager::runFrame()
 {
 	updateOpenVrPoses();
 	doInputWork();
 	updateCameraActionPose();
-
-	vr::VREvent_t e;
-	while ( vr::VRSystem()->PollNextEvent( &e, sizeof( e ) ) )
-	{
-		switch ( e.eventType )
-		{
-		case vr::VREvent_Quit:
-			*shouldQuit = true;
-			break;
-		}
-	}
 
 	if ( !shouldRender() )
 	{

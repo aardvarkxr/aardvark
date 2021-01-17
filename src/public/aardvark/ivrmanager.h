@@ -58,7 +58,7 @@ public:
 	virtual bool getUniverseFromOrigin( const std::string & originPath, glm::mat4 *universeFromOrigin ) = 0;
 	virtual ActionState_t getCurrentActionState( EHand eHand ) const = 0;
 	virtual void sentHapticEventForHand( EHand hand, float amplitude, float frequency, float duration ) = 0;
-	virtual void runFrame( bool* shouldQuit ) = 0;
+	virtual void runFrame() = 0;
 	virtual void getVargglesLookRotation(glm::mat4& horizontalLooktransform) = 0;
 	virtual void setVargglesTexture(const vr::Texture_t* pTexture) = 0;
 	virtual bool getAnimationSource( const std::string& animationSource, std::vector<JointTransform_t>* parentFromJoint ) = 0;

@@ -33,6 +33,7 @@ public:
 
 	bool hasPermission( const std::string & permission );
 	void runFrame();
+	void processVREvent( const vr::VREvent_t& evt );
 
 	void msgUpdateTextureInfo( CefRefPtr< CefProcessMessage > msg );
 	void msgWindowList( CefRefPtr< CefProcessMessage > msg );
@@ -72,6 +73,13 @@ void CAardvarkObject::runFrame()
 	}
 }
 
+void CAardvarkObject::processVREvent( const vr::VREvent_t& evt )
+{
+	if ( m_renderer )
+	{
+		m_renderer->processVREvent( evt );
+	}
+}
 
 extern bool endpointAddrFromJs( CefRefPtr< CefV8Value > obj, aardvark::EndpointAddr_t *addr );
 extern bool gadgetParamsFromJs( CefRefPtr< CefV8Value > obj, aardvark::GadgetParams_t *params );
@@ -769,6 +777,16 @@ void CAardvarkRenderProcessHandler::pollVrEvents()
 		}
 		break;
 
+		}
+
+		for ( auto& info : m_contexts )
+		{
+			if ( info.aardvarkObject )
+			{
+				info.context->Enter();
+				info.aardvarkObject->processVREvent( evt );
+				info.context->Exit();
+			}
 		}
 	}
 }

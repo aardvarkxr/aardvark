@@ -13,7 +13,7 @@ public:
 	virtual bool getUniverseFromOrigin( const std::string & originPath, glm::mat4 *universeFromOrigin ) override;
 	virtual ActionState_t getCurrentActionState( EHand eHand ) const override;
 	virtual void sentHapticEventForHand( EHand hand, float amplitude, float frequency, float duration ) override;
-	virtual void runFrame( bool* shouldQuit ) override;
+	virtual void runFrame() override;
 	virtual void setVargglesTexture(const vr::Texture_t *pTexture) override;
 	virtual bool getAnimationSource( const std::string& animationSource, std::vector<JointTransform_t>* parentFromJoint ) override;
 	virtual bool getSkeletonInfo( const std::string& skeletonPath, std::vector<JointInfo_t>* jointInfo ) override;
