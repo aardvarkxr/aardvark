@@ -1434,7 +1434,16 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 			{
 				const [ modelUrl ] = this.fixupUrlForCurrentNode( volume.uri );
 				let model = this.tryLoadModelForNode( node, modelUrl );
-				volume.aabb = model?.aabb ?? null;
+
+				// use the model box if we loaded one, otherwise use a 1cm cube. This keeps
+				// things from completely breaking when the model doesn't load (or hasn't 
+				// loaded yet).
+				volume.aabb = model?.aabb ?? 
+					{ 
+						xMin: -0.005, xMax: 0.005,
+						yMin: -0.005, yMax: 0.005,
+						zMin: -0.005, zMax: 0.005,
+					};
 			}
 		}
 
