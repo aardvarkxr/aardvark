@@ -133,10 +133,10 @@ Follow these steps:
    1. cd d:\aardvark\websrc
    2. npm install
    3. npm run build
-3. Unzip CEF libs (These are over the 100MB Github file size limit when unzipped)
-   1. unzip d:\aardvark\src\thirdparty\cef_binary_78\Debug\libcef.gz
-   2. unzip d:\aardvark\src\thirdparty\cef_binary_78\Debug\cef_sandbox.gz
-   3. unzip d:\aardvark\src\thirdparty\cef_binary_78\Release\libcef.gz
+3. Unzip the following CEF libs into the same directories the gz files are located in (These are over the 100MB Github file size limit when unzipped)
+   1. unzip d:\aardvark\src\thirdparty\cef_binary_78\Debug\libcef.dll.gz
+   2. unzip d:\aardvark\src\thirdparty\cef_binary_78\Debug\cef_sandbox.dll.gz
+   3. unzip d:\aardvark\src\thirdparty\cef_binary_78\Release\libcef.dll.gz
 4. Build aardvark C++ code
    1. cd d:\aardvark\src
    2. mkdir build
