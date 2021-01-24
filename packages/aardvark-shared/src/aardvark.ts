@@ -97,6 +97,13 @@ export enum PanelMouseEventType
 	Move = 5,
 };
 
+export enum PanelKeyboardEventType
+{
+	Unknown = 0,
+	Down = 1,
+	Up = 2,
+};
+
 
 export interface WindowInfo
 {
@@ -320,6 +327,7 @@ export interface Aardvark
 	// requires scenegraph permissions
 	subscribeToBrowserTexture( callback: AvBrowserTextureCallback ): void;
 	spoofMouseEvent( type:PanelMouseEventType, x: number, y: number ): void;
+	spoofKeyboardEvent( type:PanelKeyboardEventType, keycode: string ): void;
 
 	// requires master permissions
 	startGadget( params: GadgetParams ): void;

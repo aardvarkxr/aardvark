@@ -148,6 +148,13 @@ bool CAardvarkObject::init( CefRefPtr<CefV8Value> container )
 
 			m_handler->sendBrowserMessage( msg );
 		} );
+
+		RegisterFunction(container, "spoofKeyboardEvent", [this](const CefV8ValueList& arguments, CefRefPtr<CefV8Value>& retval, CefString& exception)
+			{
+				CefRefPtr<CefProcessMessage> msg = CefProcessMessage::Create("keyboard_event");
+				msg->GetArgumentList()->SetInt(0, (int)arguments[0]->GetIntValue());
+				m_handler->sendBrowserMessage(msg);
+			});
 	}
 
 	if ( hasPermission( "master" ) )

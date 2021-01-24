@@ -305,6 +305,11 @@ bool CAardvarkCefHandler::OnProcessMessageReceived( CefRefPtr<CefBrowser> browse
 		cefEvent.y = (int)( message->GetArgumentList()->GetDouble( 2 ) * (double)m_gadgetManifest.m_aardvark.m_height );
 		cefEvent.modifiers = 0;
 
+		CefKeyEvent cefKeyEvent;
+		cefKeyEvent.type = KEYEVENT_KEYDOWN;
+		cefKeyEvent.native_key_code = 38;
+
+
 		switch ( (aardvark::EPanelMouseEventType)message->GetArgumentList()->GetInt( 0 ) )
 		{
 		case aardvark::EPanelMouseEventType::Enter:
@@ -328,6 +333,8 @@ bool CAardvarkCefHandler::OnProcessMessageReceived( CefRefPtr<CefBrowser> browse
 		case aardvark::EPanelMouseEventType::Down:
 		{
 			browser->GetHost()->SendMouseClickEvent( cefEvent, MBT_LEFT, false, 1 );
+			//Testing Keyboard Iput being sent to panel
+			browser->GetHost()->SendKeyEvent(cefKeyEvent);
 		}
 		break;
 
@@ -338,6 +345,24 @@ bool CAardvarkCefHandler::OnProcessMessageReceived( CefRefPtr<CefBrowser> browse
 		break;
 
 		}
+	}
+	else if (message->GetName() == "keyboard_event")
+	{
+		CefKeyEvent cefEvent;
+		//hardcoding to the up button while I just get this input stuff plumbed in
+		cefEvent.windows_key_code = 38;
+		cefEvent.type = KEYEVENT_KEYDOWN;
+		browser->GetHost()->SendKeyEvent(cefEvent);
+
+		//cefEvent.windows_key_code = (int)(message->GetArgumentList()->GetInt( 1 ) );
+		/*
+		vbKeyLeft   37  LEFT ARROW key
+		vbKeyUp     38  UP ARROW key
+		vbKeyRight  39  RIGHT ARROW key
+		vbKeyDown   40  DOWN ARROW key
+		
+		*/
+
 	}
 	else if ( message->GetName() == "subscribe_window_list" )
 	{

@@ -92,6 +92,19 @@ namespace aardvark
 		float x, y;
 	};
 
+	enum class EPanelKeyboardEventType
+	{
+		Unknown = 0,
+		Down = 1,
+		Up = 2,
+	};
+
+	struct PanelKeyboardEvent_t
+	{
+		EPanelKeyboardEventType type;
+		uint64_t panelId;
+	};
+
 	enum class EGrabEventType
 	{
 		Unknown = 0,

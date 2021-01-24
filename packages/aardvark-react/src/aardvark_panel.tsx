@@ -1,4 +1,4 @@
-import { Av, AvNodeTransform, AvSharedTextureInfo, AvVolume, EndpointAddr, EVolumeType, g_builtinModelPanel, nodeTransformToMat4, PanelMouseEventType, AvVector } from '@aardvarkxr/aardvark-shared';
+import { Av, AvNodeTransform, AvSharedTextureInfo, AvVolume, EndpointAddr, EVolumeType, g_builtinModelPanel, nodeTransformToMat4, PanelMouseEventType, PanelKeyboardEventType, AvVector } from '@aardvarkxr/aardvark-shared';
 import { vec2, vec4 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
 import * as React from 'react';
@@ -18,6 +18,12 @@ export interface PanelMouseEvent
 	y: number;
 	pokerEpa: EndpointAddr;
 };
+
+export interface PanelKeyboardEvent
+{
+	type: PanelKeyboardEventType;
+	keycode: string;
+}
 
 /** Function signature for the  {@link AvPanelProps} customMouseHandler */
 export interface PanelHandler
@@ -63,6 +69,8 @@ interface AvPanelState
 	mousePosition: vec2;
 	mouseDistance: number;
 	mousePressed: boolean;
+	keyboardPressed: boolean;
+	keycodePressed: number;
 }
 
 /**
@@ -80,7 +88,7 @@ export class AvPanel extends React.Component< AvPanelProps, AvPanelState >
 	{
 		super( props );
 
-		this.state = { mousePosition: null, mouseDistance: 9999, mousePressed: false };
+		this.state = { mousePosition: null, mouseDistance: 9999, mousePressed: false, keyboardPressed: false, keycodePressed: 38 };
 
 		Av().subscribeToBrowserTexture( this.onUpdateBrowserTexture );
 	}
@@ -96,6 +104,7 @@ export class AvPanel extends React.Component< AvPanelProps, AvPanelState >
 	private onPanel( activePoker: ActiveInterface )
 	{
 		this.deliverMouseEvent( PanelMouseEventType.Enter, activePoker.selfIntersectionPoint, activePoker.peer );
+		this.deliverKeyboardEvent( PanelKeyboardEventType.Down, 38, activePoker.peer )
 		this.m_activePoker = activePoker;
 
 		activePoker.onEvent( ( event: PanelRequest ) =>
@@ -211,6 +220,11 @@ export class AvPanel extends React.Component< AvPanelProps, AvPanelState >
 	private get height(): number
 	{
 		return window.innerHeight * this.props.widthInMeters / window.innerWidth;
+	}
+
+	private deliverKeyboardEvent( eventType: PanelKeyboardEvent, keycode: string, pokerEpa: EndpointAddr )
+	{
+		Av().spoofKeyboardEvent( eventType.type, keycode, pokerEpa );
 	}
 	
 	/* @hidden */
