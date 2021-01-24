@@ -28,3 +28,4 @@ node_modules
 myeasylog.log
 avrenderer.aps
 
+websrc/package-lock.json

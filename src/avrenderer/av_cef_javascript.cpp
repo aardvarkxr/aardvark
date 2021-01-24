@@ -854,8 +854,8 @@ std::string ParseStringField( CefRefPtr<CefV8Value> obj, const std::string & obj
 	return field->GetStringValue();
 }
 
-double ParseNumberField( CefRefPtr<CefV8Value> obj, const std::string& objectName, const std::string& fieldName, CefString* exception,
-	double default )
+int ParseNumberField( CefRefPtr<CefV8Value> obj, const std::string& objectName, const std::string& fieldName, CefString* exception,
+	int default )
 {
 	if ( !obj )
 	{
@@ -1059,7 +1059,7 @@ void CAardvarkRenderProcessHandler::ParseInputManifest( CefRefPtr<CefV8Value> ma
 		actionSet.localizedName = ParseStringField( pActionSet, "action set", "localizedName", exception );
 		actionSet.priority = (uint32_t)ParseNumberField( pActionSet, "action set", "priority", exception, 0 );
 		actionSet.suppressAppBindings = ParseBooleanField( pActionSet, "action set", "suppressAppBindings", exception );
-
+		
 		if ( !exception->empty() )
 		{
 			return;
@@ -1079,7 +1079,7 @@ void CAardvarkRenderProcessHandler::ParseInputManifest( CefRefPtr<CefV8Value> ma
 			CInputManifestAction action;
 			action.name = ParseStringField( pAction, "action", "name", exception );
 			action.localizedName = ParseStringField( pAction, "action", "localizedName", exception );
-			action.type = (ActionType)ParseNumberField( pAction, "action", "type", exception, (double)ActionType::Unknown );
+			action.type = (ActionType)ParseNumberField(pAction, "action", "type", exception, (int)ActionType::Unknown);
 			if ( !exception->empty() )
 			{
 				return;
