@@ -147,7 +147,7 @@ Follow these steps:
    6. Build in debug
 5. Run it!
    1. Open a command prompt in d:\aardvark\data and run "node server\server_bundle.js"
-   1. Pick "avrenderer" as the startup project in visual studio
+   1. Right-click on "aardvarkxr" in the Solution Explorer and select "Set as StartUp Project" in Visual Studio
    2. Start Debugging from the Debug menu
 
 
