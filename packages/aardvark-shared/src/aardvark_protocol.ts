@@ -71,6 +71,10 @@ export enum MessageType
 	InterfaceRelock = 709,
 	InterfaceRelockResponse = 710,
 	InterfaceSendEventResponse = 711,
+
+	// Log related messages
+	RequestLogMonitor = 800,
+	LogMonitorEvent = 801,
 }
 
 export enum WebSocketCloseCodes
@@ -457,6 +461,33 @@ export interface MsgInterfaceReceiveEvent
 	intersectionPoint?: AvVector;
 }
 
+export enum LogMonitorType
+{
+	VRChat = "vrchat",
+}
+
+export interface MsgRequestLogMonitor
+{
+	monitorType: LogMonitorType;
+}
+
+
+export enum LogMonitorEventType
+{
+	SetFriendlyName = "set_friendly_name",
+	TransitionToRoom = "transition_to_room",
+	UpdateHeadPose = "update_head_pose",
+}
+
+export interface MsgLogMonitorEvent
+{
+	eventType: LogMonitorEventType;
+	friendlyName?: string;
+	roomId?: string;
+	roomFromHead?: AvNodeTransform;
+	roomFromHeadTime?: number;
+}
+
 export enum AvNodeType
 {
 	Invalid = -1,
@@ -769,6 +800,8 @@ export enum Permission
 	Input = "input",
 	Settings = "settings",
 	Application = "application",
+	ApplicationWrite = "application_write",
+	Logs = "logs",
 }
 
 export interface AardvarkManifestExtension
@@ -777,6 +810,7 @@ export interface AardvarkManifestExtension
 	browserWidth: number;
 	browserHeight: number;
 	startAutomatically: boolean;
+	startWithApplication?: string[];
 }
 
 export interface AardvarkManifest extends WebAppManifest

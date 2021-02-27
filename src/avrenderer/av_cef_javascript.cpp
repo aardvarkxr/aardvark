@@ -447,43 +447,20 @@ bool CAardvarkObject::init( CefRefPtr<CefV8Value> container )
 
 		RegisterFunction( container, "getCurrentSceneApplication", [this]( const CefV8ValueList& arguments, CefRefPtr<CefV8Value>& retval, CefString& exception )
 		{
-			vr::EVRInitError err = m_handler->InitOpenVR();
-			if ( err != vr::VRInitError_None )
-			{
-				exception = std::string( "VR_Init failed with " ) + vr::VR_GetVRInitErrorAsSymbol( err );
-				return;
-			}
+			m_handler->updateSceneAppInfo();
 
-			uint32_t pid = vr::VRApplications()->GetCurrentSceneProcessId();
-			if ( !pid )
-			{
-				// no scene app == compositor == return null to the caller
-				retval = CefV8Value::CreateNull();
-				return;
-			}
-
-			char appKey[ vr::k_unMaxApplicationKeyLength ];
-			if ( vr::VRApplicationError_None !=
-				vr::VRApplications()->GetApplicationKeyByProcessId( pid, appKey, sizeof( appKey ) ) )
-			{
-				// if we can't get the key we have nothing to share with the app
-				retval = CefV8Value::CreateNull();
-				return;
-			}
-
-			char appName[ 1024 ];
-			vr::EVRApplicationError appErr;
-			vr::VRApplications()->GetApplicationPropertyString( appKey, vr::VRApplicationProperty_Name_String,
-				appName, sizeof( appName ), &appErr );
-			if ( appErr != vr::VRApplicationError_None )
+			if ( !m_handler->getCurrentSceneAppPid() )
 			{
 				retval = CefV8Value::CreateNull();
-				return;
 			}
-
-			retval = CefV8Value::CreateObject( nullptr, nullptr );
-			retval->SetValue( "id", CefV8Value::CreateString( appKey ), V8_PROPERTY_ATTRIBUTE_NONE );
-			retval->SetValue( "name", CefV8Value::CreateString( appName ), V8_PROPERTY_ATTRIBUTE_NONE );
+			else
+			{
+				retval = CefV8Value::CreateObject( nullptr, nullptr );
+				retval->SetValue( "id", 
+					CefV8Value::CreateString( m_handler->getCurrentSceneAppId() ), V8_PROPERTY_ATTRIBUTE_NONE );
+				retval->SetValue( "name", 
+					CefV8Value::CreateString( m_handler->getCurrentSceneAppName() ), V8_PROPERTY_ATTRIBUTE_NONE );
+			}
 		} );
 
 	}
@@ -767,12 +744,15 @@ void CAardvarkRenderProcessHandler::pollVrEvents()
 	{
 		switch ( evt.eventType )
 		{
-		case vr::VREvent_SceneFocusChanged:
+		case vr::VREvent_SceneApplicationStateChanged:
 		{
-			for ( auto& cb : m_appChangeCallbacks )
+			if ( updateSceneAppInfo() )
 			{
-				cb.context->Enter();
-				cb.fn->ExecuteFunction( nullptr, {} );
+				for ( auto& cb : m_appChangeCallbacks )
+				{
+					cb.context->Enter();
+					cb.fn->ExecuteFunction( nullptr, {} );
+				}
 			}
 		}
 		break;
@@ -1327,6 +1307,42 @@ void CAardvarkRenderProcessHandler::syncInput( CefRefPtr<CefV8Value> infoJS, Cef
 			a->SetValue( deviceName, deviceResult, V8_PROPERTY_ATTRIBUTE_NONE );
 		}
 	}
+
+	uint32_t bestControllerTypeScore = 0;
+	std::string bestControllerType;
+	for ( vr::TrackedDeviceIndex_t device = 0; device < vr::k_unMaxTrackedDeviceCount; device++ )
+	{
+		vr::ETrackedDeviceClass eClass = vr::VRSystem()->GetTrackedDeviceClass( device );
+		if ( eClass == vr::TrackedDeviceClass_Invalid )
+			continue;
+
+		char buf[ 128 ];
+		vr::ETrackedPropertyError err;
+		vr::VRSystem()->GetStringTrackedDeviceProperty( device, vr::Prop_ControllerType_String, buf, sizeof( buf ),
+			&err );
+		if ( err != vr::TrackedProp_Success )
+			continue;
+
+		if ( !buf[ 0 ] )
+			continue;
+
+		uint32_t score = eClass == vr::TrackedDeviceClass_Controller ? 2 : 1;
+		if ( score > bestControllerTypeScore )
+		{
+			bestControllerTypeScore = score;
+			bestControllerType = buf;
+		}
+	}
+
+	if ( !bestControllerType.empty() )
+	{
+		std::string interactionProfile = controllerTypeToInteractionProfile( bestControllerType );
+		if ( !interactionProfile.empty() )
+		{
+			( *retVal )->SetValue( "interactionProfile", CefV8Value::CreateString( interactionProfile ), 
+				V8_PROPERTY_ATTRIBUTE_NONE );
+		}
+	}
 }
 
 
@@ -1336,3 +1352,45 @@ void CAardvarkRenderProcessHandler::registerSceneApplicationNotification(
 	m_appChangeCallbacks.push_back( { fn, context } );
 }
 
+
+bool CAardvarkRenderProcessHandler::updateSceneAppInfo()
+{
+	// make sure we've initialized OpenVR
+	vr::EVRInitError err = InitOpenVR();
+	if ( err != vr::VRInitError_None )
+	{
+		return false;
+	}
+
+	uint32_t pid = vr::VRApplications()->GetCurrentSceneProcessId();
+	if ( pid == m_currentSceneAppPid )
+		return false;
+
+	m_currentSceneAppPid = pid;
+
+	if ( !pid )
+	{
+		m_currentSceneAppId.clear();
+		m_currentSceneAppName.clear();
+	}
+	else
+	{
+		char appKey[ vr::k_unMaxApplicationKeyLength ];
+		if ( vr::VRApplicationError_None ==
+			vr::VRApplications()->GetApplicationKeyByProcessId( pid, appKey, sizeof( appKey ) ) )
+		{
+			m_currentSceneAppId = appKey;
+		}
+
+		char appName[ 1024 ];
+		vr::EVRApplicationError appErr;
+		vr::VRApplications()->GetApplicationPropertyString( appKey, vr::VRApplicationProperty_Name_String,
+			appName, sizeof( appName ), &appErr );
+		if ( appErr == vr::VRApplicationError_None )
+		{
+			m_currentSceneAppName = appName;
+		}
+	}
+
+	return true;
+}

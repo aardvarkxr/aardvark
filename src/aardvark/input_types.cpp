@@ -24,6 +24,35 @@ static std::map<std::string, std::string> g_interactionProfileToControllerType =
 	{ "/interaction_profiles/valve/index_controller", "knuckles" },
 };
 
+std::string interactionProfileToControllerType( const std::string& interactionProfile )
+{
+	auto i = g_interactionProfileToControllerType.find( interactionProfile );
+	if ( i == g_interactionProfileToControllerType.end() )
+		return "";
+	else
+		return i->second;
+}
+
+static std::map<std::string, std::string> g_controllerTypeToInteractionProfile;
+
+std::string controllerTypeToInteractionProfile( const std::string& controllerType )
+{
+	if ( g_controllerTypeToInteractionProfile.empty() )
+	{
+		for ( auto& i : g_interactionProfileToControllerType )
+		{
+			g_controllerTypeToInteractionProfile[ i.second ] = i.first;
+		}
+	}
+
+	auto i = g_controllerTypeToInteractionProfile.find( controllerType );
+	if ( i == g_controllerTypeToInteractionProfile.end() )
+		return "";
+	else
+		return i->second;
+}
+
+
 std::string translateOpenXrPath( const std::string& openVRPath )
 {
 	std::vector< std::string> vecPathParts = tools::tokenizeString( openVRPath, '/' );
@@ -161,23 +190,23 @@ nlohmann::json toInputFiles( const CInputManifest& m )
 
 			for ( auto& binding : action.bindings )
 			{
-				auto controllerType = g_interactionProfileToControllerType.find( binding.interactionProfile );
-				if ( controllerType == g_interactionProfileToControllerType.end() )
+				auto controllerType = interactionProfileToControllerType( binding.interactionProfile );
+				if ( controllerType.empty() )
 					continue;
 
-				auto file = bindingFiles.find( controllerType->second );
+				auto file = bindingFiles.find( controllerType );
 				if ( file == bindingFiles.end() )
 				{
 					nlohmann::json newBinding =
 					{
-						{ "controller_type", controllerType->second },
+						{ "controller_type", controllerType },
 						{ "action_manifest_version", 0 },
 						{ "category", "steamvr_input" },
 						{ "name", "Default bindings for Aardvark gadget" },
 						{ "bindings", {} },
 					};
 
-					auto res = bindingFiles.insert_or_assign( controllerType->second, newBinding );
+					auto res = bindingFiles.insert_or_assign( controllerType, newBinding );
 					file = res.first;
 				}
 

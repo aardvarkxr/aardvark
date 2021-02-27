@@ -57,6 +57,11 @@ public:
 	void syncInput( CefRefPtr<CefV8Value> infoJS, CefRefPtr<CefV8Value>* retVal, CefString* exception );
 
 	void runFrame();
+
+	bool updateSceneAppInfo();
+	uint32_t getCurrentSceneAppPid() { return m_currentSceneAppPid; }
+	std::string getCurrentSceneAppId() { return m_currentSceneAppId; }
+	std::string getCurrentSceneAppName() { return m_currentSceneAppName; }
 private:
 	void pollVrEvents();
 
@@ -82,6 +87,9 @@ private:
 		CefRefPtr<CefV8Context> context;
 	};
 	std::vector<AppChangeCallback_t> m_appChangeCallbacks;
+	std::string m_currentSceneAppId;
+	std::string m_currentSceneAppName;
+	uint32_t m_currentSceneAppPid = 0;
 
 	std::unique_ptr<CInputManifest> m_inputManifest;
 	std::string m_gadgetId;

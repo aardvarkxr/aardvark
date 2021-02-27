@@ -1,5 +1,5 @@
 import { ApiInterfaceSender, ActiveInterface, AvGadget, AvGadgetSeed, AvGrabButton, AvHeadFacingTransform, AvHighlightTransmitters, AvInterfaceEntity, AvLine, AvModel, AvOrigin, AvPanel, AvPrimitive, AvStandardGrabbable, AvTransform, GadgetInfoEvent, GadgetSeedHighlight, HiddenChildrenBehavior, k_GadgetInfoInterface, PrimitiveType, PrimitiveYOrigin, renderGadgetIcon, ShowGrabbableChildren, k_GadgetListInterface, GadgetListEventType, AvMessagebox, AvApiInterface, ApiInterfaceHandler, GadgetListResult, AvMenuItem, GrabbableStyle } from '@aardvarkxr/aardvark-react';
-import { Av, WindowInfo, AvStartGadgetResult, AardvarkManifest, AvNodeTransform, AvVector, emptyVolume, EndpointAddr, g_builtinModelFlask, g_builtinModelRocketship, g_builtinModelBarcodeScanner, nodeTransformToMat4, nodeTransformFromMat4, g_builtinModelDropAttract, g_builtinModelNetwork, g_builtinModelHammerAndWrench, g_builtinModelStar, g_builtinModelTrashcan, MessageType, MsgDestroyGadget, rayVolume, MsgInstallGadget, MsgSetGadgetToAutoLaunch, g_builtinModelPanel, AvVolume, EVolumeType, g_builtinModelArrowFlat, g_builtinModelWindowIcon, infiniteVolume, endpointAddrToString, AvGadgetSettings } from '@aardvarkxr/aardvark-shared';
+import { Av, WindowInfo, AvStartGadgetResult, AardvarkManifest, AvNodeTransform, AvVector, emptyVolume, EndpointAddr, g_builtinModelFlask, g_builtinModelRocketship, g_builtinModelBarcodeScanner, nodeTransformToMat4, nodeTransformFromMat4, g_builtinModelDropAttract, g_builtinModelNetwork, g_builtinModelHammerAndWrench, g_builtinModelStar, g_builtinModelTrashcan, MessageType, MsgDestroyGadget, rayVolume, MsgInstallGadget, MsgSetGadgetToAutoLaunch, g_builtinModelPanel, AvVolume, EVolumeType, g_builtinModelArrowFlat, g_builtinModelWindowIcon, infiniteVolume, endpointAddrToString, AvGadgetSettings, SceneApplicationInfo } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3, vec4 } from '@tlaukkan/tsm';
 import Axios from 'axios';
 import bind from 'bind-decorator';
@@ -264,6 +264,11 @@ const k_alwaysInstalledGadgets =
 	"http://localhost:23842/gadgets/dev_tools",
 ];
 
+const k_alwaysAutostartGadgets =
+[
+	"http://localhost:23842/gadgets/vrchat_bridge",
+];
+
 function subscribeWindowList(): Promise<WindowInfo[]>
 {
 	return new Promise( (resolve, reject ) =>
@@ -271,8 +276,8 @@ function subscribeWindowList(): Promise<WindowInfo[]>
 		Av().subscribeWindowList( ( windows: WindowInfo[] ) =>
 		{
 			resolve( windows );
-		})
-	})
+		} )
+	} )
 }
 
 
@@ -409,6 +414,41 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 		{
 			console.log( `Auto launch gadgets failed: ${ JSON.stringify( reason ) }` );
 		});
+
+		Av().registerSceneApplicationNotification( 
+			()=> { this.autolaunchForSceneApp().then( () => {} ) } );
+		this.autolaunchForSceneApp();
+	}
+
+	private async autolaunchForSceneApp()
+	{
+		let appInfo = Av().getCurrentSceneApplication();
+		if( !appInfo )
+			return;
+
+		let gadgetStartPromises: Promise<AvStartGadgetResult>[] = [];
+		for( let gadgetUrl of k_alwaysAutostartGadgets )
+		{
+			console.log( `considering launching ${ gadgetUrl } for scene app ${ appInfo.id }` );
+			let manifest = await this.requestManifest( gadgetUrl );
+			if( manifest.aardvark.startWithApplication?.includes( appInfo.id ) )
+			{
+				console.log( `Starting ${ gadgetUrl } because ${ appInfo.id } is running` );
+				gadgetStartPromises.push(AvGadget.instance().startGadget( gadgetUrl, [] ));
+			}
+		}
+
+		Promise.all(gadgetStartPromises)
+		.then( (results: AvStartGadgetResult[] ) => {
+			console.log( "start gadget .then" );
+			const failedGadgets = results.filter( (result) => {
+				return !result.success;
+			} );
+
+			if (results.length > 0){
+				console.log( `gadget start failed for ${ JSON.stringify( failedGadgets ) }` );
+			}
+		} );
 	}
 
 	@bind
@@ -421,6 +461,20 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 				{
 					if( this.settings.gadgetSettings[ gadgetUri ].autoLaunchEnabled )
 					{
+						let manifest = await this.requestManifest( gadgetUri );
+						if( !manifest )
+						{
+							console.log( `Could not load manifest for ${ gadgetUri } to autolaunch` );
+							continue;
+						}
+
+						// Don't start the "start with application" gadgets here.
+						// We'll get to those in a moment (and on app transitions).
+						if( manifest.aardvark.startWithApplication )
+						{
+							continue;
+						}
+
 						console.log( `starting auto launch enabled gadget ${ gadgetUri }` );
 						gadgetStartPromises.push(AvGadget.instance().startGadget( gadgetUri, [] ));
 					}
@@ -448,6 +502,7 @@ class ControlPanel extends React.Component< {}, ControlPanelState >
 			AvGadget.instance().loadManifest( url )
 			.then( ( manifest: AardvarkManifest ) =>
 			{
+				console.log( "loadManifest.then", url );
 				// all we do here is stuff the manifest into the map.
 				// This will be populated into the UI itself next time the UI is 
 				// rendered

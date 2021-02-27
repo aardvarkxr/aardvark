@@ -70,6 +70,7 @@ export class CAardvarkEndpoint
 				this.m_pendingResponses[ responseType ] = {};
 			}
 
+			console.log( `Rembering response for ${ MessageType[ responseType ] }, seq= ${ seqNumber }` );
 			this.m_pendingResponses[ responseType ][ seqNumber ] = { resolve, reject };
 		} );
 	}
@@ -127,14 +128,17 @@ export class CAardvarkEndpoint
 		if( !env )
 			return;
 
-		//console.log( `Processing message of type ${ MessageType[ env.type ] }` );
+		console.log( `Processing message of type ${ MessageType[ env.type ] }` 
+			+ ( env.replyTo ? ` replyTo ${ env.replyTo }` : "" ) );
 
 		if( this.m_handlers[ env.type ] )
 		{
+			console.log( 'calling handler' );
 			this.m_handlers[ env.type ]( env.payloadUnpacked, env );
 		} 
 		else if( this.m_asyncHandlers[ env.type ] )
 		{
+			console.log( 'calling async handler' );
 			await this.m_asyncHandlers[ env.type ]( env.payloadUnpacked, env );
 		} 
 		else if( this.m_pendingResponses[ env.type ] )
@@ -147,12 +151,14 @@ export class CAardvarkEndpoint
 			}
 			else
 			{
+				console.log( `calling resolve...` );
 				pendingResponse.resolve( [ env.payloadUnpacked, env ] );
 				delete this.m_pendingResponses[ env.type ][ env.replyTo ];
 			}
 		}
 		else if( this.m_defaultHandler )
 		{
+			console.log( 'calling default handler' );
 			await this.m_defaultHandler( env.payloadUnpacked, env );
 		}
 		else
@@ -232,11 +238,15 @@ export class CAardvarkEndpoint
 			{
 				gadgetUri,
 			}
+			console.log( "getGadgetManifest::sendMessagenAndWaitForResponse", gadgetUri );
+
 			let prom = this.sendMessageAndWaitForResponse( MessageType.GetAardvarkManifest, 
 				msgGetGadgetManifest, MessageType.GetAardvarkManifestResponse );
 
+			console.log( "after getGadgetManifest::sendMessagenAndWaitForResponse", gadgetUri );
 			prom.then( ( [ msg, env ] : [ MsgGeAardvarkManifestResponse, Envelope ] ) =>
 			{
+				console.log( "getGadgetManifest::then", gadgetUri, msg );
 				if( msg.manifest )
 				{
 					resolve( msg.manifest );

@@ -292,6 +292,7 @@ export interface ActionSetState
 export interface InputState
 {
 	results: { [ actionSetName: string ]: ActionSetState };
+	interactionProfile?: string;
 }
 
 /** Information about the underlying application that Aardvark is running on top of. */

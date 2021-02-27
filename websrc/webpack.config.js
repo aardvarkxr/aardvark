@@ -127,7 +127,8 @@ module.exports =
 	createConfig( 'gadget_menu', 'Gadget Menu', 'tsx' ),
 	createConfig( 'hand_mirror', 'Hand Mirror', 'tsx' ),
 	createConfig( 'control_test', 'Control Tester', 'tsx' ),
-	createConfig( 'whiteboard', 'Whiteboard', 'tsx' ),
+	createConfig( 'test_panel', 'Test Panel', 'tsx' ),
+	createConfig( 'vrchat_bridge', 'VRChat Bridge', 'tsx' ),
 	{
 		target: "node",
 		entry: 

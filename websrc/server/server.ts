@@ -1,4 +1,4 @@
-import { AardvarkManifest, manifestUriFromGadgetUri, AardvarkPort, AvNode, AvNodeTransform, AvNodeType, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, gadgetDetailsToId, MessageType, MsgDestroyGadget, MsgError, MsgGadgetStarted, MsgGeAardvarkManifestResponse, MsgGetAardvarkManifest, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgInstallGadget, MsgInterfaceEnded, MsgInterfaceEvent, MsgInterfaceReceiveEvent, MsgInterfaceSendEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgLostEndpoint, MsgNewEndpoint, MsgNodeHaptic, MsgOverrideTransform, MsgResourceLoadFailed, MsgSaveSettings, MsgSetEndpointType, MsgSetEndpointTypeResponse, MsgUpdateActionState, MsgUpdateSceneGraph, parseEnvelope, Permission, WebSocketCloseCodes, MsgSetGadgetToAutoLaunch } from '@aardvarkxr/aardvark-shared';
+import { AardvarkManifest, manifestUriFromGadgetUri, AardvarkPort, AvNode, AvNodeTransform, AvNodeType, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EndpointType, ENodeFlags, Envelope, gadgetDetailsToId, MessageType, MsgDestroyGadget, MsgError, MsgGadgetStarted, MsgGeAardvarkManifestResponse as MsgGetAardvarkManifestResponse, MsgGetAardvarkManifest, MsgGetInstalledGadgets, MsgGetInstalledGadgetsResponse, MsgInstallGadget, MsgInterfaceEnded, MsgInterfaceEvent, MsgInterfaceReceiveEvent, MsgInterfaceSendEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgLostEndpoint, MsgNewEndpoint, MsgNodeHaptic, MsgOverrideTransform, MsgResourceLoadFailed, MsgSaveSettings, MsgSetEndpointType, MsgSetEndpointTypeResponse, MsgUpdateActionState, MsgUpdateSceneGraph, parseEnvelope, Permission, WebSocketCloseCodes, MsgSetGadgetToAutoLaunch } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as express from 'express';
 import * as http from 'http';
@@ -9,6 +9,7 @@ import { persistence } from './persistence';
 import { getJSONFromUri, g_localInstallPath, g_localInstallPathUri } from './serverutils';
 import * as Sentry from '@sentry/node';
 import { k_AardvarkVersion } from 'common/version';
+import { CVRChatHooks } from './vrchat_hooks';
 
 console.log( "Data directory is", g_localInstallPathUri );
 
@@ -798,10 +799,12 @@ class CEndpoint
 
 	@bind private onGetGadgetManifest( env: Envelope, m: MsgGetAardvarkManifest )
 	{
+		console.log( "trying to load manifest", m.gadgetUri );
 		getJSONFromUri( manifestUriFromGadgetUri( m.gadgetUri ) )
 		.then( ( jsonManifest: any ) =>
 		{
-			let response: MsgGeAardvarkManifestResponse =
+			console.log( "trying to load manifest.then", m.gadgetUri );
+			let response: MsgGetAardvarkManifestResponse =
 			{
 				manifest: jsonManifest as AardvarkManifest,
 				gadgetUri: m.gadgetUri,
@@ -811,7 +814,8 @@ class CEndpoint
 		})
 		.catch( (reason:any ) =>
 		{
-			let response: MsgGeAardvarkManifestResponse =
+			console.log( "trying to load manifest.catch", m.gadgetUri );
+			let response: MsgGetAardvarkManifestResponse =
 			{
 				error: "Unable to load manifest " + reason,
 				gadgetUri: m.gadgetUri,
@@ -992,6 +996,7 @@ class CEndpoint
 
 	public sendReply( type: MessageType, msg: any, replyTo: Envelope, sender:EndpointAddr = undefined  )
 	{
+		console.log( `sendReply( ${ MessageType[ type ] }, ${ replyTo.sequenceNumber } )`, msg, replyTo );
 		let env: Envelope =
 		{
 			type,
@@ -1064,7 +1069,8 @@ class CServer
 	private m_wss:WebSocket.Server = null;
 	private m_nextEndpointId = 27;
 	private m_dispatcher = new CDispatcher;
-
+	private m_vrchatHooks = new CVRChatHooks;
+	
 	constructor( port: number )
 	{
 		this.m_wss = new WebSocket.Server( { server: this.m_server } );

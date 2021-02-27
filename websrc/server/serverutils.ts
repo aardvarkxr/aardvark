@@ -20,10 +20,12 @@ export function getJSONFromUri( uri: string ): Promise< any >
 				{
 					if( err )
 					{
+						console.log( "readFile.reject", uri );
 						reject( err );
 					}
 					else
 					{
+						console.log( "readFile.resolve", uri );
 						resolve( JSON.parse( data ) );
 					}
 				});
@@ -33,10 +35,12 @@ export function getJSONFromUri( uri: string ): Promise< any >
 				let promRequest = axios.get( url.toString() )
 				.then( (value: AxiosResponse ) =>
 				{
+					console.log( "axios.get.resolve", uri );
 					resolve( value.data );
 				} )
 				.catch( (reason: any ) =>
 				{
+					console.log( "axios.get.resolve", uri );
 					reject( reason );
 				});
 			}

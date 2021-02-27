@@ -137,9 +137,10 @@ export class AvGadget
 			this.clearWaitForConnect();
 		}
 
-		return new Promise( (resolve, reject) => 
+		return new Promise<void>( (resolve, reject) => 
 		{
-			if ( this.m_endpointOpened ) resolve();
+			if ( this.m_endpointOpened ) 
+				resolve();
 
 			this.m_activeWaitForConnectReject = reject
 			this.m_activeWaitForConnectResolve = resolve
