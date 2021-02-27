@@ -292,6 +292,12 @@ export interface ActionSetState
 export interface InputState
 {
 	results: { [ actionSetName: string ]: ActionSetState };
+
+	/** The interaction profile of the current controllers. Will be undefined if
+	 * there are not currently controllers or if the controllers are of an unknown 
+	 * interaction profile.
+	 */
+	interactionProfile?: string;
 }
 
 /** Information about the underlying application that Aardvark is running on top of. */

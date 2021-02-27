@@ -1327,6 +1327,42 @@ void CAardvarkRenderProcessHandler::syncInput( CefRefPtr<CefV8Value> infoJS, Cef
 			a->SetValue( deviceName, deviceResult, V8_PROPERTY_ATTRIBUTE_NONE );
 		}
 	}
+
+	uint32_t bestControllerTypeScore = 0;
+	std::string bestControllerType;
+	for ( vr::TrackedDeviceIndex_t device = 0; device < vr::k_unMaxTrackedDeviceCount; device++ )
+	{
+		vr::ETrackedDeviceClass eClass = vr::VRSystem()->GetTrackedDeviceClass( device );
+		if ( eClass == vr::TrackedDeviceClass_Invalid )
+			continue;
+
+		char buf[ 128 ];
+		vr::ETrackedPropertyError err;
+		vr::VRSystem()->GetStringTrackedDeviceProperty( device, vr::Prop_ControllerType_String, buf, sizeof( buf ),
+			&err );
+		if ( err != vr::TrackedProp_Success )
+			continue;
+
+		if ( !buf[ 0 ] )
+			continue;
+
+		uint32_t score = eClass == vr::TrackedDeviceClass_Controller ? 2 : 1;
+		if ( score > bestControllerTypeScore )
+		{
+			bestControllerTypeScore = score;
+			bestControllerType = buf;
+		}
+	}
+
+	if ( !bestControllerType.empty() )
+	{
+		std::string interactionProfile = controllerTypeToInteractionProfile( bestControllerType );
+		if ( !interactionProfile.empty() )
+		{
+			( *retVal )->SetValue( "interactionProfile", CefV8Value::CreateString( interactionProfile ),
+				V8_PROPERTY_ATTRIBUTE_NONE );
+		}
+	}
 }
 
 

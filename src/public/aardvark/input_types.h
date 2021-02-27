@@ -46,3 +46,6 @@ public:
 };
 
 nlohmann::json toInputFiles( const CInputManifest& m );
+
+std::string interactionProfileToControllerType( const std::string& interactionProfile );
+std::string controllerTypeToInteractionProfile( const std::string& controllerType );
