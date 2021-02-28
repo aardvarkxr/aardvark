@@ -21,7 +21,6 @@ enum GrabberState
 	Idle,
 	Highlight,
 	Grabbing,
-	LostGrab,
 	GrabReleased,
 	WaitingForDropComplete,
 	WaitingForRegrab,
@@ -265,7 +264,10 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 
 	private async onGrabReleased()
 	{
-		console.log( `${ EHand[ this.props.hand ] } grab released` );
+		console.log( `${ EHand[ this.props.hand ] } grab released with `
+			+ `${ ButtonState[ this.grabPressed ] }, `
+			+ `activeGrab=${ endpointAddrToString( this.state.activeGrab?.peer ) }, `
+			+ `state=${ GrabberState[ this.state.state ] }`);
 		switch( this.grabPressed )
 		{
 			case ButtonState.Suppressed:
@@ -301,16 +303,6 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 							// we unlock below.
 							await this.state.activeGrab.sendEvent( { type: GrabRequestType.DropYourself } as GrabRequest );
 							this.setState( { state: GrabberState.WaitingForDropComplete } );
-							break;
-			
-						case GrabberState.LostGrab:
-							this.state.activeGrab.unlock();	
-							this.setState( 
-								{ 
-									grabberFromGrabbableDirection: null, 
-									grabberFromGrabbableRange: null, 
-									grabberFromGrabbableRotation: null, 
-									state: GrabberState.Idle } );
 							break;
 			
 						case GrabberState.WaitingForRegrab:
@@ -579,7 +571,13 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 			{
 				case GrabberState.GrabReleased:
 				case GrabberState.Grabbing:
-					this.setState( { state: GrabberState.LostGrab } );
+					activeInterface.unlock();	
+					this.setState( 
+						{ 
+							grabberFromGrabbableDirection: null, 
+							grabberFromGrabbableRange: null, 
+							grabberFromGrabbableRotation: null, 
+							state: GrabberState.Idle } );
 					break;
 
 				case GrabberState.Highlight:
