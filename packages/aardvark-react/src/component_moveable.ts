@@ -266,6 +266,7 @@ export class MoveableComponent implements EntityComponent
 	{
 		activeContainer.onEnded(() =>
 		{
+			console.log( `ended activeContainer with ${ endpointAddrToString( activeContainer.peer ) }` );
 			this.activeContainer = null;
 			this.updateListener();
 		} );
@@ -285,6 +286,7 @@ export class MoveableComponent implements EntityComponent
 
 				case ContainerRequestType.RedropComplete:
 				{
+					console.log( "ContainerRequestType.RedropComplete" );
 					activeContainer.unlock();
 					this.wasEverDropped = false;
 					this.updateListener();
@@ -293,6 +295,7 @@ export class MoveableComponent implements EntityComponent
 			}
 		} );
 
+		console.log( `started activeContainer with ${ endpointAddrToString( activeContainer.peer ) }` );
 		this.activeContainer = activeContainer;
 		this.updateListener();
 
@@ -371,6 +374,7 @@ export class MoveableComponent implements EntityComponent
 
 	public reset()
 	{
+		console.log( "Moveable reset" );
 		this.activeContainer?.unlock();
 		this.activeContainer?.sendEvent( { state: "Moving" } );
 		this.wasEverDropped = false;
