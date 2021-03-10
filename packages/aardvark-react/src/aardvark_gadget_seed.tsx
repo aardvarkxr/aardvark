@@ -9,6 +9,8 @@ import { AvEntityChild } from './aardvark_entity_child';
 import { AvGadget } from './aardvark_gadget';
 import { ActiveInterface, InterfaceProp } from './aardvark_interface_entity';
 import { AvModel } from './aardvark_model';
+import { AvOrigin } from './aardvark_origin';
+import { AvPrimitive, PrimitiveType } from './aardvark_primitive';
 import { AvTransform } from './aardvark_transform';
 import { ContainerRequest, ContainerRequestType, MoveableComponent, MoveableComponentState } from './component_moveable';
 
@@ -429,7 +431,7 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 		if( !res.success )
 		{
 			this.setState( { phase: GadgetSeedPhase.Idle } );
-			throw new Error( "startGadget failed" );
+			throw new Error( `startGadget failed: ${ res.error }` );
 		}
 	}
 
@@ -462,12 +464,7 @@ export class AvGadgetSeed extends React.Component< AvGadgetSeedProps, AvGadgetSe
 		}
 
 		let volume: AvVolume;
-		if( this.state.phase == GadgetSeedPhase.WaitingForRedropToFinish )
-		{
-			// we want to not match against the container we're telling our child to redrop into
-			volume = { type: EVolumeType.Empty };
-		}
-		else if( this.props.customVolume )
+		if( this.props.customVolume )
 		{
 			volume = this.props.customVolume;
 		}
