@@ -373,7 +373,7 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 
 	
 	interfaceStarted( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string,
-		transmitterFromReceiver: [mat4, vec3|null], params?: object ):void
+		transmitterFromReceiver: [mat4, vec3|null], params?: object, reason?: string ):void
 	{
 		const [ transform, pt ] = transmitterFromReceiver ?? [ null, null ];
 		let intersectionPoint:AvVector;
@@ -395,11 +395,12 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 				transmitterFromReceiver: nodeTransformFromMat4( transform ),
 				intersectionPoint,
 				params,
+				reason,
 			} as MsgInterfaceStarted );
 	}
 
 	interfaceEnded( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string,
-		transmitterFromReceiver: [mat4, vec3|null] ):void
+		transmitterFromReceiver: [mat4, vec3|null], reason?: string ):void
 	{
 		const [ transform, pt ] = transmitterFromReceiver ?? [ undefined, null ];
 		let intersectionPoint:AvVector;
@@ -414,11 +415,12 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 				iface,
 				transmitterFromReceiver: nodeTransformFromMat4( transform ),
 				intersectionPoint,
+				reason,
 			} as MsgInterfaceEnded );
 	}
 
 	interfaceTransformUpdated( destination: EndpointAddr, peer: EndpointAddr, iface: string, 
-		destinationFromPeer: [mat4, vec3|null] ): void
+		destinationFromPeer: [mat4, vec3|null], reason?: string ): void
 	{
 		const [ transform, pt ] = destinationFromPeer;
 		let intersectionPoint:AvVector;
@@ -433,11 +435,12 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 				iface,
 				destinationFromPeer: nodeTransformFromMat4( transform ),
 				intersectionPoint,
+				reason,
 			} as MsgInterfaceTransformUpdated );
 	}
 
 	interfaceEvent( destination: EndpointAddr, peer: EndpointAddr, iface: string, event: object,
-		destinationFromPeer: [mat4, vec3|null] ): void
+		destinationFromPeer: [mat4, vec3|null], reason?: string ): void
 	{
 		const [ transform, pt ] = destinationFromPeer;
 		let intersectionPoint:AvVector;
@@ -453,6 +456,7 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 				event,
 				destinationFromPeer: nodeTransformFromMat4( transform ),
 				intersectionPoint,
+				reason,
 			} as MsgInterfaceReceiveEvent );
 	}
 
@@ -664,8 +668,15 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 			let entityData = this.getNodeData( entityNode );
 			let volumes: TransformedVolume[] = [];
 
-			if( entityData.lastVisible )
+			let bestSource: string;
+			if( !entityData.lastVisible )
 			{
+				bestSource = "not visible";
+			}
+			else
+			{
+				bestSource = "empty list";
+
 				// compute the transform to universe for each volume
 				for( let volume of entityNode.propVolumes ?? [] )
 				{
@@ -682,6 +693,7 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 
 					if( !universeFromEntity.getOriginPath() )
 					{
+						bestSource = "No origin path";
 						continue;
 					}
 
@@ -745,6 +757,7 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 					{
 						type: EVolumeType.Empty,
 						universeFromVolume: mat4.identity,
+						source: bestSource,
 					} );
 			}
 
@@ -1297,6 +1310,12 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 	traverseLine( node: AvNode, defaultParent: PendingTransform )
 	{
 		if( !node.propEndAddr )
+		{
+			return;
+		}
+
+		// don't draw lines if we're not drawing at all
+		if( !this.m_currentVisibility )
 		{
 			return;
 		}

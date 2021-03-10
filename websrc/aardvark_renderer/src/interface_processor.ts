@@ -5,13 +5,13 @@ import { volumeMatchesContext, TransformedVolume, volumesIntersect } from './vol
 export interface InterfaceProcessorCallbacks
 {
 	interfaceStarted( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string,
-		transmitterFromReceiver: [mat4, vec3], params?: object ):void;
+		transmitterFromReceiver: [mat4, vec3], params?: object, reason?: string ):void;
 	interfaceEnded( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string,
-		transmitterFromReceiver?: [mat4, vec3] ):void;
+		transmitterFromReceiver?: [mat4, vec3], reason?: string ):void;
 	interfaceTransformUpdated( destination: EndpointAddr, peer: EndpointAddr, iface: string, 
-		destinationFromPeer: [mat4, vec3] ): void;
+		destinationFromPeer: [mat4, vec3], reason?: string ): void;
 	interfaceEvent( destination: EndpointAddr, peer: EndpointAddr, iface: string, event: object,
-		destinationFromPeer: [mat4, vec3] ): void;
+		destinationFromPeer: [mat4, vec3], reason?: string ): void;
 }
 
 export interface InterfaceEntity
@@ -39,6 +39,7 @@ interface InterfaceInProgress
 	receiverWantsTransforms: boolean;
 	refreshTransforms: boolean;
 	hasRealVolumes: boolean;
+	emptyVolumeSource?: string;
 }
 
 export function findBestInterface( transmitter: InterfaceEntity, receiver: InterfaceEntity ): string | null
@@ -54,18 +55,49 @@ export function findBestInterface( transmitter: InterfaceEntity, receiver: Inter
 	return null;
 }
 
-function hasRealVolume( ep: InterfaceEntity, context: EVolumeContext )
+function hasRealVolume( ep: InterfaceEntity, context: EVolumeContext ) : [ boolean, string ]
 {
+	let bestSource: string = "gadget";
 	for( let v of ep.volumes )
 	{
 		if( !volumeMatchesContext( v, context ) )
 			continue;
 
 		if( v.type != EVolumeType.Empty )
-			return true;
+			return [ true, undefined ];
+
+		if( v.source )
+		{
+			bestSource = v.source
+		}
 	}
 
-	return false;
+	return [ false, bestSource ];
+}
+
+
+function pairHasRealVolume( transmitter: InterfaceEntity, receiver: InterfaceEntity, context: EVolumeContext )
+	: [ boolean, string ]
+{
+	const [ tr, ts ] = hasRealVolume( transmitter, context );	
+	const [ rr, rs ] = hasRealVolume( receiver, context );	
+	if( tr && rr )
+	{
+		return [ true, undefined ];
+	}
+
+	if( tr && !rr )
+	{
+		return [ false, "receiver." + rs ];
+	}
+	else if( rr ) // && !tr
+	{
+		return [ false, "transmitter." + ts ];
+	}
+	else // neither
+	{
+		return [ false, "transmitter." + ts + " + receiver." + rs ];
+	}
 }
 
 function entitiesIntersect( transmitter: InterfaceEntity, receiver: InterfaceEntity, context: EVolumeContext ):
@@ -186,8 +218,10 @@ export class CInterfaceProcessor
 				let receiver = entityMap.find( initialLock.receiver );
 				let transmitterFromReceiver = this.computeEntityTransform( transmitter, receiver );
 				this.callbacks.interfaceStarted( transmitter.epa, initialLock.receiver, initialLock.iface, 
-					transmitterFromReceiver, initialLock.params );
+					transmitterFromReceiver, initialLock.params, "Initial lock" );
 				
+				const [ hasRealVolumes, emptyVolumeSource ] = 
+					pairHasRealVolume( transmitter, receiver, EVolumeContext.StartOnly );
 				let iip: InterfaceInProgress =
 				{
 					transmitter: transmitter.epa,
@@ -197,8 +231,8 @@ export class CInterfaceProcessor
 					transmitterWantsTransforms: transmitter.wantsTransforms,
 					receiverWantsTransforms: receiver?.wantsTransforms ?? false,
 					refreshTransforms: false,
-					hasRealVolumes: hasRealVolume( transmitter, EVolumeContext.StartOnly )
-						&& hasRealVolume( receiver, EVolumeContext.StartOnly )
+					hasRealVolumes,
+					emptyVolumeSource,
 				};
 
 				if( receiver && receiver.receives.includes( initialLock.iface ) )
@@ -211,7 +245,8 @@ export class CInterfaceProcessor
 				{
 					// There is no such receiver, so the interface is immediately lost. Because of
 					// the implied lock, it goes into our lost lock list
-					this.callbacks.interfaceEnded( transmitter.epa, initialLock.receiver, initialLock.iface );
+					this.callbacks.interfaceEnded( transmitter.epa, initialLock.receiver, 
+						initialLock.iface, undefined, "No such receiver (initial lock)" );
 					this.lostLockedInterfaces.set( endpointAddrToString( transmitter.epa ), iip );
 				}
 			}
@@ -226,7 +261,8 @@ export class CInterfaceProcessor
 			let transmitter = entityMap.find( iip.transmitter );
 			if( !transmitter || !transmitter.transmits.includes( iip.iface ) )
 			{
-				this.callbacks.interfaceEnded(iip.transmitter, iip.receiver, iip.iface );
+				this.callbacks.interfaceEnded(iip.transmitter, iip.receiver, iip.iface, undefined,
+					"Lost transmitter" );
 				continue;
 			}
 
@@ -238,7 +274,8 @@ export class CInterfaceProcessor
 			if( !receiver || !receiver.receives.includes( iip.iface ) )
 			{
 				// console.log( "receiver no longer exists or lost iface", receiver );
-				this.callbacks.interfaceEnded(iip.transmitter, iip.receiver, iip.iface );
+				this.callbacks.interfaceEnded(iip.transmitter, iip.receiver, iip.iface, undefined,
+					"Lost receiver" + ( iip.locked ? " (locked)" : "" ) );
 				this.log( `interface end (no receiver/iface) ${ endpointAddrToString( transmitter.epa ) } `
 					+` to ${ endpointAddrToString( iip.receiver ) } for ${ iip.iface }` );
 				if( iip.locked )
@@ -259,7 +296,7 @@ export class CInterfaceProcessor
 					this.log( `interface end (no intersect) ${ endpointAddrToString( transmitter.epa ) } `
 						+` to ${ endpointAddrToString( receiver.epa ) } for ${ iip.iface }` );
 					this.callbacks.interfaceEnded( iip.transmitter, iip.receiver, iip.iface,
-						this.computeEntityTransform( transmitter, receiver ) );
+						this.computeEntityTransform( transmitter, receiver ), "no intersect" );
 					continue;
 				}
 
@@ -268,15 +305,20 @@ export class CInterfaceProcessor
 					this.log( `interface end (matching origins) ${ endpointAddrToString( transmitter.epa ) } `
 						+` to ${ endpointAddrToString( receiver.epa ) } for ${ iip.iface }` );
 					this.callbacks.interfaceEnded( iip.transmitter, iip.receiver, iip.iface,
-						this.computeEntityTransform( transmitter, receiver ) );
+						this.computeEntityTransform( transmitter, receiver ), "match disallowed" );
 					continue;
 				}
 			}
 
 			iip.transmitterWantsTransforms = transmitter.wantsTransforms;
 			iip.receiverWantsTransforms = receiver.wantsTransforms;
-			iip.hasRealVolumes = hasRealVolume( transmitter, EVolumeContext.StartOnly )
-				&& hasRealVolume( receiver, EVolumeContext.StartOnly );
+
+			const [ hasRealVolumes, emptyVolumeSource ] = 
+				pairHasRealVolume( transmitter, receiver, EVolumeContext.StartOnly );
+
+			iip.hasRealVolumes = hasRealVolumes;
+			iip.emptyVolumeSource = emptyVolumeSource;
+
 			transmittersInUse.set( iip.transmitter, iip.iface, iip );
 			newInterfacesInProgress.push( iip );
 		}
@@ -361,7 +403,9 @@ export class CInterfaceProcessor
 
 						// end the old interface before starting the new one
 						this.callbacks.interfaceEnded( transmitter.epa, oldReceiver.epa, iface,
-							this.computeEntityTransform( transmitter, oldReceiver ) );
+							this.computeEntityTransform( transmitter, oldReceiver ),
+							`higher priority receiver `
+							+ `${ bestReceiver.priority } > ${ oldReceiver.priority }` );
 						let oldIndex = newInterfacesInProgress.findIndex( ( iip: InterfaceInProgress ) => 
 							( iip == currentIip ) );
 						if( oldIndex != -1 )
@@ -375,7 +419,7 @@ export class CInterfaceProcessor
 
 					// we found a transmitter and receiver that are touching and share an interface.
 					this.callbacks.interfaceStarted( transmitter.epa, bestReceiver.epa, iface,
-						this.computeEntityTransform( transmitter, bestReceiver ) );
+						this.computeEntityTransform( transmitter, bestReceiver ), undefined, "intersection" );
 
 					newInterfacesInProgress.push(
 						{
@@ -409,13 +453,13 @@ export class CInterfaceProcessor
 			if( iip.transmitterWantsTransforms || iip.refreshTransforms )
 			{
 				this.callbacks.interfaceTransformUpdated(iip.transmitter, iip.receiver, iip.iface, 
-					this.computeEntityTransform( transmitter, receiver ) );
+					this.computeEntityTransform( transmitter, receiver ), "transmitterWantsTransforms" );
 			}
 
 			if( iip.receiverWantsTransforms || iip.refreshTransforms )
 			{
 				this.callbacks.interfaceTransformUpdated( iip.receiver, iip.transmitter, iip.iface,
-					this.computeEntityTransform( receiver, transmitter ) );
+					this.computeEntityTransform( receiver, transmitter ), "receiverWantsTransforms" );
 			}
 
 			iip.refreshTransforms = false;
@@ -471,7 +515,8 @@ export class CInterfaceProcessor
 				this.log( `Reflecting interface event from ${ endpointAddrToString( peerEpa ) } `
 					+` to ${ endpointAddrToString( destEpa ) } for ${ iface }`, event, destinationFromPeer );
 
-				this.callbacks.interfaceEvent( destEpa, peerEpa, iface, event, destinationFromPeer );
+				this.callbacks.interfaceEvent( destEpa, peerEpa, iface, event, destinationFromPeer,
+					`sent by ${ endpointAddrToString( peerEpa ) }` );
 
 				iip.refreshTransforms = true;
 
@@ -595,7 +640,8 @@ export class CInterfaceProcessor
 			// end
 			fn = () =>
 			{
-				this.callbacks.interfaceEnded(iip.transmitter, iip.receiver, iip.iface );
+				this.callbacks.interfaceEnded(iip.transmitter, iip.receiver, iip.iface,
+					undefined, "unlock without real volumes " + iip.emptyVolumeSource );
 				this.interfacesInProgress.filter( ( testIip ) => testIip != iip );
 			}
 		}
@@ -638,8 +684,10 @@ export class CInterfaceProcessor
 		let transmitterFromOldReceiver = this.computeEntityTransform( transmitter, oldReceiver );
 		let transmitterFromNewReceiver = this.computeEntityTransform( transmitter, newReceiver );
 
-		this.callbacks.interfaceEnded( transmitterEpa, oldReceiverEpa, iface, transmitterFromOldReceiver );
-		this.callbacks.interfaceStarted( transmitterEpa, newReceiverEpa, iface, transmitterFromNewReceiver );
+		this.callbacks.interfaceEnded( transmitterEpa, oldReceiverEpa, iface, transmitterFromOldReceiver,
+			"relock" );
+		this.callbacks.interfaceStarted( transmitterEpa, newReceiverEpa, iface, 
+			transmitterFromNewReceiver, undefined, "relock" );
 
 		this.log( `Relocking interface ${ endpointAddrToString( transmitterEpa ) } `
 		+ ` from ${ endpointAddrToString( oldReceiverEpa ) }`

@@ -10,12 +10,9 @@ const equal = require( 'fast-deep-equal' );
 export interface AvInterfaceEntityProcessor
 {
 	started( startMsg: MsgInterfaceStarted ): void;
-	ended( transmitter: EndpointAddr, receiver: EndpointAddr, iface: string, 
-		transmitterFromReceiver: AvNodeTransform, intersectionPoint?: AvVector ): void;
-	event( destination: EndpointAddr, peer: EndpointAddr, iface: string, data: object, 
-		destinationFromPeer: AvNodeTransform, intersectionPoint?: AvVector ): void;
-	transformUpdated( destination: EndpointAddr, peer: EndpointAddr, iface: string, 
-		destinationFromPeer: AvNodeTransform, intersectionPoint?: AvVector ): void;
+	ended( endMsg: MsgInterfaceEnded ): void;
+	event( eventMsg: MsgInterfaceReceiveEvent ): void;
+	transformUpdated( transformMsg: MsgInterfaceTransformUpdated ): void;
 }
 
 
@@ -137,9 +134,10 @@ export class AvGadget
 			this.clearWaitForConnect();
 		}
 
-		return new Promise( (resolve, reject) => 
+		return new Promise<void>( (resolve, reject) => 
 		{
-			if ( this.m_endpointOpened ) resolve();
+			if ( this.m_endpointOpened ) 
+				resolve();
 
 			this.m_activeWaitForConnectReject = reject
 			this.m_activeWaitForConnectResolve = resolve
@@ -354,8 +352,7 @@ export class AvGadget
 		let processor = this.getInterfaceEntityProcessor( env.target );
 		if( processor )
 		{
-			processor.ended(m.transmitter, m.receiver, m.iface, m.transmitterFromReceiver, 
-				m.intersectionPoint );
+			processor.ended( m );
 		}
 
 		if( !processor )
@@ -371,8 +368,7 @@ export class AvGadget
 		let processor = this.getInterfaceEntityProcessor( m.destination );
 		if( processor )
 		{
-			processor.event(m.destination, m.peer, m.iface, m.event, m.destinationFromPeer,
-				m.intersectionPoint );
+			processor.event( m );
 		}
 
 		if( !processor )
@@ -388,8 +384,7 @@ export class AvGadget
 		let processor = this.getInterfaceEntityProcessor( m.destination );
 		if( processor )
 		{
-			processor.transformUpdated( m.destination, m.peer, m.iface, m.destinationFromPeer,
-				m.intersectionPoint );
+			processor.transformUpdated( m );
 		}
 
 		if( !processor )
@@ -717,6 +712,17 @@ export class AvGadget
 					initialInterfaces: initialInterfacesEncoded, 
 					epToNotify, 
 				} );
+
+			window.setTimeout( () =>
+			{
+				if( this.m_startGadgetPromises[ notifyNodeId ] )
+				{
+					// it's been 30 seconds. If the gadget hasn't started by now,
+					// tell the caller it's never going to start
+					resolve( { success: false, error: "Timed out" } );
+					delete this.m_startGadgetPromises[ notifyNodeId ];
+				}
+			}, 30000 );
 		} );
 	} 
 

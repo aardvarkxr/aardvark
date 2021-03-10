@@ -157,9 +157,9 @@ export class MoveableComponent implements EntityComponent
 	@bind
 	private onGrabStart( activeGrab: ActiveInterface )
 	{
-		activeGrab.onEnded(() =>
+		activeGrab.onEnded(( reason?: string ) =>
 		{
-			console.log( "ACTIVE GRAB ENDED from ", endpointAddrToString( activeGrab.peer ) );
+			console.log( "ACTIVE GRAB ENDED from ", endpointAddrToString( activeGrab.peer ), reason );
 			this.activeGrabs.delete( activeGrab );
 			this.updateListener();
 
@@ -264,10 +264,15 @@ export class MoveableComponent implements EntityComponent
 	@bind
 	private onContainerStart( activeContainer: ActiveInterface )
 	{
-		activeContainer.onEnded(() =>
+		activeContainer.onEnded(( reason?: string ) =>
 		{
-			console.log( `ended activeContainer with ${ endpointAddrToString( activeContainer.peer ) }` );
+			console.log( `ended activeContainer with ${ endpointAddrToString( activeContainer.peer ) } `
+				+ `because ${ reason }` );
 			this.activeContainer = null;
+
+			// we can't be dropped into a container we don't have an interface with
+			this.wasEverDropped = false; 
+
 			this.updateListener();
 		} );
 

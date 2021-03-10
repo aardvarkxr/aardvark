@@ -66,7 +66,8 @@ export interface AvRenderer
 export interface AvStartGadgetResult
 {
 	success: boolean;
-	startedGadgetEndpointId: number;
+	startedGadgetEndpointId?: number;
+	error?: string;
 }
 
 export interface AvManifestCallback

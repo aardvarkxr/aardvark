@@ -367,6 +367,7 @@ export interface MsgInterfaceStarted
 	transmitterFromReceiver: AvNodeTransform;
 	intersectionPoint?: AvVector;
 	params?: object; // This will only be set for initial interface locks
+	reason?: string;
 }
 
 export interface MsgInterfaceEnded
@@ -376,6 +377,7 @@ export interface MsgInterfaceEnded
 	iface: string;
 	transmitterFromReceiver?: AvNodeTransform;
 	intersectionPoint?: AvVector;
+	reason?: string;
 }
 
 export interface MsgInterfaceLock
@@ -433,6 +435,7 @@ export interface MsgInterfaceTransformUpdated
 	iface: string;
 	destinationFromPeer: AvNodeTransform;
 	intersectionPoint?: AvVector;
+	reason?: string;
 }
 
 export interface MsgInterfaceSendEvent
@@ -455,6 +458,7 @@ export interface MsgInterfaceReceiveEvent
 	event: object;
 	destinationFromPeer: AvNodeTransform;
 	intersectionPoint?: AvVector;
+	reason?: string;
 }
 
 export enum AvNodeType
@@ -570,6 +574,7 @@ export interface AvVolume
 	skeletonPath?: string; // /user/hand/left or /user/hand/right
 	scale?: number; // Scales radius or AABB (after model box is resolved)
 	visualize?: boolean; // If this is true Aardvark will render the volume to the best of its ability
+	source?: string;
 }
 
 export function emptyVolume(): AvVolume
