@@ -54,6 +54,11 @@ export class InputProcessor
 		Av()?.registerInput( actionSets );
 	}
 
+	public get currentInteractionProfile(): string 
+	{ 
+		return this.state?.interactionProfile
+	}
+
 	/** Used by tests to force a state update */
 	public TEST_UpdateState( newState: InputState )
 	{
