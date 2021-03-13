@@ -31,18 +31,6 @@ volumeDictionary.set("default", {
 
 export {volumeDictionary};
 
-export function getVolume(controllerType: string)
-{
-	if (volumeDictionary.has(controllerType))
-	{
-		return volumeDictionary.get(controllerType);
-	}
-	else
-	{	
-		return volumeDictionary.get("default");	
-	}
-}
-
 
 
 

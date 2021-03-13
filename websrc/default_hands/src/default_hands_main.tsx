@@ -6,7 +6,7 @@ import { initSentryForBrowser } from 'common/sentry_utils';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import { k_actionSets } from './default_hands_input';
-import {gestureVolumes, getVolume, volumeDictionary} from './default_hands_gesture_volumes'
+import {gestureVolumes, volumeDictionary} from './default_hands_gesture_volumes'
 
 initSentryForBrowser();
 
@@ -893,6 +893,7 @@ class DefaultHands extends React.Component< {}, DefaultHandsState >
 	private menuGestureCooldownCounter: number = 0;
 
 	private controllerType: string;
+	private controllerVolumes: gestureVolumes;
 
 	constructor(props:any)
 	{
@@ -1000,9 +1001,6 @@ class DefaultHands extends React.Component< {}, DefaultHandsState >
 
 	componentDidUpdate()
 	{
-		this.controllerType = inputProcessor.currentInteractionProfile;
-
-
 		if (this.state.menuGestureCollideMain && this.state.menuGestureCollideSecondary && Date.now() >= this.menuGestureCooldownCounter + 500)
 		{
 			this.menuGestureCooldownCounter = Date.now();
@@ -1038,6 +1036,7 @@ class DefaultHands extends React.Component< {}, DefaultHandsState >
 			}
 		};
 
+		this.controllerVolumes = volumeDictionary.has(inputProcessor.currentInteractionProfile) ? volumeDictionary.get(inputProcessor.currentInteractionProfile) : null;
 
 		return (
 			<>
@@ -1055,7 +1054,7 @@ class DefaultHands extends React.Component< {}, DefaultHandsState >
 				</AvOrigin>
 
 				<AvOrigin path="/user/hand/left">
-					{ this.state.displayIntro && this.controllerType != null && 
+					{ this.state.displayIntro && this.controllerVolumes != null && 
 						<AvHeadFacingTransform>
 							<AvTransform uniformScale = {0.07}>
 								<AvModel uri = {g_builtinModelMenuIntro}/>
@@ -1063,7 +1062,7 @@ class DefaultHands extends React.Component< {}, DefaultHandsState >
 						</AvHeadFacingTransform>
 					}
 
-					{ this.controllerType == null && 
+					{ this.controllerVolumes == null && 
 						<AvTransform translateZ={ 0.04 } translateY={ 0.02 }>
 							<AvGrabButton onClick={ this.toggleGadgetMenu } modelUri={ g_builtinModelGear }/>
 						</AvTransform>
@@ -1076,21 +1075,21 @@ class DefaultHands extends React.Component< {}, DefaultHandsState >
 				</AvOrigin>
 
 				
-				{ this.controllerType != null && // set up volumes if we have a controller
+				{ this.controllerVolumes != null && // set up volumes if we have a controller
 					<>
 						<AvOrigin path="/user/hand/left">
-							<AvTransform uniformScale = {0.03} transform = {getVolume(this.controllerType).leftHandTop}>
+							<AvTransform uniformScale = {0.03} transform = {this.controllerVolumes.leftHandTop}>
 								<AvInterfaceEntity volume = {this.menuGestureVolume} transmits = {this.menuGestureMain}></AvInterfaceEntity>
 							</AvTransform>
-							<AvTransform uniformScale = {0.03} transform = {getVolume(this.controllerType).leftHandBottom}>
+							<AvTransform uniformScale = {0.03} transform = {this.controllerVolumes.leftHandBottom}>
 								<AvInterfaceEntity volume = {this.menuGestureVolumeLarger} transmits = {this.menuGestureSecondary}></AvInterfaceEntity>
 							</AvTransform>
 						</AvOrigin>
 						<AvOrigin path = "/user/hand/right">
-							<AvTransform uniformScale = {0.03} transform = {getVolume(this.controllerType).rightHandTop}>
+							<AvTransform uniformScale = {0.03} transform = {this.controllerVolumes.rightHandTop}>
 								<AvInterfaceEntity volume = {this.menuGestureVolume} receives = {this.menuGestureMain}></AvInterfaceEntity>
 							</AvTransform>
-							<AvTransform uniformScale = {0.03} transform = {getVolume(this.controllerType).rightHandBottom}>
+							<AvTransform uniformScale = {0.03} transform = {this.controllerVolumes.rightHandBottom}>
 								<AvInterfaceEntity volume = {this.menuGestureVolume} receives = {this.menuGestureSecondary}></AvInterfaceEntity>
 							</AvTransform>
 						</AvOrigin>
