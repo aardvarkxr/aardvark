@@ -38,6 +38,14 @@ let defaults =
 
 	resolve:
 	{
+		fallback: 
+		{ 
+			"url": require.resolve("url/"),
+			"util": require.resolve("util/"),
+			"assert": require.resolve("assert/"),
+			"buffer": require.resolve("buffer/"),
+			"stream": require.resolve("stream-browserify"),
+		},
 		modules:
 		[ 
 			path.resolve( __dirname, 'node_modules' ),
@@ -108,7 +116,7 @@ function createConfig( appName, appTitle, ext )
 				name: appName,
 			}
 		),
-		new CopyPlugin( copyList ),
+		new CopyPlugin( { patterns: copyList } ),
   	];
 
 	return config;
@@ -176,9 +184,11 @@ module.exports =
 		plugins:
 		[
 			new CopyPlugin(
-				[
-					{ from: './node_modules/node/bin/node.exe', to: 'bin/aardvark_server.exe' },
-				]
+				{
+					patterns: [
+						{ from: './node_modules/node/bin/node.exe', to: 'bin/aardvark_server.exe' },
+					]
+				}
 				),
 	
 			],
