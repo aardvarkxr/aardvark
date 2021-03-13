@@ -56,7 +56,7 @@ export class InputProcessor
 
 	public get currentInteractionProfile(): string 
 	{ 
-		return this.state?.interactionProfile
+		return this.state?.interactionProfile;
 	}
 
 	/** Used by tests to force a state update */
