@@ -1,16 +1,14 @@
-import { ipfsUtils } from './ipfs_utils';
-import { Av, AvSharedTextureInfo, g_anim_Left_Pen, g_anim_Right_Pen, g_builtinModelSphere, InterfaceLockResult, g_builtinModelSkinnedHandLeft, g_builtinModelSkinnedHandRight } from '@aardvarkxr/aardvark-shared';
-import { textureCache, TextureInfo } from './texture_cache';
-import { AABB, AvActionState, AvConstraint, AvModelInstance, AvNode, AvNodeTransform, AvNodeType, AvRenderer, EHand, emptyActionState, EndpointAddr, minIgnoringNulls, nodeTransformFromMat4, nodeTransformToMat4, scaleAxisToFit, scaleMat, vec3MultiplyAndAdd, computeUniverseFromLine, endpointAddrToString, EndpointType, ENodeFlags, EVolumeType, filterActionsForGadget, g_builtinModelError, MessageType, MsgInterfaceEnded, MsgInterfaceReceiveEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgResourceLoadFailed, MsgUpdateActionState, g_builtinModelCylinder, AvVector } from '@aardvarkxr/aardvark-shared';
+import { AABB, AvActionState, AvConstraint, AvModelInstance, AvNode, AvNodeTransform, AvNodeType, AvRenderer, AvSharedTextureInfo, AvVector, computeUniverseFromLine, EHand, emptyActionState, EndpointAddr, endpointAddrToString, EndpointType, ENodeFlags, EVolumeType, filterActionsForGadget, g_anim_Left_Pen, g_anim_Right_Pen, g_builtinModelCylinder, g_builtinModelError, g_builtinModelSkinnedHandLeft, g_builtinModelSkinnedHandRight, g_builtinModelSphere, InterfaceLockResult, lerpAvTransforms, MessageType, minIgnoringNulls, MsgInterfaceEnded, MsgInterfaceReceiveEvent, MsgInterfaceStarted, MsgInterfaceTransformUpdated, MsgResourceLoadFailed, MsgUpdateActionState, nodeTransformFromMat4, nodeTransformToMat4, scaleAxisToFit, scaleMat, vec3MultiplyAndAdd } from '@aardvarkxr/aardvark-shared';
 import { mat4, vec3, vec4 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
 import { EndpointAddrMap } from './endpoint_addr_map';
 import { CInterfaceProcessor, InterfaceEntity, InterfaceProcessorCallbacks } from './interface_processor';
+import { ipfsUtils } from './ipfs_utils';
 import { modelCache, ModelInfo } from './model_cache';
-import { fixupUrl, getHandVolumes, UrlType } from './traverser_utils';
+import { textureCache, TextureInfo } from './texture_cache';
 import { Traverser, TraverserCallbacks } from './traverser_interface';
+import { fixupUrl, getHandVolumes, UrlType } from './traverser_utils';
 import { TransformedVolume } from './volume_intersection';
-import isUrl from 'is-url';
 const equal = require( 'fast-deep-equal' );
 
 interface NodeData
@@ -959,6 +957,10 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 			this.traverseModelTransform( node, defaultParent );
 			break;
 		
+		case AvNodeType.WeightedTransform:
+			this.traverseWeightedTransform( node, defaultParent );
+			break;
+		
 		case AvNodeType.HeadFacingTransform:
 			this.traverseHeadFacingTransform( node, defaultParent );
 			break;
@@ -1083,6 +1085,38 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 		}
 	}
 
+	traverseWeightedTransform( node: AvNode, defaultParent: PendingTransform )
+	{
+		let myWeights = node.propWeightedParents;
+		if( !myWeights || !myWeights.length )
+		{
+			return;
+		}
+
+		let weightedTransforms: PendingTransform[] = [];
+		let weights: number[] = [];
+		for( let weight of myWeights )
+		{
+			weightedTransforms.push( this.getTransform( weight.parent ) );
+		}
+		this.updateTransformWithCompute( node.globalId, weightedTransforms, null, null, 
+			( universeFromParent: mat4[], parentFromNode: mat4 ): mat4 =>
+			{
+				let weightSoFar = 0;
+				let transformSoFar: AvNodeTransform = {};
+
+				for( let i = 0; i < universeFromParent.length; i++ )
+				{
+					let thisWeight = myWeights[ i ].weight;
+					weightSoFar += thisWeight;
+					transformSoFar = lerpAvTransforms( transformSoFar, 
+						nodeTransformFromMat4( universeFromParent[ i ] ), 
+						thisWeight / weightSoFar );
+				}
+
+				return nodeTransformToMat4( transformSoFar );
+			} );
+	}
 
 	traverseHeadFacingTransform( node: AvNode, defaultParent: PendingTransform )
 	{

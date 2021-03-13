@@ -48,16 +48,6 @@ export enum MessageType
 	SetGadgetToAutoLaunch = 403,
 	RemoveGadgetFromAutoLaunch = 404,
 
-	// gadget has "room" permissions
-	// CreateRoom = 600,
-	// CreateRoomResponse = 601,
-	// DestroyRoom = 602,
-	// DestroyRoomResponse = 603,
-	// RoomMessageReceived = 604,
-	// RoomMessageReceivedResponse = 605,
-	// SendRoomMessage = 606,
-	// UpdatePose = 607,
-
 	// Interfaces and interface entities
 	InterfaceStarted = 700,
 	InterfaceEnded = 701,
@@ -476,7 +466,7 @@ export enum AvNodeType
 	// Grabber = 8,
 	// Hook = 9,
 	Line = 10,
-	//PanelIntersection = 11,
+	WeightedTransform = 11,
 	ParentTransform = 12,
 	HeadFacingTransform = 13,
 	// RemoteUniverse = 14,
@@ -688,6 +678,12 @@ export interface InitialInterfaceLock
 	params?: object;
 }
 
+export interface WeightedParent
+{
+	parent: EndpointAddr;
+	weight: number;
+}
+
 export interface AvNode
 {
 	type: AvNodeType;
@@ -724,6 +720,7 @@ export interface AvNode
 	propInterfaceLocks?: InitialInterfaceLock[];
 	propChildAddr?: EndpointAddr;
 	propModelNodeId?: string;
+	propWeightedParents?: WeightedParent[];
 }
 
 export enum EHand

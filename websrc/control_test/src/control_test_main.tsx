@@ -1,5 +1,5 @@
-import { AvGrabButton, AvPanel, AvPanelAnchor, AvStandardGrabbable, AvTransform, AvModel, DefaultLanding, GrabbableStyle, AvComposedEntity, MoveableComponent, MoveableComponentState } from '@aardvarkxr/aardvark-react';
-import { EVolumeType, g_builtinModelAardvark, g_builtinModelPlus, Av, AvVolume, g_builtinModelHook, g_builtinModelBracelet, g_builtinModelHammerAndWrench, g_builtinModelMagnetClosed, g_builtinModelRoom, g_builtinModelHandLeft, g_builtinModelHandRight } from '@aardvarkxr/aardvark-shared';
+import { AvGrabButton, AvPanel, AvPanelAnchor, AvStandardGrabbable, AvTransform, AvModel, DefaultLanding, GrabbableStyle, AvComposedEntity, MoveableComponent, MoveableComponentState, AvOrigin, AvWeightedTransform, AvPrimitive, PrimitiveType } from '@aardvarkxr/aardvark-react';
+import { EVolumeType, g_builtinModelMagnetOpen, g_builtinModelAardvark, g_builtinModelPlus, Av, AvVolume, g_builtinModelHook, g_builtinModelBracelet, g_builtinModelHammerAndWrench, g_builtinModelMagnetClosed, g_builtinModelRoom, g_builtinModelHandLeft, g_builtinModelHandRight } from '@aardvarkxr/aardvark-shared';
 import bind from 'bind-decorator';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
@@ -152,17 +152,22 @@ class GrabSpawner extends React.Component< {}, GrabSpawnerState >
 interface ControlTestState
 {
 	buttonClicked: boolean;
+	showTransforms: boolean;
 }
 
 
 class ControlTest extends React.Component< {}, ControlTestState >
 {
+	private leftRef = React.createRef<AvOrigin>();
+	private rightRef = React.createRef<AvOrigin>();
+
 	constructor( props: any )
 	{
 		super( props );
 		this.state = 
 		{ 
 			buttonClicked: false,
+			showTransforms: false,
 		};
 	}
 
@@ -176,6 +181,15 @@ class ControlTest extends React.Component< {}, ControlTestState >
 	private onButtonReleased()
 	{
 		this.setState( { buttonClicked: false } );
+	}
+
+	@bind
+	private toggleShowTransforms()
+	{
+		this.setState( ( prevState: ControlTestState ) => 
+		{ 
+			return { showTransforms: !prevState.showTransforms } 
+		} );
 	}
 
 	public render()
@@ -205,9 +219,55 @@ class ControlTest extends React.Component< {}, ControlTestState >
 							</div>
 						</AvPanel>
 					</AvTransform>
+
 					<AvTransform translateY={ 0.15 } rotateX={ 90 }>
 						<GrabSpawner/>
 					</AvTransform>
+
+					<AvOrigin ref={ this.leftRef } path="/user/hand/left"/>
+					<AvOrigin ref={ this.rightRef } path="/user/hand/right"/>
+					<AvTransform translateY={ 0.30 } rotateX={ 90 }>
+						<AvGrabButton onClick={ this.toggleShowTransforms }
+							radius={ 0.05 }>
+							<AvTransform uniformScale={ 0.1 }>
+								<AvModel uri={ g_builtinModelMagnetOpen }/>
+							</AvTransform>
+						</AvGrabButton>
+					</AvTransform>
+					{ 
+						this.state.showTransforms && this.leftRef.current && this.rightRef.current &&
+						<>
+							<AvWeightedTransform weightedParents = {
+								[
+									{ parent: this.leftRef.current.globalId, weight: 1 },
+									{ parent: this.rightRef.current.globalId, weight: 1 }
+								]
+							}>
+								<AvPrimitive type={ PrimitiveType.Sphere } radius={ 0.01 }
+									color="blue"/>
+							</AvWeightedTransform>
+							<AvWeightedTransform weightedParents = {
+								[
+									{ parent: this.leftRef.current.globalId, weight: 0 },
+									{ parent: this.rightRef.current.globalId, weight: 1 }
+								]
+							}>
+								<AvPrimitive type={ PrimitiveType.Cube } 
+									width={0.01} height={ 0.02} depth={ 0.03}
+									color="red"/>
+							</AvWeightedTransform>
+							<AvWeightedTransform weightedParents = {
+								[
+									{ parent: this.leftRef.current.globalId, weight: 0.25 },
+									{ parent: this.rightRef.current.globalId, weight: 0.75 }
+								]
+							}>
+								<AvPrimitive type={ PrimitiveType.Cylinder } 
+									radius={ 0.01 } height={ 0.02 }
+									color="orange"/>
+							</AvWeightedTransform>
+						</>
+					}
 				</AvStandardGrabbable>
 			</div>
 		)

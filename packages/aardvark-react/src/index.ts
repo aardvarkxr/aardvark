@@ -23,6 +23,7 @@ export * from './aardvark_render';
 export * from './aardvark_standard_grabbable';
 export * from './aardvark_transform';
 export * from './aardvark_utils';
+export * from './aardvark_weighted_transform';
 export * from './api_gadgetlist';
 export * from './api_interface';
 export * from './api_messagebox';
