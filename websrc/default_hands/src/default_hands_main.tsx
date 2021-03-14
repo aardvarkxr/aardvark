@@ -1041,17 +1041,12 @@ class DefaultHands extends React.Component< {}, DefaultHandsState >
 
 		this.controllerVolumes = volumeDictionary.has(inputProcessor.currentInteractionProfile) ? volumeDictionary.get(inputProcessor.currentInteractionProfile) : null;
 
-		if (inputProcessor.isStateValid)
+		if (!inputProcessor.isStateValid)
 		{
-			console.log("state is valid! no update needed!");
-		}
-		else
-		{
-			console.log("running update in 30 miliseconds");
 			window.setTimeout(() => this.forceUpdate(), 30);
 		}
 
-		if (volumeDictionary.has(inputProcessor.currentInteractionProfile))
+		if (volumeDictionary.has(inputProcessor.currentInteractionProfile))// debug stuff, feel free to get rid of this if its clogging up the console
 		{
 			console.log("currentInteraction profile is " + inputProcessor.currentInteractionProfile + " and is in the volume dictionary");
 		}
