@@ -59,6 +59,11 @@ export class InputProcessor
 		return this.state?.interactionProfile;
 	}
 
+	public get isStateValid(): boolean
+	{
+		return this.state != undefined && this.state != null;
+	}
+
 	/** Used by tests to force a state update */
 	public TEST_UpdateState( newState: InputState )
 	{

@@ -892,7 +892,6 @@ class DefaultHands extends React.Component< {}, DefaultHandsState >
 
 	private menuGestureCooldownCounter: number = 0;
 
-	private controllerType: string;
 	private controllerVolumes: gestureVolumes;
 
 	constructor(props:any)
@@ -903,11 +902,12 @@ class DefaultHands extends React.Component< {}, DefaultHandsState >
 		{
 			localStorage.setItem("introCounter", "0")
 		}
+
 		this.state =
 		{
 			menuGestureCollideMain: false,
 			menuGestureCollideSecondary: false,
-			displayIntro: (Number(localStorage.getitem("introCounter")) < 5),
+			displayIntro: Number(localStorage.getItem("introCounter")) < 5
 		};
 	}
 
@@ -1006,9 +1006,12 @@ class DefaultHands extends React.Component< {}, DefaultHandsState >
 			this.menuGestureCooldownCounter = Date.now();
 			this.toggleGadgetMenu();
 			if (this.state.displayIntro)
+			{
 				this.setState({displayIntro: false});
 				localStorage.setItem("introCounter", (Number(localStorage.getItem("introCounter")) + 1).toString());
+			}
 		}
+		
 	}
 
 	public render()
@@ -1038,6 +1041,25 @@ class DefaultHands extends React.Component< {}, DefaultHandsState >
 
 		this.controllerVolumes = volumeDictionary.has(inputProcessor.currentInteractionProfile) ? volumeDictionary.get(inputProcessor.currentInteractionProfile) : null;
 
+		if (inputProcessor.isStateValid)
+		{
+			console.log("state is valid! no update needed!");
+		}
+		else
+		{
+			console.log("running update in 30 miliseconds");
+			window.setTimeout(() => this.forceUpdate(), 30);
+		}
+
+		if (volumeDictionary.has(inputProcessor.currentInteractionProfile))
+		{
+			console.log("currentInteraction profile is " + inputProcessor.currentInteractionProfile + " and is in the volume dictionary");
+		}
+		else
+		{
+			console.log("currentInteraction profile is " + inputProcessor.currentInteractionProfile + " and isn't in the volume dictionary");
+		}
+
 		return (
 			<>
 				<DefaultHand hand={ EHand.Left } ref={ this.leftRef }/>
@@ -1056,7 +1078,7 @@ class DefaultHands extends React.Component< {}, DefaultHandsState >
 				<AvOrigin path="/user/hand/left">
 					{ this.state.displayIntro && this.controllerVolumes != null && 
 						<AvHeadFacingTransform>
-							<AvTransform uniformScale = {0.07}>
+							<AvTransform uniformScale = {0.07} rotateX = {30}>
 								<AvModel uri = {g_builtinModelMenuIntro}/>
 							</AvTransform>
 						</AvHeadFacingTransform>
