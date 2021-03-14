@@ -1,11 +1,12 @@
-import { ActiveInterface, AvComposedEntity, AvEntityChild, AvGadget, AvGrabButton, AvInterfaceEntity, AvModel, AvModelTransform, AvOrigin, AvPrimitive, AvTransform, GrabPose, GrabRequest, GrabRequestType, k_MenuInterface, MenuEvent, MenuEventType, PanelRequest, PanelRequestType, PrimitiveType, PrimitiveYOrigin, SimpleContainerComponent } from '@aardvarkxr/aardvark-react';
-import { InputProcessor, AvNodeTransform, AvQuaternion, AvVolume, g_builtinAnims, EHand, emptyVolume, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EVolumeContext, EVolumeType, g_builtinModelGear, handToDevice, InterfaceLockResult, multiplyTransforms, rayVolume, g_builtinModelSkinnedHandLeft, g_builtinModelSkinnedHandRight, Av, g_anim_Left_ThumbsUp } from '@aardvarkxr/aardvark-shared';
+import { ActiveInterface, AvComposedEntity, AvEntityChild, AvGadget, AvGrabButton, AvInterfaceEntity, InterfaceProp, AvModel, AvModelTransform, AvOrigin, AvPrimitive, AvTransform, AvHeadFacingTransform, GrabPose, GrabRequest, GrabRequestType, k_MenuInterface, MenuEvent, MenuEventType, PanelRequest, PanelRequestType, PrimitiveType, PrimitiveYOrigin, SimpleContainerComponent, InterfaceRole } from '@aardvarkxr/aardvark-react';
+import { InputProcessor, AvNodeTransform, AvQuaternion, AvVolume, g_builtinAnims, EHand, emptyVolume, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EVolumeContext, EVolumeType, g_builtinModelMenuIntro, g_builtinModelGear, handToDevice, InterfaceLockResult, multiplyTransforms, rayVolume, g_builtinModelSkinnedHandLeft, g_builtinModelSkinnedHandRight, Av, g_anim_Left_ThumbsUp, nodeTransformToMat4, InteractionProfile } from '@aardvarkxr/aardvark-shared';
 import { vec3 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
 import { initSentryForBrowser } from 'common/sentry_utils';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import { k_actionSets } from './default_hands_input';
+import {gestureVolumes, volumeDictionary} from './default_hands_gesture_volumes'
 
 initSentryForBrowser();
 
@@ -874,13 +875,41 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 	}
 }
 
-class DefaultHands extends React.Component< {}, {} >
+interface DefaultHandsState
+{
+	menuGestureCollideMain: boolean;
+	menuGestureCollideSecondary: boolean;
+	displayIntro: boolean;
+}
+
+class DefaultHands extends React.Component< {}, DefaultHandsState >
 {
 	private containerComponent = new SimpleContainerComponent();
 	private leftRef = React.createRef<DefaultHand>();
 	private rightRef = React.createRef<DefaultHand>();
 	private gadgetRegistry: ActiveInterface = null;
 	private gadgetRegistryRef = React.createRef<AvInterfaceEntity>();
+
+	private menuGestureCooldownCounter: number = 0;
+
+	private controllerVolumes: gestureVolumes;
+
+	constructor(props:any)
+	{
+		super(props);
+
+		if (!localStorage.getItem("introCounter"))
+		{
+			localStorage.setItem("introCounter", "0")
+		}
+
+		this.state =
+		{
+			menuGestureCollideMain: false,
+			menuGestureCollideSecondary: false,
+			displayIntro: Number(localStorage.getItem("introCounter")) < 5
+		};
+	}
 
 	@bind
 	private onGadgetRegistryUI( gadgetRegistry: ActiveInterface )
@@ -935,6 +964,56 @@ class DefaultHands extends React.Component< {}, {} >
 			[ { iface: k_gadgetRegistryUI, receiver: this.gadgetRegistryRef.current.globalId } ] );
 	}
 
+	@bind
+	public menuGestureActiveCollideMain(givenInterface: ActiveInterface)
+	{
+		if(givenInterface.role == InterfaceRole.Transmitter)
+		{
+			givenInterface.onEnded(() => this.setState({menuGestureCollideMain: false}));
+			this.setState({menuGestureCollideMain: true});
+		}
+	}
+
+	@bind
+	public menuGestureActiveCollideSecondary(givenInterface: ActiveInterface)
+	{
+		if(givenInterface.role == InterfaceRole.Transmitter)
+		{
+			givenInterface.onEnded(() => this.setState({menuGestureCollideSecondary: false}));
+			this.setState({menuGestureCollideSecondary: true});
+		}
+	}
+
+	private menuGestureMain:InterfaceProp[] = [{iface: "menuGestureMain@1", processor: this.menuGestureActiveCollideMain }] 
+	private menuGestureSecondary:InterfaceProp[] = [{iface: "menuGestureSecondary@1", processor: this.menuGestureActiveCollideSecondary}]
+
+	private menuGestureVolume:AvVolume =
+	{
+		type: EVolumeType.Sphere,
+		radius: 0.8
+	};
+
+	private  menuGestureVolumeLarger:AvVolume =
+	{
+		type: EVolumeType.Sphere,
+		radius: 1.5
+	};
+
+	componentDidUpdate()
+	{
+		if (this.state.menuGestureCollideMain && this.state.menuGestureCollideSecondary && Date.now() >= this.menuGestureCooldownCounter + 500)
+		{
+			this.menuGestureCooldownCounter = Date.now();
+			this.toggleGadgetMenu();
+			if (this.state.displayIntro)
+			{
+				this.setState({displayIntro: false});
+				localStorage.setItem("introCounter", (Number(localStorage.getItem("introCounter")) + 1).toString());
+			}
+		}
+		
+	}
+
 	public render()
 	{
 		const k_containerInnerVolume: AvVolume =
@@ -960,6 +1039,22 @@ class DefaultHands extends React.Component< {}, {} >
 			}
 		};
 
+		this.controllerVolumes = volumeDictionary.has(inputProcessor.currentInteractionProfile) ? volumeDictionary.get(inputProcessor.currentInteractionProfile) : null;
+
+		if (!inputProcessor.isStateValid)
+		{
+			window.setTimeout(() => this.forceUpdate(), 30);
+		}
+
+		if (volumeDictionary.has(inputProcessor.currentInteractionProfile))// debug stuff, feel free to get rid of this if its clogging up the console
+		{
+			console.log("currentInteraction profile is " + inputProcessor.currentInteractionProfile + " and is in the volume dictionary");
+		}
+		else
+		{
+			console.log("currentInteraction profile is " + inputProcessor.currentInteractionProfile + " and isn't in the volume dictionary");
+		}
+
 		return (
 			<>
 				<DefaultHand hand={ EHand.Left } ref={ this.leftRef }/>
@@ -974,23 +1069,64 @@ class DefaultHands extends React.Component< {}, {} >
 						]
 					} volume={ emptyVolume() } ref={ this.gadgetRegistryRef } />
 				</AvOrigin>
+
 				<AvOrigin path="/user/hand/left">
-					<AvTransform translateZ={ 0.04 } translateY={ 0.02 }>
-						<AvGrabButton onClick={ this.toggleGadgetMenu } 
-							modelUri={ g_builtinModelGear }/>
-					</AvTransform>
+					{ this.state.displayIntro && this.controllerVolumes != null && 
+						<AvHeadFacingTransform>
+							<AvTransform uniformScale = {0.07} rotateX = {30}>
+								<AvModel uri = {g_builtinModelMenuIntro}/>
+							</AvTransform>
+						</AvHeadFacingTransform>
+					}
+
+					{ this.controllerVolumes == null && 
+						<AvTransform translateZ={ 0.04 } translateY={ 0.02 }>
+							<AvGrabButton onClick={ this.toggleGadgetMenu } modelUri={ g_builtinModelGear }/>
+						</AvTransform>
+					/*
+					if we dont have a controller we recognise, then show the cog, this will likely display the cog
+					for a frame or two before state finished setting up even if we wil recognise the controller
+					but thats such a short amount of time that it shouldnt be an issue
+					*/
+					}
 				</AvOrigin>
+
+				
+				{ this.controllerVolumes != null && // set up volumes if we have a controller
+					<>
+						<AvOrigin path="/user/hand/left">
+							<AvTransform uniformScale = {0.03} transform = {this.controllerVolumes.leftHandTop}>
+								<AvInterfaceEntity volume = {this.menuGestureVolume} transmits = {this.menuGestureMain}></AvInterfaceEntity>
+							</AvTransform>
+							<AvTransform uniformScale = {0.03} transform = {this.controllerVolumes.leftHandBottom}>
+								<AvInterfaceEntity volume = {this.menuGestureVolumeLarger} transmits = {this.menuGestureSecondary}></AvInterfaceEntity>
+							</AvTransform>
+						</AvOrigin>
+						<AvOrigin path = "/user/hand/right">
+							<AvTransform uniformScale = {0.03} transform = {this.controllerVolumes.rightHandTop}>
+								<AvInterfaceEntity volume = {this.menuGestureVolume} receives = {this.menuGestureMain}></AvInterfaceEntity>
+							</AvTransform>
+							<AvTransform uniformScale = {0.03} transform = {this.controllerVolumes.rightHandBottom}>
+								<AvInterfaceEntity volume = {this.menuGestureVolume} receives = {this.menuGestureSecondary}></AvInterfaceEntity>
+							</AvTransform>
+						</AvOrigin>
+					</>
+				}
+				
+
 				{/* <AvOrigin path="/user/head">
 					<AvComposedEntity components={ [ this.containerComponent ]} 
 						volume={ [ k_containerInnerVolume, k_containerOuterVolume ] }
 						priority={ 90 }/>
 				</AvOrigin> */}
+
 				<AvOrigin path="/space/stage">
 					<AvComposedEntity components={ [this.containerComponent ] }
 						volume={ { type: EVolumeType.Infinite } }
 						debugName="stage container">
 					</AvComposedEntity>
 				</AvOrigin>
+
 				{/* <AvOrigin path="/user/head">
 					<AvTransform translateZ={-2}>
 						<AvPanel widthInMeters={1.0}>
