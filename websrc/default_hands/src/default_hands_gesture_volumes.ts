@@ -15,14 +15,22 @@ volumeDictionary.set("/interaction_profiles/valve/index_controller", {
 	rightHandTop: {position: {x: 0, y:-0.13, z:0.13}},
 	rightHandBottom: {position: {x: 0, y:0, z:0.13}},
 
-})
+});
+
 volumeDictionary.set("default", {
 	leftHandTop: {position: {x: 0, y:-0.13, z:0.13}},
 	leftHandBottom: {position: {x: 0, y:-0.24, z:0.23}},
 	rightHandTop: {position: {x: 0, y:-0.13, z:0.13}},
 	rightHandBottom: {position: {x: 0, y:0, z:0.13}},
 
-})
+});
+
+volumeDictionary.set("/interaction_profiles/microsoft/hpmotioncontroller", {
+	leftHandTop: {position: 	{ 	x: -0.02, 	y:  0.01, 	z: 0.08	}},
+	leftHandBottom: {position: 	{	x: 0.02, 	y: -0.12,	z: 0.08	}},
+	rightHandTop: {position: 	{	x: 0, 		y: -0.13, 	z: 0.08	}},
+	rightHandBottom: {position: {	x: 0, 		y: 0, 		z: 0.08	}},
+});
 
 /*
 	each dictionary stores a set of coords for volumes on the users hands, if you want to add you're own for another controller it would probably be a good idea
