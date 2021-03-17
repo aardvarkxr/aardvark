@@ -22,6 +22,11 @@ interface Vector2Callback extends InputCallback
 	change: ( oldValue: [ number, number ], newValue: [ number, number ] ) => void;
 }
 
+interface InteractionProfileCallback extends InputCallback
+{
+	change: ( oldInteractionProfile: string, newInteractionProfile: string ) => void;
+}
+
 interface ActionWithListeners extends Action
 {
 	leftCallbacks?: (BooleanCallback | FloatCallback | Vector2Callback )[];
@@ -44,6 +49,7 @@ export class InputProcessor
 	private actionSets: ActionSet[];
 	private nextCallbackId = 1;
 	private syncInputOverride: ( info: InputInfo ) => InputState;
+	private interactionProfileCallbacks: InteractionProfileCallback[] = [];
 
 	constructor( actionSets: ActionSet[], inputIntervalMs?: number, 
 		syncInputOverride?: ( info: InputInfo ) => InputState )
@@ -256,6 +262,18 @@ export class InputProcessor
 		return cb.id;
 	}
 
+	public registerInteractionProfileCallback( 
+		cb: ( oldInteractionProfile: string, newInteractionProfile: string ) => void )
+	{
+		let cbid = this.nextCallbackId++;
+		this.interactionProfileCallbacks.push(
+			{ 
+				id: cbid,
+				change: cb,
+			} );
+		return cbid;
+	}
+
 	/** Unregisters a callback by id */
 	public unregisterCallback( id: number )
 	{
@@ -269,6 +287,8 @@ export class InputProcessor
 				action.rightCallbacks = action.rightCallbacks?.filter( ( cb ) => cb.id != id );
 			}
 		}
+		this.interactionProfileCallbacks = 
+			this.interactionProfileCallbacks?.filter( ( cb ) => cb.id != id );
 	}
 
 
@@ -317,7 +337,20 @@ export class InputProcessor
 	private applyNewState( newState: InputState )
 	{
 		this.processDiffs( this.state, newState );
+
+		let oldInteractionProfile = this.state?.interactionProfile;
+		let newInteractionProfile = newState?.interactionProfile;
 		this.state = newState;
+
+		if( oldInteractionProfile != newInteractionProfile )
+		{
+			console.log( `Interaction profile has changed from ${ oldInteractionProfile } to `
+				+ `${ newInteractionProfile }` );
+			for( let cb of this.interactionProfileCallbacks )
+			{
+				cb.change( oldInteractionProfile, newInteractionProfile );
+			}
+		}
 	}
 
 	private callCallback( cb: BooleanCallback | FloatCallback | Vector2Callback,

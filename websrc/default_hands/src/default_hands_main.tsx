@@ -909,6 +909,8 @@ class DefaultHands extends React.Component< {}, DefaultHandsState >
 			menuGestureCollideSecondary: false,
 			displayIntro: Number(localStorage.getItem("introCounter")) < 5
 		};
+
+		inputProcessor.registerInteractionProfileCallback( () => { this.forceUpdate(); } );
 	}
 
 	@bind
@@ -990,13 +992,15 @@ class DefaultHands extends React.Component< {}, DefaultHandsState >
 	private menuGestureVolume:AvVolume =
 	{
 		type: EVolumeType.Sphere,
-		radius: 0.8
+		radius: 0.8,
+//		visualize: true,
 	};
 
 	private  menuGestureVolumeLarger:AvVolume =
 	{
 		type: EVolumeType.Sphere,
-		radius: 1.5
+		radius: 1.5,
+//		visualize: true,
 	};
 
 	componentDidUpdate()
@@ -1041,18 +1045,14 @@ class DefaultHands extends React.Component< {}, DefaultHandsState >
 
 		this.controllerVolumes = volumeDictionary.has(inputProcessor.currentInteractionProfile) ? volumeDictionary.get(inputProcessor.currentInteractionProfile) : null;
 
-		if (!inputProcessor.isStateValid)
-		{
-			window.setTimeout(() => this.forceUpdate(), 30);
-		}
-
-		if (volumeDictionary.has(inputProcessor.currentInteractionProfile))// debug stuff, feel free to get rid of this if its clogging up the console
+		if ( this.controllerVolumes )
 		{
 			console.log("currentInteraction profile is " + inputProcessor.currentInteractionProfile + " and is in the volume dictionary");
 		}
 		else
 		{
 			console.log("currentInteraction profile is " + inputProcessor.currentInteractionProfile + " and isn't in the volume dictionary");
+			this.controllerVolumes = volumeDictionary.get( "default" );
 		}
 
 		return (
