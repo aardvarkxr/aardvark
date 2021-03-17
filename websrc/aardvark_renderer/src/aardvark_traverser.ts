@@ -78,6 +78,7 @@ class PendingTransform
 
 		this.m_currentlyResolving = true;
 
+		let parentFromNode = this.m_parentFromNode ?? mat4.identity;
 		if( this.m_parents )
 		{
 			for( let parent of this.m_parents )
@@ -95,13 +96,13 @@ class PendingTransform
 			{
 				let universeFromParent = this.universeFromParentWithConstraint();
 				this.m_universeFromNode = new mat4;
-				mat4.product( universeFromParent, this.m_parentFromNode, 
+				mat4.product( universeFromParent, parentFromNode, 
 					this.m_universeFromNode );
 			}
 		}
 		else
 		{
-			this.m_universeFromNode = this.m_parentFromNode;
+			this.m_universeFromNode = parentFromNode;
 		}
 
 		this.m_currentlyResolving = false;
@@ -1099,7 +1100,7 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 		{
 			weightedTransforms.push( this.getTransform( weight.parent ) );
 		}
-		this.updateTransformWithCompute( node.globalId, weightedTransforms, null, null, 
+		this.updateTransformWithCompute( node.globalId, weightedTransforms, mat4.identity, null, 
 			( universeFromParent: mat4[], parentFromNode: mat4 ): mat4 =>
 			{
 				let weightSoFar = 0;
@@ -1121,7 +1122,7 @@ export class AvDefaultTraverser implements InterfaceProcessorCallbacks, Traverse
 	traverseHeadFacingTransform( node: AvNode, defaultParent: PendingTransform )
 	{
 		let universeFromHead = new mat4( this.m_renderer.getUniverseFromOriginTransform( "/user/head" ) );
-		this.updateTransformWithCompute( node.globalId, [ defaultParent ], null, null,
+		this.updateTransformWithCompute( node.globalId, [ defaultParent ], mat4.identity, null,
 			( universeFromParent: mat4[], parentFromNode ) =>
 			{
 				let yAxisRough = new vec3( [ 0, 1, 0 ] );
