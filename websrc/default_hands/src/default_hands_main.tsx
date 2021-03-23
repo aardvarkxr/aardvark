@@ -1,4 +1,4 @@
-import { ActiveInterface, AvComposedEntity, AvEntityChild, AvGadget, AvGrabButton, AvInterfaceEntity, InterfaceProp, AvModel, AvModelTransform, AvOrigin, AvPrimitive, AvTransform, AvHeadFacingTransform, GrabPose, GrabRequest, GrabRequestType, k_MenuInterface, MenuEvent, MenuEventType, PanelRequest, PanelRequestType, PrimitiveType, PrimitiveYOrigin, SimpleContainerComponent, InterfaceRole } from '@aardvarkxr/aardvark-react';
+import { ActiveInterface, AvComposedEntity, AvEntityChild, AvGadget, AvGrabButton, AvInterfaceEntity, InterfaceProp, AvModel, AvModelTransform, AvOrigin, AvPrimitive, AvTransform, AvHeadFacingTransform, GrabPose, GrabRequest, GrabRequestType, k_MenuInterface, MenuEvent, MenuEventType, PanelRequest, PanelRequestType, PrimitiveType, PrimitiveYOrigin, SimpleContainerComponent, InterfaceRole, AvWeightedTransform } from '@aardvarkxr/aardvark-react';
 import { InputProcessor, AvNodeTransform, AvQuaternion, AvVolume, g_builtinAnims, EHand, emptyVolume, EndpointAddr, endpointAddrsMatch, endpointAddrToString, EVolumeContext, EVolumeType, g_builtinModelMenuIntro, g_builtinModelGear, handToDevice, InterfaceLockResult, multiplyTransforms, rayVolume, g_builtinModelSkinnedHandLeft, g_builtinModelSkinnedHandRight, Av, g_anim_Left_ThumbsUp, nodeTransformToMat4, InteractionProfile } from '@aardvarkxr/aardvark-shared';
 import { vec3 } from '@tlaukkan/tsm';
 import bind from 'bind-decorator';
@@ -877,8 +877,8 @@ class DefaultHand extends React.Component< DefaultHandProps, DefaultHandState >
 
 interface DefaultHandsState
 {
-	menuGestureCollideMain: boolean;
-	menuGestureCollideSecondary: boolean;
+	gestureCollideMain: boolean;
+	gestureCollideSecondary: boolean;
 	displayIntro: boolean;
 }
 
@@ -890,9 +890,9 @@ class DefaultHands extends React.Component< {}, DefaultHandsState >
 	private gadgetRegistry: ActiveInterface = null;
 	private gadgetRegistryRef = React.createRef<AvInterfaceEntity>();
 
-	private menuGestureCooldownCounter: number = 0;
-
 	private controllerVolumes: gestureVolumes;
+	private introTransformLeft = React.createRef<AvOrigin>();
+	private introTransformRight = React.createRef<AvOrigin>();
 
 	constructor(props:any)
 	{
@@ -905,9 +905,10 @@ class DefaultHands extends React.Component< {}, DefaultHandsState >
 
 		this.state =
 		{
-			menuGestureCollideMain: false,
-			menuGestureCollideSecondary: false,
-			displayIntro: Number(localStorage.getItem("introCounter")) < 5
+			gestureCollideMain: false,
+			gestureCollideSecondary: false,
+			//displayIntro: Number(localStorage.getItem("introCounter")) < 5
+			displayIntro: true,
 		};
 
 		inputProcessor.registerInteractionProfileCallback( () => { this.forceUpdate(); } );
@@ -967,47 +968,54 @@ class DefaultHands extends React.Component< {}, DefaultHandsState >
 	}
 
 	@bind
-	public menuGestureActiveCollideMain(givenInterface: ActiveInterface)
+	public gestureActiveMain(givenInterface: ActiveInterface)
 	{
 		if(givenInterface.role == InterfaceRole.Transmitter)
 		{
-			givenInterface.onEnded(() => this.setState({menuGestureCollideMain: false}));
-			this.setState({menuGestureCollideMain: true});
+			givenInterface.onEnded(() => this.setState({gestureCollideMain: false}));
+			this.setState({gestureCollideMain: true});
 		}
 	}
 
 	@bind
-	public menuGestureActiveCollideSecondary(givenInterface: ActiveInterface)
+	public gestureActiveSecondary(givenInterface: ActiveInterface)
 	{
 		if(givenInterface.role == InterfaceRole.Transmitter)
 		{
-			givenInterface.onEnded(() => this.setState({menuGestureCollideSecondary: false}));
-			this.setState({menuGestureCollideSecondary: true});
+			givenInterface.onEnded(() => this.setState({gestureCollideSecondary: false}));
+			this.setState({gestureCollideSecondary: true});
 		}
 	}
 
-	private menuGestureMain:InterfaceProp[] = [{iface: "menuGestureMain@1", processor: this.menuGestureActiveCollideMain }] 
-	private menuGestureSecondary:InterfaceProp[] = [{iface: "menuGestureSecondary@1", processor: this.menuGestureActiveCollideSecondary}]
+	private gestureMain:InterfaceProp[] = [{iface: "menuGestureMain@1", processor: this.gestureActiveMain }] 
+	private gestureSecondary:InterfaceProp[] = [{iface: "menuGestureSecondary@1", processor: this.gestureActiveSecondary}]
 
-	private menuGestureVolume:AvVolume =
+	private gestureVolume:AvVolume =
 	{
 		type: EVolumeType.Sphere,
-		radius: 0.8,
+		radius: 0.03,
 //		visualize: true,
 	};
 
-	private  menuGestureVolumeLarger:AvVolume =
+	private  gestureVolumeLarger:AvVolume =
 	{
 		type: EVolumeType.Sphere,
-		radius: 1.5,
+		radius: 0.05,
+//		visualize: true,
+	};
+
+	private gestureVolumeEnd:AvVolume = 
+	{
+		type: EVolumeType.Sphere, 
+		radius :0.25, 
+		context: EVolumeContext.ContinueOnly
 //		visualize: true,
 	};
 
 	componentDidUpdate()
 	{
-		if (this.state.menuGestureCollideMain && this.state.menuGestureCollideSecondary && Date.now() >= this.menuGestureCooldownCounter + 500)
+		if (this.state.gestureCollideMain && this.state.gestureCollideSecondary)
 		{
-			this.menuGestureCooldownCounter = Date.now();
 			this.toggleGadgetMenu();
 			if (this.state.displayIntro)
 			{
@@ -1055,6 +1063,11 @@ class DefaultHands extends React.Component< {}, DefaultHandsState >
 			this.controllerVolumes = volumeDictionary.get( "default" );
 		}
 
+		if (this.state.displayIntro && this.controllerVolumes != null && this.introTransformLeft.current != null && this.introTransformRight.current != null)
+		{
+			console.log("right: " + this.introTransformRight.current.endpointAddr() + "\n left: "+ this.introTransformLeft.current.endpointAddr())
+		}
+
 		return (
 			<>
 				<DefaultHand hand={ EHand.Left } ref={ this.leftRef }/>
@@ -1070,14 +1083,7 @@ class DefaultHands extends React.Component< {}, DefaultHandsState >
 					} volume={ emptyVolume() } ref={ this.gadgetRegistryRef } />
 				</AvOrigin>
 
-				<AvOrigin path="/user/hand/left">
-					{ this.state.displayIntro && this.controllerVolumes != null && 
-						<AvHeadFacingTransform>
-							<AvTransform uniformScale = {0.07} rotateX = {30}>
-								<AvModel uri = {g_builtinModelMenuIntro}/>
-							</AvTransform>
-						</AvHeadFacingTransform>
-					}
+				<AvOrigin path="/user/hand/left" ref = {this.introTransformLeft}>
 
 					{ this.controllerVolumes == null && 
 						<AvTransform translateZ={ 0.04 } translateY={ 0.02 }>
@@ -1091,23 +1097,35 @@ class DefaultHands extends React.Component< {}, DefaultHandsState >
 					}
 				</AvOrigin>
 
+				<AvOrigin path = {"/user/hand/left"} ref = {this.introTransformRight}></AvOrigin>
+
+				{ this.state.displayIntro && this.controllerVolumes != null && this.introTransformLeft.current != null && this.introTransformRight.current != null && 
+					<AvWeightedTransform weightedParents = {[{parent: this.introTransformRight.current.endpointAddr(), weight: 1}, {parent: this.introTransformLeft.current.endpointAddr(), weight: 1}]}>
+						<AvHeadFacingTransform>
+							<AvTransform uniformScale = {0.07} rotateX = {30}>
+								<AvModel uri = {g_builtinModelMenuIntro}/>
+							</AvTransform>
+						</AvHeadFacingTransform>
+					</AvWeightedTransform>
+				}
+
 				
 				{ this.controllerVolumes != null && // set up volumes if we have a controller
 					<>
 						<AvOrigin path="/user/hand/left">
-							<AvTransform uniformScale = {0.03} transform = {this.controllerVolumes.leftHandTop}>
-								<AvInterfaceEntity volume = {this.menuGestureVolume} transmits = {this.menuGestureMain}></AvInterfaceEntity>
+							<AvTransform transform = {this.controllerVolumes.leftHandTop}>
+								<AvInterfaceEntity volume = {[this.gestureVolume, this.gestureVolumeEnd]} transmits = {this.gestureMain}></AvInterfaceEntity>
 							</AvTransform>
-							<AvTransform uniformScale = {0.03} transform = {this.controllerVolumes.leftHandBottom}>
-								<AvInterfaceEntity volume = {this.menuGestureVolumeLarger} transmits = {this.menuGestureSecondary}></AvInterfaceEntity>
+							<AvTransform  transform = {this.controllerVolumes.leftHandBottom}>
+								<AvInterfaceEntity volume = {[this.gestureVolumeLarger, this.gestureVolumeEnd]} transmits = {this.gestureSecondary}></AvInterfaceEntity>
 							</AvTransform>
 						</AvOrigin>
 						<AvOrigin path = "/user/hand/right">
-							<AvTransform uniformScale = {0.03} transform = {this.controllerVolumes.rightHandTop}>
-								<AvInterfaceEntity volume = {this.menuGestureVolume} receives = {this.menuGestureMain}></AvInterfaceEntity>
+							<AvTransform transform = {this.controllerVolumes.rightHandTop}>
+								<AvInterfaceEntity volume = {[this.gestureVolume, this.gestureVolumeEnd]} receives = {this.gestureMain}></AvInterfaceEntity>
 							</AvTransform>
-							<AvTransform uniformScale = {0.03} transform = {this.controllerVolumes.rightHandBottom}>
-								<AvInterfaceEntity volume = {this.menuGestureVolume} receives = {this.menuGestureSecondary}></AvInterfaceEntity>
+							<AvTransform transform = {this.controllerVolumes.rightHandBottom}>
+								<AvInterfaceEntity volume = {[this.gestureVolume, this.gestureVolumeEnd]} receives = {this.gestureSecondary}></AvInterfaceEntity>
 							</AvTransform>
 						</AvOrigin>
 					</>
