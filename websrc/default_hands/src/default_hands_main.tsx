@@ -1099,13 +1099,14 @@ class DefaultHands extends React.Component< {}, DefaultHandsState >
 
 				<AvOrigin path = {"/user/hand/right"} ref = {this.introTransformRight}></AvOrigin>
 
-				{ this.state.displayIntro && this.controllerVolumes != null && this.introTransformLeft.current != null && this.introTransformRight.current != null && 
+				{ /*
+				this.state.displayIntro && this.controllerVolumes != null && this.introTransformLeft.current != null && this.introTransformRight.current != null && 
 					<AvWeightedTransform weightedParents = {[{parent: this.introTransformRight.current.endpointAddr(), weight: 1}, {parent: this.introTransformLeft.current.endpointAddr(), weight: 1}]}>
 						<AvTransform uniformScale = {0.07} rotateX = {30}>
 							<AvModel uri = {g_builtinModelMenuIntro}/>
 						</AvTransform>
 					</AvWeightedTransform>
-				}
+				*/}
 
 				
 				{ this.controllerVolumes != null && // set up volumes if we have a controller
