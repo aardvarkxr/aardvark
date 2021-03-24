@@ -951,7 +951,7 @@ class DefaultHands extends React.Component< {}, DefaultHandsState >
 
 		// this is a solution to an issue which seems to be the same as the one above, weighted transform doesnt have
 		// access to valid endpoints on the first render, we need to trigger another render when it will have them
-		window.setTimeout(() => this.forceUpdate(), 500);
+		window.setTimeout(() => this.forceUpdate(), 100);
 	}
 
 	private startGadgetMenu()
