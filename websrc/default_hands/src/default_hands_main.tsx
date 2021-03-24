@@ -894,6 +894,8 @@ class DefaultHands extends React.Component< {}, DefaultHandsState >
 	private introTransformLeft = React.createRef<AvOrigin>();
 	private introTransformRight = React.createRef<AvOrigin>();
 
+	private TEMPREFERENCE = React.createRef<AvWeightedTransform>();
+
 	constructor(props:any)
 	{
 		super(props);
@@ -946,6 +948,10 @@ class DefaultHands extends React.Component< {}, DefaultHandsState >
 		{
 			this.startGadgetMenu();
 		}
+
+		// this is a solution to an issue which seems to be the same as the one above, weighted transform doesnt have
+		// access to valid endpoints on the first render, we need to trigger another render when it will have them
+		window.setTimeout(() => this.forceUpdate(), 500);
 	}
 
 	private startGadgetMenu()
@@ -1062,11 +1068,7 @@ class DefaultHands extends React.Component< {}, DefaultHandsState >
 			console.log("currentInteraction profile is " + inputProcessor.currentInteractionProfile + " and isn't in the volume dictionary");
 			this.controllerVolumes = volumeDictionary.get( "default" );
 		}
-
-		if (this.state.displayIntro && this.controllerVolumes != null && this.introTransformLeft.current != null && this.introTransformRight.current != null)
-		{
-			console.log("right: " + this.introTransformRight.current.endpointAddr() + "\n left: "+ this.introTransformLeft.current.endpointAddr())
-		}
+		
 
 		return (
 			<>
@@ -1099,14 +1101,15 @@ class DefaultHands extends React.Component< {}, DefaultHandsState >
 
 				<AvOrigin path = {"/user/hand/right"} ref = {this.introTransformRight}></AvOrigin>
 
-				{ /*
-				this.state.displayIntro && this.controllerVolumes != null && this.introTransformLeft.current != null && this.introTransformRight.current != null && 
-					<AvWeightedTransform weightedParents = {[{parent: this.introTransformRight.current.endpointAddr(), weight: 1}, {parent: this.introTransformLeft.current.endpointAddr(), weight: 1}]}>
-						<AvTransform uniformScale = {0.07} rotateX = {30}>
-							<AvModel uri = {g_builtinModelMenuIntro}/>
-						</AvTransform>
+				{ this.state.displayIntro && this.controllerVolumes != null && this.introTransformLeft.current != null && this.introTransformRight.current != null && 
+					<AvWeightedTransform weightedParents = {[{parent: this.introTransformRight.current.endpointAddr(), weight: 1}, {parent: this.introTransformLeft.current.endpointAddr(), weight: 1}]} ref = {this.TEMPREFERENCE}>
+						<AvHeadFacingTransform>
+							<AvTransform uniformScale = {0.07} rotateX = {30}>
+								<AvModel uri = {g_builtinModelMenuIntro}/>
+							</AvTransform>
+						</AvHeadFacingTransform>
 					</AvWeightedTransform>
-				*/}
+				}
 
 				
 				{ this.controllerVolumes != null && // set up volumes if we have a controller
