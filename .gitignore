@@ -28,3 +28,4 @@ node_modules
 myeasylog.log
 avrenderer.aps
 
+src/out/build/
