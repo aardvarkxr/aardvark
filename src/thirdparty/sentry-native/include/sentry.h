@@ -24,8 +24,8 @@ extern "C" {
 
 /* SDK Version */
 #define SENTRY_SDK_NAME "sentry.native"
-#define SENTRY_SDK_VERSION "0.4.0"
-#define SENTRY_SDK_USER_AGENT (SENTRY_SDK_NAME "/" SENTRY_SDK_VERSION)
+#define SENTRY_SDK_VERSION "0.4.6"
+#define SENTRY_SDK_USER_AGENT SENTRY_SDK_NAME "/" SENTRY_SDK_VERSION
 
 /* common platform detection */
 #ifdef _WIN32
@@ -729,6 +729,18 @@ SENTRY_API const char *sentry_options_get_ca_certs(
     const sentry_options_t *opts);
 
 /**
+ * Configures the name of the http transport thread.
+ */
+SENTRY_API void sentry_options_set_transport_thread_name(
+    sentry_options_t *opts, const char *name);
+
+/**
+ * Returns the configured http transport thread name.
+ */
+SENTRY_API const char *sentry_options_get_transport_thread_name(
+    const sentry_options_t *opts);
+
+/**
  * Enables or disables debug printing mode.
  */
 SENTRY_API void sentry_options_set_debug(sentry_options_t *opts, int debug);
@@ -837,12 +849,23 @@ SENTRY_API void sentry_options_set_handler_path(
  * artifacts in case of a crash. This will also be used by the crashpad backend
  * if it is configured.
  *
- * The path defaults to `.sentry-native` in the current working directory, will
- * be created if it does not exist, and will be resolved to an absolute path
- * inside of `sentry_init`.
+ * The directory is used for "cached" data, which needs to persist across
+ * application restarts to ensure proper flagging of release-health sessions,
+ * but might otherwise be safely purged regularly.
  *
- * It is recommended that library users set an explicit absolute path, depending
- * on their apps runtime directory.
+ * It is roughly equivalent to the type of `AppData/Local` on Windows and
+ * `XDG_CACHE_HOME` on Linux, and equivalent runtime directories on other
+ * platforms.
+ *
+ * It is recommended that users set an explicit absolute path, depending
+ * on their apps runtime directory. The path will be created if it does not
+ * exist, and will be resolved to an absolute path inside of `sentry_init`. The
+ * directory should not be shared with other application data/configuration, as
+ * sentry-native will enumerate and possibly delete files in that directory. An
+ * example might be `$XDG_CACHE_HOME/your-app/sentry`
+ *
+ * If no explicit path it set, sentry-native will default to `.sentry-native` in
+ * the current working directory, with no specific platform-specific handling.
  *
  * `path` is assumed to be in platform-specific filesystem path encoding.
  * API Users on windows are encouraged to use
@@ -903,6 +926,14 @@ SENTRY_API int sentry_init(sentry_options_t *options);
 SENTRY_API int sentry_shutdown(void);
 
 /**
+ * This will lazily load and cache a list of all the loaded libraries.
+ *
+ * Returns a new reference to an immutable, frozen list.
+ * The reference must be released with `sentry_value_decref`.
+ */
+SENTRY_EXPERIMENTAL_API sentry_value_t sentry_get_modules_list(void);
+
+/**
  * Clears the internal module cache.
  *
  * For performance reasons, sentry will cache the list of loaded libraries when
@@ -912,6 +943,17 @@ SENTRY_API int sentry_shutdown(void);
  * `sentry_capture_event` will have an up-to-date module list.
  */
 SENTRY_EXPERIMENTAL_API void sentry_clear_modulecache(void);
+
+/**
+ * Re-initializes the Sentry backend.
+ *
+ * This is needed if a third-party library overrides the previously installed
+ * signal handler. Calling this function can be potentially dangerous and should
+ * only be done when necessary.
+ *
+ * Returns 0 on success.
+ */
+SENTRY_EXPERIMENTAL_API int sentry_reinstall_backend(void);
 
 /**
  * Gives user consent.

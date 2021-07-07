@@ -6,7 +6,7 @@ import time
 import itertools
 import json
 from . import make_dsn, check_output, run, Envelope
-from .conditions import is_asan, has_http, has_inproc, has_breakpad, has_files
+from .conditions import has_http, has_breakpad, has_files
 from .assertions import (
     assert_attachment,
     assert_meta,
@@ -22,7 +22,7 @@ from .assertions import (
 pytestmark = pytest.mark.skipif(not has_http, reason="tests need http")
 
 auth_header = (
-    "Sentry sentry_key=uiaeosnrtdy, sentry_version=7, sentry_client=sentry.native/0.4.0"
+    "Sentry sentry_key=uiaeosnrtdy, sentry_version=7, sentry_client=sentry.native/0.4.6"
 )
 
 
@@ -183,7 +183,6 @@ def test_abnormal_session(cmake, httpserver):
     assert_session(envelope1, {"status": "abnormal", "errors": 0, "duration": 10})
 
 
-@pytest.mark.skipif(not has_inproc, reason="test needs inproc backend")
 def test_inproc_crash_http(cmake, httpserver):
     tmp_path = cmake(["sentry_example"], {"SENTRY_BACKEND": "inproc"})
 
@@ -209,14 +208,13 @@ def test_inproc_crash_http(cmake, httpserver):
 
     assert_session(envelope, {"init": True, "status": "crashed", "errors": 1})
 
-    assert_meta(envelope)
+    assert_meta(envelope, integration="inproc")
     assert_breadcrumb(envelope)
     assert_attachment(envelope)
 
     assert_crash(envelope)
 
 
-@pytest.mark.skipif(not has_inproc, reason="test needs inproc backend")
 def test_inproc_dump_inflight(cmake, httpserver):
     tmp_path = cmake(["sentry_example"], {"SENTRY_BACKEND": "inproc"})
 
@@ -262,7 +260,7 @@ def test_breakpad_crash_http(cmake, httpserver):
 
     assert_session(envelope, {"init": True, "status": "crashed", "errors": 1})
 
-    assert_meta(envelope)
+    assert_meta(envelope, integration="breakpad")
     assert_breadcrumb(envelope)
     assert_attachment(envelope)
 

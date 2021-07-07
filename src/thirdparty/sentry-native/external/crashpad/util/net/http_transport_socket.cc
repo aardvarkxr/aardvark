@@ -123,7 +123,7 @@ class SSLStream : public Stream {
         return false;
       }
     } else {
-#if defined(OS_LINUX)
+#if defined(OS_LINUX) || defined(OS_CHROMEOS)
       if (SSL_CTX_load_verify_locations(
               ctx_.get(), nullptr, "/etc/ssl/certs") <= 0) {
         LOG(ERROR) << "SSL_CTX_load_verify_locations";
@@ -419,7 +419,7 @@ bool WriteRequest(Stream* stream,
         }
       }
 
-      write_start = buf.crlf - size_len;
+      write_start = static_cast<char*>(buf.crlf) - size_len;
       write_size = size_len + sizeof(buf.crlf) + data_bytes + kCRLFSize;
     } else {
       // When not using chunked encoding, only use buf.data.

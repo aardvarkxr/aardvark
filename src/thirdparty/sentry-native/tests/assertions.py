@@ -1,4 +1,6 @@
 import datetime
+import email
+import gzip
 
 
 def matches(actual, expected):
@@ -21,7 +23,7 @@ def assert_session(envelope, extra_assertion=None):
         assert matches(session, extra_assertion)
 
 
-def assert_meta(envelope, release="test-example-release"):
+def assert_meta(envelope, release="test-example-release", integration=None):
     event = envelope.get_event()
 
     expected = {
@@ -33,16 +35,20 @@ def assert_meta(envelope, release="test-example-release"):
         "transaction": "test-transaction",
         "tags": {"expected-tag": "some value"},
         "extra": {"extra stuff": "some value", "…unicode key…": "őá…–🤮🚀¿ 한글 테스트"},
-        "sdk": {
-            "name": "sentry.native",
-            "version": "0.4.0",
-            "packages": [
-                {"name": "github:getsentry/sentry-native", "version": "0.4.0"},
-            ],
-        },
+    }
+    expected_sdk = {
+        "name": "sentry.native",
+        "version": "0.4.6",
+        "packages": [{"name": "github:getsentry/sentry-native", "version": "0.4.6"},],
     }
 
     assert matches(event, expected)
+    assert matches(event["sdk"], expected_sdk)
+
+    if integration is None:
+        assert event["sdk"].get("integrations") is None
+    else:
+        assert event["sdk"]["integrations"] == [integration]
     assert any(
         "sentry_example" in image["code_file"]
         for image in event["debug_meta"]["images"]
@@ -127,3 +133,21 @@ def assert_crash(envelope):
     # depending on the unwinder, we currently don’t get any stack frames from
     # a `ucontext`
     assert_stacktrace(envelope, inside_exception=True, check_size=False)
+
+
+def assert_crashpad_upload(req):
+    multipart = gzip.decompress(req.get_data())
+    msg = email.message_from_bytes(bytes(str(req.headers), encoding="utf8") + multipart)
+    files = [part.get_filename() for part in msg.walk()]
+
+    # TODO:
+    # Actually assert that we get a correct event/breadcrumbs payload
+    assert "__sentry-breadcrumb1" in files
+    assert "__sentry-breadcrumb2" in files
+    assert "__sentry-event" in files
+
+    assert any(
+        b'name="upload_file_minidump"' in part.as_bytes()
+        and b"\n\nMDMP" in part.as_bytes()
+        for part in msg.walk()
+    )

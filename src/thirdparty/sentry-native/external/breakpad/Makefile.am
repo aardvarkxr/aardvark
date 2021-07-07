@@ -123,6 +123,7 @@ endif
 check_LIBRARIES =
 noinst_LIBRARIES =
 lib_LIBRARIES =
+libexec_PROGRAMS =
 bin_PROGRAMS =
 check_PROGRAMS =
 EXTRA_PROGRAMS =
@@ -355,6 +356,7 @@ CLEANFILES += \
 if !DISABLE_TOOLS
 bin_PROGRAMS += \
 	src/tools/linux/core2md/core2md \
+	src/tools/linux/pid2md/pid2md \
 	src/tools/linux/dump_syms/dump_syms \
 	src/tools/linux/md2core/minidump-2-core \
 	src/tools/linux/symupload/minidump_upload \
@@ -362,6 +364,10 @@ bin_PROGRAMS += \
 if X86_HOST
 bin_PROGRAMS += \
 	src/tools/mac/dump_syms/dump_syms_mac
+endif
+if HAVE_MEMFD_CREATE
+libexec_PROGRAMS += \
+	src/tools/linux/core_handler/core_handler
 endif
 endif
 endif LINUX_HOST
@@ -371,6 +377,8 @@ endif LINUX_HOST
 if !DISABLE_PROCESSOR
 check_PROGRAMS += \
 	src/common/test_assembler_unittest \
+	src/common/dwarf/dwarf2reader_lineinfo_unittest \
+	src/common/dwarf/dwarf2reader_splitfunctions_unittest \
 	src/processor/address_map_unittest \
 	src/processor/basic_source_line_resolver_unittest \
 	src/processor/cfi_frame_info_unittest \
@@ -568,6 +576,20 @@ src_tools_linux_core2md_core2md_SOURCES = \
 	src/tools/linux/core2md/core2md.cc
 
 src_tools_linux_core2md_core2md_LDADD = \
+	src/client/linux/libbreakpad_client.a
+
+if HAVE_MEMFD_CREATE
+src_tools_linux_core_handler_core_handler_SOURCES = \
+	src/tools/linux/core_handler/core_handler.cc
+
+src_tools_linux_core_handler_core_handler_LDADD = \
+	src/client/linux/libbreakpad_client.a
+endif
+
+src_tools_linux_pid2md_pid2md_SOURCES = \
+	src/tools/linux/pid2md/pid2md.cc
+
+src_tools_linux_pid2md_pid2md_LDADD = \
 	src/client/linux/libbreakpad_client.a
 
 src_tools_linux_dump_syms_dump_syms_SOURCES = \
@@ -1202,6 +1224,30 @@ src_common_test_assembler_unittest_SOURCES = \
 src_common_test_assembler_unittest_CPPFLAGS = \
 	$(AM_CPPFLAGS) $(TEST_CFLAGS)
 src_common_test_assembler_unittest_LDADD = \
+	$(TEST_LIBS) \
+	$(PTHREAD_CFLAGS) $(PTHREAD_LIBS)
+
+src_common_dwarf_dwarf2reader_lineinfo_unittest_SOURCES = \
+	src/common/dwarf/dwarf2reader.h \
+	src/common/dwarf/dwarf2reader_lineinfo_unittest.cc
+src_common_dwarf_dwarf2reader_lineinfo_unittest_CPPFLAGS = \
+	$(AM_CPPFLAGS) $(TEST_CFLAGS)
+src_common_dwarf_dwarf2reader_lineinfo_unittest_LDADD = \
+  src/common/dwarf/bytereader.o \
+  src/common/dwarf/dwarf2reader.o \
+  src/common/dwarf/elf_reader.o \
+	$(TEST_LIBS) \
+	$(PTHREAD_CFLAGS) $(PTHREAD_LIBS)
+
+src_common_dwarf_dwarf2reader_splitfunctions_unittest_SOURCES = \
+	src/common/dwarf/dwarf2reader.h \
+	src/common/dwarf/dwarf2reader_splitfunctions_unittest.cc
+src_common_dwarf_dwarf2reader_splitfunctions_unittest_CPPFLAGS = \
+	$(AM_CPPFLAGS) $(TEST_CFLAGS)
+src_common_dwarf_dwarf2reader_splitfunctions_unittest_LDADD = \
+  src/common/dwarf/bytereader.o \
+  src/common/dwarf/dwarf2reader.o \
+  src/common/dwarf/elf_reader.o \
 	$(TEST_LIBS) \
 	$(PTHREAD_CFLAGS) $(PTHREAD_LIBS)
 

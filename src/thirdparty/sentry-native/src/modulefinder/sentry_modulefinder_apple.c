@@ -32,7 +32,7 @@ typedef struct segment_command_64 mach_segment_command_type;
 
 static bool g_initialized = false;
 static sentry_mutex_t g_mutex = SENTRY__MUTEX_INIT;
-static sentry_value_t g_modules;
+static sentry_value_t g_modules = { 0 };
 
 static void
 add_image(const struct mach_header *mh, intptr_t UNUSED(vmaddr_slide))
@@ -128,7 +128,7 @@ done:
 }
 
 sentry_value_t
-sentry__modules_get_list(void)
+sentry_get_modules_list(void)
 {
     sentry__mutex_lock(&g_mutex);
     if (!g_initialized) {
@@ -142,12 +142,14 @@ sentry__modules_get_list(void)
         _dyld_register_func_for_remove_image(remove_image);
         g_initialized = true;
     }
+    sentry_value_t modules = g_modules;
+    sentry_value_incref(modules);
     sentry__mutex_unlock(&g_mutex);
-    return g_modules;
+    return modules;
 }
 
 void
-sentry__modulefinder_cleanup(void)
+sentry_clear_modulecache(void)
 {
     sentry__mutex_lock(&g_mutex);
     sentry_value_decref(g_modules);
