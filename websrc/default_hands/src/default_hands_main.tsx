@@ -1059,16 +1059,7 @@ class DefaultHands extends React.Component< {}, DefaultHandsState >
 
 		this.controllerVolumes = volumeDictionary.has(inputProcessor.currentInteractionProfile) ? volumeDictionary.get(inputProcessor.currentInteractionProfile) : null;
 
-		if ( this.controllerVolumes )
-		{
-			console.log("currentInteraction profile is " + inputProcessor.currentInteractionProfile + " and is in the volume dictionary");
-		}
-		else
-		{
-			console.log("currentInteraction profile is " + inputProcessor.currentInteractionProfile + " and isn't in the volume dictionary");
-			this.controllerVolumes = volumeDictionary.get( "default" );
-		}
-		
+		console.log("currentInteraction profile is " + inputProcessor.currentInteractionProfile + ` and ${this.controllerVolumes ? 'is' : 'is not'} in the volume dictionary`)
 
 		return (
 			<>
