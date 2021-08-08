@@ -25,6 +25,13 @@ volumeDictionary.set("default", {
 
 });
 
+volumeDictionary.set("/interaction_profiles/oculus/touch", {
+	leftHandTop: {position: {x: 0, y: -0.04, z: 0.09}},
+	leftHandBottom: {position: {x: 0, y: -0.09, z: 0.2}},
+	rightHandTop: {position: {x: 0, y: -0.07, z: 0.1}},
+	rightHandBottom: {position: {x: 0, y: 0.04, z: 0.1}},
+});
+
 volumeDictionary.set("/interaction_profiles/microsoft/hpmotioncontroller", {
 	leftHandTop: {position: 	{ 	x: -0.02, 	y:  0.01, 	z: 0.08	}},
 	leftHandBottom: {position: 	{	x: 0.02, 	y: -0.12,	z: 0.08	}},
