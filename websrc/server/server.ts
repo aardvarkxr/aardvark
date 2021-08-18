@@ -1133,7 +1133,7 @@ let server:CServer;
 
 async function startup()
 {
-	server = new CServer( Number( process.env.PORT ) || AardvarkPort );
+	server = new CServer( AardvarkPort );
 	server.init();
 }
 
