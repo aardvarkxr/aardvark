@@ -909,8 +909,8 @@ class DefaultHands extends React.Component< {}, DefaultHandsState >
 		{
 			gestureCollideMain: false,
 			gestureCollideSecondary: false,
-			//displayIntro: Number(localStorage.getItem("introCounter")) < 5
-			displayIntro: true,
+			displayIntro: Number(localStorage.getItem("introCounter")) < 5
+			//displayIntro: true, swap this line with one above to stop the intro dissapearing
 		};
 
 		inputProcessor.registerInteractionProfileCallback( () => { this.forceUpdate(); } );
@@ -931,6 +931,7 @@ class DefaultHands extends React.Component< {}, DefaultHandsState >
 	private toggleGadgetMenu()
 	{
 		this.gadgetRegistry?.sendEvent( { type: "toggle_visibility" } );
+		// on the first run we toggle visibility twice!
 	}
 
 	componentDidMount()
@@ -951,7 +952,7 @@ class DefaultHands extends React.Component< {}, DefaultHandsState >
 
 		// this is a solution to an issue which seems to be the same as the one above, weighted transform doesnt have
 		// access to valid endpoints on the first render, we need to trigger another render when it will have them
-		window.setTimeout(() => this.forceUpdate(), 100);
+		window.setTimeout(() => this.forceUpdate(), 400);
 	}
 
 	private startGadgetMenu()
@@ -1022,12 +1023,21 @@ class DefaultHands extends React.Component< {}, DefaultHandsState >
 	{
 		if (this.state.gestureCollideMain && this.state.gestureCollideSecondary)
 		{
-			this.toggleGadgetMenu();
+
 			if (this.state.displayIntro)
 			{
 				this.setState({displayIntro: false});
 				localStorage.setItem("introCounter", (Number(localStorage.getItem("introCounter")) + 1).toString());
 			}
+			else
+			{
+				this.toggleGadgetMenu(); 
+			}
+			/*
+			I know this looks like we wouldnt toggle the menu on the first bump, but because we set state we force a rerender
+			and that then causes us to actually toggle the menu, if we didnt do this then the menu wouldnt display the first
+			time as it would be toggled twice. 
+			*/
 		}
 		
 	}
@@ -1109,6 +1119,10 @@ class DefaultHands extends React.Component< {}, DefaultHandsState >
 							</AvTransform>
 						</AvHeadFacingTransform>
 					</AvWeightedTransform>
+				}
+
+				{ this.state.displayIntro &&
+					<></>
 				}
 
 				
