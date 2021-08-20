@@ -1,5 +1,7 @@
 #include "sentry_testsupport.h"
 #include "sentry_value.h"
+#include <locale.h>
+#include <math.h>
 #include <sentry.h>
 
 SENTRY_TEST(value_null)
@@ -8,12 +10,14 @@ SENTRY_TEST(value_null)
     TEST_CHECK(sentry_value_get_type(val) == SENTRY_VALUE_TYPE_NULL);
     TEST_CHECK(sentry_value_is_null(val));
     TEST_CHECK(sentry_value_as_int32(val) == 0);
+    TEST_CHECK(isnan(sentry_value_as_double(val)));
+    TEST_CHECK_STRING_EQUAL(sentry_value_as_string(val), "");
     TEST_CHECK(!sentry_value_is_true(val));
     TEST_CHECK_JSON_VALUE(val, "null");
     TEST_CHECK(sentry_value_refcount(val) == 1);
+    TEST_CHECK(sentry_value_is_frozen(val));
     sentry_value_decref(val);
     TEST_CHECK(sentry_value_refcount(val) == 1);
-    TEST_CHECK(sentry_value_is_frozen(val));
 }
 
 SENTRY_TEST(value_bool)
@@ -34,9 +38,9 @@ SENTRY_TEST(value_bool)
     TEST_CHECK(!sentry_value_is_true(val));
     TEST_CHECK_JSON_VALUE(val, "false");
     TEST_CHECK(sentry_value_refcount(val) == 1);
+    TEST_CHECK(sentry_value_is_frozen(val));
     sentry_value_decref(val);
     TEST_CHECK(sentry_value_refcount(val) == 1);
-    TEST_CHECK(sentry_value_is_frozen(val));
 }
 
 SENTRY_TEST(value_int32)
@@ -62,9 +66,9 @@ SENTRY_TEST(value_int32)
     TEST_CHECK(sentry_value_as_int32(val) == -1);
     TEST_CHECK(sentry_value_is_true(val) == true);
     TEST_CHECK(sentry_value_refcount(val) == 1);
+    TEST_CHECK(sentry_value_is_frozen(val));
     sentry_value_decref(val);
     TEST_CHECK(sentry_value_refcount(val) == 1);
-    TEST_CHECK(sentry_value_is_frozen(val));
 }
 
 SENTRY_TEST(value_double)
@@ -75,9 +79,14 @@ SENTRY_TEST(value_double)
     TEST_CHECK(sentry_value_is_true(val));
     TEST_CHECK_JSON_VALUE(val, "42.05");
     TEST_CHECK(sentry_value_refcount(val) == 1);
-    sentry_value_decref(val);
-    TEST_CHECK(sentry_value_refcount(val) == 1);
     TEST_CHECK(sentry_value_is_frozen(val));
+    sentry_value_decref(val);
+
+    val = sentry_value_new_double(4294967295.);
+    TEST_CHECK(sentry_value_get_type(val) == SENTRY_VALUE_TYPE_DOUBLE);
+    TEST_CHECK(sentry_value_as_double(val) == 4294967295.);
+    TEST_CHECK_JSON_VALUE(val, "4294967295");
+    sentry_value_decref(val);
 }
 
 SENTRY_TEST(value_string)
@@ -312,4 +321,72 @@ SENTRY_TEST(value_json_surrogates)
         STRING("{\"valid key\": true, \"invalid key \\uD801\": false}"));
     TEST_CHECK_JSON_VALUE(rv, "{\"valid key\":true}");
     sentry_value_decref(rv);
+}
+
+SENTRY_TEST(value_json_locales)
+{
+    // we set a locale that uses decimal-commas to make sure we parse/stringify
+    // correctly with a decimal dot.
+    setlocale(LC_ALL, "de-DE");
+
+    sentry_value_t rv = sentry__value_from_json(
+        STRING("{\"dbl_max\": 1.7976931348623158e+308,"
+               "\"dbl_min\": 2.2250738585072014e-308,"
+               "\"max_int32\": 4294967295,"
+               "\"max_safe_int\": 9007199254740991}"));
+
+    // thou shalt not use exact comparison for floating point values
+    TEST_CHECK(sentry_value_as_double(sentry_value_get_by_key(rv, "dbl_max"))
+        == 1.7976931348623158e+308);
+    TEST_CHECK(sentry_value_as_double(sentry_value_get_by_key(rv, "dbl_min"))
+        == 2.2250738585072014e-308);
+
+    TEST_CHECK(sentry_value_as_double(sentry_value_get_by_key(rv, "max_int32"))
+        == 4294967295.);
+    TEST_CHECK(
+        sentry_value_as_double(sentry_value_get_by_key(rv, "max_safe_int"))
+        == 9007199254740991.);
+
+    // we format to 16 digits:
+    TEST_CHECK_JSON_VALUE(rv,
+        "{\"dbl_max\":1.797693134862316e+308,"
+        "\"dbl_min\":2.225073858507201e-308,"
+        "\"max_int32\":4294967295,"
+        "\"max_safe_int\":9007199254740991}");
+
+    sentry_value_decref(rv);
+}
+
+SENTRY_TEST(value_json_invalid_doubles)
+{
+    sentry_value_t val;
+
+    val = sentry_value_new_double(INFINITY);
+    TEST_CHECK_JSON_VALUE(val, "null");
+    sentry_value_decref(val);
+
+    val = sentry_value_new_double(-INFINITY);
+    TEST_CHECK_JSON_VALUE(val, "null");
+    sentry_value_decref(val);
+
+    val = sentry_value_new_double(NAN);
+    TEST_CHECK_JSON_VALUE(val, "null");
+    sentry_value_decref(val);
+}
+
+SENTRY_TEST(value_wrong_type)
+{
+    sentry_value_t val = sentry_value_new_null();
+
+    TEST_CHECK(sentry_value_set_by_key(val, "foobar", val) == 1);
+    TEST_CHECK(sentry_value_remove_by_key(val, "foobar") == 1);
+    TEST_CHECK(sentry_value_append(val, val) == 1);
+    TEST_CHECK(sentry_value_set_by_index(val, 1, val) == 1);
+    TEST_CHECK(sentry_value_remove_by_index(val, 1) == 1);
+    TEST_CHECK(sentry_value_is_null(sentry_value_get_by_key(val, "foobar")));
+    TEST_CHECK(
+        sentry_value_is_null(sentry_value_get_by_key_owned(val, "foobar")));
+    TEST_CHECK(sentry_value_is_null(sentry_value_get_by_index(val, 1)));
+    TEST_CHECK(sentry_value_is_null(sentry_value_get_by_index_owned(val, 1)));
+    TEST_CHECK(sentry_value_get_length(val) == 0);
 }

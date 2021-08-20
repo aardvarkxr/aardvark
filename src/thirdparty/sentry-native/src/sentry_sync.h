@@ -146,6 +146,8 @@ typedef struct sentry__winmutex_s sentry_mutex_t;
 #    define sentry__mutex_lock(Lock) sentry__winmutex_lock(Lock)
 #    define sentry__mutex_unlock(Lock)                                         \
         LeaveCriticalSection(&(Lock)->critical_section)
+#    define sentry__mutex_free(Lock)                                           \
+        DeleteCriticalSection(&(Lock)->critical_section)
 
 #    define sentry__thread_spawn(ThreadId, Func, Data)                         \
         (*ThreadId = CreateThread(NULL, 0, Func, Data, 0, NULL),               \
@@ -215,6 +217,8 @@ typedef pthread_cond_t sentry_cond_t;
                 pthread_mutex_unlock(Mutex);                                   \
             }                                                                  \
         } while (0)
+#    define sentry__mutex_free(Lock) pthread_mutex_destroy(Lock)
+
 #    define sentry__cond_init(CondVar)                                         \
         do {                                                                   \
             sentry_cond_t tmp = PTHREAD_COND_INITIALIZER;                      \
@@ -323,6 +327,12 @@ int sentry__bgworker_start(sentry_bgworker_t *bgw);
  * Returns 0 on success.
  */
 int sentry__bgworker_shutdown(sentry_bgworker_t *bgw, uint64_t timeout);
+
+/**
+ * This will set a preferable thread name for background worker.
+ * Should be executed before worker start
+ */
+void sentry__bgworker_setname(sentry_bgworker_t *bgw, const char *thread_name);
 
 /**
  * This will submit a new task to the background thread.

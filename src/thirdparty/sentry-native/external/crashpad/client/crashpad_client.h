@@ -25,6 +25,7 @@
 #include "base/files/file_path.h"
 #include "base/macros.h"
 #include "build/build_config.h"
+#include "build/chromeos_buildflags.h"
 #include "util/file/file_io.h"
 #include "util/misc/capture_context.h"
 
@@ -33,7 +34,7 @@
 #elif defined(OS_WIN)
 #include <windows.h>
 #include "util/win/scoped_handle.h"
-#elif defined(OS_LINUX) || defined(OS_ANDROID)
+#elif defined(OS_LINUX) || defined(OS_CHROMEOS) || defined(OS_ANDROID)
 #include <signal.h>
 #include <ucontext.h>
 #endif
@@ -121,7 +122,7 @@ class CrashpadClient {
                     bool asynchronous_start,
                     const std::vector<base::FilePath>& attachments = {});
 
-#if defined(OS_ANDROID) || defined(OS_LINUX) || DOXYGEN
+#if defined(OS_ANDROID) || defined(OS_LINUX) || defined(OS_CHROMEOS) || DOXYGEN
   //! \brief Retrieve the socket and process ID for the handler.
   //!
   //! `StartHandler()` must have successfully been called before calling this
@@ -166,7 +167,7 @@ class CrashpadClient {
   //!
   //! \return `true` on success. Otherwise `false` with a message logged.
   static bool InitializeSignalStackForThread();
-#endif  // OS_ANDROID || OS_LINUX || DOXYGEN
+#endif  // OS_ANDROID || OS_LINUX || OS_CHROMEOS || DOXYGEN
 
 #if defined(OS_ANDROID) || DOXYGEN
   //! \brief Installs a signal handler to execute `/system/bin/app_process` and
@@ -337,7 +338,7 @@ class CrashpadClient {
       int socket);
 #endif  // OS_ANDROID || DOXYGEN
 
-#if defined(OS_LINUX) || defined(OS_ANDROID) || DOXYGEN
+#if defined(OS_LINUX) || defined(OS_ANDROID) || defined(OS_CHROMEOS) || DOXYGEN
   //! \brief Installs a signal handler to launch a handler process in reponse to
   //!     a crash.
   //!
@@ -450,7 +451,7 @@ class CrashpadClient {
   //!
   //! \param[in] unhandled_signals The set of unhandled signals
   void SetUnhandledSignals(const std::set<int>& unhandled_signals);
-#endif  // OS_LINUX || OS_ANDROID || DOXYGEN
+#endif  // OS_LINUX || OS_ANDROID || OS_CHROMEOS || DOXYGEN
 
 #if defined(OS_IOS) || DOXYGEN
   //! \brief Configures the process to direct its crashes to the iOS in-process
@@ -667,7 +668,7 @@ class CrashpadClient {
   static void UseSystemDefaultHandler();
 #endif
 
-#if defined(OS_CHROMEOS)
+#if BUILDFLAG(IS_CHROMEOS_ASH)
   //! \brief Sets a timestamp on the signal handler to be passed on to
   //!     crashpad_handler and then eventually Chrome OS's crash_reporter.
   //!
@@ -683,7 +684,7 @@ class CrashpadClient {
 #elif defined(OS_WIN)
   std::wstring ipc_pipe_;
   ScopedKernelHANDLE handler_start_thread_;
-#elif defined(OS_LINUX) || defined(OS_ANDROID)
+#elif defined(OS_LINUX) || defined(OS_CHROMEOS) || defined(OS_ANDROID)
   std::set<int> unhandled_signals_;
 #endif  // OS_APPLE
 

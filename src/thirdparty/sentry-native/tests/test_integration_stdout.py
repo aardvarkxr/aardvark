@@ -4,7 +4,7 @@ import sys
 import os
 import time
 from . import check_output, run, Envelope
-from .conditions import has_inproc, has_breakpad, has_files
+from .conditions import has_breakpad, has_files
 from .assertions import (
     assert_attachment,
     assert_meta,
@@ -84,7 +84,6 @@ def test_multi_process(cmake):
     assert len(runs) == 0
 
 
-@pytest.mark.skipif(not has_inproc, reason="test needs inproc backend")
 def test_inproc_crash_stdout(cmake):
     tmp_path = cmake(
         ["sentry_example"], {"SENTRY_BACKEND": "inproc", "SENTRY_TRANSPORT": "none"},
@@ -103,7 +102,7 @@ def test_inproc_crash_stdout(cmake):
             crash_timestamp = f.read()
         assert_timestamp(crash_timestamp)
 
-    assert_meta(envelope)
+    assert_meta(envelope, integration="inproc")
     assert_breadcrumb(envelope)
     assert_attachment(envelope)
 
@@ -126,7 +125,7 @@ def test_breakpad_crash_stdout(cmake):
     output = check_output(tmp_path, "sentry_example", ["stdout", "no-setup"])
     envelope = Envelope.deserialize(output)
 
-    assert_meta(envelope)
+    assert_meta(envelope, integration="breakpad")
     assert_breadcrumb(envelope)
     assert_attachment(envelope)
 

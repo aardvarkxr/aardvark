@@ -130,8 +130,6 @@ def cmake(cwd, targets, options=None):
     if "asan" in os.environ.get("RUN_ANALYZER", ""):
         configcmd.append("-DWITH_ASAN_OPTION=ON")
 
-    configcmd.append(source_dir)
-
     # we have to set `-Werror` for this cmake invocation only, otherwise
     # completely unrelated things will break
     cflags = []
@@ -144,9 +142,13 @@ def cmake(cwd, targets, options=None):
     if "gcc" in os.environ.get("RUN_ANALYZER", ""):
         cflags.append("-fanalyzer")
     if "llvm-cov" in os.environ.get("RUN_ANALYZER", ""):
-        cflags.append("-fprofile-instr-generate -fcoverage-mapping")
+        flags = "-fprofile-instr-generate -fcoverage-mapping"
+        configcmd.append("-DCMAKE_C_FLAGS='{}'".format(flags))
+        configcmd.append("-DCMAKE_CXX_FLAGS='{}'".format(flags))
     env = dict(os.environ)
     env["CFLAGS"] = env["CXXFLAGS"] = " ".join(cflags)
+
+    configcmd.append(source_dir)
 
     print("\n{} > {}".format(cwd, " ".join(configcmd)), flush=True)
     try:
@@ -210,13 +212,7 @@ def cmake(cwd, targets, options=None):
             "compilation.json",
         ]
         print("{} > {}".format(cwd, " ".join(checkcmd)), flush=True)
-        child = subprocess.run(checkcmd, stdout=subprocess.PIPE, cwd=cwd, check=True)
-        sys.stdout.buffer.write(child.stdout)
-        marker = b"Total number of reports: "
-        errors = child.stdout[child.stdout.rfind(marker) + len(marker) :]
-        errors = int(errors[: errors.find(b"\n")])
-        if errors > 0:
-            pytest.fail("code-checker analysis failed")
+        child = subprocess.run(checkcmd, cwd=cwd, check=True)
 
     if os.environ.get("ANDROID_API"):
         # copy the output to the android image via adb
