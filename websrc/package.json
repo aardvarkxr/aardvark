@@ -75,7 +75,7 @@
     "react": "^16.8.6",
     "react-dom": "^16.8.6",
     "style-loader": "^1.2.1",
-    "three": "^0.117.1",
+    "three": "^0.137.0",
     "uuid": "^3.3.3",
     "validator": "^13.0.0",
     "winston": "^3.2.1",
