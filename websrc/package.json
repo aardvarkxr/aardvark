@@ -59,7 +59,7 @@
     "base64-js": "^1.3.1",
     "bind-decorator": "^1.0.11",
     "color": "^3.1.2",
-    "express": "^4.17.1",
+    "express": "^4.17.3",
     "fast-deep-equal": "^3.1.1",
     "file-url": "^3.0.0",
     "gltf-js-utils": "^3.0.0",
